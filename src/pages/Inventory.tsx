@@ -22,7 +22,12 @@ export const Inventory: React.FC = () => {
 
   const activeProducts = products.filter(p => p.active);
   const categories = Array.from(new Set(products.map(p => p.category || 'Standard')));
-  const filteredProducts = products.filter(p => selectedCategory === 'All' || (p.category || 'Standard') === selectedCategory);
+  const filteredProducts = products
+    .filter(p => selectedCategory === 'All' || (p.category || 'Standard') === selectedCategory)
+    .sort((a, b) => {
+      if (a.category !== b.category) return (a.category || '').localeCompare(b.category || '');
+      return a.price - b.price;
+    });
   
   const qty = parseInt(quantity) || 0;
   const cost = parseInt(costPrice) || 0;

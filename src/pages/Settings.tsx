@@ -389,7 +389,11 @@ export const Settings: React.FC = () => {
         )}
         
         <div className="flex flex-col gap-2">
-          {products.map(product => (
+          {[...products].sort((a, b) => {
+            if (a.active !== b.active) return a.active ? -1 : 1;
+            if (a.category !== b.category) return (a.category || '').localeCompare(b.category || '');
+            return a.price - b.price;
+          }).map(product => (
             <div key={product.id} className="flex justify-between items-center p-3 border rounded" style={{ borderColor: 'var(--border-color)' }}>
               <div className="flex gap-3 items-center">
                 {product.image ? (

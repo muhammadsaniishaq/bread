@@ -22,7 +22,12 @@ export const Sales: React.FC = () => {
 
   const activeProducts = products.filter(p => p.active);
   const categories = Array.from(new Set(activeProducts.map(p => p.category || 'Standard')));
-  const filteredProducts = activeProducts.filter(p => selectedCategory === 'All' || (p.category || 'Standard') === selectedCategory);
+  const filteredProducts = activeProducts
+    .filter(p => selectedCategory === 'All' || (p.category || 'Standard') === selectedCategory)
+    .sort((a, b) => {
+      if (a.category !== b.category) return (a.category || '').localeCompare(b.category || '');
+      return a.price - b.price;
+    });
   
   const subtotal = useMemo(() => {
     return cart.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0);
