@@ -68,14 +68,16 @@ export const Inventory: React.FC = () => {
   const handleConfirmBatch = async () => {
     if (pendingItems.length === 0) return;
     setIsProcessing(true);
-    await processInventoryBatch(pendingItems, activeTab as 'Receive' | 'Return');
-    // Best guess for nav, though Context actually assigns it. Since process batch is async and context internalizes it, we might just nav to the list. 
-    // Actually, redirecting to the receipt directly is better UX. 
-    // Let's modify the Context to return the batchId, or we can just derive it since we know Date.now() happens in that function. But Date.now() is variable.
-    // For simplicity without breaking perfectly working AppContext processInventoryBatch, we'll just go to view tab.
+    
+    // Generate the batch ID here to guarantee we know it
+    const batchId = Date.now().toString();
+    const itemsWithBatch = pendingItems.map(item => ({ ...item, batchId }));
+    
+    await processInventoryBatch(itemsWithBatch, activeTab as 'Receive' | 'Return');
+    
     setPendingItems([]);
     setIsProcessing(false);
-    handleTabChange('view');
+    navigate(`/inventory/receipt/${batchId}`);
   };
 
   const remainingBalance = companyMetrics.totalValueReceived - companyMetrics.totalMoneyPaid;

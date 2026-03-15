@@ -134,7 +134,9 @@ export const Sales: React.FC = () => {
     setPaymentType('Cash');
     setDiscountInput('');
     setRedeemPoints(false);
-    alert('Sale recorded successfully!');
+    
+    // Automatically navigate to receipt for printing/sharing
+    navigate(`/receipt/${tx.id}`);
   };
 
   const getProductName = (id: string) => products.find(p => p.id === id)?.name || 'Unknown';
