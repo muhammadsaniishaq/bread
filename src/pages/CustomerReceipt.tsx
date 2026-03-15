@@ -97,7 +97,7 @@ export const CustomerReceipt: React.FC = () => {
               <img 
                 src={appSettings.logo} 
                 alt="Logo" 
-                className="w-16 h-16 mx-auto mb-2 object-cover rounded"
+                className="w-10 h-10 mx-auto mb-2 object-cover rounded"
                 style={{ filter: 'grayscale(100%)' }}
               />
             )}
