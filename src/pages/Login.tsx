@@ -9,7 +9,9 @@ export const Login: React.FC = () => {
   const { login, isAuthenticated, appSettings } = useAppContext();
   const navigate = useNavigate();
 
-  const [step, setStep] = useState<1 | 2>(1);
+  const [step, setStep] = useState<1 | 2>(() => {
+    return localStorage.getItem('emailLoginRemembered') === 'true' ? 2 : 1;
+  });
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [credError, setCredError] = useState('');
@@ -45,6 +47,7 @@ export const Login: React.FC = () => {
     
     if (email.toLowerCase().trim() === targetEmail.toLowerCase() && password === targetPassword) {
       setCredError('');
+      localStorage.setItem('emailLoginRemembered', 'true');
       setStep(2);
     } else {
       setCredError('Invalid email or password');

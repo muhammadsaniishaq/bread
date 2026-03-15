@@ -66,7 +66,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     adminPin: '0018', 
     cashierPin: '0000', 
     receiptFooter: 'Thank you for your patronage!',
-    adminEmail: 'muhammadsaniiyaku3@gmail.com',
+    adminEmail: 'muhammadsaniisyaku3@gmail.com',
     adminPassword: '12,Abumafhal'
   });
   const [loading, setLoading] = useState(true);
@@ -93,7 +93,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setInventoryLogs(storedInventoryLogs);
       setExpenses(storedExpenses);
       if (metrics) setCompanyMetrics(metrics);
-      if (settings) setAppSettings(settings);
+      if (settings) {
+        setAppSettings(prev => ({ ...prev, ...settings }));
+      }
     } catch (error) {
       console.error('Failed to load local data', error);
     } finally {
