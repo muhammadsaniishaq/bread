@@ -60,6 +60,12 @@ export interface DebtPayment {
   amount: number;
 }
 
+export interface BakeryPayment {
+  id: string;
+  date: string;
+  amount: number;
+}
+
 export interface InventoryLog {
   id: string;
   batchId?: string; // Groups multiple items into a single receipt

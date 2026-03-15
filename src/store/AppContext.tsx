@@ -3,7 +3,8 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import type { Product, Customer, Transaction, DebtPayment, InventoryLog,
   CompanyMetrics,
   Expense,
-  AppSettings
+  AppSettings,
+  BakeryPayment
 } from './types';
 import { 
   dbProducts, 
@@ -12,6 +13,7 @@ import {
   dbDebtPayments, 
   dbInventoryLogs, 
   dbCompanyMetrics,
+  dbBakeryPayments,
   dbExpenses,
   dbSettings,
   getItems, 
@@ -24,6 +26,7 @@ interface AppContextType {
   transactions: Transaction[];
   debtPayments: DebtPayment[];
   inventoryLogs: InventoryLog[];
+  bakeryPayments: BakeryPayment[];
   companyMetrics: CompanyMetrics;
   expenses: Expense[];
   loading: boolean;
@@ -47,6 +50,7 @@ interface AppContextType {
   addInventory: (log: InventoryLog) => Promise<void>;
   returnInventory: (log: InventoryLog) => Promise<void>;
   processInventoryBatch: (logs: InventoryLog[], action: 'Receive' | 'Return') => Promise<void>;
+  recordBakeryPayment: (payment: BakeryPayment) => Promise<void>;
   addExpense: (expense: Expense) => Promise<void>;
   appSettings: AppSettings;
   updateSettings: (settings: AppSettings) => Promise<void>;
@@ -60,6 +64,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [debtPayments, setDebtPayments] = useState<DebtPayment[]>([]);
   const [inventoryLogs, setInventoryLogs] = useState<InventoryLog[]>([]);
+  const [bakeryPayments, setBakeryPayments] = useState<BakeryPayment[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [companyMetrics, setCompanyMetrics] = useState<CompanyMetrics>({ totalValueReceived: 0, totalMoneyPaid: 0 });
   const [appSettings, setAppSettings] = useState<AppSettings>({ 
@@ -82,6 +87,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const storedTransactions = await getItems<Transaction>(dbTransactions as any);
       const storedDebtPayments = await getItems<DebtPayment>(dbDebtPayments as any);
       const storedInventoryLogs = await getItems<InventoryLog>(dbInventoryLogs as any);
+      const storedBakeryPayments = await getItems<BakeryPayment>(dbBakeryPayments as any);
       const storedExpenses = await getItems<Expense>(dbExpenses as any);
       
       const metrics = await dbCompanyMetrics.getItem<CompanyMetrics>('main');
@@ -92,6 +98,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setTransactions(storedTransactions);
       setDebtPayments(storedDebtPayments);
       setInventoryLogs(storedInventoryLogs);
+      setBakeryPayments(storedBakeryPayments);
       setExpenses(storedExpenses);
       if (metrics) setCompanyMetrics(metrics);
       if (settings) {
@@ -313,6 +320,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     await refreshData();
   };
   
+  const recordBakeryPayment = async (payment: BakeryPayment) => {
+    await dbBakeryPayments.setItem(payment.id, payment);
+    
+    // Increase total money paid to company
+    const newMetrics = { 
+      ...companyMetrics, 
+      totalMoneyPaid: (companyMetrics.totalMoneyPaid || 0) + payment.amount 
+    };
+    await dbCompanyMetrics.setItem('main', newMetrics);
+    
+    await refreshData();
+  };
+  
   const addExpense = async (expense: Expense) => {
     await dbExpenses.setItem(expense.id, expense);
     setExpenses([...expenses, expense]);
@@ -325,9 +345,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   return (
     <AppContext.Provider value={{
-      products, customers, transactions, debtPayments, inventoryLogs, companyMetrics, expenses, loading, refreshData,
+      products, customers, transactions, debtPayments, inventoryLogs, bakeryPayments, companyMetrics, expenses, loading, refreshData,
       isAuthenticated, login, logout, updatePin,
-      addProduct, updateProduct, deleteProduct, addCustomer, updateCustomer, recordSale, recordDebtPayment, addInventory, returnInventory, processInventoryBatch, addExpense,
+      addProduct, updateProduct, deleteProduct, addCustomer, updateCustomer, recordSale, recordDebtPayment, addInventory, returnInventory, processInventoryBatch, recordBakeryPayment, addExpense,
       appSettings, updateSettings
     }}>
       {children}

@@ -8,11 +8,11 @@ import { useTranslation } from '../store/LanguageContext';
 import { Trash2, FileText, TrendingDown, TrendingUp } from 'lucide-react';
 
 export const Inventory: React.FC = () => {
-  const { products, companyMetrics, processInventoryBatch, inventoryLogs } = useAppContext();
+  const { products, companyMetrics, processInventoryBatch, inventoryLogs, recordBakeryPayment, bakeryPayments } = useAppContext();
   const { t } = useTranslation();
   const navigate = useNavigate();
   
-  const [activeTab, setActiveTab] = useState<'view' | 'receive' | 'return'>('view');
+  const [activeTab, setActiveTab] = useState<'view' | 'receive' | 'return' | 'balance'>('view');
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [pendingItems, setPendingItems] = useState<InventoryLog[]>([]);
   const [productId, setProductId] = useState('');
@@ -20,6 +20,7 @@ export const Inventory: React.FC = () => {
   const [costPrice, setCostPrice] = useState('');
   const [storeKeeper, setStoreKeeper] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [paymentAmount, setPaymentAmount] = useState('');
 
   const activeProducts = products.filter(p => p.active);
   const categories = Array.from(new Set(products.map(p => p.category || 'Standard')));
@@ -33,13 +34,14 @@ export const Inventory: React.FC = () => {
   const qty = parseInt(quantity) || 0;
   const cost = parseInt(costPrice) || 0;
 
-  const handleTabChange = (tab: 'view' | 'receive' | 'return') => {
+  const handleTabChange = (tab: 'view' | 'receive' | 'return' | 'balance') => {
     setActiveTab(tab);
     setPendingItems([]);
     setProductId('');
     setQuantity('');
     setCostPrice('');
     setStoreKeeper('');
+    setPaymentAmount('');
   };
 
   const handleAddItem = (e: React.FormEvent) => {
@@ -67,6 +69,23 @@ export const Inventory: React.FC = () => {
     
     setPendingItems([...pendingItems, log]);
     setProductId(''); setQuantity(''); setCostPrice('');
+  };
+
+  const handleRecordPayment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const amountStr = parseInt(paymentAmount);
+    if (!amountStr || amountStr <= 0) return;
+    
+    setIsProcessing(true);
+    await recordBakeryPayment({
+      id: Date.now().toString(),
+      date: new Date().toISOString(),
+      amount: amountStr
+    });
+    
+    setPaymentAmount('');
+    setIsProcessing(false);
+    alert('Payment to supplier recorded successfully!');
   };
 
   const removeItem = (id: string) => {
@@ -141,6 +160,13 @@ export const Inventory: React.FC = () => {
           onClick={() => handleTabChange(activeTab === 'return' ? 'view' : 'return')}
         >
           - {t('inv.return')}
+        </button>
+        <button 
+          className={`btn flex-none ${activeTab === 'balance' ? 'btn-primary' : 'btn-outline'}`}
+          style={{ width: 'auto', minHeight: '2.5rem', padding: '0.5rem 1rem', borderRadius: 'var(--radius-full)' }}
+          onClick={() => handleTabChange(activeTab === 'balance' ? 'view' : 'balance')}
+        >
+          Company Balance (₦)
         </button>
       </div>
 
@@ -284,6 +310,53 @@ export const Inventory: React.FC = () => {
           </div>
         ))}
       </div>
+      
+      {activeTab === 'balance' && (
+        <div className="mt-4">
+          <div className="card" style={{ borderLeftWidth: '4px', borderColor: 'var(--primary-color)' }}>
+            <h2 className="text-lg font-bold mb-4">Record Payment to Company</h2>
+            <form onSubmit={handleRecordPayment} className="flex gap-2">
+              <div className="form-group flex-1">
+                <input 
+                  type="number" 
+                  className="form-input" 
+                  placeholder="Amount Paid (₦)" 
+                  value={paymentAmount}
+                  onChange={e => setPaymentAmount(e.target.value)}
+                  required 
+                />
+              </div>
+              <button 
+                type="submit" 
+                className="btn btn-primary"
+                disabled={isProcessing}
+                style={{ width: 'auto', padding: '0 1.5rem' }}
+              >
+                {isProcessing ? 'Saving...' : 'Record'}
+              </button>
+            </form>
+          </div>
+          
+          <h2 className="text-lg font-bold mt-8 mb-4">Payment History</h2>
+          <div className="flex flex-col gap-3">
+            {bakeryPayments.length === 0 ? (
+              <p className="text-center text-secondary py-4">No payments recorded yet.</p>
+            ) : (
+              [...bakeryPayments]
+              .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+              .map(payment => (
+                <div key={payment.id} className="card flex justify-between items-center" style={{ marginBottom: 0, padding: '1rem' }}>
+                  <div>
+                    <div className="font-bold text-sm">Payment Sent</div>
+                    <div className="text-xs text-secondary">{new Date(payment.date).toLocaleString()}</div>
+                  </div>
+                  <div className="font-bold text-success">+₦{payment.amount.toLocaleString()}</div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      )}
       
       {activeTab === 'view' && sortedBatchIds.length > 0 && (
         <div className="mt-8">

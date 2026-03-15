@@ -7,6 +7,7 @@ export const dbTransactions = localforage.createInstance({ name: 'BreadAppDB', s
 export const dbDebtPayments = localforage.createInstance({ name: 'BreadAppDB', storeName: 'debt_payments' });
 export const dbInventoryLogs = localforage.createInstance({ name: 'BreadAppDB', storeName: 'inventory_logs' });
 export const dbCompanyMetrics = localforage.createInstance({ name: 'BreadAppDB', storeName: 'company_metrics' });
+export const dbBakeryPayments = localforage.createInstance({ name: 'BreadAppDB', storeName: 'bakery_payments' });
 export const dbExpenses = localforage.createInstance({ name: 'BreadAppDB', storeName: 'expenses' });
 export const dbSettings = localforage.createInstance({ name: 'BreadAppDB', storeName: 'settings' });
 
