@@ -20,7 +20,11 @@ export const Inventory: React.FC = () => {
   const [costPrice, setCostPrice] = useState('');
   const [storeKeeper, setStoreKeeper] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
+  
+  // Bakery Payment Form States
   const [paymentAmount, setPaymentAmount] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState<'Cash' | 'Transfer'>('Cash');
+  const [paymentReceiver, setPaymentReceiver] = useState('');
 
   const activeProducts = products.filter(p => p.active);
   const categories = Array.from(new Set(products.map(p => p.category || 'Standard')));
@@ -42,6 +46,8 @@ export const Inventory: React.FC = () => {
     setCostPrice('');
     setStoreKeeper('');
     setPaymentAmount('');
+    setPaymentMethod('Cash');
+    setPaymentReceiver('');
   };
 
   const handleAddItem = (e: React.FormEvent) => {
@@ -77,15 +83,23 @@ export const Inventory: React.FC = () => {
     if (!amountStr || amountStr <= 0) return;
     
     setIsProcessing(true);
+    const paymentId = Date.now().toString();
+    
     await recordBakeryPayment({
-      id: Date.now().toString(),
+      id: paymentId,
       date: new Date().toISOString(),
-      amount: amountStr
+      amount: amountStr,
+      method: paymentMethod,
+      receiver: paymentReceiver.trim() || undefined
     });
     
     setPaymentAmount('');
+    setPaymentReceiver('');
+    setPaymentMethod('Cash');
     setIsProcessing(false);
-    alert('Payment to supplier recorded successfully!');
+    
+    // Navigate straight to the receipt
+    navigate(`/bakery-receipt/${paymentId}`);
   };
 
   const removeItem = (id: string) => {
@@ -141,32 +155,32 @@ export const Inventory: React.FC = () => {
 
       <div className="flex gap-2 mb-4 overflow-x-auto pb-2 no-print">
         <button 
-          className={`btn flex-none ${activeTab === 'view' ? 'btn-primary' : 'btn-outline'}`}
-          style={{ width: 'auto', minHeight: '2.5rem', padding: '0.5rem 1rem', borderRadius: 'var(--radius-full)' }}
+          className={`btn flex-none text-xs ${activeTab === 'view' ? 'btn-primary' : 'btn-outline'}`}
+          style={{ width: 'auto', minHeight: '2rem', padding: '0.25rem 0.75rem', borderRadius: 'var(--radius-full)' }}
           onClick={() => handleTabChange('view')}
         >
           Overview
         </button>
         <button 
-          className={`btn flex-none ${activeTab === 'receive' ? 'btn-success' : 'btn-outline'}`}
-          style={{ width: 'auto', minHeight: '2.5rem', padding: '0.5rem 1rem', borderRadius: 'var(--radius-full)' }}
+          className={`btn flex-none text-xs ${activeTab === 'receive' ? 'btn-success' : 'btn-outline'}`}
+          style={{ width: 'auto', minHeight: '2rem', padding: '0.25rem 0.75rem', borderRadius: 'var(--radius-full)' }}
           onClick={() => handleTabChange(activeTab === 'receive' ? 'view' : 'receive')}
         >
           + {t('inv.receive')}
         </button>
         <button 
-          className={`btn flex-none ${activeTab === 'return' ? 'btn-danger' : 'btn-outline'}`}
-          style={{ width: 'auto', minHeight: '2.5rem', padding: '0.5rem 1rem', borderRadius: 'var(--radius-full)' }}
+          className={`btn flex-none text-xs ${activeTab === 'return' ? 'btn-danger' : 'btn-outline'}`}
+          style={{ width: 'auto', minHeight: '2rem', padding: '0.25rem 0.75rem', borderRadius: 'var(--radius-full)' }}
           onClick={() => handleTabChange(activeTab === 'return' ? 'view' : 'return')}
         >
           - {t('inv.return')}
         </button>
         <button 
-          className={`btn flex-none ${activeTab === 'balance' ? 'btn-primary' : 'btn-outline'}`}
-          style={{ width: 'auto', minHeight: '2.5rem', padding: '0.5rem 1rem', borderRadius: 'var(--radius-full)' }}
+          className={`btn flex-none text-xs ${activeTab === 'balance' ? 'btn-primary' : 'btn-outline'}`}
+          style={{ width: 'auto', minHeight: '2rem', padding: '0.25rem 0.75rem', borderRadius: 'var(--radius-full)' }}
           onClick={() => handleTabChange(activeTab === 'balance' ? 'view' : 'balance')}
         >
-          Company Balance (₦)
+          Company Balance
         </button>
       </div>
 
@@ -313,26 +327,54 @@ export const Inventory: React.FC = () => {
       
       {activeTab === 'balance' && (
         <div className="mt-4">
-          <div className="card" style={{ borderLeftWidth: '4px', borderColor: 'var(--primary-color)' }}>
-            <h2 className="text-lg font-bold mb-4">Record Payment to Company</h2>
-            <form onSubmit={handleRecordPayment} className="flex gap-2">
-              <div className="form-group flex-1">
+          <div className="card border-t-4 border-primary">
+            <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
+               <TrendingDown size={20} className="text-primary" /> Record Payment to Company
+            </h2>
+            <form onSubmit={handleRecordPayment}>
+              <div className="form-group mb-3">
+                <label className="form-label text-xs">Amount Paid (₦) *</label>
                 <input 
                   type="number" 
                   className="form-input" 
-                  placeholder="Amount Paid (₦)" 
+                  placeholder="e.g. 50000" 
                   value={paymentAmount}
                   onChange={e => setPaymentAmount(e.target.value)}
                   required 
                 />
               </div>
+              
+              <div className="flex gap-3 mb-4">
+                <div className="form-group flex-1">
+                  <label className="form-label text-xs">Method</label>
+                  <select 
+                    className="form-select" 
+                    value={paymentMethod}
+                    onChange={e => setPaymentMethod(e.target.value as 'Cash' | 'Transfer')}
+                  >
+                    <option value="Cash">Cash (KudiHannu)</option>
+                    <option value="Transfer">Bank Transfer</option>
+                  </select>
+                </div>
+                
+                <div className="form-group flex-1">
+                  <label className="form-label text-xs">Receiver Name</label>
+                  <input 
+                    type="text" 
+                    className="form-input" 
+                    placeholder="Who received it?" 
+                    value={paymentReceiver}
+                    onChange={e => setPaymentReceiver(e.target.value)}
+                  />
+                </div>
+              </div>
+
               <button 
                 type="submit" 
-                className="btn btn-primary"
+                className="btn btn-primary w-full"
                 disabled={isProcessing}
-                style={{ width: 'auto', padding: '0 1.5rem' }}
               >
-                {isProcessing ? 'Saving...' : 'Record'}
+                {isProcessing ? 'Saving & Generating Receipt...' : 'Record Payment & Print Receipt'}
               </button>
             </form>
           </div>
@@ -347,8 +389,11 @@ export const Inventory: React.FC = () => {
               .map(payment => (
                 <div key={payment.id} className="card flex justify-between items-center" style={{ marginBottom: 0, padding: '1rem' }}>
                   <div>
-                    <div className="font-bold text-sm">Payment Sent</div>
-                    <div className="text-xs text-secondary">{new Date(payment.date).toLocaleString()}</div>
+                    <div className="font-bold text-sm">Payment Sent {payment.method ? `(${payment.method})` : ''}</div>
+                    <div className="text-xs text-secondary">
+                      {new Date(payment.date).toLocaleString()}
+                      {payment.receiver && ` • To: ${payment.receiver}`}
+                    </div>
                   </div>
                   <div className="font-bold text-success">+₦{payment.amount.toLocaleString()}</div>
                 </div>

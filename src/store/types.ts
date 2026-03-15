@@ -64,6 +64,8 @@ export interface BakeryPayment {
   id: string;
   date: string;
   amount: number;
+  method?: 'Cash' | 'Transfer';
+  receiver?: string;
 }
 
 export interface InventoryLog {

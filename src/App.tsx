@@ -16,6 +16,7 @@ import Login from './pages/Login';
 import Receipt from './pages/Receipt';
 import CustomerProfile from './pages/CustomerProfile';
 import { InventoryReceipt } from './pages/InventoryReceipt';
+import BakeryReceipt from './pages/BakeryReceipt';
 
 import { SplashScreen } from './components/SplashScreen';
 
@@ -83,6 +84,7 @@ const AppContent: React.FC = () => {
             <Route path="customers/:id" element={<CustomerProfile />} />
             <Route path="inventory" element={<Inventory />} />
             <Route path="inventory/receipt/:id" element={<InventoryReceipt />} />
+            <Route path="bakery-receipt/:id" element={<BakeryReceipt />} />
             <Route path="settings" element={<Settings />} />
             <Route path="receipt/:id" element={<Receipt />} /> {/* Updated path for receipt */}
             <Route path="reports" element={<Reports />} />
