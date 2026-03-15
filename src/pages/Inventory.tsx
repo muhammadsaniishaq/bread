@@ -78,7 +78,7 @@ export const Inventory: React.FC = () => {
     const batchId = Date.now().toString();
     const itemsWithBatch = pendingItems.map(item => ({ ...item, batchId }));
     
-    await processInventoryBatch(itemsWithBatch, activeTab as 'Receive' | 'Return');
+    await processInventoryBatch(itemsWithBatch, activeTab === 'receive' ? 'Receive' : 'Return');
     
     setPendingItems([]);
     setIsProcessing(false);
