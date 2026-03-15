@@ -17,8 +17,11 @@ import Receipt from './pages/Receipt';
 import CustomerProfile from './pages/CustomerProfile';
 import { InventoryReceipt } from './pages/InventoryReceipt';
 
+import { SplashScreen } from './components/SplashScreen';
+
 const AppContent: React.FC = () => {
   const { isAuthenticated, loading, logout } = useAppContext();
+  const [showSplash, setShowSplash] = React.useState(true);
   
   const theme = localStorage.getItem('theme') as 'light' | 'dark' || 'light';
 
@@ -54,7 +57,11 @@ const AppContent: React.FC = () => {
   }, [isAuthenticated, logout]);
 
   if (loading) {
-    return <div style={{display:'flex', justifyContent:'center', alignItems:'center', height:'100vh'}}>Loading App...</div>;
+    return <div style={{display:'flex', justifyContent:'center', alignItems:'center', height:'100vh', backgroundColor:'var(--background-color)', color:'var(--primary-color)'}}>Loading App Data...</div>;
+  }
+
+  if (showSplash) {
+    return <SplashScreen onFinish={() => setShowSplash(false)} />;
   }
 
   // The isAuthenticated check is now handled by ProtectedRoute for most routes
