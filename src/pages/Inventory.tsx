@@ -5,7 +5,7 @@ import { AnimatedPage } from '../components/AnimatedPage';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from '../store/LanguageContext';
 
-import { Trash2, FileText, TrendingDown, TrendingUp } from 'lucide-react';
+import { Trash2, FileText, TrendingDown, TrendingUp, Package, ArrowDownCircle, ArrowUpCircle, Wallet } from 'lucide-react';
 
 export const Inventory: React.FC = () => {
   const { products, companyMetrics, processInventoryBatch, inventoryLogs, recordBakeryPayment, bakeryPayments } = useAppContext();
@@ -153,34 +153,34 @@ export const Inventory: React.FC = () => {
         </div>
       </div>
 
-      <div className="flex gap-2 mb-4 overflow-x-auto pb-2 no-print">
+      <div className="flex gap-2 mb-4 overflow-x-auto pb-2 no-print hide-scrollbar">
         <button 
-          className={`btn flex-none text-xs ${activeTab === 'view' ? 'btn-primary' : 'btn-outline'}`}
-          style={{ width: 'auto', minHeight: '2rem', padding: '0.25rem 0.75rem', borderRadius: 'var(--radius-full)' }}
+          className={`btn flex-none text-xs flex items-center justify-center gap-1.5 ${activeTab === 'view' ? 'btn-primary' : 'bg-[var(--surface-color)] text-secondary border border-transparent'}`}
+          style={{ width: 'auto', minHeight: '2rem', padding: '0.35rem 0.85rem', borderRadius: 'var(--radius-full)' }}
           onClick={() => handleTabChange('view')}
         >
-          Overview
+          <Package size={14} /> <span>Overview</span>
         </button>
         <button 
-          className={`btn flex-none text-xs ${activeTab === 'receive' ? 'btn-success' : 'btn-outline'}`}
-          style={{ width: 'auto', minHeight: '2rem', padding: '0.25rem 0.75rem', borderRadius: 'var(--radius-full)' }}
+          className={`btn flex-none text-xs flex items-center justify-center gap-1.5 ${activeTab === 'receive' ? 'btn-success' : 'bg-[var(--surface-color)] text-secondary border border-transparent'}`}
+          style={{ width: 'auto', minHeight: '2rem', padding: '0.35rem 0.85rem', borderRadius: 'var(--radius-full)' }}
           onClick={() => handleTabChange(activeTab === 'receive' ? 'view' : 'receive')}
         >
-          + {t('inv.receive')}
+          <ArrowDownCircle size={14} /> <span>Receive</span>
         </button>
         <button 
-          className={`btn flex-none text-xs ${activeTab === 'return' ? 'btn-danger' : 'btn-outline'}`}
-          style={{ width: 'auto', minHeight: '2rem', padding: '0.25rem 0.75rem', borderRadius: 'var(--radius-full)' }}
+          className={`btn flex-none text-xs flex items-center justify-center gap-1.5 ${activeTab === 'return' ? 'btn-danger' : 'bg-[var(--surface-color)] text-secondary border border-transparent'}`}
+          style={{ width: 'auto', minHeight: '2rem', padding: '0.35rem 0.85rem', borderRadius: 'var(--radius-full)' }}
           onClick={() => handleTabChange(activeTab === 'return' ? 'view' : 'return')}
         >
-          - {t('inv.return')}
+          <ArrowUpCircle size={14} /> <span>Return</span>
         </button>
         <button 
-          className={`btn flex-none text-xs ${activeTab === 'balance' ? 'btn-primary' : 'btn-outline'}`}
-          style={{ width: 'auto', minHeight: '2rem', padding: '0.25rem 0.75rem', borderRadius: 'var(--radius-full)' }}
+          className={`btn flex-none text-xs flex items-center justify-center gap-1.5 ${activeTab === 'balance' ? 'btn-primary' : 'bg-[var(--surface-color)] text-secondary border border-transparent'}`}
+          style={{ width: 'auto', minHeight: '2rem', padding: '0.35rem 0.85rem', borderRadius: 'var(--radius-full)' }}
           onClick={() => handleTabChange(activeTab === 'balance' ? 'view' : 'balance')}
         >
-          Company Balance
+          <Wallet size={14} /> <span>Balance</span>
         </button>
       </div>
 
