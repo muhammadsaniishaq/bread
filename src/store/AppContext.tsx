@@ -179,7 +179,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (productIndex !== -1) {
           updatedProducts[productIndex] = {
             ...updatedProducts[productIndex],
-            stock: Math.max(0, updatedProducts[productIndex].stock - item.quantity)
+            stock: Math.max(0, Number(updatedProducts[productIndex].stock || 0) - Number(item.quantity))
           };
           await dbProducts.setItem(updatedProducts[productIndex].id, updatedProducts[productIndex]);
         }
