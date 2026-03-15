@@ -61,7 +61,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [inventoryLogs, setInventoryLogs] = useState<InventoryLog[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [companyMetrics, setCompanyMetrics] = useState<CompanyMetrics>({ totalValueReceived: 0, totalMoneyPaid: 0 });
-  const [appSettings, setAppSettings] = useState<AppSettings>({ companyName: 'THE BEST SPECIAL BREAD', adminPin: '1234', cashierPin: '0000', receiptFooter: 'Thank you for your patronage!' });
+  const [appSettings, setAppSettings] = useState<AppSettings>({ 
+    companyName: 'THE BEST SPECIAL BREAD', 
+    adminPin: '0018', 
+    cashierPin: '0000', 
+    receiptFooter: 'Thank you for your patronage!',
+    adminEmail: 'muhammadsaniiyaku3@gmail.com',
+    adminPassword: '12,Abumafhal'
+  });
   const [loading, setLoading] = useState(true);
   
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -103,7 +110,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, []);
 
   const login = (pin: string) => {
-    const adminPin = appSettings.adminPin || '1234';
+    const adminPin = appSettings.adminPin || '0018';
 
     if (pin === adminPin) {
       setIsAuthenticated(true);

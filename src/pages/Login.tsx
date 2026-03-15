@@ -40,8 +40,8 @@ export const Login: React.FC = () => {
 
   const handleCredentialSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const targetEmail = appSettings?.adminEmail || 'admin@breadapp.com';
-    const targetPassword = appSettings?.adminPassword || 'password123';
+    const targetEmail = appSettings?.adminEmail || 'muhammadsaniiyaku3@gmail.com';
+    const targetPassword = appSettings?.adminPassword || '12,Abumafhal';
     
     if (email.toLowerCase().trim() === targetEmail.toLowerCase() && password === targetPassword) {
       setCredError('');
