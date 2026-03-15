@@ -1,0 +1,98 @@
+import React, { useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'; // Changed BrowserRouter to Router
+import { AppProvider, useAppContext } from './store/AppContext';
+import { LanguageProvider } from './store/LanguageContext';
+import ProtectedRoute from './components/ProtectedRoute';
+import Layout from './components/Layout';
+
+import Dashboard from './pages/Dashboard';
+import Settings from './pages/Settings';
+import Sales from './pages/Sales';
+import Customers from './pages/Customers';
+import Inventory from './pages/Inventory';
+import Reports from './pages/Reports';
+import Expenses from './pages/Expenses';
+import Login from './pages/Login';
+import Receipt from './pages/Receipt';
+import CustomerProfile from './pages/CustomerProfile';
+import { InventoryReceipt } from './pages/InventoryReceipt';
+
+const AppContent: React.FC = () => {
+  const { isAuthenticated, loading, logout } = useAppContext();
+  
+  const theme = localStorage.getItem('theme') as 'light' | 'dark' || 'light';
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('theme', theme);
+  }, [theme]);
+
+  // Auto-Lock Inactivity Timer (5 Minutes)
+  useEffect(() => {
+    let timeoutId: ReturnType<typeof setTimeout>;
+
+    const resetTimer = () => {
+      clearTimeout(timeoutId);
+      if (isAuthenticated) {
+        timeoutId = setTimeout(() => {
+          logout();
+        }, 5 * 60 * 1000); // 5 minutes
+      }
+    };
+
+    const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'];
+    
+    if (isAuthenticated) {
+      events.forEach(event => document.addEventListener(event, resetTimer));
+      resetTimer(); // Start immediately
+    }
+
+    return () => {
+      clearTimeout(timeoutId);
+      events.forEach(event => document.removeEventListener(event, resetTimer));
+    };
+  }, [isAuthenticated, logout]);
+
+  if (loading) {
+    return <div style={{display:'flex', justifyContent:'center', alignItems:'center', height:'100vh'}}>Loading App...</div>;
+  }
+
+  // The isAuthenticated check is now handled by ProtectedRoute for most routes
+  // Login page is explicitly rendered if not authenticated
+  return (
+    <LanguageProvider>
+      <Router>
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          
+          <Route path="/" element={
+            <ProtectedRoute>
+              <Layout />
+            </ProtectedRoute>
+          }>
+            <Route index element={<Dashboard />} />
+            <Route path="sales" element={<Sales />} />
+            <Route path="customers" element={<Customers />} />
+            <Route path="customers/:id" element={<CustomerProfile />} />
+            <Route path="inventory" element={<Inventory />} />
+            <Route path="inventory/receipt/:id" element={<InventoryReceipt />} />
+            <Route path="settings" element={<Settings />} />
+            <Route path="receipt/:id" element={<Receipt />} /> {/* Updated path for receipt */}
+            <Route path="reports" element={<Reports />} />
+            <Route path="expenses" element={<Expenses />} />
+          </Route>
+        </Routes>
+      </Router>
+    </LanguageProvider>
+  );
+};
+
+function App() {
+  return (
+    <AppProvider>
+      <AppContent />
+    </AppProvider>
+  );
+}
+
+export default App;

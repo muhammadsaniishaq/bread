@@ -1,0 +1,94 @@
+export interface Product {
+  id: string;
+  name: string;
+  price: number;
+  active: boolean;
+  stock: number;
+  category?: string;
+  image?: string;
+}
+
+export interface Customer {
+  id: string;
+  name: string;
+  phone: string;
+  location: string;
+  notes: string;
+  debtBalance: number;
+  loyaltyPoints?: number;
+}
+
+export interface TransactionItem {
+  productId: string;
+  quantity: number;
+  unitPrice: number;
+}
+
+export interface Transaction {
+  id: string;
+  date: string;
+  type: 'Cash' | 'Debt';
+  items?: TransactionItem[]; // V3 Shopping Cart
+  productId?: string;        // Legacy
+  quantity?: number;         // Legacy
+  totalPrice: number;
+  discount?: number;
+  customerId?: string; // For debt
+  pointsEarned?: number;
+  pointsUsed?: number;
+}
+
+// Utility to normalize legacy vs new transactions
+export const getTransactionItems = (tx: Transaction): TransactionItem[] => {
+  if (tx.items && tx.items.length > 0) return tx.items;
+  if (tx.productId && tx.quantity) {
+    // Reconstruct unit price (gross estimate including potential discounts applied to the whole thing)
+    // Actually, price could just be derived from mapping, but storing here as fallback
+    return [{
+      productId: tx.productId,
+      quantity: tx.quantity,
+      unitPrice: (tx.totalPrice + (tx.discount || 0)) / tx.quantity
+    }];
+  }
+  return [];
+};
+
+export interface DebtPayment {
+  id: string;
+  date: string;
+  customerId: string;
+  amount: number;
+}
+
+export interface InventoryLog {
+  id: string;
+  batchId?: string; // Groups multiple items into a single receipt
+  date: string;
+  type?: 'Receive' | 'Return'; // Added for tracking returns vs receiving
+  productId: string;
+  quantityReceived: number; // For returns, this represents the quantity returned
+  costPrice: number;
+}
+
+export interface CompanyMetrics {
+  totalValueReceived: number;
+  totalMoneyPaid: number;
+}
+
+export interface Expense {
+  id: string;
+  date: string;
+  description: string;
+  amount: number;
+}
+
+export interface AppSettings {
+  companyName: string;
+  logo?: string;
+  receiptFooter?: string;
+  adminPin?: string;
+  cashierPin?: string;
+  adminEmail?: string;
+  adminPassword?: string;
+}
+
