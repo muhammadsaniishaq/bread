@@ -155,29 +155,25 @@ export const Inventory: React.FC = () => {
 
       <div className="flex gap-2 mb-4 overflow-x-auto pb-2 no-print hide-scrollbar">
         <button 
-          className={`btn flex-none text-xs flex items-center justify-center gap-1.5 ${activeTab === 'view' ? 'btn-primary' : 'bg-[var(--surface-color)] text-secondary border border-transparent'}`}
-          style={{ width: 'auto', minHeight: '2rem', padding: '0.35rem 0.85rem', borderRadius: 'var(--radius-full)' }}
+          className={`flex-shrink-0 px-3 py-1.5 rounded-full text-[11px] sm:text-xs font-bold transition-all flex items-center gap-1.5 ${activeTab === 'view' ? 'bg-primary text-white shadow-sm' : 'bg-[var(--surface-color)] text-secondary border border-transparent hover:border-primary/30 shadow-sm'}`}
           onClick={() => handleTabChange('view')}
         >
           <Package size={14} /> <span>Overview</span>
         </button>
         <button 
-          className={`btn flex-none text-xs flex items-center justify-center gap-1.5 ${activeTab === 'receive' ? 'btn-success' : 'bg-[var(--surface-color)] text-secondary border border-transparent'}`}
-          style={{ width: 'auto', minHeight: '2rem', padding: '0.35rem 0.85rem', borderRadius: 'var(--radius-full)' }}
+          className={`flex-shrink-0 px-3 py-1.5 rounded-full text-[11px] sm:text-xs font-bold transition-all flex items-center gap-1.5 ${activeTab === 'receive' ? 'bg-success text-white shadow-sm' : 'bg-[var(--surface-color)] text-secondary border border-transparent hover:border-success/30 shadow-sm'}`}
           onClick={() => handleTabChange(activeTab === 'receive' ? 'view' : 'receive')}
         >
           <ArrowDownCircle size={14} /> <span>Receive</span>
         </button>
         <button 
-          className={`btn flex-none text-xs flex items-center justify-center gap-1.5 ${activeTab === 'return' ? 'btn-danger' : 'bg-[var(--surface-color)] text-secondary border border-transparent'}`}
-          style={{ width: 'auto', minHeight: '2rem', padding: '0.35rem 0.85rem', borderRadius: 'var(--radius-full)' }}
+          className={`flex-shrink-0 px-3 py-1.5 rounded-full text-[11px] sm:text-xs font-bold transition-all flex items-center gap-1.5 ${activeTab === 'return' ? 'bg-danger text-white shadow-sm' : 'bg-[var(--surface-color)] text-secondary border border-transparent hover:border-danger/30 shadow-sm'}`}
           onClick={() => handleTabChange(activeTab === 'return' ? 'view' : 'return')}
         >
           <ArrowUpCircle size={14} /> <span>Return</span>
         </button>
         <button 
-          className={`btn flex-none text-xs flex items-center justify-center gap-1.5 ${activeTab === 'balance' ? 'btn-primary' : 'bg-[var(--surface-color)] text-secondary border border-transparent'}`}
-          style={{ width: 'auto', minHeight: '2rem', padding: '0.35rem 0.85rem', borderRadius: 'var(--radius-full)' }}
+          className={`flex-shrink-0 px-3 py-1.5 rounded-full text-[11px] sm:text-xs font-bold transition-all flex items-center gap-1.5 ${activeTab === 'balance' ? 'bg-primary text-white shadow-sm' : 'bg-[var(--surface-color)] text-secondary border border-transparent hover:border-primary/30 shadow-sm'}`}
           onClick={() => handleTabChange(activeTab === 'balance' ? 'view' : 'balance')}
         >
           <Wallet size={14} /> <span>Balance</span>
