@@ -229,7 +229,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // Add to stock
     const product = products.find(p => p.id === finalLog.productId);
     if (product) {
-       const updatedProduct = { ...product, stock: product.stock + finalLog.quantityReceived };
+       const updatedProduct = { ...product, stock: Number(product.stock || 0) + Number(finalLog.quantityReceived) };
        await dbProducts.setItem(product.id, updatedProduct);
     }
     
@@ -254,7 +254,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (product) {
        const updatedProduct = { 
          ...product, 
-         stock: Math.max(0, product.stock - finalLog.quantityReceived) 
+         stock: Math.max(0, Number(product.stock || 0) - Number(finalLog.quantityReceived)) 
        };
        await dbProducts.setItem(product.id, updatedProduct);
     }
@@ -285,12 +285,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (action === 'Receive') {
           updatedProducts[productIndex] = {
             ...updatedProducts[productIndex],
-            stock: updatedProducts[productIndex].stock + finalLog.quantityReceived
+            stock: Number(updatedProducts[productIndex].stock || 0) + Number(finalLog.quantityReceived)
           };
         } else {
           updatedProducts[productIndex] = {
             ...updatedProducts[productIndex],
-            stock: Math.max(0, updatedProducts[productIndex].stock - finalLog.quantityReceived)
+            stock: Math.max(0, Number(updatedProducts[productIndex].stock || 0) - Number(finalLog.quantityReceived))
           };
         }
         await dbProducts.setItem(updatedProducts[productIndex].id, updatedProducts[productIndex]);
