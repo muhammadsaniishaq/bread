@@ -6,8 +6,10 @@ import { useAppContext } from '../store/AppContext';
 import './BottomNav.css';
 
 const BottomNav: React.FC = () => {
-  const { appSettings } = useAppContext();
+  const { appSettings, products } = useAppContext();
   const isAdmin = appSettings?.role === 'Admin' || !appSettings?.role; // Default to Admin for legacy
+
+  const hasLowStock = products.some(p => p.active && p.stock > 0 && p.stock < 20);
 
   return (
     <nav className="bottom-nav">
@@ -28,7 +30,10 @@ const BottomNav: React.FC = () => {
             <span>Clients</span>
           </NavLink>
           <NavLink to="/inventory" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
-            <Package size={22} strokeWidth={2.5} />
+            <div className="relative">
+              <Package size={22} strokeWidth={2.5} />
+              {hasLowStock && <div className="low-stock-badge"></div>}
+            </div>
             <span>Stock</span>
           </NavLink>
           <NavLink to="/expenses" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
