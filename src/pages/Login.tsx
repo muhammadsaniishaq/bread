@@ -77,12 +77,12 @@ export const Login: React.FC = () => {
           initial={{ scale: 0 }}
           animate={{ scale: 1 }}
           transition={{ type: 'spring', bounce: 0.5, delay: 0.1 }}
-          className="login-icon-wrapper flex items-center justify-center mb-6 text-primary overflow-hidden"
+          className="login-icon-wrapper flex items-center justify-center mb-4 text-primary overflow-hidden"
         >
           {appSettings?.logo ? (
             <img src={appSettings.logo} alt="Company Logo" className="w-full h-full object-cover" />
           ) : (
-            <Lock size={28} />
+            <Lock size={20} />
           )}
         </motion.div>
         
