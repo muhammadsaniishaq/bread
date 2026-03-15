@@ -187,9 +187,9 @@ export const Sales: React.FC = () => {
             style={{ marginBottom: 0 }}
           >
             {p.image ? (
-               <img src={p.image} className="w-8 h-8 rounded-full object-cover mb-4 shadow-md transition-transform duration-300 hover:scale-110" alt={p.name} />
+               <img src={p.image} style={{ width: '40px', height: '40px', objectFit: 'cover' }} className="rounded-full mb-3 shadow-sm transition-transform duration-300 hover:scale-110" alt={p.name} />
             ) : (
-               <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary/10 to-primary/30 flex items-center justify-center text-primary font-bold mb-4 shadow-md text-[14px] transition-transform duration-300 hover:scale-110">
+               <div style={{ width: '40px', height: '40px' }} className="rounded-full bg-gradient-to-br from-primary/10 to-primary/30 flex items-center justify-center text-primary font-bold mb-3 shadow-sm text-[14px] transition-transform duration-300 hover:scale-110">
                  {p.name.charAt(1) === '₦' ? p.name.charAt(p.name.indexOf(' ')+1) : p.name.charAt(1)}
                </div>
             )}

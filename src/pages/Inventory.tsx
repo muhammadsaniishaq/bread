@@ -250,9 +250,9 @@ export const Inventory: React.FC = () => {
           <div key={p.id} className="card flex justify-between items-center" style={{ marginBottom: 0 }}>
             <div className="flex items-center gap-3">
               {p.image ? (
-                <img src={p.image} className="w-8 h-8 rounded-full object-cover" alt="" />
+                <img src={p.image} style={{ width: '30px', height: '30px', objectFit: 'cover' }} className="rounded-full" alt="" />
               ) : (
-                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">
+                <div style={{ width: '30px', height: '30px' }} className="rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs">
                   {p.name.charAt(1) === '₦' ? p.name.charAt(p.name.indexOf(' ') + 1) : p.name.charAt(1)}
                 </div>
               )}

@@ -364,7 +364,7 @@ export const Settings: React.FC = () => {
             <div className="form-group mb-4">
               <label className="form-label">Product Image (Optional)</label>
               <div className="flex items-center gap-3">
-                {newImage && <img src={newImage} alt="Preview" className="w-10 h-10 object-cover rounded border" />}
+                {newImage && <img src={newImage} alt="Preview" style={{ width: '30px', height: '30px', objectFit: 'cover' }} className="rounded border" />}
                 <button 
                   type="button" 
                   className="btn btn-outline text-sm py-1 px-3"
@@ -398,9 +398,9 @@ export const Settings: React.FC = () => {
               <div className="flex gap-3 items-center">
                 <div className="text-secondary font-bold text-lg opacity-50 w-6 text-center">{index + 1}.</div>
                 {product.image ? (
-                  <img src={product.image} alt={product.name} className="w-8 h-8 object-cover rounded bg-gray-100" />
+                  <img src={product.image} alt={product.name} style={{ width: '30px', height: '30px', objectFit: 'cover' }} className="rounded bg-gray-100" />
                 ) : (
-                  <div className="w-8 h-8 rounded bg-primary/10 flex items-center justify-center text-primary font-bold">
+                  <div style={{ width: '30px', height: '30px' }} className="rounded bg-primary/10 flex items-center justify-center text-primary font-bold text-xs">
                     {product.name.charAt(1)}
                   </div>
                 )}

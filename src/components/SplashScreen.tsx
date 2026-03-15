@@ -40,10 +40,11 @@ export const SplashScreen: React.FC<{ onFinish: () => void }> = ({ onFinish }) =
               <img 
                 src={appSettings.logo} 
                 alt={appSettings.companyName || "Company Logo"} 
-                className="w-20 h-20 object-contain mb-8 shadow-2xl rounded-3xl"
+                style={{ maxHeight: '60px', maxWidth: '60px', objectFit: 'contain' }}
+                className="mb-8 shadow-2xl rounded-2xl"
               />
             ) : (
-              <div className="w-20 h-20 bg-gradient-to-br from-primary to-indigo-600 rounded-3xl flex items-center justify-center text-white text-5xl font-extrabold mb-8 shadow-2xl">
+              <div style={{ width: '60px', height: '60px' }} className="bg-gradient-to-br from-primary to-indigo-600 rounded-2xl flex items-center justify-center text-white text-3xl font-extrabold mb-8 shadow-2xl">
                 {appSettings.companyName ? appSettings.companyName.charAt(0) : 'B'}
               </div>
             )}
