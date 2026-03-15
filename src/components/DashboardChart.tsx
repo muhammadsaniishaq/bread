@@ -6,7 +6,7 @@ export const DashboardChart: React.FC = () => {
   const { transactions, expenses } = useAppContext();
 
   const data = useMemo(() => {
-    const days: { date: string, label: string, sales: number, profit: number }[] = [];
+    const days: { date: string, label: string, sales: number, expenses: number, profit: number }[] = [];
     const now = new Date();
     
     // Generate last 7 days starting from oldest to today
@@ -14,7 +14,7 @@ export const DashboardChart: React.FC = () => {
       const d = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
       const isoStr = d.toISOString().split('T')[0];
       const label = d.toLocaleDateString('en-US', { weekday: 'short' });
-      days.push({ date: isoStr, label, sales: 0, profit: 0 });
+      days.push({ date: isoStr, label, sales: 0, expenses: 0, profit: 0 });
     }
 
     // Aggregate data
@@ -28,6 +28,7 @@ export const DashboardChart: React.FC = () => {
         .reduce((sum, e) => sum + e.amount, 0);
         
       day.sales = daySales;
+      day.expenses = dayExpenses;
       day.profit = (daySales * 0.1) - dayExpenses;
     });
 
@@ -49,37 +50,52 @@ export const DashboardChart: React.FC = () => {
           <AreaChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
             <defs>
               <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="var(--primary-color)" stopOpacity={0.4}/>
+                <stop offset="5%" stopColor="var(--primary-color)" stopOpacity={0.6}/>
                 <stop offset="95%" stopColor="var(--primary-color)" stopOpacity={0}/>
+              </linearGradient>
+              <linearGradient id="colorExpenses" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="var(--danger-color)" stopOpacity={0.5}/>
+                <stop offset="95%" stopColor="var(--danger-color)" stopOpacity={0}/>
               </linearGradient>
             </defs>
             <XAxis 
               dataKey="label" 
               axisLine={false} 
               tickLine={false} 
-              tick={{fontSize: 12, fill: 'var(--text-secondary)'}} 
+              tick={{fontSize: 12, fill: 'var(--text-secondary)', fontWeight: 600}} 
               dy={10} 
             />
             <Tooltip 
               contentStyle={{ 
-                background: 'rgba(var(--surface-rgb), 0.9)', 
-                border: '1px solid rgba(255,255,255,0.1)', 
-                borderRadius: '12px', 
-                backdropFilter: 'blur(10px)',
-                boxShadow: '0 10px 25px rgba(0,0,0,0.2)'
+                background: 'rgba(var(--surface-rgb), 0.95)', 
+                border: '1px solid rgba(255,255,255,0.2)', 
+                borderRadius: '16px', 
+                backdropFilter: 'blur(20px)',
+                boxShadow: '0 15px 35px rgba(0,0,0,0.15)',
+                padding: '12px 16px'
               }}
-              itemStyle={{ color: 'var(--primary-color)', fontWeight: 'bold' }}
-              labelStyle={{ color: 'var(--text-secondary)', marginBottom: '4px' }}
+              itemStyle={{ fontWeight: 'bold' }}
+              labelStyle={{ color: 'var(--text-secondary)', marginBottom: '8px', fontSize: '13px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}
             />
             <Area 
               type="monotone" 
               dataKey="sales" 
-              name="Sales (₦)" 
+              name="Income (₦)" 
               stroke="var(--primary-color)" 
               strokeWidth={4} 
               fillOpacity={1} 
               fill="url(#colorSales)"
-              activeDot={{ r: 6, strokeWidth: 0, fill: 'var(--primary-color)', style: { filter: 'drop-shadow(0px 4px 6px rgba(0,0,0,0.2))' } }}
+              activeDot={{ r: 6, strokeWidth: 2, stroke: '#fff', fill: 'var(--primary-color)', style: { filter: 'drop-shadow(0px 4px 8px rgba(var(--primary-rgb),0.5))' } }}
+            />
+            <Area 
+              type="monotone" 
+              dataKey="expenses" 
+              name="Expenses (₦)" 
+              stroke="var(--danger-color)" 
+              strokeWidth={3} 
+              fillOpacity={1} 
+              fill="url(#colorExpenses)"
+              activeDot={{ r: 5, strokeWidth: 2, stroke: '#fff', fill: 'var(--danger-color)', style: { filter: 'drop-shadow(0px 4px 8px rgba(var(--danger-rgb),0.5))' } }}
             />
           </AreaChart>
         </ResponsiveContainer>
