@@ -393,9 +393,10 @@ export const Settings: React.FC = () => {
             if (a.active !== b.active) return a.active ? -1 : 1;
             if (a.category !== b.category) return (a.category || '').localeCompare(b.category || '');
             return a.price - b.price;
-          }).map(product => (
+          }).map((product, index) => (
             <div key={product.id} className="flex justify-between items-center p-3 border rounded" style={{ borderColor: 'var(--border-color)' }}>
               <div className="flex gap-3 items-center">
+                <div className="text-secondary font-bold text-lg opacity-50 w-6 text-center">{index + 1}.</div>
                 {product.image ? (
                   <img src={product.image} alt={product.name} className="w-12 h-12 object-cover rounded bg-gray-100" />
                 ) : (
