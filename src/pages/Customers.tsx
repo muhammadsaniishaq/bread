@@ -4,7 +4,7 @@ import type { Customer } from '../store/types';
 import { AnimatedPage } from '../components/AnimatedPage';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from '../store/LanguageContext';
-import { Award, Star, Crown, Medal } from 'lucide-react';
+import { Award, Star, Crown, Medal, MessageCircle } from 'lucide-react';
 
 export const getBadge = (points?: number) => {
   const p = points || 0;
@@ -70,6 +70,26 @@ export const Customers: React.FC = () => {
     setPaymentCustomerId(null);
     setPaymentAmount('');
     alert('Payment recorded successfully!');
+  };
+
+  const handleWhatsAppReminder = (customer: Customer, e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent card click
+    if (!customer.phone) {
+      alert('Babu lambar wayar wannan mutumin (No phone number saved).');
+      return;
+    }
+    
+    // Format number to international if needed (assuming Nigerian +234 for now if it starts with 0)
+    let phoneStr = customer.phone.replace(/\D/g, '');
+    if (phoneStr.startsWith('0')) {
+      phoneStr = '234' + phoneStr.substring(1);
+    }
+    
+    const message = `Assalamu Alaikum ${customer.name},\n\nMuna tunatar da kai bashin ₦${customer.debtBalance.toLocaleString()} na Burodi. Mungode sosai da kasuwanci da mu.`;
+    const url = `whatsapp://send?phone=${phoneStr}&text=${encodeURIComponent(message)}`;
+    
+    // Fallback if needed, but whatsapp:// usually works best on mobile devices
+    window.open(url, '_blank');
   };
 
   return (
@@ -171,12 +191,24 @@ export const Customers: React.FC = () => {
                       <button type="button" className="btn btn-outline" style={{ minHeight: 'auto', padding: '0.5rem 1rem' }} onClick={() => setPaymentCustomerId(null)}>{t('sales.cancel')}</button>
                     </form>
                   ) : (
-                    <button 
-                      className="btn btn-outline w-full text-sm py-2"
-                      onClick={() => setPaymentCustomerId(customer.id)}
-                    >
-                      Record Payment
-                    </button>
+                    <div className="flex gap-2">
+                      <button 
+                        className="btn btn-outline flex-1 text-sm py-2"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setPaymentCustomerId(customer.id);
+                        }}
+                      >
+                        Record Payment
+                      </button>
+                      <button 
+                        className="btn flex-1 text-sm py-2"
+                        style={{ backgroundColor: '#25D366', color: '#fff', border: 'none' }}
+                        onClick={(e) => handleWhatsAppReminder(customer, e)}
+                      >
+                        <MessageCircle size={16} className="mr-1 inline" /> Reminder
+                      </button>
+                    </div>
                   )}
                 </div>
               )}
