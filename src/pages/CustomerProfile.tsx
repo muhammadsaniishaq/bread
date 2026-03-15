@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAppContext } from '../store/AppContext';
 import { getTransactionItems } from '../store/types';
@@ -8,10 +8,40 @@ import { ArrowLeft, Phone, MapPin, Activity, MessageCircle, MessageSquare } from
 export const CustomerProfile: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { customers, transactions, debtPayments, products } = useAppContext();
+  const { customers, transactions, debtPayments, products, recordDebtPayment } = useAppContext();
+
+  const [amount, setAmount] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState<'Cash' | 'Transfer'>('Cash');
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [showPaymentForm, setShowPaymentForm] = useState(false);
 
   const customer = customers.find(c => c.id === id);
   
+  const handleRecordPayment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!customer) return;
+    
+    const amountNum = parseInt(amount);
+    if (!amountNum || amountNum <= 0) return;
+    
+    setIsProcessing(true);
+    const paymentId = Date.now().toString();
+    
+    await recordDebtPayment({
+      id: paymentId,
+      date: new Date().toISOString(),
+      customerId: customer.id,
+      amount: amountNum,
+      method: paymentMethod
+    });
+    
+    setAmount('');
+    setPaymentMethod('Cash');
+    setShowPaymentForm(false);
+    setIsProcessing(false);
+    navigate(`/customer-receipt/${paymentId}`); // Generate and view receipt
+  };
+
   const metrics = useMemo(() => {
     if (!customer) return null;
     
@@ -73,6 +103,11 @@ export const CustomerProfile: React.FC = () => {
             <div className="text-xl font-bold mt-1" style={{ color: customer.debtBalance > 0 ? 'var(--danger-color)' : 'var(--success-color)' }}>
               ₦{customer.debtBalance.toLocaleString()}
             </div>
+            {customer.debtBalance > 0 && (
+              <button className="btn btn-sm btn-primary mt-3 w-full" onClick={() => setShowPaymentForm(true)}>
+                Record Payment
+              </button>
+            )}
           </div>
           <div className="card" style={{ gridColumn: 'span 2', marginBottom: 0, background: 'linear-gradient(135deg, rgba(79, 70, 229, 0.1), rgba(79, 70, 229, 0.02))', borderColor: 'rgba(79, 70, 229, 0.2)' }}>
             <div className="text-sm text-indigo-800 dark:text-indigo-300 font-semibold mb-1">Loyalty Points Balance</div>
@@ -108,6 +143,48 @@ export const CustomerProfile: React.FC = () => {
               </a>
             </div>
           </div>
+        )}
+
+        {showPaymentForm && (
+          <form onSubmit={handleRecordPayment} className="card border-primary mb-6">
+            <h3 className="font-bold mb-3">Record Debt Payment</h3>
+            <div className="flex flex-col gap-3">
+              <div className="flex gap-2">
+                <div className="form-group flex-1">
+                  <label className="text-xs text-secondary mb-1 block">Method</label>
+                  <select
+                    className="form-select w-full"
+                    style={{ padding: '0.5rem' }}
+                    value={paymentMethod}
+                    onChange={e => setPaymentMethod(e.target.value as 'Cash' | 'Transfer')}
+                  >
+                    <option value="Cash">Cash</option>
+                    <option value="Transfer">Transfer</option>
+                  </select>
+                </div>
+                <div className="form-group flex-[2]">
+                  <label className="text-xs text-secondary mb-1 block">Amount (₦)</label>
+                  <input 
+                    type="number" 
+                    className="form-input w-full" 
+                    placeholder="Enter amount" 
+                    value={amount}
+                    onChange={e => setAmount(e.target.value)}
+                    required
+                    style={{ padding: '0.5rem' }}
+                  />
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <button type="submit" className="btn btn-primary flex-1" disabled={isProcessing}>
+                  {isProcessing ? 'Saving...' : 'Save & Print Receipt'}
+                </button>
+                <button type="button" className="btn btn-outline flex-1" onClick={() => setShowPaymentForm(false)}>
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </form>
         )}
 
         <h3 className="text-lg font-bold mb-3 flex items-center gap-2">

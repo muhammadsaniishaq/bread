@@ -58,6 +58,7 @@ export interface DebtPayment {
   date: string;
   customerId: string;
   amount: number;
+  method?: 'Cash' | 'Transfer';
 }
 
 export interface BakeryPayment {

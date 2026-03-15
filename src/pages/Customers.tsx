@@ -30,6 +30,7 @@ export const Customers: React.FC = () => {
   
   const [paymentCustomerId, setPaymentCustomerId] = useState<string | null>(null);
   const [paymentAmount, setPaymentAmount] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState<'Cash' | 'Transfer'>('Cash');
 
   const filteredCustomers = useMemo(() => {
     return customers.filter(c => c.name.toLowerCase().includes(search.toLowerCase()) || 
@@ -58,18 +59,24 @@ export const Customers: React.FC = () => {
 
   const handleRecordPayment = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!paymentCustomerId || !paymentAmount) return;
+    if (!paymentCustomerId) return;
     
+    const amountStr = parseInt(paymentAmount);
+    if (!amountStr || amountStr <= 0) return;
+    
+    const paymentId = Date.now().toString();
     await recordDebtPayment({
-      id: Date.now().toString(),
+      id: paymentId,
       date: new Date().toISOString(),
       customerId: paymentCustomerId,
-      amount: parseInt(paymentAmount)
+      amount: amountStr,
+      method: paymentMethod
     });
     
-    setPaymentCustomerId(null);
     setPaymentAmount('');
-    alert('Payment recorded successfully!');
+    setPaymentMethod('Cash');
+    setPaymentCustomerId(null);
+    navigate(`/customer-receipt/${paymentId}`); // Generate and view receipt
   };
 
   const handleWhatsAppReminder = (customer: Customer, e: React.MouseEvent) => {
@@ -177,18 +184,31 @@ export const Customers: React.FC = () => {
               {customer.debtBalance > 0 && (
                 <div className="mt-4 pt-4 border-t debt-form" style={{ borderColor: 'var(--border-color)' }}>
                   {paymentCustomerId === customer.id ? (
-                    <form onSubmit={handleRecordPayment} className="flex gap-2">
-                      <input 
-                        type="number" 
-                        className="form-input" 
-                        placeholder="Amount (₦)" 
-                        value={paymentAmount}
-                        onChange={e => setPaymentAmount(e.target.value)}
-                        required
-                        style={{ padding: '0.5rem' }}
-                      />
-                      <button type="submit" className="btn btn-primary" style={{ minHeight: 'auto', padding: '0.5rem 1rem' }}>{t('cust.save')}</button>
-                      <button type="button" className="btn btn-outline" style={{ minHeight: 'auto', padding: '0.5rem 1rem' }} onClick={() => setPaymentCustomerId(null)}>{t('sales.cancel')}</button>
+                    <form onSubmit={handleRecordPayment} className="flex flex-col gap-2">
+                      <div className="flex gap-2">
+                        <select
+                          className="form-select flex-1"
+                          style={{ padding: '0.5rem', minWidth: '100px' }}
+                          value={paymentMethod}
+                          onChange={e => setPaymentMethod(e.target.value as 'Cash' | 'Transfer')}
+                        >
+                          <option value="Cash">Cash</option>
+                          <option value="Transfer">Transfer</option>
+                        </select>
+                        <input 
+                          type="number" 
+                          className="form-input flex-[2]" 
+                          placeholder="Amount (₦)" 
+                          value={paymentAmount}
+                          onChange={e => setPaymentAmount(e.target.value)}
+                          required
+                          style={{ padding: '0.5rem' }}
+                        />
+                      </div>
+                      <div className="flex gap-2">
+                        <button type="submit" className="btn btn-primary flex-1" style={{ minHeight: 'auto', padding: '0.5rem 1rem' }}>{t('cust.save')}</button>
+                        <button type="button" className="btn btn-outline flex-1" style={{ minHeight: 'auto', padding: '0.5rem 1rem' }} onClick={() => setPaymentCustomerId(null)}>{t('sales.cancel')}</button>
+                      </div>
                     </form>
                   ) : (
                     <div className="flex gap-2">
