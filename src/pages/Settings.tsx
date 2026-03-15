@@ -398,9 +398,9 @@ export const Settings: React.FC = () => {
               <div className="flex gap-3 items-center">
                 <div className="text-secondary font-bold text-lg opacity-50 w-6 text-center">{index + 1}.</div>
                 {product.image ? (
-                  <img src={product.image} alt={product.name} className="w-12 h-12 object-cover rounded bg-gray-100" />
+                  <img src={product.image} alt={product.name} className="w-10 h-10 object-cover rounded bg-gray-100" />
                 ) : (
-                  <div className="w-12 h-12 rounded bg-primary/10 flex items-center justify-center text-primary font-bold">
+                  <div className="w-10 h-10 rounded bg-primary/10 flex items-center justify-center text-primary font-bold">
                     {product.name.charAt(1)}
                   </div>
                 )}
