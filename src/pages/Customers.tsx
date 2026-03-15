@@ -4,7 +4,7 @@ import type { Customer } from '../store/types';
 import { AnimatedPage } from '../components/AnimatedPage';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from '../store/LanguageContext';
-import { Award, Star, Crown, Medal, MessageCircle } from 'lucide-react';
+import { Award, Star, Crown, Medal, MessageCircle, X, Camera } from 'lucide-react';
 
 export const getBadge = (points?: number) => {
   const p = points || 0;
@@ -27,6 +27,7 @@ export const Customers: React.FC = () => {
   const [phone, setPhone] = useState('');
   const [location, setLocation] = useState('');
   const [notes, setNotes] = useState('');
+  const [image, setImage] = useState('');
   
   const [paymentCustomerId, setPaymentCustomerId] = useState<string | null>(null);
   const [paymentAmount, setPaymentAmount] = useState('');
@@ -36,6 +37,17 @@ export const Customers: React.FC = () => {
     return customers.filter(c => c.name.toLowerCase().includes(search.toLowerCase()) || 
                                  c.location.toLowerCase().includes(search.toLowerCase()));
   }, [customers, search]);
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImage(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -47,14 +59,19 @@ export const Customers: React.FC = () => {
       phone,
       location,
       notes,
-      debtBalance: 0
+      debtBalance: 0,
+      loyaltyPoints: 0,
+      image: image || undefined
     };
     
     await addCustomer(newCustomer);
     
     // Reset
-    setName(''); setPhone(''); setLocation(''); setNotes('');
+    setName(''); setPhone(''); setLocation(''); setNotes(''); setImage('');
     setIsAdding(false);
+    
+    // Auto navigate to the ID card / Cert generation page
+    navigate(`/customer-docs/${newCustomer.id}`);
   };
 
   const handleRecordPayment = async (e: React.FormEvent) => {
@@ -114,31 +131,67 @@ export const Customers: React.FC = () => {
       </div>
       
       {isAdding && (
-        <form onSubmit={handleAdd} className="card border-primary">
-          <h2 className="text-lg font-semibold mb-4">{t('cust.addCustomer')}</h2>
-          
-          <div className="form-group">
-            <label className="form-label">{t('cust.name')} *</label>
-            <input type="text" className="form-input" value={name} onChange={e => setName(e.target.value)} required />
-          </div>
-          
-          <div className="form-group">
-            <label className="form-label">{t('cust.phone')}</label>
-            <input type="tel" className="form-input" value={phone} onChange={e => setPhone(e.target.value)} />
-          </div>
-          
-          <div className="form-group">
-            <label className="form-label">Location/Address</label>
-            <input type="text" className="form-input" value={location} onChange={e => setLocation(e.target.value)} />
-          </div>
-          
-          <div className="form-group">
-            <label className="form-label">Notes</label>
-            <input type="text" className="form-input" value={notes} onChange={e => setNotes(e.target.value)} />
-          </div>
-          
-          <button type="submit" className="btn btn-primary mt-2">{t('cust.save')}</button>
-        </form>
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <form onSubmit={handleAdd} className="card border-primary w-full max-w-md max-h-[90vh] overflow-y-auto m-0 relative">
+            <button 
+              type="button" 
+              onClick={() => setIsAdding(false)}
+              className="absolute top-4 right-4 text-secondary hover:text-danger"
+            >
+              <X size={24} />
+            </button>
+            <h2 className="text-xl font-bold mb-6">{t('cust.addCustomer')}</h2>
+            
+            <div className="flex flex-col items-center mb-6">
+              <label 
+                className="w-24 h-24 rounded-full bg-[var(--surface-color)] border-2 border-dashed border-primary/50 flex flex-col items-center justify-center cursor-pointer overflow-hidden relative group"
+              >
+                {image ? (
+                  <img src={image} alt="Preview" className="w-full h-full object-cover" />
+                ) : (
+                  <>
+                    <Camera size={24} className="text-secondary mb-1 group-hover:text-primary transition-colors" />
+                    <span className="text-[10px] text-secondary group-hover:text-primary">Add Photo</span>
+                  </>
+                )}
+                <input 
+                  type="file" 
+                  accept="image/*" 
+                  className="hidden" 
+                  onChange={handleImageUpload}
+                />
+              </label>
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">{t('cust.name')} *</label>
+              <input type="text" className="form-input" value={name} onChange={e => setName(e.target.value)} required placeholder="Full Name" />
+            </div>
+            
+            <div className="form-group">
+              <label className="form-label">{t('cust.phone')}</label>
+              <input type="tel" className="form-input" value={phone} onChange={e => setPhone(e.target.value)} placeholder="080... or +234..." />
+            </div>
+            
+            <div className="form-group">
+              <label className="form-label">Location/Address</label>
+              <input type="text" className="form-input" value={location} onChange={e => setLocation(e.target.value)} placeholder="Customer's shop or area" />
+            </div>
+            
+            <div className="form-group">
+              <label className="form-label">Notes</label>
+              <textarea 
+                className="form-input" 
+                value={notes} 
+                onChange={e => setNotes(e.target.value)} 
+                rows={2}
+                placeholder="Any additional details..."
+              />
+            </div>
+            
+            <button type="submit" className="btn btn-primary w-full mt-4 py-3">{t('cust.save')} & Generate ID</button>
+          </form>
+        </div>
       )}
 
       <div className="form-group mb-4">

@@ -16,6 +16,7 @@ export interface Customer {
   notes: string;
   debtBalance: number;
   loyaltyPoints?: number;
+  image?: string;
 }
 
 export interface TransactionItem {

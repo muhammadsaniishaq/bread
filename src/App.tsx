@@ -16,6 +16,7 @@ import Login from './pages/Login';
 import Receipt from './pages/Receipt';
 import CustomerProfile from './pages/CustomerProfile';
 import CustomerReceipt from './pages/CustomerReceipt';
+import CustomerIDAndCert from './pages/CustomerIDAndCert';
 import { InventoryReceipt } from './pages/InventoryReceipt';
 import BakeryReceipt from './pages/BakeryReceipt';
 
@@ -84,6 +85,7 @@ const AppContent: React.FC = () => {
             <Route path="customers" element={<Customers />} />
             <Route path="customers/:id" element={<CustomerProfile />} />
             <Route path="customer-receipt/:id" element={<CustomerReceipt />} />
+            <Route path="customer-docs/:id" element={<CustomerIDAndCert />} />
             <Route path="inventory" element={<Inventory />} />
             <Route path="inventory/receipt/:id" element={<InventoryReceipt />} />
             <Route path="bakery-receipt/:id" element={<BakeryReceipt />} />
