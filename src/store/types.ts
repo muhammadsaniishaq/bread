@@ -68,6 +68,7 @@ export interface InventoryLog {
   productId: string;
   quantityReceived: number; // For returns, this represents the quantity returned
   costPrice: number;
+  storeKeeper?: string; // Who gave or received the items
 }
 
 export interface CompanyMetrics {

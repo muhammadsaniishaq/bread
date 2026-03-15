@@ -18,6 +18,7 @@ export const Inventory: React.FC = () => {
   const [productId, setProductId] = useState('');
   const [quantity, setQuantity] = useState('');
   const [costPrice, setCostPrice] = useState('');
+  const [storeKeeper, setStoreKeeper] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
 
   const activeProducts = products.filter(p => p.active);
@@ -38,6 +39,7 @@ export const Inventory: React.FC = () => {
     setProductId('');
     setQuantity('');
     setCostPrice('');
+    setStoreKeeper('');
   };
 
   const handleAddItem = (e: React.FormEvent) => {
@@ -59,7 +61,8 @@ export const Inventory: React.FC = () => {
       type: activeTab === 'receive' ? 'Receive' : 'Return',
       productId,
       quantityReceived: qty,
-      costPrice: cost
+      costPrice: cost,
+      storeKeeper: storeKeeper.trim() || undefined
     };
     
     setPendingItems([...pendingItems, log]);
@@ -175,6 +178,17 @@ export const Inventory: React.FC = () => {
                 <label className="form-label">{t('inv.costPrice')} (₦)</label>
                 <input type="number" className="form-input" min="1" value={costPrice} onChange={e => setCostPrice(e.target.value)} required />
               </div>
+            </div>
+
+            <div className="form-group mb-4">
+              <label className="form-label">Store Keeper (Optional)</label>
+              <input 
+                type="text" 
+                className="form-input" 
+                placeholder="Name of person supplying/receiving"
+                value={storeKeeper} 
+                onChange={e => setStoreKeeper(e.target.value)} 
+              />
             </div>
             
             <button type="submit" className={`btn w-full btn-outline ${activeTab === 'return' ? 'text-danger border-danger' : 'text-success border-success'}`}>
@@ -295,7 +309,10 @@ export const Inventory: React.FC = () => {
                     </div>
                     <div>
                       <div className="font-bold text-sm">{isReceive ? 'Received Stock' : 'Returned Stock'}</div>
-                      <div className="text-xs text-secondary">{new Date(first.date).toLocaleString()}</div>
+                      <div className="text-xs text-secondary">
+                        {new Date(first.date).toLocaleString()}
+                        {first.storeKeeper && ` • Keeper: ${first.storeKeeper}`}
+                      </div>
                     </div>
                   </div>
                   <div className="text-right flex items-center gap-3">
