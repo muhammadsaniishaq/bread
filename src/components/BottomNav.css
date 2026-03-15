@@ -3,26 +3,32 @@
   bottom: 1.5rem;
   left: 50%;
   transform: translateX(-50%);
-  width: calc(100% - 3rem);
-  max-width: 400px; /* Compresses it to act like a pill */
-  background: rgba(255, 255, 255, 0.4);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: var(--radius-full);
+  width: calc(100% - 2rem);
+  max-width: 500px; /* Widened to fit 6 icons properly */
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(25px) saturate(200%);
+  -webkit-backdrop-filter: blur(25px) saturate(200%);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 2rem;
   display: flex;
-  justify-content: space-around;
+  justify-content: space-between; /* Ensures even spacing */
   align-items: center;
-  padding: 0.5rem 1rem;
+  padding: 0.5rem 0.75rem;
   z-index: 50;
-  box-shadow: 0 10px 40px -10px rgba(0,0,0,0.1), 0 0 0 1px rgba(255,255,255,0.1) inset;
+  box-shadow: 
+    0 10px 40px -10px rgba(0,0,0,0.1), 
+    0 1px 3px rgba(0,0,0,0.05),
+    inset 0 1px 0 rgba(255,255,255,0.6);
   transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 [data-theme='dark'] .bottom-nav { 
-  background: rgba(24, 24, 27, 0.4); 
-  border-color: rgba(255,255,255,0.05);
-  box-shadow: 0 10px 40px -10px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.05) inset;
+  background: rgba(24, 24, 27, 0.75); 
+  border-color: rgba(255,255,255,0.1);
+  box-shadow: 
+    0 10px 40px -10px rgba(0,0,0,0.5), 
+    0 1px 3px rgba(0,0,0,0.3),
+    inset 0 1px 0 rgba(255,255,255,0.1);
 }
 
 .nav-item {
@@ -34,16 +40,27 @@
   color: var(--text-secondary);
   font-size: 0.65rem;
   font-weight: 600;
-  padding: 0.5rem;
+  padding: 0.5rem 0.25rem;
   flex: 1;
-  border-radius: var(--radius-xl);
+  border-radius: 1.25rem;
   transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
   position: relative;
+  min-width: 0; /* Prevents overflow */
+}
+
+.nav-item span {
+  margin-top: 0.2rem;
+  font-size: 0.6rem;
+  opacity: 0.8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
 }
 
 .nav-item svg {
-  margin-bottom: 0.25rem;
   transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), color 0.2s ease;
+  flex-shrink: 0;
 }
 
 .nav-item:active {
@@ -53,6 +70,11 @@
 .nav-item.active {
   color: var(--primary-color);
   background: rgba(var(--primary-rgb), 0.1);
+}
+
+.nav-item.active span {
+  opacity: 1;
+  font-weight: 700;
 }
 
 .nav-item.active svg {

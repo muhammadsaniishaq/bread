@@ -84,11 +84,11 @@ export interface Expense {
 
 export interface AppSettings {
   companyName: string;
+  adminPin: string;
+  cashierPin: string;
+  receiptFooter: string;
   logo?: string;
-  receiptFooter?: string;
-  adminPin?: string;
-  cashierPin?: string;
   adminEmail?: string;
   adminPassword?: string;
+  role?: 'Admin' | 'Cashier';
 }
-
