@@ -8,11 +8,12 @@ import { exportData, importData } from '../store/backup';
 import { useTranslation } from '../store/LanguageContext';
 
 export const Settings: React.FC = () => {
-  const { products, addProduct, updateProduct, updatePin, refreshData, logout, appSettings, updateSettings } = useAppContext();
+  const { products, addProduct, updateProduct, deleteProduct, updatePin, refreshData, logout, appSettings, updateSettings } = useAppContext();
   const { t, language, setLanguage } = useTranslation();
   const theme = document.documentElement.getAttribute('data-theme') || 'light';
   
   const [isAdding, setIsAdding] = useState(false);
+  const [editingProductId, setEditingProductId] = useState<string | null>(null);
   const [newPrice, setNewPrice] = useState('');
   const [newCategory, setNewCategory] = useState('Round');
   const [newImage, setNewImage] = useState<string | undefined>(undefined);
@@ -32,7 +33,7 @@ export const Settings: React.FC = () => {
     await updateProduct({ ...product, active: !product.active });
   };
   
-  const handleAddProduct = async (e: React.FormEvent) => {
+  const handleSaveProduct = async (e: React.FormEvent) => {
     e.preventDefault();
     const price = parseInt(newPrice);
     if (!price || price <= 0) return;
@@ -40,21 +41,53 @@ export const Settings: React.FC = () => {
     const catName = newCategory.trim() || 'Round';
     const finalName = `₦${price} ${catName}`;
     
-    const newProduct: Product = {
-      id: Date.now().toString(),
-      name: finalName,
-      price: price,
-      active: true,
-      stock: 0,
-      category: catName,
-      image: newImage
-    };
+    if (editingProductId) {
+      const existing = products.find(p => p.id === editingProductId);
+      if (existing) {
+        await updateProduct({
+          ...existing,
+          name: finalName,
+          price,
+          category: catName,
+          image: newImage !== undefined ? newImage : existing.image
+        });
+      }
+    } else {
+      const newProduct: Product = {
+        id: Date.now().toString(),
+        name: finalName,
+        price: price,
+        active: true,
+        stock: 0,
+        category: catName,
+        image: newImage
+      };
+      await addProduct(newProduct);
+    }
     
-    await addProduct(newProduct);
+    resetProductForm();
+  };
+
+  const resetProductForm = () => {
     setNewPrice('');
     setNewCategory('Round');
     setNewImage(undefined);
     setIsAdding(false);
+    setEditingProductId(null);
+  };
+
+  const handleEditClick = (product: Product) => {
+    setNewPrice(product.price.toString());
+    setNewCategory(product.category || 'Round');
+    setNewImage(product.image);
+    setEditingProductId(product.id);
+    setIsAdding(true);
+  };
+
+  const handleDeleteProduct = async (id: string, name: string) => {
+    if (window.confirm(`Are you sure you want to delete ${name}? This action cannot be undone.`)) {
+      await deleteProduct(id);
+    }
   };
 
   const handleProductImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -301,7 +334,8 @@ export const Settings: React.FC = () => {
         </div>
         
         {isAdding && (
-          <form onSubmit={handleAddProduct} className="mb-4 p-4 border rounded" style={{ borderColor: 'var(--border-color)' }}>
+          <form onSubmit={handleSaveProduct} className="mb-4 p-4 border rounded" style={{ borderColor: 'var(--border-color)' }}>
+            <h3 className="font-bold mb-3">{editingProductId ? 'Edit Product' : 'Add New Product'}</h3>
             <div className="grid grid-cols-2 gap-2 mb-2">
               <div className="form-group mb-0">
                 <label className="form-label">{t('set.price')} (₦)</label>
@@ -348,8 +382,8 @@ export const Settings: React.FC = () => {
               </div>
             </div>
             <div className="flex gap-2">
-              <button type="submit" className="btn btn-primary" style={{ minHeight: '2.5rem', padding: '0.5rem' }}>Save</button>
-              <button type="button" className="btn btn-outline" style={{ minHeight: '2.5rem', padding: '0.5rem' }} onClick={() => setIsAdding(false)}>Cancel</button>
+              <button type="submit" className="btn btn-primary" style={{ minHeight: '2.5rem', padding: '0.5rem' }}>{editingProductId ? 'Update' : 'Save'}</button>
+              <button type="button" className="btn btn-outline" style={{ minHeight: '2.5rem', padding: '0.5rem' }} onClick={resetProductForm}>Cancel</button>
             </div>
           </form>
         )}
@@ -370,13 +404,29 @@ export const Settings: React.FC = () => {
                   <div className="text-sm text-secondary">₦{product.price} • {product.category || 'Standard'}</div>
                 </div>
               </div>
-              <button 
-                onClick={() => handleToggleActive(product)}
-                className={`btn btn-outline ${product.active ? 'text-success' : 'text-danger'}`}
-                style={{ width: 'auto', minHeight: '2rem', padding: '0.25rem 0.5rem', fontSize: '0.75rem' }}
-              >
-                {product.active ? 'Active' : 'Inactive'}
-              </button>
+              <div className="flex items-center gap-2 flex-wrap justify-end">
+                <button 
+                  onClick={() => handleEditClick(product)}
+                  className="btn btn-outline"
+                  style={{ width: 'auto', minHeight: '2rem', padding: '0.25rem 0.5rem', fontSize: '0.75rem' }}
+                >
+                  Edit
+                </button>
+                <button 
+                  onClick={() => handleToggleActive(product)}
+                  className={`btn btn-outline ${product.active ? 'text-success' : 'text-secondary'}`}
+                  style={{ width: 'auto', minHeight: '2rem', padding: '0.25rem 0.5rem', fontSize: '0.75rem' }}
+                >
+                  {product.active ? 'Active' : 'Inactive'}
+                </button>
+                <button 
+                  onClick={() => handleDeleteProduct(product.id, product.name)}
+                  className="btn btn-outline border-danger text-danger"
+                  style={{ width: 'auto', minHeight: '2rem', padding: '0.25rem 0.5rem', fontSize: '0.75rem' }}
+                >
+                  Delete
+                </button>
+              </div>
             </div>
           ))}
         </div>
