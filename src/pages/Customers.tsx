@@ -138,77 +138,76 @@ export const Customers: React.FC = () => {
         </button>
       </div>
       
-      {isAdding && (
+      {isAdding && !rawUpload && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          
-          {rawUpload ? (
-            <ImageCropper 
-              imageSrc={rawUpload} 
-              onCropComplete={onCropComplete} 
-              onCancel={() => setRawUpload(null)} 
-            />
-          ) : (
-            <form onSubmit={handleAdd} className="card border-primary w-full max-w-md max-h-[90vh] overflow-y-auto m-0 relative">
-              <button 
-                type="button" 
-                onClick={() => setIsAdding(false)}
-                className="absolute top-4 right-4 text-secondary hover:text-danger z-10"
+          <form onSubmit={handleAdd} className="card border-primary w-full max-w-md max-h-[90vh] overflow-y-auto m-0 relative">
+            <button 
+              type="button" 
+              onClick={() => setIsAdding(false)}
+              className="absolute top-4 right-4 text-secondary hover:text-danger z-10"
+            >
+              <X size={24} />
+            </button>
+            <h2 className="text-xl font-bold mb-6">{t('cust.addCustomer')}</h2>
+            
+            <div className="flex flex-col items-center mb-6">
+              <label 
+                className="w-24 h-24 rounded-full bg-[var(--surface-color)] border-2 border-dashed border-primary/50 flex flex-col items-center justify-center cursor-pointer overflow-hidden relative group"
               >
-                <X size={24} />
-              </button>
-              <h2 className="text-xl font-bold mb-6">{t('cust.addCustomer')}</h2>
-              
-              <div className="flex flex-col items-center mb-6">
-                <label 
-                  className="w-24 h-24 rounded-full bg-[var(--surface-color)] border-2 border-dashed border-primary/50 flex flex-col items-center justify-center cursor-pointer overflow-hidden relative group"
-                >
-                  {image ? (
-                    <img src={image} alt="Preview" className="w-full h-full object-cover" />
-                  ) : (
-                    <>
-                      <Camera size={24} className="text-secondary mb-1 group-hover:text-primary transition-colors" />
-                      <span className="text-[10px] text-secondary group-hover:text-primary text-center leading-tight">Add Photo</span>
-                    </>
-                  )}
-                  <input 
-                    type="file" 
-                    accept="image/*" 
-                    className="hidden" 
-                    onChange={handleImageUpload}
-                  />
-                </label>
-              </div>
-
-              <div className="form-group">
-                <label className="form-label">{t('cust.name')} *</label>
-                <input type="text" className="form-input" value={name} onChange={e => setName(e.target.value)} required placeholder="Full Name" />
-              </div>
-              
-              <div className="form-group">
-                <label className="form-label">{t('cust.phone')}</label>
-                <input type="tel" className="form-input" value={phone} onChange={e => setPhone(e.target.value)} placeholder="080... or +234..." />
-              </div>
-              
-              <div className="form-group">
-                <label className="form-label">Location/Address</label>
-                <input type="text" className="form-input" value={location} onChange={e => setLocation(e.target.value)} placeholder="Customer's shop or area" />
-              </div>
-              
-              <div className="form-group">
-                <label className="form-label">Notes</label>
-                <textarea 
-                  className="form-input" 
-                  value={notes} 
-                  onChange={e => setNotes(e.target.value)} 
-                  rows={2}
-                  placeholder="Any additional details..."
+                {image ? (
+                  <img src={image} alt="Preview" className="w-full h-full object-cover" />
+                ) : (
+                  <>
+                    <Camera size={24} className="text-secondary mb-1 group-hover:text-primary transition-colors" />
+                    <span className="text-[10px] text-secondary group-hover:text-primary text-center leading-tight">Add Photo</span>
+                  </>
+                )}
+                <input 
+                  type="file" 
+                  accept="image/*" 
+                  className="hidden" 
+                  onChange={handleImageUpload}
                 />
-              </div>
-              
-              <button type="submit" className="btn btn-primary w-full mt-4 py-3 shadow-md">{t('cust.save')} & Generate ID</button>
-            </form>
-          )}
+              </label>
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">{t('cust.name')} *</label>
+              <input type="text" className="form-input" value={name} onChange={e => setName(e.target.value)} required placeholder="Full Name" />
+            </div>
+            
+            <div className="form-group">
+              <label className="form-label">{t('cust.phone')}</label>
+              <input type="tel" className="form-input" value={phone} onChange={e => setPhone(e.target.value)} placeholder="080... or +234..." />
+            </div>
+            
+            <div className="form-group">
+              <label className="form-label">Location/Address</label>
+              <input type="text" className="form-input" value={location} onChange={e => setLocation(e.target.value)} placeholder="Customer's shop or area" />
+            </div>
+            
+            <div className="form-group">
+              <label className="form-label">Notes</label>
+              <textarea 
+                className="form-input" 
+                value={notes} 
+                onChange={e => setNotes(e.target.value)} 
+                rows={2}
+                placeholder="Any additional details..."
+              />
+            </div>
+            
+            <button type="submit" className="btn btn-primary w-full mt-4 py-3 shadow-md">{t('cust.save')} & Generate ID</button>
+          </form>
         </div>
+      )}
+
+      {rawUpload && (
+        <ImageCropper 
+          imageSrc={rawUpload} 
+          onCropComplete={onCropComplete} 
+          onCancel={() => setRawUpload(null)} 
+        />
       )}
 
       <div className="form-group mb-4">
