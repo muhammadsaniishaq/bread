@@ -81,8 +81,14 @@ export const ImageCropper: React.FC<ImageCropperProps> = ({ imageSrc, onCropComp
   };
 
   return (
-    <div className="fixed inset-0 bg-black z-[100] flex flex-col">
-      <div className="relative flex-1">
+    <div className="fixed inset-0 bg-black/95 backdrop-blur-md z-[100] flex flex-col items-center justify-center p-4">
+      
+      <div className="text-white text-center mb-6">
+        <h3 className="font-bold text-lg">Crop Photo</h3>
+        <p className="text-secondary text-sm">Pinch to zoom, drag to move</p>
+      </div>
+
+      <div className="relative w-full max-w-[280px] sm:max-w-[320px] aspect-[3/4] bg-gray-900 rounded-2xl overflow-hidden shadow-[0_0_40px_rgba(0,0,0,0.5)] border-2 border-primary/50 mb-8 shrink-0">
         <Cropper
           image={imageSrc}
           crop={crop}
@@ -96,7 +102,7 @@ export const ImageCropper: React.FC<ImageCropperProps> = ({ imageSrc, onCropComp
         />
       </div>
       
-      <div className="bg-[#1e293b] p-6 pb-10 shadow-[0_-10px_20px_rgba(0,0,0,0.2)] z-10">
+      <div className="w-full max-w-sm bg-[#1e293b] p-5 sm:p-6 rounded-3xl shadow-[0_10px_40px_rgba(0,0,0,0.5)] border border-white/10">
         <div className="mb-6 flex flex-col gap-2 relative">
            <label className="text-white text-xs font-bold uppercase tracking-wider mb-2 z-10 relative">Zoom</label>
            
@@ -133,21 +139,21 @@ export const ImageCropper: React.FC<ImageCropperProps> = ({ imageSrc, onCropComp
            `}</style>
         </div>
         
-        <div className="flex gap-4 max-w-sm mx-auto z-10 relative">
+        <div className="flex gap-3 sm:gap-4 max-w-sm mx-auto z-10 relative">
           <button 
             type="button" 
-            className="flex-1 py-3 px-4 bg-gray-600 hover:bg-gray-500 text-white rounded-xl font-bold flex items-center justify-center gap-2 transition-colors shadow-sm"
+            className="flex-1 py-3 px-4 bg-gray-700 hover:bg-gray-600 text-white rounded-xl font-bold flex items-center justify-center gap-2 transition-colors shadow-sm"
             onClick={onCancel}
           >
             <X size={20} /> Cancel
           </button>
           <button 
             type="button" 
-            className="flex-1 py-3 px-4 bg-primary text-white rounded-xl font-bold shadow-lg shadow-primary/30 flex items-center justify-center gap-2"
+            className="flex-1 py-3 px-4 bg-primary text-white rounded-xl font-bold shadow-[0_4px_14px_0_rgba(var(--primary-rgb),0.39)] flex items-center justify-center gap-2 transition-transform active:scale-95"
             onClick={handleSave}
             disabled={isProcessing}
           >
-            {isProcessing ? 'Processing...' : (
+            {isProcessing ? 'Saving...' : (
               <><Check size={20} /> Crop & Save</>
             )}
           </button>
