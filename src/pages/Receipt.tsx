@@ -76,9 +76,9 @@ export const Receipt: React.FC = () => {
       // Items
       getTransactionItems(tx).forEach(item => {
         const p = products.find(prod => prod.id === item.productId);
-        const name = (p?.name || 'Item').substring(0, 16).padEnd(16, ' ');
+        const name = (p?.name || 'Item').substring(0, 13).padEnd(13, ' ');
         const qty = item.quantity.toString().padStart(3, ' ');
-        const price = (item.quantity * item.unitPrice).toLocaleString().padStart(9, ' ');
+        const price = (item.quantity * item.unitPrice).toLocaleString().padStart(8, ' ');
         cmds.push(`${name} x${qty} ${price}\n`);
       });
       
