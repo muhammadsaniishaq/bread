@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAppContext } from '../store/AppContext';
 import { ArrowLeft, Share2, Award } from 'lucide-react';
@@ -12,6 +12,26 @@ export const CustomerIDAndCert: React.FC = () => {
   const customer = customers.find(c => c.id === id);
   const idCardRef = useRef<HTMLDivElement>(null);
   const certRef = useRef<HTMLDivElement>(null);
+  const certContainerRef = useRef<HTMLDivElement>(null);
+  const certScaleWrapperRef = useRef<HTMLDivElement>(null);
+  const [certScale, setCertScale] = useState(1);
+
+  useEffect(() => {
+    const updateScale = () => {
+      if (certContainerRef.current) {
+        const containerWidth = certContainerRef.current.offsetWidth;
+        if (containerWidth < 832) {
+          setCertScale((containerWidth - 32) / 800);
+        } else {
+          setCertScale(1);
+        }
+      }
+    };
+    
+    updateScale();
+    window.addEventListener('resize', updateScale);
+    return () => window.removeEventListener('resize', updateScale);
+  }, []);
 
   if (!customer) {
     return (
@@ -22,8 +42,14 @@ export const CustomerIDAndCert: React.FC = () => {
     );
   }
 
-  const handleShare = async (ref: React.RefObject<HTMLDivElement | null>, filename: string) => {
+  const handleShare = async (ref: React.RefObject<HTMLDivElement | null>, filename: string, isCert = false) => {
     if (!ref.current) return;
+    
+    // Temporarily reset scale for high-res capture
+    if (isCert && certScaleWrapperRef.current) {
+        certScaleWrapperRef.current.style.transform = 'scale(1)';
+    }
+
     try {
       const canvas = await html2canvas(ref.current, { scale: 3, useCORS: true });
       canvas.toBlob(async (blob) => {
@@ -47,6 +73,11 @@ export const CustomerIDAndCert: React.FC = () => {
     } catch (err) {
       console.error('Error generating image:', err);
       alert('Could not generate image.');
+    } finally {
+      // Restore scale
+      if (isCert && certScaleWrapperRef.current) {
+         certScaleWrapperRef.current.style.transform = `scale(${certScale})`;
+      }
     }
   };
 
@@ -98,7 +129,7 @@ export const CustomerIDAndCert: React.FC = () => {
                 flexDirection: 'column'
               }}
             >
-              {/* Bakery Decor Accents (Small icons scattered using absolute positioning simulating a pattern) */}
+              {/* Bakery Decor Accents */}
               <div style={{ position: 'absolute', top: '8px', left: '8px', fontSize: '10px', opacity: 0.3 }}>🥐</div>
               <div style={{ position: 'absolute', top: '40px', right: '12px', fontSize: '12px', opacity: 0.3 }}>🥖</div>
               <div style={{ position: 'absolute', bottom: '64px', left: '12px', fontSize: '10px', opacity: 0.3 }}>🥨</div>
@@ -106,17 +137,29 @@ export const CustomerIDAndCert: React.FC = () => {
               <div style={{ position: 'absolute', top: '50%', left: '8px', fontSize: '10px', opacity: 0.3 }}>🍞</div>
               <div style={{ position: 'absolute', top: '40%', right: '8px', fontSize: '10px', opacity: 0.3 }}>🍪</div>
 
-              <div style={{ position: 'relative', zIndex: 10, display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: '20px', paddingLeft: '16px', paddingRight: '16px', height: '100%' }}>
-                {/* Header Logo or Name */}
-                <h1 style={{ fontWeight: 'bold', fontSize: '10px', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '16px', opacity: 0.9, textAlign: 'center', width: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {appSettings.companyName || 'BAKERY & CO.'}
-                </h1>
+              {/* ID Card Watermark Logo */}
+              {appSettings.logo && (
+                <div style={{ position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0.04, zIndex: 0, pointerEvents: 'none' }}>
+                   <img src={appSettings.logo} alt="Watermark" style={{ width: '180px', height: '180px', objectFit: 'contain' }} />
+                </div>
+              )}
 
-                {/* Passport Photo (With Ornate Frame) */}
-                <div style={{ position: 'relative', marginBottom: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '4px', width: '90px', height: '90px', backgroundColor: '#4e342e' }}>
+              <div style={{ position: 'relative', zIndex: 10, display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: '16px', paddingLeft: '16px', paddingRight: '16px', height: '100%' }}>
+                {/* Header Logo or Name */}
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '10px' }}>
+                  {appSettings.logo && (
+                    <img src={appSettings.logo} alt="Logo" style={{ width: '22px', height: '22px', objectFit: 'contain', marginBottom: '4px' }} />
+                  )}
+                  <h1 style={{ fontWeight: 'bold', fontSize: '10px', letterSpacing: '0.1em', textTransform: 'uppercase', opacity: 0.9, textAlign: 'center', width: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {appSettings.companyName || 'BAKERY & CO.'}
+                  </h1>
+                </div>
+
+                {/* Passport Photo */}
+                <div style={{ position: 'relative', marginBottom: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '3px', width: '82px', height: '82px', backgroundColor: '#4e342e' }}>
                    <div style={{ position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, backgroundColor: '#faeddb', clipPath: 'polygon(10% 0, 90% 0, 100% 10%, 100% 90%, 90% 100%, 10% 100%, 0 90%, 0 10%)' }}></div>
                    <div style={{ position: 'absolute', top: '3px', right: '3px', bottom: '3px', left: '3px', backgroundColor: '#4e342e', clipPath: 'polygon(10% 0, 90% 0, 100% 10%, 100% 90%, 90% 100%, 10% 100%, 0 90%, 0 10%)' }}></div>
-                   <div style={{ width: '78px', height: '78px', position: 'relative', zIndex: 20, overflow: 'hidden', backgroundColor: '#f3f4f6', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, clipPath: 'polygon(10% 0, 90% 0, 100% 10%, 100% 90%, 90% 100%, 10% 100%, 0 90%, 0 10%)' }}>
+                   <div style={{ width: '72px', height: '72px', position: 'relative', zIndex: 20, overflow: 'hidden', backgroundColor: '#f3f4f6', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, clipPath: 'polygon(10% 0, 90% 0, 100% 10%, 100% 90%, 90% 100%, 10% 100%, 0 90%, 0 10%)' }}>
                     {customer.image ? (
                       <img src={customer.image} alt={customer.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     ) : (
@@ -126,19 +169,28 @@ export const CustomerIDAndCert: React.FC = () => {
                 </div>
 
                 {/* Customer Details */}
-                <div style={{ textAlign: 'center', width: '100%', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', marginTop: '8px' }}>
-                  <h2 style={{ fontFamily: 'serif', fontStyle: 'italic', fontWeight: 'bold', fontSize: '20px', lineHeight: 1.2, marginBottom: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', width: '100%', padding: '0 4px' }}>{customer.name}</h2>
-                  <p style={{ fontWeight: 'bold', fontSize: '8px', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '12px', opacity: 0.8 }}>Job Position / Partner</p>
+                <div style={{ textAlign: 'center', width: '100%', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', marginTop: '2px' }}>
+                  <h2 style={{ fontFamily: 'serif', fontStyle: 'italic', fontWeight: 'bold', fontSize: '18px', lineHeight: 1.1, marginBottom: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', width: '100%', padding: '0 4px' }}>{customer.name}</h2>
+                  <p style={{ fontWeight: 'bold', fontSize: '8px', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '8px', opacity: 0.8 }}>Job Position / Partner</p>
                   
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', marginBottom: '12px', opacity: 0.6 }}>
-                    <div style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#4e342e' }}></div>
-                    <div style={{ width: '32px', height: '1px', backgroundColor: '#4e342e' }}></div>
-                    <div style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#4e342e' }}></div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', marginBottom: '8px', opacity: 0.6 }}>
+                    <div style={{ width: '4px', height: '4px', borderRadius: '50%', backgroundColor: '#4e342e' }}></div>
+                    <div style={{ width: '24px', height: '1px', backgroundColor: '#4e342e' }}></div>
+                    <div style={{ width: '4px', height: '4px', borderRadius: '50%', backgroundColor: '#4e342e' }}></div>
                   </div>
 
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', width: '100%', alignItems: 'center' }}>
-                    <div>
-                      <div style={{ fontFamily: 'monospace', fontSize: '9px', fontWeight: 'bold', opacity: 0.8 }}>ID: CUST-{customer.id.slice(-5)}</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', width: '100%', alignItems: 'stretch', padding: '0 8px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(78,52,46,0.1)', paddingBottom: '2px' }}>
+                      <span style={{ fontSize: '7px', fontWeight: 'bold', opacity: 0.6 }}>ID No:</span>
+                      <span style={{ fontFamily: 'monospace', fontSize: '8px', fontWeight: 'bold', color: '#4e342e' }}>CUST-{customer.id.slice(-5)}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(78,52,46,0.1)', paddingBottom: '2px' }}>
+                      <span style={{ fontSize: '7px', fontWeight: 'bold', opacity: 0.6 }}>Phone:</span>
+                      <span style={{ fontSize: '7px', fontWeight: 'bold', color: '#4e342e' }}>{customer.phone || 'N/A'}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(78,52,46,0.1)', paddingBottom: '2px' }}>
+                      <span style={{ fontSize: '7px', fontWeight: 'bold', opacity: 0.6 }}>Address:</span>
+                      <span style={{ fontSize: '7px', fontWeight: 'bold', color: '#4e342e', textAlign: 'right', maxWidth: '80px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{customer.location || 'Local Customer'}</span>
                     </div>
                   </div>
                 </div>
@@ -155,40 +207,65 @@ export const CustomerIDAndCert: React.FC = () => {
         <hr className="border-[var(--border-color)] w-full no-print my-16" />
 
         {/* CERTIFICATE SECTION */}
-        <section style={{ width: '100%', paddingBottom: '40px' }}>
+        <section style={{ width: '100%', paddingBottom: '40px' }} ref={certContainerRef}>
           <div className="no-print" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
             <div>
               <h2 style={{ fontSize: '18px', fontWeight: 'bold' }}>Certificate of Partnership</h2>
               <p style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Premium Landscape A4</p>
             </div>
-            <button className="btn btn-sm btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '8px', boxShadow: 'var(--shadow-sm)' }} onClick={() => handleShare(certRef, `${customer.name}-Certificate`)}>
+            <button className="btn btn-sm btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '8px', boxShadow: 'var(--shadow-sm)' }} onClick={() => handleShare(certRef, `${customer.name}-Certificate`, true)}>
               <Share2 size={16} /> Save / Share
             </button>
           </div>
           
-          <div style={{ display: 'flex', justifyContent: 'center', overflowX: 'auto', paddingBottom: '16px', width: '100%' }} className="hide-scrollbar">
-            {/* Certificate Container (A4 Landscape aspect ratio) */}
-            <div 
-              ref={certRef}
-              className="cert-print"
-              style={{ 
-                width: '800px', 
-                height: '565px', 
-                boxSizing: 'border-box',
-                backgroundColor: 'white',
-                color: 'black',
-                boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
-                flexShrink: 0
-              }}
-            >
-              {/* Modern Minimalist Border Frame */}
-              <div style={{ width: '100%', height: '100%', padding: '24px', backgroundColor: '#f8fafc' }}>
-                <div style={{ width: '100%', height: '100%', border: '1px solid #e2e8f0', backgroundColor: 'white', boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)', padding: '4px' }}>
-                  <div style={{ width: '100%', height: '100%', border: '3px solid #1e293b', padding: '32px', display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'hidden' }}>
-                    
-                    {/* Subtle background abstract shapes */}
-                    <div style={{ position: 'absolute', top: '-40px', right: '-40px', width: '400px', height: '400px', backgroundColor: '#f8fafc', borderBottomLeftRadius: '400px', zIndex: 0 }}></div>
-                    <div style={{ position: 'absolute', bottom: '-40px', left: '-40px', width: '300px', height: '300px', backgroundColor: '#f8fafc', borderTopRightRadius: '300px', zIndex: 0 }}></div>
+          <div style={{ display: 'flex', justifyContent: 'center', paddingBottom: '16px', width: '100%' }}>
+            {/* Certificate Scale Wrapper */}
+            <div style={{ 
+               width: `${800 * certScale}px`, 
+               height: `${565 * certScale}px`, 
+               position: 'relative', 
+               overflow: 'visible' 
+            }}>
+              <div 
+                ref={certScaleWrapperRef}
+                style={{
+                  transform: `scale(${certScale})`,
+                  transformOrigin: 'top left',
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  width: '800px', 
+                  height: '565px',
+                  zIndex: 20
+                }}
+              >
+                <div 
+                  ref={certRef}
+                  className="cert-print"
+                  style={{ 
+                    width: '100%', 
+                    height: '100%', 
+                    boxSizing: 'border-box',
+                    backgroundColor: 'white',
+                    color: 'black',
+                    boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+                  }}
+                >
+                  {/* Modern Minimalist Border Frame */}
+                  <div style={{ width: '100%', height: '100%', padding: '24px', backgroundColor: '#f8fafc' }}>
+                    <div style={{ width: '100%', height: '100%', border: '1px solid #e2e8f0', backgroundColor: 'white', boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)', padding: '4px' }}>
+                      <div style={{ width: '100%', height: '100%', border: '3px solid #1e293b', padding: '32px', display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'hidden' }}>
+                        
+                        {/* Subtle background abstract shapes */}
+                        <div style={{ position: 'absolute', top: '-40px', right: '-40px', width: '400px', height: '400px', backgroundColor: '#f8fafc', borderBottomLeftRadius: '400px', zIndex: 0 }}></div>
+                        <div style={{ position: 'absolute', bottom: '-40px', left: '-40px', width: '300px', height: '300px', backgroundColor: '#f8fafc', borderTopRightRadius: '300px', zIndex: 0 }}></div>
+
+                        {/* Large Watermark Logo */}
+                        {appSettings.logo && (
+                          <div style={{ position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0.03, zIndex: 0, pointerEvents: 'none' }}>
+                             <img src={appSettings.logo} alt="Watermark" style={{ width: '400px', height: '400px', objectFit: 'contain' }} />
+                          </div>
+                        )}
 
                     <div style={{ position: 'relative', zIndex: 10, display: 'flex', flexDirection: 'column', height: '100%' }}>
                       {/* Header row with Logos */}
@@ -251,8 +328,10 @@ export const CustomerIDAndCert: React.FC = () => {
                 </div>
               </div>
             </div>
+            </div>
           </div>
-        </section>
+        </div>
+      </section>
       </div>
 
       <style>{`
