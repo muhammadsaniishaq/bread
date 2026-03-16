@@ -6,7 +6,7 @@ import { ShoppingCart, Trash2 } from 'lucide-react';
 import { useTranslation } from '../store/LanguageContext';
 
 export const Sales: React.FC = () => {
-  const { customers, products, recordSale } = useAppContext();
+  const { customers, products, transactions, recordSale } = useAppContext();
   const { t } = useTranslation();
   const navigate = useNavigate();
   
@@ -344,6 +344,39 @@ export const Sales: React.FC = () => {
           📄 Print Receipt For Last Sale
         </button>
       )}
+
+      {/* Recent Sales History */}
+      <div className="mt-8">
+        <h3 className="text-lg font-bold mb-4">Recent Sales (Today)</h3>
+        <div className="flex flex-col gap-3">
+          {transactions
+            .filter(t => new Date(t.date).toDateString() === new Date().toDateString())
+            .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+            .slice(0, 10)
+            .map(tx => {
+              const customerName = customers.find(c => c.id === tx.customerId)?.name || 'Walk-in Customer';
+              return (
+                <div key={tx.id} className="card p-3 flex justify-between items-center mb-0 hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer" onClick={() => navigate(`/receipt/${tx.id}`)}>
+                  <div>
+                    <div className="font-bold text-sm">Sale to {customerName}</div>
+                    <div className="text-xs text-secondary mt-1">
+                      {new Date(tx.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} • 
+                      <span className={`ml-1 ${tx.type === 'Cash' ? 'text-success' : 'text-danger'}`}>{tx.type}</span>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="font-bold">₦{tx.totalPrice.toLocaleString()}</div>
+                    <button className="text-primary text-xs underline mt-1">View Receipt</button>
+                  </div>
+                </div>
+              );
+            })}
+            
+            {transactions.filter(t => new Date(t.date).toDateString() === new Date().toDateString()).length === 0 && (
+              <p className="text-center text-secondary text-sm py-4">No sales recorded today yet.</p>
+            )}
+        </div>
+      </div>
     </div>
   );
 };

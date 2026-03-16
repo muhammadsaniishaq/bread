@@ -226,62 +226,55 @@ export const InventoryReceipt: React.FC = () => {
 
   return (
     <AnimatedPage>
-      <div className="container" style={{ maxWidth: '320px', margin: '0 auto', background: 'var(--surface-color)', minHeight: '100vh', paddingTop: '1rem' }}>
-        
-        {/* Hide controls when printing & optimize for 58mm POS */}
-        <style>{`
-          @media print {
-            @page { margin: 0; size: 58mm auto; }
-            html, body {
-              margin: 0 !important;
-              padding: 0 !important;
-              width: 58mm !important;
-              background: #fff !important;
-            }
-            .no-print { display: none !important; }
-            .container { 
-              padding: 0 !important; 
-              margin: 0 !important; 
-              max-width: 58mm !important; 
-              width: 58mm !important;
-              box-shadow: none !important; 
-              background: transparent !important;
-            }
-            .receipt-box { 
-              border: none !important; 
-              padding: 0 !important; 
-              margin: 0 !important;
-              width: 58mm !important;
-              max-width: 58mm !important;
-              color: #000 !important;
-              background: #fff !important;
-              font-family: monospace !important;
-              line-height: 1.2 !important;
-            }
-            .receipt-logo {
-              max-width: 40px !important;
-              max-height: 40px !important;
-              margin: 0 auto 5px auto !important;
-            }
-            * {
-              font-family: monospace !important;
-              color: #000 !important;
-            }
-            h1 { font-size: 14px !important; margin-bottom: 2px !important; }
-            .text-2xl { font-size: 14px !important; }
-            .text-xl { font-size: 13px !important; }
-            .text-lg { font-size: 12px !important; }
-            .text-sm { font-size: 10px !important; }
-            .text-xs { font-size: 9px !important; }
-            .p-6 { padding: 5px !important; }
-            .mb-6 { margin-bottom: 8px !important; }
-            .mb-4 { margin-bottom: 5px !important; }
-            .py-3 { padding-top: 3px !important; padding-bottom: 3px !important; }
-            .p-3 { padding: 3px !important; }
-            table { width: 100% !important; font-size: 10px !important; }
-            th, td { padding: 2px !important; }
+      {/* 58mm POS Optimization */}
+      <style>{`
+        @media print {
+          @page { margin: 0; size: 58mm auto; }
+          html, body {
+            margin: 0 !important;
+            padding: 0 !important;
+            width: 58mm !important;
+            background: #fff !important;
           }
-        `}</style>
+          .no-print { display: none !important; }
+          .container { 
+            padding: 0 !important; 
+            margin: 0 !important; 
+            max-width: 58mm !important; 
+            width: 58mm !important;
+            box-shadow: none !important; 
+            background: transparent !important;
+          }
+          .receipt-box { 
+            border: none !important; 
+            padding: 0 !important; 
+            margin: 0 !important;
+            width: 58mm !important;
+            max-width: 58mm !important;
+            color: #000 !important;
+            background: #fff !important;
+            font-family: monospace !important;
+            line-height: 1.2 !important;
+          }
+          * {
+            font-family: monospace !important;
+            color: #000 !important;
+          }
+          h1 { font-size: 14px !important; margin-bottom: 2px !important; }
+          .text-2xl { font-size: 14px !important; }
+          .text-xl { font-size: 13px !important; }
+          .text-lg { font-size: 12px !important; }
+          .text-sm { font-size: 10px !important; }
+          .text-xs { font-size: 9px !important; }
+          .p-6 { padding: 5px !important; }
+          .mb-6 { margin-bottom: 8px !important; }
+          .mb-4 { margin-bottom: 5px !important; }
+          .py-3 { padding-top: 3px !important; padding-bottom: 3px !important; }
+          .p-3 { padding: 3px !important; }
+          .border-dashed { border-style: dashed !important; border-width: 1px !important; border-color: #000 !important; }
+        }
+      `}</style>
+      <div className="container" style={{ maxWidth: '320px', margin: '0 auto', background: 'var(--surface-color)', minHeight: '100vh', paddingTop: '1rem' }}>
 
         <div className="flex justify-between items-center mb-6 no-print">
           <button onClick={() => navigate(-1)} className="btn btn-outline btn-icon">

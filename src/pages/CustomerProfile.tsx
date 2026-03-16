@@ -360,6 +360,12 @@ export const CustomerProfile: React.FC = () => {
                         <div className={`text-xs uppercase font-bold mt-1 ${item.type === 'Cash' ? 'text-success' : 'text-danger'}`}>
                           {item.type}
                         </div>
+                        <button 
+                          className="text-xs text-primary underline mt-1 cursor-pointer block text-right w-full"
+                          onClick={(e) => { e.stopPropagation(); navigate(`/receipt/${item.id}`); }}
+                        >
+                          View Receipt
+                        </button>
                       </div>
                     </div>
                   </div>
