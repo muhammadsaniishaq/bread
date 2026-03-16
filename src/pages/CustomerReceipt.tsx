@@ -126,7 +126,7 @@ export const CustomerReceipt: React.FC = () => {
       const payload = new Uint8Array(buffer);
 
       // 7. Send the data in chunks if it's too large (BLE limit is often 512 or 20 bytes depending on negotiation)
-      const chunkSize = 512;
+      const chunkSize = 256; // Reduced chunk size for better compatibility
       for (let i = 0; i < payload.length; i += chunkSize) {
         const chunk = payload.slice(i, i + chunkSize);
         if (characteristic.properties.writeWithoutResponse) {
@@ -134,7 +134,12 @@ export const CustomerReceipt: React.FC = () => {
         } else {
            await characteristic.writeValue(chunk);
         }
+        // Add a small delay to prevent buffer overflow on older printers
+        await new Promise(resolve => setTimeout(resolve, 50));
       }
+
+      // Small delay before disconnect to ensure buffer flushes
+      await new Promise(resolve => setTimeout(resolve, 500));
 
       // Disconnect cleanly
       device.gatt.disconnect();
