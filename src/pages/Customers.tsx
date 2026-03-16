@@ -152,7 +152,7 @@ export const Customers: React.FC = () => {
             
             <div className="flex flex-col items-center mb-6">
               <label 
-                className="w-24 h-24 rounded-full bg-[var(--surface-color)] border-2 border-dashed border-primary/50 flex flex-col items-center justify-center cursor-pointer overflow-hidden relative group"
+                className="w-16 h-16 rounded-full bg-[var(--surface-color)] border-2 border-dashed border-primary/50 flex flex-col items-center justify-center cursor-pointer overflow-hidden relative group"
               >
                 {image ? (
                   <img src={image} alt="Preview" className="w-full h-full object-cover" />

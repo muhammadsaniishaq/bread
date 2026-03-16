@@ -31,8 +31,8 @@ async function getCroppedImg(
   }
 
   // Set standard passport/ID card resolution
-  const TARGET_WIDTH = 300;
-  const TARGET_HEIGHT = 300;
+  const TARGET_WIDTH = 600;
+  const TARGET_HEIGHT = 600;
   
   canvas.width = TARGET_WIDTH;
   canvas.height = TARGET_HEIGHT;
@@ -53,7 +53,7 @@ async function getCroppedImg(
     TARGET_HEIGHT
   );
 
-  return canvas.toDataURL('image/jpeg', 0.9);
+  return canvas.toDataURL('image/jpeg', 1.0);
 }
 
 export const ImageCropper: React.FC<ImageCropperProps> = ({ imageSrc, onCropComplete, onCancel }) => {

@@ -90,7 +90,7 @@ export const CustomerIDAndCert: React.FC = () => {
               {/* Body */}
               <div className="flex-1 mt-10 p-3 pt-4 flex gap-3">
                 {/* Photo */}
-                <div className="w-[1.2in] h-[1.2in] flex-shrink-0 border-2 border-primary rounded-md overflow-hidden bg-gray-100 flex items-center justify-center">
+                <div className="w-[0.9in] h-[0.9in] flex-shrink-0 border-2 border-primary rounded-md overflow-hidden bg-gray-100 flex items-center justify-center">
                   {customer.image ? (
                     <img src={customer.image} alt={customer.name} className="w-full h-full object-cover" />
                   ) : (
@@ -148,13 +148,13 @@ export const CustomerIDAndCert: React.FC = () => {
                   {/* Watermark Logo */}
                   {appSettings.logo && (
                     <div className="absolute inset-0 flex items-center justify-center opacity-[0.03] z-0 pointer-events-none">
-                       <img src={appSettings.logo} alt="Watermark" className="w-96 h-96 object-contain" />
+                       <img src={appSettings.logo} alt="Watermark" className="w-64 h-64 object-contain" />
                     </div>
                   )}
 
                   <div className="text-center z-10 w-full">
                     {appSettings.logo && (
-                      <img src={appSettings.logo} alt="Company Logo" className="w-20 h-20 mx-auto mb-4 object-contain" />
+                      <img src={appSettings.logo} alt="Company Logo" className="w-14 h-14 mx-auto mb-4 object-contain" />
                     )}
                     <h1 className="text-4xl font-serif font-bold text-[#1e293b] mb-2 tracking-wide uppercase">
                       Certificate of Partnership
