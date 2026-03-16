@@ -96,11 +96,11 @@ export const CustomerReceipt: React.FC = () => {
         "\\x1B" + "a" + "\\x01", // Center align
         "Amount Paid\n",
         "\\x1D" + "!" + "\\x11", // Double height & width
-        `NGN ${payment.amount.toLocaleString()}\n`,
+        `N ${payment.amount.toLocaleString()}\n`,
         "\\x1D" + "!" + "\\x00", // Normal text
         "\\x1B" + "a" + "\\x00", // Left align
         "--------------------------------\n",
-        `New Balance: NGN ${customer.debtBalance.toLocaleString()}\n`,
+        `New Balance: N ${customer.debtBalance.toLocaleString()}\n`,
         "\\x1B" + "a" + "\\x01", // Center align
         "\n",
         (appSettings.receiptFooter || 'Thank you for your business!') + "\n",

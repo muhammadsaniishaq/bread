@@ -86,12 +86,12 @@ export const Receipt: React.FC = () => {
       cmds.push("\\x1B" + "a" + "\\x02"); // Right align
       
       if (tx.discount && tx.discount > 0) {
-        cmds.push(`Discount: -NGN ${tx.discount.toLocaleString()}\n`);
+        cmds.push(`Discount: -N ${tx.discount.toLocaleString()}\n`);
       }
       
       cmds.push("\\x1B" + "E" + "\\x01"); // Bold
       cmds.push("\\x1D" + "!" + "\\x11"); // Double height/width
-      cmds.push(`TOTAL: NGN ${tx.totalPrice.toLocaleString()}\n`);
+      cmds.push(`TOTAL: N ${tx.totalPrice.toLocaleString()}\n`);
       cmds.push("\\x1D" + "!" + "\\x00"); // Normal
       cmds.push("\\x1B" + "E" + "\\x00"); // Unbold
       

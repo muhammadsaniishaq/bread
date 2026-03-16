@@ -91,7 +91,7 @@ export const InventoryReceipt: React.FC = () => {
       
       cmds.push("\\x1B" + "E" + "\\x01"); // Bold
       cmds.push("\\x1D" + "!" + "\\x11"); // Double height/width
-      cmds.push(`TOTAL: NGN ${totalValue.toLocaleString()}\n`);
+      cmds.push(`TOTAL: N ${totalValue.toLocaleString()}\n`);
       cmds.push("\\x1D" + "!" + "\\x00"); // Normal
       cmds.push("\\x1B" + "E" + "\\x00"); // Unbold
       
