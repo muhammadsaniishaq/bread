@@ -81,30 +81,45 @@ export const ImageCropper: React.FC<ImageCropperProps> = ({ imageSrc, onCropComp
   };
 
   return (
-    <div className="fixed inset-0 bg-black/95 backdrop-blur-md z-[100] flex flex-col items-center justify-start sm:justify-center p-4 overflow-y-auto pb-10">
+    <div className="fixed inset-0 bg-black/95 backdrop-blur-md z-[100] flex flex-col h-[100dvh]">
       
-      <div className="text-white text-center mb-4 mt-4 sm:mt-0 shrink-0">
-        <h3 className="font-bold text-lg">Crop Photo</h3>
-        <p className="text-secondary text-sm">Pinch to zoom, drag to move</p>
+      {/* Header */}
+      <div className="text-white text-center py-4 shrink-0 px-4 flex justify-between items-center relative z-10">
+        <div className="w-8"></div> {/* Spacer for centering */}
+        <div>
+          <h3 className="font-bold text-lg">Crop Photo</h3>
+          <p className="text-secondary text-xs mt-0.5">Pinch inside box to zoom</p>
+        </div>
+        <button onClick={onCancel} className="w-8 h-8 flex items-center justify-center rounded-full bg-white/10 text-white">
+          <X size={18} />
+        </button>
       </div>
 
-      <div className="relative w-full max-w-[240px] sm:max-w-[300px] aspect-square bg-gray-900 rounded-2xl overflow-hidden shadow-[0_0_40px_rgba(0,0,0,0.5)] border-2 border-primary/50 mb-6 shrink-0 z-10">
-        <Cropper
-          image={imageSrc}
-          crop={crop}
-          zoom={zoom}
-          aspect={1}
-          onCropChange={setCrop}
-          onCropComplete={handleCropComplete}
-          onZoomChange={setZoom}
-          showGrid={true}
-          cropShape="rect"
-        />
+      {/* Cropper Area - dynamically takes available height */}
+      <div className="flex-1 w-full relative flex items-center justify-center p-4 min-h-0">
+        <div className="relative w-full max-w-[300px] max-h-full aspect-square bg-gray-900 rounded-2xl overflow-hidden shadow-[0_0_40px_rgba(0,0,0,0.5)] border-2 border-primary/50 shrink-0">
+          <Cropper
+            image={imageSrc}
+            crop={crop}
+            zoom={zoom}
+            aspect={1}
+            onCropChange={setCrop}
+            onCropComplete={handleCropComplete}
+            onZoomChange={setZoom}
+            showGrid={true}
+            cropShape="rect"
+            /* Apply custom styling for internal container to fix bounds */
+            classes={{
+              containerClassName: 'h-full w-full'
+            }}
+          />
+        </div>
       </div>
       
-      <div className="w-full max-w-[280px] sm:max-w-sm bg-[#1e293b] p-5 rounded-3xl shadow-[0_10px_40px_rgba(0,0,0,0.5)] border border-white/10 shrink-0 z-20">
-        <div className="mb-6 flex flex-col gap-2 relative">
-           <label className="text-white text-xs font-bold uppercase tracking-wider mb-2 z-10 relative">Zoom</label>
+      {/* Footer Controls - Fixed height at bottom */}
+      <div className="w-full bg-[#1e293b] p-5 pb-safe pt-4 rounded-t-3xl shadow-[0_-10px_40px_rgba(0,0,0,0.5)] border-t border-white/10 shrink-0 relative z-20 mt-auto">
+        <div className="mb-5 flex items-center gap-4 max-w-sm mx-auto">
+           <span className="text-white text-[10px] font-bold uppercase tracking-wider shrink-0">Zoom</span>
            
            <input
              type="range"
@@ -113,7 +128,7 @@ export const ImageCropper: React.FC<ImageCropperProps> = ({ imageSrc, onCropComp
              max={3}
              step={0.1}
              onChange={(e) => setZoom(Number(e.target.value))}
-             className="w-full h-2 rounded-lg appearance-none cursor-pointer z-10 relative"
+             className="w-full h-2 rounded-lg appearance-none cursor-pointer"
              style={{ 
                background: `linear-gradient(to right, var(--primary-color) 0%, var(--primary-color) ${((zoom - 1) / 2) * 100}%, #475569 ${((zoom - 1) / 2) * 100}%, #475569 100%)` 
              }}
@@ -121,13 +136,13 @@ export const ImageCropper: React.FC<ImageCropperProps> = ({ imageSrc, onCropComp
            <style>{`
              input[type=range]::-webkit-slider-thumb {
                -webkit-appearance: none;
-               height: 20px;
-               width: 20px;
+               height: 24px;
+               width: 24px;
                border-radius: 50%;
                background: white;
                box-shadow: 0 2px 6px rgba(0,0,0,0.3);
                cursor: pointer;
-               margin-top: -9px;
+               margin-top: -11px;
              }
              input[type=range]::-webkit-slider-runnable-track {
                width: 100%;
@@ -136,26 +151,21 @@ export const ImageCropper: React.FC<ImageCropperProps> = ({ imageSrc, onCropComp
                background: transparent;
                border-radius: 2px;
              }
+             /* Fallback safe area padding for iOS */
+             .pb-safe { padding-bottom: max(1.25rem, env(safe-area-inset-bottom)); }
            `}</style>
         </div>
         
-        <div className="flex flex-col gap-3 max-w-sm mx-auto z-10 relative">
+        <div className="max-w-sm mx-auto">
           <button 
             type="button" 
-            className="w-full py-3.5 px-4 bg-primary text-white rounded-xl font-bold shadow-[0_4px_14px_0_rgba(var(--primary-rgb),0.39)] flex items-center justify-center gap-2 transition-transform active:scale-95 text-sm"
+            className="w-full py-4 px-4 bg-primary text-white rounded-xl font-bold shadow-[0_4px_14px_0_rgba(var(--primary-rgb),0.39)] flex items-center justify-center gap-2 transition-transform active:scale-95 text-[15px]"
             onClick={handleSave}
             disabled={isProcessing}
           >
             {isProcessing ? 'Saving...' : (
-              <><Check size={18} /> Crop & Save Selection</>
+              <><Check size={20} /> Crop & Save Photo</>
             )}
-          </button>
-          <button 
-            type="button" 
-            className="w-full py-3 px-4 bg-transparent border border-gray-600 text-gray-300 hover:bg-gray-800 rounded-xl font-bold flex items-center justify-center gap-2 transition-colors text-sm"
-            onClick={onCancel}
-          >
-            <X size={18} /> Cancel
           </button>
         </div>
       </div>
