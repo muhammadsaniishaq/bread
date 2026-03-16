@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useAppContext } from '../store/AppContext';
 import type { Customer } from '../store/types';
 import { AnimatedPage } from '../components/AnimatedPage';
+import { ImageCropper } from '../components/ImageCropper';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from '../store/LanguageContext';
 import { Award, Star, Crown, Medal, MessageCircle, X, Camera } from 'lucide-react';
@@ -28,6 +29,7 @@ export const Customers: React.FC = () => {
   const [location, setLocation] = useState('');
   const [notes, setNotes] = useState('');
   const [image, setImage] = useState('');
+  const [rawUpload, setRawUpload] = useState<string | null>(null);
   
   const [paymentCustomerId, setPaymentCustomerId] = useState<string | null>(null);
   const [paymentAmount, setPaymentAmount] = useState('');
@@ -43,53 +45,16 @@ export const Customers: React.FC = () => {
     if (file) {
       const reader = new FileReader();
       reader.onloadend = () => {
-        // Create an image to read dimensions
-        const img = new Image();
-        img.onload = () => {
-          // Set target passport size (e.g. 300x400 aspect ratio 3:4)
-          const TARGET_WIDTH = 300;
-          const TARGET_HEIGHT = 400;
-          
-          const canvas = document.createElement('canvas');
-          canvas.width = TARGET_WIDTH;
-          canvas.height = TARGET_HEIGHT;
-          const ctx = canvas.getContext('2d');
-          
-          if (ctx) {
-            // Fill background in case of transparency
-            ctx.fillStyle = '#f3f4f6';
-            ctx.fillRect(0, 0, TARGET_WIDTH, TARGET_HEIGHT);
-
-            // Calculate cover cropping
-            const imgAspect = img.width / img.height;
-            const targetAspect = TARGET_WIDTH / TARGET_HEIGHT;
-            
-            let drawWidth, drawHeight, offsetX, offsetY;
-            
-            if (imgAspect > targetAspect) {
-              // Image is wider than target
-              drawHeight = TARGET_HEIGHT;
-              drawWidth = img.width * (TARGET_HEIGHT / img.height);
-              offsetX = (TARGET_WIDTH - drawWidth) / 2;
-              offsetY = 0;
-            } else {
-              // Image is taller than target
-              drawWidth = TARGET_WIDTH;
-              drawHeight = img.height * (TARGET_WIDTH / img.width);
-              offsetX = 0;
-              offsetY = (TARGET_HEIGHT - drawHeight) / 2;
-            }
-            
-            ctx.drawImage(img, offsetX, offsetY, drawWidth, drawHeight);
-            
-            // Save as compressed JPEG
-            setImage(canvas.toDataURL('image/jpeg', 0.8));
-          }
-        };
-        img.src = reader.result as string;
+        // Just store the raw file, let cropper handle the rest
+        setRawUpload(reader.result as string);
       };
       reader.readAsDataURL(file);
     }
+  };
+
+  const onCropComplete = (croppedBase64: string) => {
+    setImage(croppedBase64);
+    setRawUpload(null);
   };
 
   const handleAdd = async (e: React.FormEvent) => {
@@ -175,65 +140,74 @@ export const Customers: React.FC = () => {
       
       {isAdding && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <form onSubmit={handleAdd} className="card border-primary w-full max-w-md max-h-[90vh] overflow-y-auto m-0 relative">
-            <button 
-              type="button" 
-              onClick={() => setIsAdding(false)}
-              className="absolute top-4 right-4 text-secondary hover:text-danger"
-            >
-              <X size={24} />
-            </button>
-            <h2 className="text-xl font-bold mb-6">{t('cust.addCustomer')}</h2>
-            
-            <div className="flex flex-col items-center mb-6">
-              <label 
-                className="w-24 h-24 rounded-full bg-[var(--surface-color)] border-2 border-dashed border-primary/50 flex flex-col items-center justify-center cursor-pointer overflow-hidden relative group"
+          
+          {rawUpload ? (
+            <ImageCropper 
+              imageSrc={rawUpload} 
+              onCropComplete={onCropComplete} 
+              onCancel={() => setRawUpload(null)} 
+            />
+          ) : (
+            <form onSubmit={handleAdd} className="card border-primary w-full max-w-md max-h-[90vh] overflow-y-auto m-0 relative">
+              <button 
+                type="button" 
+                onClick={() => setIsAdding(false)}
+                className="absolute top-4 right-4 text-secondary hover:text-danger z-10"
               >
-                {image ? (
-                  <img src={image} alt="Preview" className="w-full h-full object-cover" />
-                ) : (
-                  <>
-                    <Camera size={24} className="text-secondary mb-1 group-hover:text-primary transition-colors" />
-                    <span className="text-[10px] text-secondary group-hover:text-primary">Add Photo</span>
-                  </>
-                )}
-                <input 
-                  type="file" 
-                  accept="image/*" 
-                  className="hidden" 
-                  onChange={handleImageUpload}
-                />
-              </label>
-            </div>
+                <X size={24} />
+              </button>
+              <h2 className="text-xl font-bold mb-6">{t('cust.addCustomer')}</h2>
+              
+              <div className="flex flex-col items-center mb-6">
+                <label 
+                  className="w-24 h-24 rounded-full bg-[var(--surface-color)] border-2 border-dashed border-primary/50 flex flex-col items-center justify-center cursor-pointer overflow-hidden relative group"
+                >
+                  {image ? (
+                    <img src={image} alt="Preview" className="w-full h-full object-cover" />
+                  ) : (
+                    <>
+                      <Camera size={24} className="text-secondary mb-1 group-hover:text-primary transition-colors" />
+                      <span className="text-[10px] text-secondary group-hover:text-primary text-center leading-tight">Add Photo</span>
+                    </>
+                  )}
+                  <input 
+                    type="file" 
+                    accept="image/*" 
+                    className="hidden" 
+                    onChange={handleImageUpload}
+                  />
+                </label>
+              </div>
 
-            <div className="form-group">
-              <label className="form-label">{t('cust.name')} *</label>
-              <input type="text" className="form-input" value={name} onChange={e => setName(e.target.value)} required placeholder="Full Name" />
-            </div>
-            
-            <div className="form-group">
-              <label className="form-label">{t('cust.phone')}</label>
-              <input type="tel" className="form-input" value={phone} onChange={e => setPhone(e.target.value)} placeholder="080... or +234..." />
-            </div>
-            
-            <div className="form-group">
-              <label className="form-label">Location/Address</label>
-              <input type="text" className="form-input" value={location} onChange={e => setLocation(e.target.value)} placeholder="Customer's shop or area" />
-            </div>
-            
-            <div className="form-group">
-              <label className="form-label">Notes</label>
-              <textarea 
-                className="form-input" 
-                value={notes} 
-                onChange={e => setNotes(e.target.value)} 
-                rows={2}
-                placeholder="Any additional details..."
-              />
-            </div>
-            
-            <button type="submit" className="btn btn-primary w-full mt-4 py-3">{t('cust.save')} & Generate ID</button>
-          </form>
+              <div className="form-group">
+                <label className="form-label">{t('cust.name')} *</label>
+                <input type="text" className="form-input" value={name} onChange={e => setName(e.target.value)} required placeholder="Full Name" />
+              </div>
+              
+              <div className="form-group">
+                <label className="form-label">{t('cust.phone')}</label>
+                <input type="tel" className="form-input" value={phone} onChange={e => setPhone(e.target.value)} placeholder="080... or +234..." />
+              </div>
+              
+              <div className="form-group">
+                <label className="form-label">Location/Address</label>
+                <input type="text" className="form-input" value={location} onChange={e => setLocation(e.target.value)} placeholder="Customer's shop or area" />
+              </div>
+              
+              <div className="form-group">
+                <label className="form-label">Notes</label>
+                <textarea 
+                  className="form-input" 
+                  value={notes} 
+                  onChange={e => setNotes(e.target.value)} 
+                  rows={2}
+                  placeholder="Any additional details..."
+                />
+              </div>
+              
+              <button type="submit" className="btn btn-primary w-full mt-4 py-3 shadow-md">{t('cust.save')} & Generate ID</button>
+            </form>
+          )}
         </div>
       )}
 
