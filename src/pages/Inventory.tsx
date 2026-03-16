@@ -8,7 +8,7 @@ import { useTranslation } from '../store/LanguageContext';
 import { Trash2, FileText, TrendingDown, TrendingUp, Package, ArrowDownCircle, ArrowUpCircle, Wallet } from 'lucide-react';
 
 export const Inventory: React.FC = () => {
-  const { products, companyMetrics, processInventoryBatch, inventoryLogs, recordBakeryPayment, bakeryPayments } = useAppContext();
+  const { products, companyMetrics, processInventoryBatch, inventoryLogs, recordBakeryPayment, bakeryPayments, transactions, expenses } = useAppContext();
   const { t } = useTranslation();
   const navigate = useNavigate();
   
@@ -123,6 +123,13 @@ export const Inventory: React.FC = () => {
 
   const remainingBalance = companyMetrics.totalValueReceived - companyMetrics.totalMoneyPaid;
 
+  // New Professional Metrics
+  const totalSales = transactions.reduce((sum, t) => sum + t.totalPrice, 0);
+  const totalGrossProfit = totalSales * 0.1; // Standard 10%
+  const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
+  const totalNetProfit = totalGrossProfit - totalExpenses;
+  const totalReturnsCost = inventoryLogs.filter(l => l.type === 'Return').reduce((sum, l) => sum + (l.quantityReceived * l.costPrice), 0);
+
   // Group logs by batch for history
   const groupedLogs = inventoryLogs.reduce((acc, log) => {
     const key = log.batchId || log.id;
@@ -140,16 +147,47 @@ export const Inventory: React.FC = () => {
       <div className="container">
         <h1 className="text-2xl font-bold mb-6">{t('inv.title')}</h1>
       
-      <div className="card text-center mb-6">
-        <h2 className="text-sm text-secondary">Supplier Balance</h2>
-        {remainingBalance <= 0 ? (
-          <div className="text-2xl font-bold text-success mt-1">No outstanding balance</div>
-        ) : (
-          <div className="text-3xl font-bold text-danger mt-1">₦{remainingBalance.toLocaleString()}</div>
-        )}
-        <div className="flex justify-between mt-4 text-sm text-secondary">
-          <span>Total Received: ₦{companyMetrics.totalValueReceived.toLocaleString()}</span>
-          <span>Total Paid: ₦{companyMetrics.totalMoneyPaid.toLocaleString()}</span>
+      {/* Professional Company Balance Grid */}
+      <div className="rounded-2xl bg-gradient-to-br from-slate-900 to-slate-800 text-white p-5 mb-6 shadow-xl border border-white/10">
+        <h2 className="text-sm text-slate-300 font-medium mb-4 flex items-center gap-2">
+          <Wallet size={16} className="text-primary" />
+          Professional Financial Balance
+        </h2>
+        
+        <div className="mb-6">
+          <div className="text-xs text-slate-400 uppercase tracking-wider mb-1">Company Balance (What you Owe)</div>
+          {remainingBalance <= 0 ? (
+            <div className="text-3xl font-bold leading-tight text-emerald-400">No Debt</div>
+          ) : (
+            <div className="text-4xl font-black leading-tight text-rose-400">₦{remainingBalance.toLocaleString()}</div>
+          )}
+        </div>
+
+        <div className="grid grid-cols-2 gap-4 border-t border-white/10 pt-4 mb-4">
+          <div>
+            <div className="text-[10px] text-slate-400 uppercase tracking-wider">Total Value Received</div>
+            <div className="text-base font-bold">₦{companyMetrics.totalValueReceived.toLocaleString()}</div>
+          </div>
+          <div>
+            <div className="text-[10px] text-slate-400 uppercase tracking-wider">Total Money Paid</div>
+            <div className="text-base font-bold text-emerald-400">₦{companyMetrics.totalMoneyPaid.toLocaleString()}</div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4 border-t border-white/10 pt-4">
+          <div>
+            <div className="text-[10px] text-slate-400 uppercase tracking-wider">Total Sales (Abun da aka saida)</div>
+            <div className="text-lg font-bold text-blue-400">₦{totalSales.toLocaleString()}</div>
+          </div>
+          <div>
+            <div className="text-[10px] text-slate-400 uppercase tracking-wider">Total Returns (Abun da aka maida)</div>
+            <div className="text-lg font-bold text-amber-400">₦{totalReturnsCost.toLocaleString()}</div>
+          </div>
+          <div className="col-span-2 bg-black/20 rounded-lg p-3 mt-2 border border-white/5">
+            <div className="text-[10px] text-slate-400 uppercase tracking-wider mb-1">Estimated Net Profit (Riba)</div>
+            <div className="text-xl font-bold text-emerald-400">₦{totalNetProfit.toLocaleString()}</div>
+            <div className="text-xs text-slate-500 mt-1">Based on 10% Gross Margin minus Expenses</div>
+          </div>
         </div>
       </div>
 
