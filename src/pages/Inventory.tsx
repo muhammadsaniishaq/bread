@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useAppContext } from '../store/AppContext';
 import type { InventoryLog } from '../store/types';
 import { AnimatedPage } from '../components/AnimatedPage';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useTranslation } from '../store/LanguageContext';
 
 import { Trash2, FileText, TrendingDown, TrendingUp, Package, ArrowDownCircle, ArrowUpCircle, Wallet } from 'lucide-react';
@@ -457,7 +457,12 @@ export const Inventory: React.FC = () => {
                       {payment.receiver && ` • To: ${payment.receiver}`}
                     </div>
                   </div>
-                  <div className="font-bold text-success">+₦{payment.amount.toLocaleString()}</div>
+                  <div className="flex flex-col items-end gap-2">
+                    <div className="font-bold text-success">+₦{payment.amount.toLocaleString()}</div>
+                    <Link to={`/bakery-receipt/${payment.id}`} className="btn btn-outline py-1 px-2 text-[10px] flex items-center gap-1">
+                      <FileText size={12} /> Receipt
+                    </Link>
+                  </div>
                 </div>
               ))
             )}
