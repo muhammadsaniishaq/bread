@@ -9,7 +9,11 @@ export const CustomerIDAndCert: React.FC = () => {
   const navigate = useNavigate();
   const { customers, appSettings } = useAppContext();
   
-  const customer = customers.find(c => c.id === id);
+  const customerIndex = customers.findIndex(c => c.id === id);
+  const customer = customerIndex !== -1 ? customers[customerIndex] : undefined;
+  // Calculate sequential serial number (1-based index)
+  const serialNumber = customerIndex !== -1 ? (customerIndex + 1).toString().padStart(6, '0') : '000000';
+
   const idCardRef = useRef<HTMLDivElement>(null);
   const certRef = useRef<HTMLDivElement>(null);
   const certContainerRef = useRef<HTMLDivElement>(null);
@@ -182,7 +186,7 @@ export const CustomerIDAndCert: React.FC = () => {
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', width: '100%', alignItems: 'stretch', padding: '0 8px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(78,52,46,0.1)', paddingBottom: '2px' }}>
                       <span style={{ fontSize: '7px', fontWeight: 'bold', opacity: 0.6 }}>S/N:</span>
-                      <span style={{ fontFamily: 'monospace', fontSize: '8px', fontWeight: 'bold', color: '#4e342e' }}>{parseInt(customer.id.substring(0, 8), 16).toString().slice(0, 6).padStart(6, '0')}</span>
+                      <span style={{ fontFamily: 'monospace', fontSize: '8px', fontWeight: 'bold', color: '#4e342e' }}>{serialNumber}</span>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(78,52,46,0.1)', paddingBottom: '2px' }}>
                       <span style={{ fontSize: '7px', fontWeight: 'bold', opacity: 0.6 }}>Phone:</span>
@@ -307,7 +311,7 @@ export const CustomerIDAndCert: React.FC = () => {
                       </div>
 
                       {/* Footer Signatures */}
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: 'auto', paddingLeft: '40px', paddingRight: '40px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: 'auto', paddingLeft: '40px', paddingRight: '40px', paddingBottom: '20px' }}>
                         <div style={{ textAlign: 'center', width: '160px' }}>
                           <div style={{ borderBottom: '1.5px solid #cbd5e1', paddingBottom: '4px', marginBottom: '8px', height: '32px', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', fontWeight: 'bold', fontSize: '12px', color: '#1e293b', fontFamily: 'monospace' }}>
                             {new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
