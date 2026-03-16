@@ -82,6 +82,16 @@ export const Inventory: React.FC = () => {
     const amountStr = parseInt(paymentAmount);
     if (!amountStr || amountStr <= 0) return;
     
+    // Calculate strict payment ceiling (Total Sales 90% minus already paid)
+    const currentSales = transactions.reduce((sum, t) => sum + t.totalPrice, 0);
+    const companyOwed = currentSales - (currentSales * 0.1); // 90%
+    const availableToPay = companyOwed - companyMetrics.totalMoneyPaid;
+    
+    if (amountStr > availableToPay) {
+      alert(`Cannot pay more than the available Company Share (₦${availableToPay.toLocaleString()})`);
+      return;
+    }
+
     setIsProcessing(true);
     const paymentId = Date.now().toString();
     
@@ -388,8 +398,12 @@ export const Inventory: React.FC = () => {
                   placeholder="e.g. 50000" 
                   value={paymentAmount}
                   onChange={e => setPaymentAmount(e.target.value)}
+                  max={companyShare - companyMetrics.totalMoneyPaid}
                   required 
                 />
+                <div className="text-[10px] text-secondary mt-1">
+                  Available to pay: <strong className="text-primary">₦{(companyShare - companyMetrics.totalMoneyPaid).toLocaleString()}</strong>
+                </div>
               </div>
               
               <div className="flex gap-3 mb-4">
