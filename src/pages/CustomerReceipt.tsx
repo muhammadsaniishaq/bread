@@ -103,9 +103,9 @@ export const CustomerReceipt: React.FC = () => {
             box-shadow: none !important;
           }
           .receipt-logo {
-            max-width: 40px !important;
-            max-height: 40px !important;
-            margin: 0 auto 5px auto !important;
+            max-width: 28px !important;
+            max-height: 28px !important;
+            margin: 0 auto 4px auto !important;
           }
           * {
             font-family: monospace !important;
@@ -151,8 +151,8 @@ export const CustomerReceipt: React.FC = () => {
               <img 
                 src={appSettings.logo} 
                 alt="Logo" 
-                className="receipt-logo w-8 h-8 mx-auto mb-2 object-contain rounded-sm"
-                style={{ filter: 'grayscale(100%)' }}
+                className="receipt-logo mx-auto mb-2 object-contain rounded-sm"
+                style={{ filter: 'grayscale(100%)', width: '28px', height: '28px' }}
               />
             )}
             <h1 className="text-lg font-bold uppercase">{appSettings.companyName || 'BREAD APP'}</h1>
