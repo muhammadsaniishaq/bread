@@ -70,26 +70,80 @@ export const CustomerReceipt: React.FC = () => {
   };
 
   return (
-    <div className="container pb-20">
+    <div className="container pb-20" style={{ maxWidth: '320px', margin: '0 auto', background: 'var(--surface-color)', minHeight: '100vh', paddingTop: '1rem' }}>
+      {/* Hide controls when printing & optimize for 58mm POS */}
+      <style>{`
+        @media print {
+          @page { margin: 0; size: 58mm auto; }
+          html, body {
+            margin: 0 !important;
+            padding: 0 !important;
+            width: 58mm !important;
+            background: #fff !important;
+          }
+          .no-print { display: none !important; }
+          .container { 
+            padding: 0 !important; 
+            margin: 0 !important; 
+            max-width: 58mm !important; 
+            width: 58mm !important;
+            box-shadow: none !important; 
+            background: transparent !important;
+          }
+          .receipt-box { 
+            border: none !important; 
+            padding: 0 !important; 
+            margin: 0 !important;
+            width: 58mm !important;
+            max-width: 58mm !important;
+            color: #000 !important;
+            background: #fff !important;
+            font-family: monospace !important;
+            line-height: 1.2 !important;
+            box-shadow: none !important;
+          }
+          .receipt-logo {
+            max-width: 40px !important;
+            max-height: 40px !important;
+            margin: 0 auto 5px auto !important;
+          }
+          * {
+            font-family: monospace !important;
+            color: #000 !important;
+          }
+          h1 { font-size: 14px !important; margin-bottom: 2px !important; }
+          .text-3xl { font-size: 14px !important; }
+          .text-xl { font-size: 13px !important; }
+          .text-sm { font-size: 10px !important; }
+          .text-xs { font-size: 9px !important; }
+          .p-8 { padding: 5px !important; }
+          .mb-6 { margin-bottom: 8px !important; }
+          .mb-4 { margin-bottom: 5px !important; }
+          .mt-8 { margin-top: 8px !important; }
+          .pb-4 { padding-bottom: 4px !important; }
+          .pt-4 { padding-top: 4px !important; }
+        }
+      `}</style>
+
       <div className="flex justify-between items-center mb-6 no-print">
-        <button className="btn btn-outline flex items-center gap-2" onClick={() => navigate('/customers')}>
-          <ArrowLeft size={18} /> Back
+        <button className="btn btn-outline btn-icon" onClick={() => navigate('/customers')}>
+          <ArrowLeft size={18} />
         </button>
         <div className="flex gap-2">
-          <button className="btn btn-outline text-primary border-primary flex items-center gap-2" onClick={handleShare}>
-            <Share2 size={18} /> Share
+          <button className="btn btn-outline text-primary border-primary flex items-center gap-2" onClick={handleShare} style={{ padding: '0.4rem 0.8rem' }}>
+            <Share2 size={16} /> Share
           </button>
-          <button className="btn btn-primary flex items-center gap-2" onClick={handlePrint}>
-            <Printer size={18} /> Print
+          <button className="btn btn-primary flex items-center gap-2" onClick={handlePrint} style={{ padding: '0.4rem 0.8rem' }}>
+            <Printer size={16} /> Print
           </button>
         </div>
       </div>
 
-      <div className="max-w-md mx-auto">
+      <div className="mx-auto" style={{ width: '100%' }}>
         <div 
           ref={receiptRef}
-          className="bg-white text-black p-8 rounded-lg shadow-sm"
-          style={{ fontFamily: 'monospace' }}
+          className="receipt-box bg-white text-black p-6 rounded shadow-sm mx-auto"
+          style={{ fontFamily: 'monospace', maxWidth: '100%' }}
         >
           {/* Header */}
           <div className="text-center mb-6">
@@ -97,12 +151,12 @@ export const CustomerReceipt: React.FC = () => {
               <img 
                 src={appSettings.logo} 
                 alt="Logo" 
-                className="w-10 h-10 mx-auto mb-2 object-cover rounded"
+                className="receipt-logo w-8 h-8 mx-auto mb-2 object-contain rounded-sm"
                 style={{ filter: 'grayscale(100%)' }}
               />
             )}
-            <h1 className="text-xl font-bold uppercase">{appSettings.companyName || 'BREAD APP'}</h1>
-            <p className="text-sm">CUSTOMER PAYMENT RECEIPT</p>
+            <h1 className="text-lg font-bold uppercase">{appSettings.companyName || 'BREAD APP'}</h1>
+            <p className="text-xs">CUSTOMER PAYMENT RECEIPT</p>
           </div>
 
           <div className="border-b border-dashed border-gray-400 pb-4 mb-4 text-sm">
