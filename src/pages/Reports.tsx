@@ -54,6 +54,19 @@ export const Reports: React.FC = () => {
   const totalReturns = filteredLogs.filter(l => l.type === 'Return').reduce((sum, l) => sum + (l.quantityReceived * l.costPrice), 0);
   const outstandingDebt = customers.reduce((sum, c) => sum + (c.debtBalance || 0), 0);
 
+  // Breakdown by Product
+  const salesByProduct: Record<string, number> = {};
+  filteredTxs.forEach(t => {
+    getTransactionItems(t).forEach(item => {
+      salesByProduct[item.productId] = (salesByProduct[item.productId] || 0) + item.quantity;
+    });
+  });
+
+  const returnsByProduct: Record<string, number> = {};
+  filteredLogs.filter(l => l.type === 'Return').forEach(l => {
+    returnsByProduct[l.productId] = (returnsByProduct[l.productId] || 0) + l.quantityReceived;
+  });
+
   const getProductName = (id: string) => products.find(p => p.id === id)?.name || 'Unknown Item';
   const getCustomerName = (id: string) => customers.find(c => c.id === id)?.name || 'Unknown';
 
@@ -110,7 +123,11 @@ export const Reports: React.FC = () => {
         `Debt Issued: NGN ${totalDebt.toLocaleString()}\n`,
         "--------------------------------\n",
         `Bread Sold : ${breadCount} units\n`,
+        ...Object.entries(salesByProduct).map(([id, qty]) => ` - ${getProductName(id).substring(0, 16).padEnd(16)}: ${qty}\n`),
+        "--------------------------------\n",
         `Returns    : NGN ${totalReturns.toLocaleString()}\n`,
+        ...Object.entries(returnsByProduct).map(([id, qty]) => ` - ${getProductName(id).substring(0, 16).padEnd(16)}: ${qty}\n`),
+        "--------------------------------\n",
         `Stock Val  : NGN ${stockRetailValue.toLocaleString()}\n`,
         `Unpaid Debt: NGN ${outstandingDebt.toLocaleString()}\n`,
         "--------------------------------\n",
@@ -190,10 +207,10 @@ export const Reports: React.FC = () => {
         }
       `}</style>
       
-      <div className="flex justify-between items-center mb-6 no-print">
-        <h1 className="text-2xl font-bold">Advanced Reports</h1>
-        <button className="btn btn-primary flex items-center gap-2" style={{width: 'auto', minHeight: 'auto', padding: '0.5rem 1rem'}} onClick={handlePrint}>
-          <Printer size={18} /> Print Repo
+      <div className="flex justify-between items-center mb-6 no-print bg-black/5 dark:bg-white/5 p-3 rounded-xl border border-[var(--border-color)]">
+        <h1 className="text-lg font-bold">Advanced Reports</h1>
+        <button className="btn btn-primary flex items-center justify-center gap-2 rounded-lg text-sm font-bold" style={{ width: 'auto', minHeight: '36px', padding: '0 1rem' }} onClick={handlePrint}>
+          <Printer size={16} /> Print Repo
         </button>
       </div>
       
@@ -225,8 +242,16 @@ export const Reports: React.FC = () => {
           <div className="text-xl font-bold mt-1">₦{totalSalesValue.toLocaleString()}</div>
         </div>
         <div className="card" style={{ marginBottom: 0 }}>
-          <div className="text-sm text-secondary">Bread Sold</div>
-          <div className="text-xl font-bold mt-1">{breadCount} units</div>
+          <div className="text-sm text-secondary">Bread Sold (Total)</div>
+          <div className="text-xl font-bold mt-1 mb-2">{breadCount} units</div>
+          <div className="text-xs text-secondary mt-1 border-t border-[var(--border-color)] pt-2 max-h-24 overflow-y-auto">
+            {Object.entries(salesByProduct).map(([id, qty]) => (
+              <div key={id} className="flex justify-between py-1 border-b border-[var(--border-color)] last:border-0">
+                <span className="truncate pr-2">{getProductName(id)}</span>
+                <span className="font-bold">{qty}</span>
+              </div>
+            ))}
+          </div>
         </div>
         <div className="card" style={{ marginBottom: 0 }}>
           <div className="text-sm text-secondary">Cash Received</div>
@@ -239,8 +264,17 @@ export const Reports: React.FC = () => {
         
         {/* Advanced Feature Cards */}
         <div className="card border-warning" style={{ marginBottom: 0 }}>
-          <div className="text-sm text-secondary">Total Returns</div>
-          <div className="text-xl font-bold text-warning mt-1">₦{totalReturns.toLocaleString()}</div>
+          <div className="text-sm text-secondary">Total Returns Breakdown</div>
+          <div className="text-xl font-bold text-warning mt-1 mb-2">₦{totalReturns.toLocaleString()}</div>
+          <div className="text-xs text-secondary mt-1 border-t border-[var(--border-color)] pt-2 max-h-24 overflow-y-auto">
+            {Object.keys(returnsByProduct).length === 0 ? <div className="py-1">No returns.</div> : 
+             Object.entries(returnsByProduct).map(([id, qty]) => (
+              <div key={id} className="flex justify-between py-1 border-b border-[var(--border-color)] last:border-0">
+                <span className="truncate pr-2">{getProductName(id)}</span>
+                <span className="font-bold text-warning">{qty}</span>
+              </div>
+            ))}
+          </div>
         </div>
         <div className="card border-primary" style={{ marginBottom: 0 }}>
           <div className="text-sm text-secondary">Outstanding Debt</div>
