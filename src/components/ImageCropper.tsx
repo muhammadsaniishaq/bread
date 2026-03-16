@@ -32,7 +32,7 @@ async function getCroppedImg(
 
   // Set standard passport/ID card resolution
   const TARGET_WIDTH = 300;
-  const TARGET_HEIGHT = 400;
+  const TARGET_HEIGHT = 300;
   
   canvas.width = TARGET_WIDTH;
   canvas.height = TARGET_HEIGHT;
@@ -88,12 +88,12 @@ export const ImageCropper: React.FC<ImageCropperProps> = ({ imageSrc, onCropComp
         <p className="text-secondary text-sm">Pinch to zoom, drag to move</p>
       </div>
 
-      <div className="relative w-full max-w-[280px] sm:max-w-[320px] aspect-[3/4] bg-gray-900 rounded-2xl overflow-hidden shadow-[0_0_40px_rgba(0,0,0,0.5)] border-2 border-primary/50 mb-8 shrink-0">
+      <div className="relative w-full max-w-[280px] sm:max-w-[320px] aspect-square bg-gray-900 rounded-2xl overflow-hidden shadow-[0_0_40px_rgba(0,0,0,0.5)] border-2 border-primary/50 mb-6 shrink-0">
         <Cropper
           image={imageSrc}
           crop={crop}
           zoom={zoom}
-          aspect={3 / 4}
+          aspect={1}
           onCropChange={setCrop}
           onCropComplete={handleCropComplete}
           onZoomChange={setZoom}
