@@ -234,6 +234,12 @@ export const CustomerProfile: React.FC = () => {
                       </div>
                       <div className="text-right">
                         <div className="font-bold text-success">+ ₦{item.amount.toLocaleString()}</div>
+                        <button 
+                          className="text-xs text-primary underline mt-1 cursor-pointer"
+                          onClick={(e) => { e.stopPropagation(); navigate(`/customer-receipt/${item.id}`); }}
+                        >
+                          View Receipt
+                        </button>
                       </div>
                     </div>
                   </div>

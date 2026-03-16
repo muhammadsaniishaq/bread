@@ -43,7 +43,50 @@ export const Customers: React.FC = () => {
     if (file) {
       const reader = new FileReader();
       reader.onloadend = () => {
-        setImage(reader.result as string);
+        // Create an image to read dimensions
+        const img = new Image();
+        img.onload = () => {
+          // Set target passport size (e.g. 300x400 aspect ratio 3:4)
+          const TARGET_WIDTH = 300;
+          const TARGET_HEIGHT = 400;
+          
+          const canvas = document.createElement('canvas');
+          canvas.width = TARGET_WIDTH;
+          canvas.height = TARGET_HEIGHT;
+          const ctx = canvas.getContext('2d');
+          
+          if (ctx) {
+            // Fill background in case of transparency
+            ctx.fillStyle = '#f3f4f6';
+            ctx.fillRect(0, 0, TARGET_WIDTH, TARGET_HEIGHT);
+
+            // Calculate cover cropping
+            const imgAspect = img.width / img.height;
+            const targetAspect = TARGET_WIDTH / TARGET_HEIGHT;
+            
+            let drawWidth, drawHeight, offsetX, offsetY;
+            
+            if (imgAspect > targetAspect) {
+              // Image is wider than target
+              drawHeight = TARGET_HEIGHT;
+              drawWidth = img.width * (TARGET_HEIGHT / img.height);
+              offsetX = (TARGET_WIDTH - drawWidth) / 2;
+              offsetY = 0;
+            } else {
+              // Image is taller than target
+              drawWidth = TARGET_WIDTH;
+              drawHeight = img.height * (TARGET_WIDTH / img.width);
+              offsetX = 0;
+              offsetY = (TARGET_HEIGHT - drawHeight) / 2;
+            }
+            
+            ctx.drawImage(img, offsetX, offsetY, drawWidth, drawHeight);
+            
+            // Save as compressed JPEG
+            setImage(canvas.toDataURL('image/jpeg', 0.8));
+          }
+        };
+        img.src = reader.result as string;
       };
       reader.readAsDataURL(file);
     }
