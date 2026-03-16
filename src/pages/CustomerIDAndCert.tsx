@@ -75,63 +75,81 @@ export const CustomerIDAndCert: React.FC = () => {
             {/* Standard Portrait CR80 ID Card (2.125" x 3.375") translated to pixels for reliable crisp rendering (roughly 204px x 324px depending on scale, but let's use fixed safe px) */}
             <div 
               ref={idCardRef}
-              className="bg-white rounded-[1rem] shadow-2xl relative overflow-hidden flex flex-col id-card-print"
-              style={{ width: '220px', height: '350px', flexShrink: 0, fontFamily: "'Inter', sans-serif" }}
+              className="rounded-[1rem] shadow-2xl relative overflow-hidden flex flex-col id-card-print"
+              style={{ 
+                width: '220px', 
+                height: '350px', 
+                flexShrink: 0, 
+                fontFamily: "'Inter', sans-serif",
+                background: '#faeddb', // base cream color
+                backgroundImage: `repeating-linear-gradient(
+                  0deg,
+                  #faeddb,
+                  #faeddb 20px,
+                  #f5e0c8 20px,
+                  #f5e0c8 40px
+                )`,
+                color: '#4e342e' // deep brown
+              }}
             >
-              {/* Premium Top Gradient Header */}
-              <div className="h-[120px] bg-gradient-to-br from-primary to-indigo-800 w-full absolute top-0 left-0 z-0">
-                 {/* Decorative circles */}
-                 <div className="absolute -top-6 -right-6 w-24 h-24 bg-white opacity-10 rounded-full blur-xl"></div>
-                 <div className="absolute top-10 -left-6 w-16 h-16 bg-white opacity-10 rounded-full blur-md"></div>
-              </div>
+              {/* Bakery Decor Accents (Small icons scattered using absolute positioning simulating a pattern) */}
+              <div className="absolute top-2 left-2 text-[10px] opacity-30">🥐</div>
+              <div className="absolute top-10 right-3 text-[12px] opacity-30">🥖</div>
+              <div className="absolute bottom-16 left-3 text-[10px] opacity-30">🥨</div>
+              <div className="absolute bottom-8 right-2 text-[12px] opacity-30">🧁</div>
+              <div className="absolute top-1/2 left-2 text-[10px] opacity-30">🍞</div>
+              <div className="absolute top-[40%] right-2 text-[10px] opacity-30">🍪</div>
 
               <div className="relative z-10 flex flex-col items-center pt-5 px-4 h-full">
                 {/* Header Logo or Name */}
-                <h1 className="text-white font-bold text-[10px] tracking-widest uppercase mb-4 opacity-90 text-center w-full truncate">
-                  {appSettings.companyName || 'BREAD APP'}
+                <h1 className="font-bold text-[10px] tracking-widest uppercase mb-4 opacity-90 text-center w-full truncate">
+                  {appSettings.companyName || 'BAKERY & CO.'}
                 </h1>
 
-                {/* Passport Photo (Small and Premium) */}
-                <div className="w-[80px] h-[80px] rounded-full border-4 border-white shadow-lg overflow-hidden bg-gray-100 flex items-center justify-center shrink-0 mb-3 z-10">
-                  {customer.image ? (
-                    <img src={customer.image} alt={customer.name} className="w-full h-full object-cover" />
-                  ) : (
-                    <span className="text-gray-400 text-[9px] text-center px-2 leading-tight">No Photo</span>
-                  )}
+                {/* Passport Photo (With Ornate Frame) */}
+                <div className="relative mb-3 flex items-center justify-center p-1 w-[90px] h-[90px] bg-[#4e342e]">
+                   <div className="absolute inset-0 bg-[#faeddb]" style={{ clipPath: 'polygon(10% 0, 90% 0, 100% 10%, 100% 90%, 90% 100%, 10% 100%, 0 90%, 0 10%)' }}></div>
+                   <div className="absolute inset-[3px] bg-[#4e342e]" style={{ clipPath: 'polygon(10% 0, 90% 0, 100% 10%, 100% 90%, 90% 100%, 10% 100%, 0 90%, 0 10%)' }}></div>
+                   <div className="w-[78px] h-[78px] relative z-20 overflow-hidden bg-gray-100 flex items-center justify-center shrink-0" style={{ clipPath: 'polygon(10% 0, 90% 0, 100% 10%, 100% 90%, 90% 100%, 10% 100%, 0 90%, 0 10%)' }}>
+                    {customer.image ? (
+                      <img src={customer.image} alt={customer.name} className="w-full h-full object-cover" />
+                    ) : (
+                      <span className="text-gray-400 text-[9px] text-center px-2 leading-tight">No Photo</span>
+                    )}
+                  </div>
                 </div>
 
                 {/* Customer Details */}
-                <div className="text-center w-full flex-1 flex flex-col justify-center">
-                  <h2 className="text-[#101828] font-black text-[15px] leading-tight mb-0.5 truncate w-full px-1">{customer.name}</h2>
-                  <p className="text-primary font-bold text-[9px] tracking-widest uppercase mb-3">Authorized Partner</p>
+                <div className="text-center w-full flex-1 flex flex-col justify-center mt-2">
+                  <h2 className="font-serif italic font-bold text-[20px] leading-tight mb-0.5 truncate w-full px-1">{customer.name}</h2>
+                  <p className="font-bold text-[8px] tracking-widest uppercase mb-3 opacity-80">Job Position / Partner</p>
                   
-                  <div className="w-8 h-0.5 bg-gray-200 mx-auto mb-3"></div>
+                  <div className="flex items-center justify-center gap-1 mb-3 opacity-60">
+                    <div className="w-1.5 h-1.5 rounded-full bg-[#4e342e]"></div>
+                    <div className="w-8 h-px bg-[#4e342e]"></div>
+                    <div className="w-1.5 h-1.5 rounded-full bg-[#4e342e]"></div>
+                  </div>
 
-                  <div className="flex flex-col gap-1.5 w-full items-center">
+                  <div className="flex flex-col gap-1 w-full items-center">
                     <div>
-                      <div className="text-[7px] text-gray-400 uppercase font-bold tracking-wider">ID Number</div>
-                      <div className="font-mono text-[10px] font-bold text-[#344054]">CUST-{customer.id.slice(-5)}</div>
-                    </div>
-                    <div>
-                      <div className="text-[7px] text-gray-400 uppercase font-bold tracking-wider">Phone</div>
-                      <div className="text-[9px] font-bold text-[#344054]">{customer.phone || 'N/A'}</div>
+                      <div className="font-mono text-[9px] font-bold opacity-80">ID: CUST-{customer.id.slice(-5)}</div>
                     </div>
                   </div>
                 </div>
 
                 {/* Bottom Bar */}
-                <div className="h-6 w-full bg-gray-50 flex items-center justify-center border-t border-gray-100 mt-auto">
-                    <span className="text-[6px] text-gray-400 font-bold tracking-widest uppercase">Valid & Verified</span>
+                <div className="h-6 w-full flex items-center justify-center mt-auto border-t border-[#4e342e]/20">
+                    <span className="text-[7px] font-bold tracking-widest uppercase opacity-70">Valid & Verified</span>
                 </div>
               </div>
             </div>
           </div>
         </section>
 
-        <hr className="border-[var(--border-color)] w-full no-print" />
+        <hr className="border-[var(--border-color)] w-full no-print my-16" />
 
         {/* CERTIFICATE SECTION */}
-        <section className="w-full">
+        <section className="w-full pb-10">
           <div className="flex justify-between items-center mb-4 no-print">
             <div>
               <h2 className="text-lg font-bold">Certificate of Partnership</h2>
@@ -162,9 +180,9 @@ export const CustomerIDAndCert: React.FC = () => {
                       {/* Header row with Logos */}
                       <div className="flex justify-between items-start w-full">
                         {appSettings.logo ? (
-                          <img src={appSettings.logo} alt="Company Logo" className="w-12 h-12 object-contain" />
+                          <img src={appSettings.logo} alt="Company Logo" className="w-8 h-8 object-contain" />
                         ) : (
-                          <div className="w-12 h-12 flex items-center justify-center bg-slate-100 rounded text-[10px] font-bold text-slate-400 text-center leading-tight">LOGO</div>
+                          <div className="w-8 h-8 flex items-center justify-center bg-slate-100 rounded text-[8px] font-bold text-slate-400 text-center leading-tight">LOGO</div>
                         )}
                         
                         <div className="text-right flex flex-col items-end">
