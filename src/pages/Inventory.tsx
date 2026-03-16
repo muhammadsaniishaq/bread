@@ -148,45 +148,46 @@ export const Inventory: React.FC = () => {
         <h1 className="text-2xl font-bold mb-6">{t('inv.title')}</h1>
       
       {/* Professional Company Balance Grid */}
-      <div className="rounded-2xl bg-gradient-to-br from-slate-900 to-slate-800 text-white p-5 mb-6 shadow-xl border border-white/10">
-        <h2 className="text-sm text-slate-300 font-medium mb-4 flex items-center gap-2">
-          <Wallet size={16} className="text-primary" />
+      <div className="card mb-6" style={{ background: 'var(--surface-color)', border: '1px solid var(--border-color)', padding: '1.5rem' }}>
+        <h2 className="text-sm font-bold mb-4 flex items-center gap-2" style={{ color: 'var(--primary-color)' }}>
+          <Wallet size={18} />
           Professional Financial Balance
         </h2>
         
-        <div className="mb-6">
-          <div className="text-xs text-slate-400 uppercase tracking-wider mb-1">Company Balance (What you Owe)</div>
+        <div style={{ marginBottom: '1.5rem' }}>
+          <div className="text-xs uppercase font-bold text-secondary mb-1">Company Balance (What you Owe)</div>
           {remainingBalance <= 0 ? (
-            <div className="text-3xl font-bold leading-tight text-emerald-400">No Debt</div>
+            <div className="text-3xl font-black text-success">No Debt</div>
           ) : (
-            <div className="text-4xl font-black leading-tight text-rose-400">₦{remainingBalance.toLocaleString()}</div>
+            <div className="text-4xl font-black text-danger">₦{remainingBalance.toLocaleString()}</div>
           )}
         </div>
 
-        <div className="grid grid-cols-2 gap-4 border-t border-white/10 pt-4 mb-4">
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', borderTop: '1px solid var(--border-color)', paddingTop: '1rem', marginBottom: '1rem' }}>
           <div>
-            <div className="text-[10px] text-slate-400 uppercase tracking-wider">Total Value Received</div>
-            <div className="text-base font-bold">₦{companyMetrics.totalValueReceived.toLocaleString()}</div>
+            <div className="text-xs text-secondary uppercase font-bold mb-1" style={{ fontSize: '10px' }}>Total Value Received</div>
+            <div className="text-lg font-bold">₦{companyMetrics.totalValueReceived.toLocaleString()}</div>
           </div>
           <div>
-            <div className="text-[10px] text-slate-400 uppercase tracking-wider">Total Money Paid</div>
-            <div className="text-base font-bold text-emerald-400">₦{companyMetrics.totalMoneyPaid.toLocaleString()}</div>
+            <div className="text-xs text-secondary uppercase font-bold mb-1" style={{ fontSize: '10px' }}>Total Money Paid</div>
+            <div className="text-lg font-bold text-success">₦{companyMetrics.totalMoneyPaid.toLocaleString()}</div>
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-4 border-t border-white/10 pt-4">
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', borderTop: '1px solid var(--border-color)', paddingTop: '1rem' }}>
           <div>
-            <div className="text-[10px] text-slate-400 uppercase tracking-wider">Total Sales (Abun da aka saida)</div>
-            <div className="text-lg font-bold text-blue-400">₦{totalSales.toLocaleString()}</div>
+            <div className="text-xs text-secondary uppercase font-bold mb-1" style={{ fontSize: '10px' }}>Total Sales (Abun da aka saida)</div>
+            <div className="text-xl font-bold" style={{ color: 'var(--primary-color)' }}>₦{totalSales.toLocaleString()}</div>
           </div>
           <div>
-            <div className="text-[10px] text-slate-400 uppercase tracking-wider">Total Returns (Abun da aka maida)</div>
-            <div className="text-lg font-bold text-amber-400">₦{totalReturnsCost.toLocaleString()}</div>
+            <div className="text-xs text-secondary uppercase font-bold mb-1" style={{ fontSize: '10px' }}>Total Returns (Abun da aka maida)</div>
+            <div className="text-xl font-bold text-warning">₦{totalReturnsCost.toLocaleString()}</div>
           </div>
-          <div className="col-span-2 bg-black/20 rounded-lg p-3 mt-2 border border-white/5">
-            <div className="text-[10px] text-slate-400 uppercase tracking-wider mb-1">Estimated Net Profit (Riba)</div>
-            <div className="text-xl font-bold text-emerald-400">₦{totalNetProfit.toLocaleString()}</div>
-            <div className="text-xs text-slate-500 mt-1">Based on 10% Gross Margin minus Expenses</div>
+          
+          <div style={{ gridColumn: '1 / -1', background: 'var(--background-color)', padding: '1rem', borderRadius: '12px', border: '1px solid var(--border-color)', marginTop: '0.5rem' }}>
+            <div className="text-xs text-secondary uppercase font-bold mb-1" style={{ fontSize: '11px' }}>Estimated Net Profit (Riba)</div>
+            <div className="text-2xl font-black text-success">₦{totalNetProfit.toLocaleString()}</div>
+            <div className="text-xs text-secondary mt-1" style={{ fontSize: '10px' }}>Based on 10% Gross Margin minus Expenses</div>
           </div>
         </div>
       </div>
