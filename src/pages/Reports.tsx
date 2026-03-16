@@ -2,9 +2,10 @@ import React, { useState } from 'react';
 import { useAppContext } from '../store/AppContext';
 import { getTransactionItems } from '../store/types';
 import { useNavigate } from 'react-router-dom';
+import { Printer } from 'lucide-react';
 
 export const Reports: React.FC = () => {
-  const { transactions, expenses, products, customers } = useAppContext();
+  const { transactions, expenses, products, customers, inventoryLogs, appSettings } = useAppContext();
   const navigate = useNavigate();
   
   const [period, setPeriod] = useState<'All' | 'Today' | 'Week' | 'Month'>('Today');
@@ -18,22 +19,26 @@ export const Reports: React.FC = () => {
 
     let filteredTxs = transactions;
     let filteredExps = expenses;
+    let filteredLogs = inventoryLogs;
 
     if (period === 'Today') {
       filteredTxs = transactions.filter(t => t.date.startsWith(todayStr));
       filteredExps = expenses.filter(e => e.date.startsWith(todayStr));
+      filteredLogs = inventoryLogs.filter(l => l.date.startsWith(todayStr));
     } else if (period === 'Week') {
       filteredTxs = transactions.filter(t => new Date(t.date) >= oneWeekAgo);
       filteredExps = expenses.filter(e => new Date(e.date) >= oneWeekAgo);
+      filteredLogs = inventoryLogs.filter(l => new Date(l.date) >= oneWeekAgo);
     } else if (period === 'Month') {
       filteredTxs = transactions.filter(t => new Date(t.date) >= oneMonthAgo);
       filteredExps = expenses.filter(e => new Date(e.date) >= oneMonthAgo);
+      filteredLogs = inventoryLogs.filter(l => new Date(l.date) >= oneMonthAgo);
     }
 
-    return { filteredTxs, filteredExps };
+    return { filteredTxs, filteredExps, filteredLogs };
   };
 
-  const { filteredTxs, filteredExps } = filteredData();
+  const { filteredTxs, filteredExps, filteredLogs } = filteredData();
 
   const totalSalesValue = filteredTxs.reduce((acc, t) => acc + t.totalPrice, 0);
   const totalCash = filteredTxs.filter(t => t.type === 'Cash').reduce((acc, t) => acc + t.totalPrice, 0);
@@ -43,6 +48,11 @@ export const Reports: React.FC = () => {
   const totalExpenses = filteredExps.reduce((acc, e) => acc + e.amount, 0);
   const grossProfit = totalSalesValue * 0.1;
   const netProfit = grossProfit - totalExpenses;
+
+  // Advanced Metrics
+  const stockRetailValue = products.filter(p => p.active).reduce((sum, p) => sum + (p.stock * p.price), 0);
+  const totalReturns = filteredLogs.filter(l => l.type === 'Return').reduce((sum, l) => sum + (l.quantityReceived * l.costPrice), 0);
+  const outstandingDebt = customers.reduce((sum, c) => sum + (c.debtBalance || 0), 0);
 
   const getProductName = (id: string) => products.find(p => p.id === id)?.name || 'Unknown Item';
   const getCustomerName = (id: string) => customers.find(c => c.id === id)?.name || 'Unknown';
@@ -54,12 +64,136 @@ export const Reports: React.FC = () => {
 
   const sortedTxs = [...filteredTxs].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
+  const handlePrint = async () => {
+    try {
+      if (!(navigator as any).bluetooth) {
+        alert("This browser doesn't support direct Bluetooth printing. Falling back to standard print.");
+        window.print();
+        return;
+      }
+
+      const device = await (navigator as any).bluetooth.requestDevice({
+        filters: [
+          { services: ['000018f0-0000-1000-8000-00805f9b34fb'] },
+          { namePrefix: 'MTP' }, { namePrefix: 'PT' }, { namePrefix: 'RP' }, { namePrefix: 'Printer' }
+        ],
+        optionalServices: ['000018f0-0000-1000-8000-00805f9b34fb', '49535343-fe7d-4ae5-8fa9-9fafd205e455', 'e7810a71-73ae-499d-8c15-faa9aef0c3f2']
+      });
+
+      if (!device.gatt) throw new Error("No GATT server found.");
+      const server = await device.gatt.connect();
+      const services = await server.getPrimaryServices();
+      if (services.length === 0) throw new Error("No services found.");
+      const service = services[0];
+      
+      const characteristics = await service.getCharacteristics();
+      const characteristic = characteristics.find((c: any) => c.properties.write || c.properties.writeWithoutResponse);
+      if (!characteristic) throw new Error("No writable characteristic.");
+
+      // Build ESC/POS payload
+      const title = (appSettings.companyName || 'BREAD APP').toUpperCase();
+      let cmds = [
+        "\\x1B" + "@", // Init
+        "\\x1B" + "a" + "\\x01", // Center
+        "\\x1B" + "E" + "\\x01", // Bold
+        title + "\n",
+        "\\x1B" + "E" + "\\x00", // Normal
+        `REPORTS & ANALYTICS\n`,
+        `Period: ${period.toUpperCase()}\n`,
+        "--------------------------------\n", // 32 chars
+        "\\x1B" + "a" + "\\x00", // Left
+        `Net Profit : NGN ${netProfit.toLocaleString()}\n`,
+        `Total Sales: NGN ${totalSalesValue.toLocaleString()}\n`,
+        `10% Gross  : NGN ${grossProfit.toLocaleString()}\n`,
+        `Expenses   : NGN ${totalExpenses.toLocaleString()}\n`,
+        `Cash Recvd : NGN ${totalCash.toLocaleString()}\n`,
+        `Debt Issued: NGN ${totalDebt.toLocaleString()}\n`,
+        "--------------------------------\n",
+        `Bread Sold : ${breadCount} units\n`,
+        `Returns    : NGN ${totalReturns.toLocaleString()}\n`,
+        `Stock Val  : NGN ${stockRetailValue.toLocaleString()}\n`,
+        `Unpaid Debt: NGN ${outstandingDebt.toLocaleString()}\n`,
+        "--------------------------------\n",
+        "\\x1B" + "a" + "\\x01", // Center
+        "\n",
+        `Printed: ${new Date().toLocaleString()}\n`,
+        "Generated by BreadApp\n",
+        "\n\n\n" // Feed paper
+      ];
+
+      const cmdStr = cmds.join("");
+      const buffer = [];
+      for (let i = 0; i < cmdStr.length; i++) {
+        if (cmdStr[i] === '\\' && cmdStr[i+1] === 'x') {
+           buffer.push(parseInt(cmdStr.substring(i+2, i+4), 16));
+           i += 3;
+        } else {
+           buffer.push(cmdStr.charCodeAt(i));
+        }
+      }
+      
+      const payload = new Uint8Array(buffer);
+      const chunkSize = 32; // Hyper-conservative for worst-case BLE thermal printers
+      for (let i = 0; i < payload.length; i += chunkSize) {
+        const chunk = payload.slice(i, i + chunkSize);
+        if (characteristic.properties.writeWithoutResponse) {
+           await characteristic.writeValueWithoutResponse(chunk);
+        } else {
+           await characteristic.writeValue(chunk);
+        }
+        await new Promise(r => setTimeout(r, 30));
+      }
+
+      await new Promise(r => setTimeout(r, 500));
+      device.gatt.disconnect();
+
+    } catch (error) {
+      console.warn("Bluetooth print failed: ", error);
+      window.print();
+    }
+  };
+
   return (
-    <div className="container">
-      <div className="flex justify-between items-center mb-6">
+    <div className="container" style={{ paddingBottom: '2rem' }}>
+      {/* Advanced 58mm styling for fallback print */}
+      <style>{`
+        @media print {
+          @page { margin: 0; size: 58mm auto; }
+          html, body {
+            margin: 0 !important;
+            padding: 0 !important;
+            width: 58mm !important;
+            background: #fff !important;
+          }
+          .no-print { display: none !important; }
+          .container { 
+            padding: 0 !important; 
+            margin: 0 auto !important; 
+            max-width: 58mm !important; 
+            width: 58mm !important;
+            box-shadow: none !important; 
+            background: transparent !important;
+          }
+          * {
+            font-family: monospace !important;
+            color: #000 !important;
+          }
+          h1 { font-size: 14px !important; margin-bottom: 2px !important; }
+          .text-2xl { font-size: 14px !important; }
+          .text-xl { font-size: 13px !important; }
+          .text-lg { font-size: 12px !important; }
+          .text-sm { font-size: 10px !important; }
+          .text-xs { font-size: 9px !important; }
+          .card { border: none !important; padding: 2px !important; box-shadow: none !important; margin-bottom: 4px !important; }
+          /* Enforce black text for thermal */
+          .text-success, .text-danger, .text-primary, .text-secondary { color: #000 !important; }
+        }
+      `}</style>
+      
+      <div className="flex justify-between items-center mb-6 no-print">
         <h1 className="text-2xl font-bold">Advanced Reports</h1>
-        <button className="btn btn-outline" style={{width: 'auto', minHeight: 'auto', padding: '0.25rem 0.5rem'}} onClick={() => window.print()}>
-          Print View
+        <button className="btn btn-primary flex items-center gap-2" style={{width: 'auto', minHeight: 'auto', padding: '0.5rem 1rem'}} onClick={handlePrint}>
+          <Printer size={18} /> Print Repo
         </button>
       </div>
       
@@ -101,6 +235,20 @@ export const Reports: React.FC = () => {
         <div className="card border-danger" style={{ marginBottom: 0 }}>
           <div className="text-sm text-secondary">Debt Issued</div>
           <div className="text-xl font-bold text-danger mt-1">₦{totalDebt.toLocaleString()}</div>
+        </div>
+        
+        {/* Advanced Feature Cards */}
+        <div className="card border-warning" style={{ marginBottom: 0 }}>
+          <div className="text-sm text-secondary">Total Returns</div>
+          <div className="text-xl font-bold text-warning mt-1">₦{totalReturns.toLocaleString()}</div>
+        </div>
+        <div className="card border-primary" style={{ marginBottom: 0 }}>
+          <div className="text-sm text-secondary">Outstanding Debt</div>
+          <div className="text-xl font-bold text-primary mt-1">₦{outstandingDebt.toLocaleString()}</div>
+        </div>
+        <div className="card col-span-2" style={{ marginBottom: 0 }}>
+          <div className="text-sm text-secondary">Total Inventory Retail Value</div>
+          <div className="text-xl font-bold mt-1">₦{stockRetailValue.toLocaleString()}</div>
         </div>
       </div>
       
