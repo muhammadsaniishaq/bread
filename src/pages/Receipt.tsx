@@ -116,7 +116,7 @@ export const Receipt: React.FC = () => {
       }
       
       const payload = new Uint8Array(buffer);
-      const chunkSize = 256;
+      const chunkSize = 64;
       for (let i = 0; i < payload.length; i += chunkSize) {
         const chunk = payload.slice(i, i + chunkSize);
         if (characteristic.properties.writeWithoutResponse) {
@@ -124,7 +124,7 @@ export const Receipt: React.FC = () => {
         } else {
            await characteristic.writeValue(chunk);
         }
-        await new Promise(r => setTimeout(r, 50)); // Slow down for printer buffer
+        await new Promise(r => setTimeout(r, 20)); // Strict slow down for printer BLE MTU
       }
 
       await new Promise(r => setTimeout(r, 500));
