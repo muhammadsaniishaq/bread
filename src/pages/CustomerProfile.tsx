@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useAppContext } from '../store/AppContext';
 import { getTransactionItems } from '../store/types';
 import { AnimatedPage } from '../components/AnimatedPage';
-import { ArrowLeft, Phone, MapPin, Activity, MessageCircle, MessageSquare } from 'lucide-react';
+import { ArrowLeft, Phone, MapPin, Activity, MessageCircle, MessageSquare, FileText } from 'lucide-react';
 
 export const CustomerProfile: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -82,6 +82,9 @@ export const CustomerProfile: React.FC = () => {
             <ArrowLeft size={20} />
           </button>
           <h1 className="text-2xl font-bold m-0 flex-1 truncate">{customer.name}</h1>
+          <button onClick={() => navigate(`/customer-docs/${customer.id}`)} className="btn btn-outline btn-icon" style={{ padding: '0.6rem' }} title="View ID & Certificate">
+            <FileText size={20} className="text-primary" />
+          </button>
         </div>
 
         <div className="card bg-primary text-white mb-6">

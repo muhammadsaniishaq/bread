@@ -56,145 +56,166 @@ export const CustomerIDAndCert: React.FC = () => {
         <button className="btn btn-outline flex items-center gap-2" onClick={() => navigate('/customers')}>
           <ArrowLeft size={18} /> Back
         </button>
-        <div className="flex gap-2">
-           {/* Mobile view standard buttons hidden, relying on individual section actions */}
-        </div>
       </div>
 
-      <div className="space-y-12">
+      <div className="space-y-12 flex flex-col items-center">
         {/* ID CARD SECTION */}
-        <section>
+        <section className="w-full max-w-sm">
           <div className="flex justify-between items-center mb-4 no-print">
-            <h2 className="text-lg font-bold">ID Card</h2>
-            <div className="flex gap-2">
-              <button className="btn btn-sm btn-outline text-primary border-primary flex items-center gap-1" onClick={() => handleShare(idCardRef, `${customer.name}-ID`)}>
-                <Share2 size={14} /> Share
-              </button>
+            <div>
+              <h2 className="text-lg font-bold">Official ID Card</h2>
+              <p className="text-xs text-secondary">Modern Badge Design</p>
             </div>
+            <button className="btn btn-sm btn-primary flex items-center gap-2 shadow-sm" onClick={() => handleShare(idCardRef, `${customer.name}-ID`)}>
+              <Share2 size={16} /> Save / Share
+            </button>
           </div>
           
-          <div className="flex justify-center overflow-x-auto pb-4 hide-scrollbar">
-            {/* ID Card Container */}
+          <div className="flex justify-center hide-scrollbar">
+            {/* Standard Portrait CR80 ID Card (2.125" x 3.375") translated to pixels for reliable crisp rendering (roughly 204px x 324px depending on scale, but let's use fixed safe px) */}
             <div 
               ref={idCardRef}
-              className="bg-white text-black rounded-xl shadow-xl relative overflow-hidden flex flex-col printable-area id-card-print"
-              style={{ width: '3.375in', height: '2.125in', flexShrink: 0, fontFamily: 'sans-serif' }}
+              className="bg-white rounded-[1rem] shadow-2xl relative overflow-hidden flex flex-col id-card-print"
+              style={{ width: '220px', height: '350px', flexShrink: 0, fontFamily: "'Inter', sans-serif" }}
             >
-              {/* Header / Brand Color */}
-              <div className="absolute top-0 left-0 right-0 h-10 bg-primary flex items-center justify-center px-4">
-                <h1 className="text-white font-bold text-sm tracking-widest uppercase">
-                  {appSettings.companyName || 'BREAD APP'}
-                </h1>
+              {/* Premium Top Gradient Header */}
+              <div className="h-[120px] bg-gradient-to-br from-primary to-indigo-800 w-full absolute top-0 left-0 z-0">
+                 {/* Decorative circles */}
+                 <div className="absolute -top-6 -right-6 w-24 h-24 bg-white opacity-10 rounded-full blur-xl"></div>
+                 <div className="absolute top-10 -left-6 w-16 h-16 bg-white opacity-10 rounded-full blur-md"></div>
               </div>
 
-              {/* Body */}
-              <div className="flex-1 mt-10 p-3 pt-4 flex gap-3">
-                {/* Photo */}
-                <div className="w-[0.9in] h-[0.9in] flex-shrink-0 border-2 border-primary rounded-md overflow-hidden bg-gray-100 flex items-center justify-center">
+              <div className="relative z-10 flex flex-col items-center pt-5 px-4 h-full">
+                {/* Header Logo or Name */}
+                <h1 className="text-white font-bold text-[10px] tracking-widest uppercase mb-4 opacity-90 text-center w-full truncate">
+                  {appSettings.companyName || 'BREAD APP'}
+                </h1>
+
+                {/* Passport Photo (Small and Premium) */}
+                <div className="w-[80px] h-[80px] rounded-full border-4 border-white shadow-lg overflow-hidden bg-gray-100 flex items-center justify-center shrink-0 mb-3 z-10">
                   {customer.image ? (
                     <img src={customer.image} alt={customer.name} className="w-full h-full object-cover" />
                   ) : (
-                    <span className="text-gray-400 text-xs text-center px-2">No Photo provided</span>
+                    <span className="text-gray-400 text-[9px] text-center px-2 leading-tight">No Photo</span>
                   )}
                 </div>
-                
-                {/* Details */}
-                <div className="flex-1 flex flex-col justify-center">
-                  <div className="text-[10px] text-gray-500 uppercase font-bold mb-0.5">Customer Name</div>
-                  <div className="font-bold text-sm leading-tight mb-2 text-primary">{customer.name}</div>
-                  
-                  <div className="text-[9px] text-gray-500 uppercase font-bold mb-0.5">ID Number</div>
-                  <div className="font-mono text-xs font-bold leading-tight mb-2">CUST-{customer.id.slice(-5)}</div>
-                  
-                  <div className="text-[9px] text-gray-500 uppercase font-bold mb-0.5">Phone</div>
-                  <div className="text-xs font-bold leading-tight">{customer.phone || 'N/A'}</div>
-                </div>
-              </div>
 
-              {/* Footer Banner */}
-              <div className="h-4 bg-gray-800 absolute bottom-0 left-0 right-0 flex justify-between items-center px-3">
-                 <span className="text-[7px] text-gray-300">AUTHORIZED DISTRIBUTOR</span>
-                 <span className="text-[7px] text-gray-300">valuable partner</span>
+                {/* Customer Details */}
+                <div className="text-center w-full flex-1 flex flex-col justify-center">
+                  <h2 className="text-[#101828] font-black text-[15px] leading-tight mb-0.5 truncate w-full px-1">{customer.name}</h2>
+                  <p className="text-primary font-bold text-[9px] tracking-widest uppercase mb-3">Authorized Partner</p>
+                  
+                  <div className="w-8 h-0.5 bg-gray-200 mx-auto mb-3"></div>
+
+                  <div className="flex flex-col gap-1.5 w-full items-center">
+                    <div>
+                      <div className="text-[7px] text-gray-400 uppercase font-bold tracking-wider">ID Number</div>
+                      <div className="font-mono text-[10px] font-bold text-[#344054]">CUST-{customer.id.slice(-5)}</div>
+                    </div>
+                    <div>
+                      <div className="text-[7px] text-gray-400 uppercase font-bold tracking-wider">Phone</div>
+                      <div className="text-[9px] font-bold text-[#344054]">{customer.phone || 'N/A'}</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Bottom Bar */}
+                <div className="h-6 w-full bg-gray-50 flex items-center justify-center border-t border-gray-100 mt-auto">
+                    <span className="text-[6px] text-gray-400 font-bold tracking-widest uppercase">Valid & Verified</span>
+                </div>
               </div>
             </div>
           </div>
         </section>
 
-        <hr className="border-[var(--border-color)] no-print" />
+        <hr className="border-[var(--border-color)] w-full no-print" />
 
         {/* CERTIFICATE SECTION */}
-        <section>
+        <section className="w-full">
           <div className="flex justify-between items-center mb-4 no-print">
-            <h2 className="text-lg font-bold">Certificate of Partnership</h2>
-            <div className="flex gap-2">
-              <button className="btn btn-sm btn-outline text-primary border-primary flex items-center gap-1" onClick={() => handleShare(certRef, `${customer.name}-Certificate`)}>
-                <Share2 size={14} /> Share
-              </button>
+            <div>
+              <h2 className="text-lg font-bold">Certificate of Partnership</h2>
+              <p className="text-xs text-secondary">Premium Landscape A4</p>
             </div>
+            <button className="btn btn-sm btn-primary flex items-center gap-2 shadow-sm" onClick={() => handleShare(certRef, `${customer.name}-Certificate`)}>
+              <Share2 size={16} /> Save / Share
+            </button>
           </div>
           
-          <div className="flex justify-center overflow-x-auto pb-4 hide-scrollbar">
-            {/* Certificate Container */}
+          <div className="flex justify-center overflow-x-auto pb-4 hide-scrollbar w-full">
+            {/* Certificate Container (A4 Landscape aspect ratio) */}
             <div 
               ref={certRef}
-              className="bg-white text-black p-2 shadow-2xl printable-area cert-print relative flex-shrink-0"
-              style={{ width: '11in', height: '8.5in', maxWidth: '800px', maxHeight: '600px', boxSizing: 'border-box' }}
+              className="bg-white text-black shadow-2xl cert-print relative flex-shrink-0"
+              style={{ width: '800px', height: '565px', boxSizing: 'border-box' }}
             >
-              {/* Outer Border */}
-              <div className="w-full h-full border-[6px] border-[#c5a059] p-1 flex flex-col relative overflow-hidden bg-[#faf9f6]">
-                {/* Inner Border */}
-                <div className="w-full h-full border-2 border-[#1e293b] p-8 flex flex-col items-center justify-between relative z-10">
-                  
-                  {/* Watermark Logo */}
-                  {appSettings.logo && (
-                    <div className="absolute inset-0 flex items-center justify-center opacity-[0.03] z-0 pointer-events-none">
-                       <img src={appSettings.logo} alt="Watermark" className="w-64 h-64 object-contain" />
-                    </div>
-                  )}
+              {/* Modern Minimalist Border Frame */}
+              <div className="w-full h-full p-6 bg-[#f8fafc]">
+                <div className="w-full h-full border-[1px] border-slate-200 bg-white shadow-sm p-1">
+                  <div className="w-full h-full border-[3px] border-slate-800 p-8 flex flex-col relative overflow-hidden">
+                    
+                    {/* Subtle background abstract shapes */}
+                    <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-slate-50 rounded-bl-[400px] z-0 -mr-10 -mt-10"></div>
+                    <div className="absolute bottom-0 left-0 w-[300px] h-[300px] bg-slate-50 rounded-tr-[300px] z-0 -ml-10 -mb-10"></div>
 
-                  <div className="text-center z-10 w-full">
-                    {appSettings.logo && (
-                      <img src={appSettings.logo} alt="Company Logo" className="w-14 h-14 mx-auto mb-4 object-contain" />
-                    )}
-                    <h1 className="text-4xl font-serif font-bold text-[#1e293b] mb-2 tracking-wide uppercase">
-                      Certificate of Partnership
-                    </h1>
-                    <div className="w-32 h-1 bg-[#c5a059] mx-auto mb-8"></div>
-                    
-                    <p className="text-lg italic text-gray-600 mb-6 font-serif">
-                      This certificate is proudly presented to
-                    </p>
-                    
-                    <h2 className="text-5xl font-bold text-primary mb-6 font-serif underline decoration-[3px] underline-offset-8 decoration-[#c5a059]">
-                      {customer.name}
-                    </h2>
-                    
-                    <p className="text-lg text-gray-700 max-w-2xl mx-auto leading-relaxed mt-8 font-serif">
-                      In recognition of outstanding commitment, trust, and continuous engagement as an authorized distributor and valuable partner of <strong>{appSettings.companyName || 'Our Bakery'}</strong>. We deeply appreciate your business.
-                    </p>
-                  </div>
-
-                  <div className="w-full flex justify-between items-end px-12 z-10 mt-12 pb-8">
-                    <div className="text-center w-48">
-                      <div className="border-b border-gray-400 mb-2 h-8 flex items-end justify-center font-bold text-sm">
-                        {new Date().toLocaleDateString()}
+                    <div className="relative z-10 flex flex-col h-full">
+                      {/* Header row with Logos */}
+                      <div className="flex justify-between items-start w-full">
+                        {appSettings.logo ? (
+                          <img src={appSettings.logo} alt="Company Logo" className="w-12 h-12 object-contain" />
+                        ) : (
+                          <div className="w-12 h-12 flex items-center justify-center bg-slate-100 rounded text-[10px] font-bold text-slate-400 text-center leading-tight">LOGO</div>
+                        )}
+                        
+                        <div className="text-right flex flex-col items-end">
+                           <h3 className="font-bold text-slate-800 text-[10px] tracking-widest uppercase">{appSettings.companyName || 'BREAD APP'}</h3>
+                           <p className="text-[8px] text-slate-500 uppercase tracking-widest">Official Document</p>
+                        </div>
                       </div>
-                      <span className="text-sm font-bold text-gray-600 uppercase tracking-widest">Date</span>
-                    </div>
 
-                    <div className="flex flex-col items-center">
-                       <Award size={64} className="text-[#c5a059] mb-2 drop-shadow-md" strokeWidth={1.5} />
-                       <span className="text-[10px] font-bold tracking-widest text-[#1e293b] uppercase">Official Partner</span>
-                    </div>
-                    
-                    <div className="text-center w-48">
-                      <div className="border-b border-gray-400 mb-2 h-8 whitespace-nowrap">
-                         <span className="font-[signature] italic text-xl">Management</span>
+                      {/* Main Title Area */}
+                      <div className="text-center mt-8 mb-10 flex-1 flex flex-col justify-center">
+                        <div className="flex justify-center mb-6">
+                           <Award size={48} strokeWidth={1} className="text-slate-800" />
+                        </div>
+                        
+                        <h1 className="text-[34px] font-serif font-medium text-slate-900 tracking-tight leading-none mb-4">
+                          CERTIFICATE OF PARTNERSHIP
+                        </h1>
+                        <div className="w-12 h-[2px] bg-primary mx-auto mb-8"></div>
+                        
+                        <p className="text-[14px] text-slate-500 uppercase tracking-widest mb-4 font-medium">
+                          PROUDLY PRESENTED TO
+                        </p>
+                        
+                        <h2 className="text-[40px] font-serif font-bold text-slate-900 leading-none mb-8">
+                          {customer.name}
+                        </h2>
+                        
+                        <p className="text-[13px] text-slate-600 max-w-xl mx-auto leading-relaxed font-sans">
+                          In recognition of your outstanding commitment and continuous trust. You are officially recognized as an authorized distributor and valuable partner of <strong>{appSettings.companyName || 'Our Company'}</strong>. We deeply appreciate your business.
+                        </p>
                       </div>
-                      <span className="text-sm font-bold text-gray-600 uppercase tracking-widest">Authorized Signature</span>
-                    </div>
-                  </div>
 
+                      {/* Footer Signatures */}
+                      <div className="flex justify-between items-end mt-auto px-10">
+                        <div className="text-center w-40">
+                          <div className="border-b-[1.5px] border-slate-300 pb-1 mb-2 h-8 flex items-end justify-center font-bold text-xs text-slate-800 font-mono">
+                            {new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                          </div>
+                          <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Date Issued</span>
+                        </div>
+                        
+                        <div className="text-center w-40">
+                          <div className="border-b-[1.5px] border-slate-300 pb-1 mb-2 h-8 flex items-end justify-center">
+                             <span className="font-[signature] italic text-xl text-slate-800">Management</span>
+                          </div>
+                          <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Authorized Signature</span>
+                        </div>
+                      </div>
+                    </div>
+
+                  </div>
                 </div>
               </div>
             </div>
@@ -208,11 +229,7 @@ export const CustomerIDAndCert: React.FC = () => {
           .container { padding: 0 !important; margin: 0 !important; max-width: 100% !important; }
           .no-print { display: none !important; }
           
-          /* Need to handle whichever area is currently being printed.
-             Because window.print() prints the whole page, we might need a workaround for two different printable areas, 
-             but typically users will share/save as image individually. This basic CSS shows both sequentially if printed. */
-             
-          .printable-area, .printable-area * {
+          .id-card-print, .cert-print, .id-card-print *, .cert-print * {
             visibility: visible;
           }
           
@@ -229,7 +246,7 @@ export const CustomerIDAndCert: React.FC = () => {
           .cert-print {
             position: absolute;
             left: 0;
-            top: 2.5in;
+            top: 4in; /* Space it out from ID card */
             margin: 0 !important;
             box-shadow: none !important;
             -webkit-print-color-adjust: exact;
