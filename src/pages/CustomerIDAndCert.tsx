@@ -139,8 +139,8 @@ export const CustomerIDAndCert: React.FC = () => {
 
               {/* ID Card Watermark Logo */}
               {appSettings.logo && (
-                <div style={{ position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0.04, zIndex: 0, pointerEvents: 'none' }}>
-                   <img src={appSettings.logo} alt="Watermark" style={{ width: '180px', height: '180px', objectFit: 'contain' }} />
+                <div style={{ position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0.05, zIndex: 0, pointerEvents: 'none' }}>
+                   <img src={appSettings.logo} alt="Watermark" style={{ width: '130px', height: '130px', objectFit: 'contain' }} />
                 </div>
               )}
 
@@ -148,7 +148,7 @@ export const CustomerIDAndCert: React.FC = () => {
                 {/* Header Logo or Name */}
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '10px' }}>
                   {appSettings.logo && (
-                    <img src={appSettings.logo} alt="Logo" style={{ width: '22px', height: '22px', objectFit: 'contain', marginBottom: '4px' }} />
+                    <img src={appSettings.logo} alt="Logo" style={{ width: '28px', height: '28px', objectFit: 'contain', marginBottom: '4px' }} />
                   )}
                   <h1 style={{ fontWeight: 'bold', fontSize: '10px', letterSpacing: '0.1em', textTransform: 'uppercase', opacity: 0.9, textAlign: 'center', width: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {appSettings.companyName || 'BAKERY & CO.'}
@@ -170,7 +170,7 @@ export const CustomerIDAndCert: React.FC = () => {
 
                 {/* Customer Details */}
                 <div style={{ textAlign: 'center', width: '100%', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', marginTop: '2px' }}>
-                  <h2 style={{ fontFamily: 'serif', fontStyle: 'italic', fontWeight: 'bold', fontSize: '18px', lineHeight: 1.1, marginBottom: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', width: '100%', padding: '0 4px' }}>{customer.name}</h2>
+                  <h2 style={{ fontFamily: 'serif', fontStyle: 'italic', fontWeight: 'bold', fontSize: '15px', lineHeight: 1.1, marginBottom: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', width: '100%', padding: '0 4px' }}>{customer.name}</h2>
                   <p style={{ fontWeight: 'bold', fontSize: '8px', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '8px', opacity: 0.8 }}>Job Position / Partner</p>
                   
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', marginBottom: '8px', opacity: 0.6 }}>
@@ -181,8 +181,8 @@ export const CustomerIDAndCert: React.FC = () => {
 
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', width: '100%', alignItems: 'stretch', padding: '0 8px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(78,52,46,0.1)', paddingBottom: '2px' }}>
-                      <span style={{ fontSize: '7px', fontWeight: 'bold', opacity: 0.6 }}>ID No:</span>
-                      <span style={{ fontFamily: 'monospace', fontSize: '8px', fontWeight: 'bold', color: '#4e342e' }}>CUST-{customer.id.slice(-5)}</span>
+                      <span style={{ fontSize: '7px', fontWeight: 'bold', opacity: 0.6 }}>S/N:</span>
+                      <span style={{ fontFamily: 'monospace', fontSize: '8px', fontWeight: 'bold', color: '#4e342e' }}>{parseInt(customer.id.substring(0, 8), 16).toString().slice(0, 6).padStart(6, '0')}</span>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(78,52,46,0.1)', paddingBottom: '2px' }}>
                       <span style={{ fontSize: '7px', fontWeight: 'bold', opacity: 0.6 }}>Phone:</span>
@@ -262,8 +262,8 @@ export const CustomerIDAndCert: React.FC = () => {
 
                         {/* Large Watermark Logo */}
                         {appSettings.logo && (
-                          <div style={{ position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0.03, zIndex: 0, pointerEvents: 'none' }}>
-                             <img src={appSettings.logo} alt="Watermark" style={{ width: '400px', height: '400px', objectFit: 'contain' }} />
+                          <div style={{ position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0.05, zIndex: 0, pointerEvents: 'none' }}>
+                             <img src={appSettings.logo} alt="Watermark" style={{ width: '350px', height: '350px', objectFit: 'contain' }} />
                           </div>
                         )}
 
@@ -271,9 +271,9 @@ export const CustomerIDAndCert: React.FC = () => {
                       {/* Header row with Logos */}
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', width: '100%' }}>
                         {appSettings.logo ? (
-                          <img src={appSettings.logo} alt="Company Logo" style={{ width: '50px', height: '50px', objectFit: 'contain' }} />
+                          <img src={appSettings.logo} alt="Company Logo" style={{ width: '64px', height: '64px', objectFit: 'contain' }} />
                         ) : (
-                          <div style={{ width: '50px', height: '50px', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#f1f5f9', borderRadius: '4px', fontSize: '10px', fontWeight: 'bold', color: '#94a3b8', textAlign: 'center', lineHeight: 1.2 }}>LOGO</div>
+                          <div style={{ width: '64px', height: '64px', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#f1f5f9', borderRadius: '4px', fontSize: '10px', fontWeight: 'bold', color: '#94a3b8', textAlign: 'center', lineHeight: 1.2 }}>LOGO</div>
                         )}
                         
                         <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
@@ -297,7 +297,7 @@ export const CustomerIDAndCert: React.FC = () => {
                           PROUDLY PRESENTED TO
                         </p>
                         
-                        <h2 style={{ fontSize: '40px', fontFamily: 'serif', fontWeight: 'bold', color: '#0f172a', lineHeight: 1, marginBottom: '32px' }}>
+                        <h2 style={{ fontSize: '32px', fontFamily: 'serif', fontWeight: 'bold', color: '#0f172a', lineHeight: 1, marginBottom: '32px' }}>
                           {customer.name}
                         </h2>
                         
