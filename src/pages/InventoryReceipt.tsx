@@ -113,7 +113,7 @@ export const InventoryReceipt: React.FC = () => {
       }
       
       const payload = new Uint8Array(buffer);
-      const chunkSize = 64;
+      const chunkSize = 32; // Drop to 32 bytes for worst case BLE thermal printers
       for (let i = 0; i < payload.length; i += chunkSize) {
         const chunk = payload.slice(i, i + chunkSize);
         if (characteristic.properties.writeWithoutResponse) {
@@ -239,7 +239,7 @@ export const InventoryReceipt: React.FC = () => {
           .no-print { display: none !important; }
           .container { 
             padding: 0 !important; 
-            margin: 0 !important; 
+            margin: 0 auto !important; 
             max-width: 58mm !important; 
             width: 58mm !important;
             box-shadow: none !important; 
@@ -248,7 +248,7 @@ export const InventoryReceipt: React.FC = () => {
           .receipt-box { 
             border: none !important; 
             padding: 0 !important; 
-            margin: 0 !important;
+            margin: 0 auto !important;
             width: 58mm !important;
             max-width: 58mm !important;
             color: #000 !important;

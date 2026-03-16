@@ -124,7 +124,7 @@ export const CustomerReceipt: React.FC = () => {
       }
       
       const payload = new Uint8Array(buffer);
-      const chunkSize = 64; // Strict BLE MTU chunk size for oldest thermal printers
+      const chunkSize = 32; // Drop to 32 bytes for worst case BLE thermal printers
       for (let i = 0; i < payload.length; i += chunkSize) {
         const chunk = payload.slice(i, i + chunkSize);
         if (characteristic.properties.writeWithoutResponse) {
@@ -133,7 +133,7 @@ export const CustomerReceipt: React.FC = () => {
            await characteristic.writeValue(chunk);
         }
         // Add a small delay to prevent buffer overflow on older printers
-        await new Promise(resolve => setTimeout(resolve, 20));
+        await new Promise(resolve => setTimeout(resolve, 30)); // slightly larger delay
       }
 
       // Small delay before disconnect to ensure buffer flushes

@@ -116,7 +116,7 @@ export const Receipt: React.FC = () => {
       }
       
       const payload = new Uint8Array(buffer);
-      const chunkSize = 64;
+      const chunkSize = 32; // Hyper-conservative for worst-case BLE thermal printers
       for (let i = 0; i < payload.length; i += chunkSize) {
         const chunk = payload.slice(i, i + chunkSize);
         if (characteristic.properties.writeWithoutResponse) {
@@ -223,7 +223,7 @@ export const Receipt: React.FC = () => {
   return (
     <div className="container" style={{ maxWidth: '320px', margin: '0 auto', background: 'var(--surface-color)', minHeight: '100vh', paddingTop: '1rem' }}>
       
-      {/* Hide controls when printing & optimize for 58mm POS */}
+      {/* 58mm POS Optimization */}
       <style>{`
         @media print {
           @page { margin: 0; size: 58mm auto; }
@@ -236,7 +236,7 @@ export const Receipt: React.FC = () => {
           .no-print { display: none !important; }
           .container { 
             padding: 0 !important; 
-            margin: 0 !important; 
+            margin: 0 auto !important; 
             max-width: 58mm !important; 
             width: 58mm !important;
             box-shadow: none !important; 
@@ -245,7 +245,7 @@ export const Receipt: React.FC = () => {
           .receipt-box { 
             border: none !important; 
             padding: 0 !important; 
-            margin: 0 !important;
+            margin: 0 auto !important;
             width: 58mm !important;
             max-width: 58mm !important;
             color: #000 !important;
@@ -254,8 +254,8 @@ export const Receipt: React.FC = () => {
             line-height: 1.2 !important;
           }
           .receipt-logo {
-            max-width: 40px !important;
-            max-height: 40px !important;
+            max-width: 32px !important;
+            max-height: 32px !important;
             margin: 0 auto 5px auto !important;
           }
           * {
@@ -268,9 +268,9 @@ export const Receipt: React.FC = () => {
           .text-lg { font-size: 12px !important; }
           .text-sm { font-size: 10px !important; }
           .text-xs { font-size: 9px !important; }
-          .p-6 { padding: 5px !important; }
-          .mb-6 { margin-bottom: 8px !important; }
-          .mb-4 { margin-bottom: 5px !important; }
+          .p-6 { padding: 4px !important; }
+          .mb-6 { margin-bottom: 6px !important; }
+          .mb-4 { margin-bottom: 4px !important; }
           .py-3 { padding-top: 3px !important; padding-bottom: 3px !important; }
           .p-3 { padding: 3px !important; }
         }
