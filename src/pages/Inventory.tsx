@@ -123,11 +123,11 @@ export const Inventory: React.FC = () => {
 
   const remainingBalance = companyMetrics.totalValueReceived - companyMetrics.totalMoneyPaid;
 
-  // New Professional Metrics
   const totalSales = transactions.reduce((sum, t) => sum + t.totalPrice, 0);
   const totalGrossProfit = totalSales * 0.1; // Standard 10%
+  const companyShare = totalSales - totalGrossProfit; // 90% belongs to company
   const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
-  const totalNetProfit = totalGrossProfit - totalExpenses;
+  const totalNetProfit = totalGrossProfit - totalExpenses; // What's left for the owner
   const totalReturnsCost = inventoryLogs.filter(l => l.type === 'Return').reduce((sum, l) => sum + (l.quantityReceived * l.costPrice), 0);
 
   // Group logs by batch for history
@@ -176,18 +176,31 @@ export const Inventory: React.FC = () => {
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', borderTop: '1px solid var(--border-color)', paddingTop: '1rem' }}>
           <div>
-            <div className="text-xs text-secondary uppercase font-bold mb-1" style={{ fontSize: '10px' }}>Total Sales (Abun da aka saida)</div>
+            <div className="text-xs text-secondary uppercase font-bold mb-1" style={{ fontSize: '10px' }}>Total Sales</div>
             <div className="text-xl font-bold" style={{ color: 'var(--primary-color)' }}>₦{totalSales.toLocaleString()}</div>
           </div>
           <div>
-            <div className="text-xs text-secondary uppercase font-bold mb-1" style={{ fontSize: '10px' }}>Total Returns (Abun da aka maida)</div>
+            <div className="text-xs text-secondary uppercase font-bold mb-1" style={{ fontSize: '10px' }}>Total Returns</div>
             <div className="text-xl font-bold text-warning">₦{totalReturnsCost.toLocaleString()}</div>
           </div>
           
+          <div style={{ gridColumn: '1 / -1', borderTop: '1px solid var(--border-color)', margin: '0.5rem 0', paddingTop: '1rem', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+             <div>
+               <div className="text-xs text-secondary uppercase font-bold mb-1" style={{ fontSize: '10px' }}>Company Share (90%)</div>
+               <div className="text-xl font-bold text-danger">₦{companyShare.toLocaleString()}</div>
+               <div className="text-xs text-secondary mt-1" style={{ fontSize: '10px' }}>Amount owed from sales</div>
+             </div>
+             <div>
+               <div className="text-xs text-secondary uppercase font-bold mb-1" style={{ fontSize: '10px' }}>Local Gross Profit (10%)</div>
+               <div className="text-xl font-bold text-success">₦{totalGrossProfit.toLocaleString()}</div>
+               <div className="text-xs text-secondary mt-1" style={{ fontSize: '10px' }}>Amount retained from sales</div>
+             </div>
+          </div>
+
           <div style={{ gridColumn: '1 / -1', background: 'var(--background-color)', padding: '1rem', borderRadius: '12px', border: '1px solid var(--border-color)', marginTop: '0.5rem' }}>
-            <div className="text-xs text-secondary uppercase font-bold mb-1" style={{ fontSize: '11px' }}>Estimated Net Profit (Riba)</div>
+            <div className="text-xs text-secondary uppercase font-bold mb-1" style={{ fontSize: '11px' }}>Final Net Profit</div>
             <div className="text-2xl font-black text-success">₦{totalNetProfit.toLocaleString()}</div>
-            <div className="text-xs text-secondary mt-1" style={{ fontSize: '10px' }}>Based on 10% Gross Margin minus Expenses</div>
+            <div className="text-xs text-secondary mt-1" style={{ fontSize: '10px' }}>Local Gross Profit (10%) minus Total Business Expenses</div>
           </div>
         </div>
       </div>
