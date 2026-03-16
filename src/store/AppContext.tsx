@@ -44,6 +44,7 @@ interface AppContextType {
   
   addCustomer: (customer: Customer) => Promise<void>;
   updateCustomer: (customer: Customer) => Promise<void>;
+  deleteCustomer: (id: string) => Promise<void>;
   
   recordSale: (transaction: Transaction) => Promise<void>;
   recordDebtPayment: (payment: DebtPayment) => Promise<void>;
@@ -162,6 +163,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const updateCustomer = async (customer: Customer) => {
     await dbCustomers.setItem(customer.id, customer);
+    await refreshData();
+  };
+
+  const deleteCustomer = async (id: string) => {
+    await dbCustomers.removeItem(id);
     await refreshData();
   };
 
@@ -347,7 +353,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     <AppContext.Provider value={{
       products, customers, transactions, debtPayments, inventoryLogs, bakeryPayments, companyMetrics, expenses, loading, refreshData,
       isAuthenticated, login, logout, updatePin,
-      addProduct, updateProduct, deleteProduct, addCustomer, updateCustomer, recordSale, recordDebtPayment, addInventory, returnInventory, processInventoryBatch, recordBakeryPayment, addExpense,
+      addProduct, updateProduct, deleteProduct, addCustomer, updateCustomer, deleteCustomer, recordSale, recordDebtPayment, addInventory, returnInventory, processInventoryBatch, recordBakeryPayment, addExpense,
       appSettings, updateSettings
     }}>
       {children}

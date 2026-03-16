@@ -3,19 +3,49 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useAppContext } from '../store/AppContext';
 import { getTransactionItems } from '../store/types';
 import { AnimatedPage } from '../components/AnimatedPage';
-import { ArrowLeft, Phone, MapPin, Activity, MessageCircle, MessageSquare, FileText } from 'lucide-react';
+import { ArrowLeft, Phone, MapPin, Activity, MessageCircle, MessageSquare, FileText, Edit2, Trash2 } from 'lucide-react';
 
 export const CustomerProfile: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { customers, transactions, debtPayments, products, recordDebtPayment } = useAppContext();
+  const { customers, transactions, debtPayments, products, recordDebtPayment, updateCustomer, deleteCustomer } = useAppContext();
+
+  const customer = customers.find(c => c.id === id);
 
   const [amount, setAmount] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<'Cash' | 'Transfer'>('Cash');
   const [isProcessing, setIsProcessing] = useState(false);
   const [showPaymentForm, setShowPaymentForm] = useState(false);
 
-  const customer = customers.find(c => c.id === id);
+  // Edit State
+  const [isEditing, setIsEditing] = useState(false);
+  const [editName, setEditName] = useState(customer?.name || '');
+  const [editPhone, setEditPhone] = useState(customer?.phone || '');
+  const [editLocation, setEditLocation] = useState(customer?.location || '');
+
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!customer) return;
+    if (!editName.trim()) return;
+
+    setIsProcessing(true);
+    await updateCustomer({
+      ...customer,
+      name: editName.trim(),
+      phone: editPhone.trim(),
+      location: editLocation.trim(),
+    });
+    setIsEditing(false);
+    setIsProcessing(false);
+  };
+
+  const handleDelete = async () => {
+    if (!customer) return;
+    if (window.confirm(`Are you absolutely sure you want to delete ${customer.name}? This action cannot be undone.`)) {
+      await deleteCustomer(customer.id);
+      navigate('/customers');
+    }
+  };
   
   const handleRecordPayment = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -82,9 +112,17 @@ export const CustomerProfile: React.FC = () => {
             <ArrowLeft size={20} />
           </button>
           <h1 className="text-2xl font-bold m-0 flex-1 truncate">{customer.name}</h1>
-          <button onClick={() => navigate(`/customer-docs/${customer.id}`)} className="btn btn-outline btn-icon" style={{ padding: '0.6rem' }} title="View ID & Certificate">
-            <FileText size={20} className="text-primary" />
-          </button>
+          <div className="flex gap-2">
+            <button onClick={() => setIsEditing(true)} className="btn btn-outline btn-icon border-emerald-200 text-emerald-600 bg-emerald-50 hover:bg-emerald-100" style={{ padding: '0.6rem' }} title="Edit Customer">
+              <Edit2 size={18} />
+            </button>
+            <button onClick={handleDelete} className="btn btn-outline btn-icon border-red-200 text-red-600 bg-red-50 hover:bg-red-100" style={{ padding: '0.6rem' }} title="Delete Customer">
+              <Trash2 size={18} />
+            </button>
+            <button onClick={() => navigate(`/customer-docs/${customer.id}`)} className="btn btn-outline btn-icon" style={{ padding: '0.6rem' }} title="View ID & Certificate">
+              <FileText size={20} className="text-primary" />
+            </button>
+          </div>
         </div>
 
         <div className="card bg-primary text-white mb-6">
@@ -144,6 +182,39 @@ export const CustomerProfile: React.FC = () => {
               >
                 <MessageSquare size={18} /> SMS
               </a>
+            </div>
+          </div>
+        )}
+
+        {isEditing && (
+          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+            <div className="card w-full max-w-md bg-white border-2 border-primary">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-bold">Edit Customer</h3>
+                <button onClick={() => setIsEditing(false)} className="text-secondary hover:text-danger">
+                  <ArrowLeft size={20} className="rotate-180" />
+                </button>
+              </div>
+              <form onSubmit={handleEditSubmit} className="space-y-4">
+                <div className="form-group">
+                  <label>Full Name</label>
+                  <input type="text" className="form-input w-full" value={editName} onChange={e => setEditName(e.target.value)} required />
+                </div>
+                <div className="form-group">
+                  <label>Phone Number (Optional)</label>
+                  <input type="tel" className="form-input w-full" value={editPhone} onChange={e => setEditPhone(e.target.value)} />
+                </div>
+                <div className="form-group">
+                  <label>Location/Address (Optional)</label>
+                  <input type="text" className="form-input w-full" value={editLocation} onChange={e => setEditLocation(e.target.value)} />
+                </div>
+                <div className="flex gap-3 pt-2">
+                  <button type="button" className="btn btn-outline flex-1" onClick={() => setIsEditing(false)}>Cancel</button>
+                  <button type="submit" className="btn btn-primary flex-1" disabled={isProcessing}>
+                    {isProcessing ? 'Saving...' : 'Save Changes'}
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         )}
