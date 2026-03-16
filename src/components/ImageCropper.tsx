@@ -81,23 +81,39 @@ export const ImageCropper: React.FC<ImageCropperProps> = ({ imageSrc, onCropComp
   };
 
   return (
-    <div className="fixed inset-0 bg-black/95 backdrop-blur-md z-[100] flex flex-col h-[100dvh]">
+    <div 
+      style={{
+        position: 'fixed',
+        top: 0, left: 0, right: 0, bottom: 0,
+        backgroundColor: 'rgba(0,0,0,0.95)',
+        backdropFilter: 'blur(10px)',
+        WebkitBackdropFilter: 'blur(10px)',
+        zIndex: 1000,
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100%',
+        maxHeight: '-webkit-fill-available'
+      }}
+    >
       
       {/* Header */}
-      <div className="text-white text-center py-4 shrink-0 px-4 flex justify-between items-center relative z-10">
-        <div className="w-8"></div> {/* Spacer for centering */}
-        <div>
-          <h3 className="font-bold text-lg">Crop Photo</h3>
-          <p className="text-secondary text-xs mt-0.5">Pinch inside box to zoom</p>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px', flexShrink: 0, position: 'relative', zIndex: 10 }}>
+        <div style={{ width: '32px' }}></div>
+        <div style={{ textAlign: 'center' }}>
+          <h3 style={{ fontWeight: 'bold', fontSize: '18px', color: '#fff', margin: 0 }}>Crop Photo</h3>
+          <p style={{ color: '#aaa', fontSize: '12px', margin: '4px 0 0 0' }}>Pinch inside box to zoom</p>
         </div>
-        <button onClick={onCancel} className="w-8 h-8 flex items-center justify-center rounded-full bg-white/10 text-white">
+        <button 
+          onClick={onCancel} 
+          style={{ width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '50%', backgroundColor: 'rgba(255,255,255,0.1)', color: '#fff', border: 'none', cursor: 'pointer' }}
+        >
           <X size={18} />
         </button>
       </div>
 
-      {/* Cropper Area - dynamically takes available height */}
-      <div className="flex-1 w-full relative flex items-center justify-center p-4 min-h-0">
-        <div className="relative w-full max-w-[300px] max-h-full aspect-square bg-gray-900 rounded-2xl overflow-hidden shadow-[0_0_40px_rgba(0,0,0,0.5)] border-2 border-primary/50 shrink-0">
+      {/* Cropper Area */}
+      <div style={{ flex: 1, position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', minHeight: 0 }}>
+        <div style={{ position: 'relative', width: '100%', maxWidth: '300px', aspectRatio: '1/1', backgroundColor: '#111', borderRadius: '16px', overflow: 'hidden', boxShadow: '0 0 40px rgba(0,0,0,0.5)', border: '2px solid var(--primary-color)', flexShrink: 0 }}>
           <Cropper
             image={imageSrc}
             crop={crop}
@@ -108,18 +124,16 @@ export const ImageCropper: React.FC<ImageCropperProps> = ({ imageSrc, onCropComp
             onZoomChange={setZoom}
             showGrid={true}
             cropShape="rect"
-            /* Apply custom styling for internal container to fix bounds */
-            classes={{
-              containerClassName: 'h-full w-full'
-            }}
+            classes={{ containerClassName: 'cropper-container-internal' }}
           />
+          <style>{`.cropper-container-internal { height: 100% !important; width: 100% !important; }`}</style>
         </div>
       </div>
       
-      {/* Footer Controls - Fixed height at bottom */}
-      <div className="w-full bg-[#1e293b] p-5 pb-safe pt-4 rounded-t-3xl shadow-[0_-10px_40px_rgba(0,0,0,0.5)] border-t border-white/10 shrink-0 relative z-20 mt-auto">
-        <div className="mb-5 flex items-center gap-4 max-w-sm mx-auto">
-           <span className="text-white text-[10px] font-bold uppercase tracking-wider shrink-0">Zoom</span>
+      {/* Footer Controls */}
+      <div style={{ width: '100%', backgroundColor: '#1e293b', padding: '20px 20px max(20px, env(safe-area-inset-bottom)) 20px', borderTopLeftRadius: '24px', borderTopRightRadius: '24px', boxShadow: '0 -10px 40px rgba(0,0,0,0.5)', borderTop: '1px solid rgba(255,255,255,0.1)', flexShrink: 0, position: 'relative', zIndex: 20 }}>
+        <div style={{ marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '16px', maxWidth: '384px', margin: '0 auto 20px auto' }}>
+           <span style={{ color: '#fff', fontSize: '10px', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.05em', flexShrink: 0 }}>Zoom</span>
            
            <input
              type="range"
@@ -128,8 +142,8 @@ export const ImageCropper: React.FC<ImageCropperProps> = ({ imageSrc, onCropComp
              max={3}
              step={0.1}
              onChange={(e) => setZoom(Number(e.target.value))}
-             className="w-full h-2 rounded-lg appearance-none cursor-pointer"
              style={{ 
+               width: '100%', height: '8px', borderRadius: '8px', WebkitAppearance: 'none', cursor: 'pointer',
                background: `linear-gradient(to right, var(--primary-color) 0%, var(--primary-color) ${((zoom - 1) / 2) * 100}%, #475569 ${((zoom - 1) / 2) * 100}%, #475569 100%)` 
              }}
            />
@@ -142,26 +156,29 @@ export const ImageCropper: React.FC<ImageCropperProps> = ({ imageSrc, onCropComp
                background: white;
                box-shadow: 0 2px 6px rgba(0,0,0,0.3);
                cursor: pointer;
-               margin-top: -11px;
+               margin-top: -8px;
              }
              input[type=range]::-webkit-slider-runnable-track {
                width: 100%;
-               height: 4px;
+               height: 8px;
                cursor: pointer;
                background: transparent;
-               border-radius: 2px;
+               border-radius: 4px;
              }
-             /* Fallback safe area padding for iOS */
-             .pb-safe { padding-bottom: max(1.25rem, env(safe-area-inset-bottom)); }
            `}</style>
         </div>
         
-        <div className="max-w-sm mx-auto">
+        <div style={{ maxWidth: '384px', margin: '0 auto' }}>
           <button 
             type="button" 
-            className="w-full py-4 px-4 bg-primary text-white rounded-xl font-bold shadow-[0_4px_14px_0_rgba(var(--primary-rgb),0.39)] flex items-center justify-center gap-2 transition-transform active:scale-95 text-[15px]"
             onClick={handleSave}
             disabled={isProcessing}
+            style={{ width: '100%', padding: '16px', backgroundColor: 'var(--primary-color)', color: '#fff', borderRadius: '12px', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', border: 'none', outline: 'none', cursor: 'pointer', fontSize: '15px', boxShadow: '0 4px 14px 0 rgba(var(--primary-rgb), 0.39)', transition: 'transform 0.1s' }}
+            onMouseDown={e => e.currentTarget.style.transform = 'scale(0.96)'}
+            onMouseUp={e => e.currentTarget.style.transform = 'scale(1)'}
+            onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
+            onTouchStart={e => e.currentTarget.style.transform = 'scale(0.96)'}
+            onTouchEnd={e => e.currentTarget.style.transform = 'scale(1)'}
           >
             {isProcessing ? 'Saving...' : (
               <><Check size={20} /> Crop & Save Photo</>
