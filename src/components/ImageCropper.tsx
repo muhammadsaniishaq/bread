@@ -81,14 +81,14 @@ export const ImageCropper: React.FC<ImageCropperProps> = ({ imageSrc, onCropComp
   };
 
   return (
-    <div className="fixed inset-0 bg-black/95 backdrop-blur-md z-[100] flex flex-col items-center justify-center p-4">
+    <div className="fixed inset-0 bg-black/95 backdrop-blur-md z-[100] flex flex-col items-center justify-start sm:justify-center p-4 overflow-y-auto pb-10">
       
-      <div className="text-white text-center mb-6">
+      <div className="text-white text-center mb-4 mt-4 sm:mt-0 shrink-0">
         <h3 className="font-bold text-lg">Crop Photo</h3>
         <p className="text-secondary text-sm">Pinch to zoom, drag to move</p>
       </div>
 
-      <div className="relative w-full max-w-[280px] sm:max-w-[320px] aspect-square bg-gray-900 rounded-2xl overflow-hidden shadow-[0_0_40px_rgba(0,0,0,0.5)] border-2 border-primary/50 mb-6 shrink-0">
+      <div className="relative w-full max-w-[240px] sm:max-w-[300px] aspect-square bg-gray-900 rounded-2xl overflow-hidden shadow-[0_0_40px_rgba(0,0,0,0.5)] border-2 border-primary/50 mb-6 shrink-0 z-10">
         <Cropper
           image={imageSrc}
           crop={crop}
@@ -102,7 +102,7 @@ export const ImageCropper: React.FC<ImageCropperProps> = ({ imageSrc, onCropComp
         />
       </div>
       
-      <div className="w-full max-w-sm bg-[#1e293b] p-5 sm:p-6 rounded-3xl shadow-[0_10px_40px_rgba(0,0,0,0.5)] border border-white/10">
+      <div className="w-full max-w-[280px] sm:max-w-sm bg-[#1e293b] p-5 rounded-3xl shadow-[0_10px_40px_rgba(0,0,0,0.5)] border border-white/10 shrink-0 z-20">
         <div className="mb-6 flex flex-col gap-2 relative">
            <label className="text-white text-xs font-bold uppercase tracking-wider mb-2 z-10 relative">Zoom</label>
            
@@ -139,23 +139,23 @@ export const ImageCropper: React.FC<ImageCropperProps> = ({ imageSrc, onCropComp
            `}</style>
         </div>
         
-        <div className="flex gap-3 sm:gap-4 max-w-sm mx-auto z-10 relative">
+        <div className="flex flex-col gap-3 max-w-sm mx-auto z-10 relative">
           <button 
             type="button" 
-            className="flex-1 py-3 px-4 bg-gray-700 hover:bg-gray-600 text-white rounded-xl font-bold flex items-center justify-center gap-2 transition-colors shadow-sm"
-            onClick={onCancel}
-          >
-            <X size={20} /> Cancel
-          </button>
-          <button 
-            type="button" 
-            className="flex-1 py-3 px-4 bg-primary text-white rounded-xl font-bold shadow-[0_4px_14px_0_rgba(var(--primary-rgb),0.39)] flex items-center justify-center gap-2 transition-transform active:scale-95"
+            className="w-full py-3.5 px-4 bg-primary text-white rounded-xl font-bold shadow-[0_4px_14px_0_rgba(var(--primary-rgb),0.39)] flex items-center justify-center gap-2 transition-transform active:scale-95 text-sm"
             onClick={handleSave}
             disabled={isProcessing}
           >
             {isProcessing ? 'Saving...' : (
-              <><Check size={20} /> Crop & Save</>
+              <><Check size={18} /> Crop & Save Selection</>
             )}
+          </button>
+          <button 
+            type="button" 
+            className="w-full py-3 px-4 bg-transparent border border-gray-600 text-gray-300 hover:bg-gray-800 rounded-xl font-bold flex items-center justify-center gap-2 transition-colors text-sm"
+            onClick={onCancel}
+          >
+            <X size={18} /> Cancel
           </button>
         </div>
       </div>
