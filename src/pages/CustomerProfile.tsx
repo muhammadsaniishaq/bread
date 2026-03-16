@@ -3,7 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useAppContext } from '../store/AppContext';
 import { getTransactionItems } from '../store/types';
 import { AnimatedPage } from '../components/AnimatedPage';
-import { ArrowLeft, Phone, MapPin, Activity, MessageCircle, MessageSquare, FileText, Edit2, Trash2 } from 'lucide-react';
+import { ImageCropper } from '../components/ImageCropper';
+import { ArrowLeft, Phone, MapPin, Activity, MessageCircle, MessageSquare, FileText, Edit2, Trash2, Camera } from 'lucide-react';
 
 export const CustomerProfile: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -22,6 +23,25 @@ export const CustomerProfile: React.FC = () => {
   const [editName, setEditName] = useState(customer?.name || '');
   const [editPhone, setEditPhone] = useState(customer?.phone || '');
   const [editLocation, setEditLocation] = useState(customer?.location || '');
+  const [editNotes, setEditNotes] = useState(customer?.notes || '');
+  const [editImage, setEditImage] = useState(customer?.image || '');
+  const [rawUpload, setRawUpload] = useState<string | null>(null);
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setRawUpload(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const onCropComplete = (croppedBase64: string) => {
+    setEditImage(croppedBase64);
+    setRawUpload(null);
+  };
 
   const handleEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,6 +54,8 @@ export const CustomerProfile: React.FC = () => {
       name: editName.trim(),
       phone: editPhone.trim(),
       location: editLocation.trim(),
+      notes: editNotes.trim(),
+      image: editImage,
     });
     setIsEditing(false);
     setIsProcessing(false);
@@ -186,9 +208,9 @@ export const CustomerProfile: React.FC = () => {
           </div>
         )}
 
-        {isEditing && (
+        {isEditing && !rawUpload && (
           <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-            <div className="card w-full max-w-md bg-white border-2 border-primary">
+            <div className="card w-full max-w-md bg-white border-2 border-primary max-h-[90vh] overflow-y-auto">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-lg font-bold">Edit Customer</h3>
                 <button onClick={() => setIsEditing(false)} className="text-secondary hover:text-danger">
@@ -196,6 +218,37 @@ export const CustomerProfile: React.FC = () => {
                 </button>
               </div>
               <form onSubmit={handleEditSubmit} className="space-y-4">
+                
+                <div className="flex flex-col items-center mb-4">
+                  <label 
+                    className="w-20 h-20 rounded-full bg-[var(--surface-color)] border-2 border-dashed border-primary/50 flex flex-col items-center justify-center cursor-pointer overflow-hidden relative group"
+                  >
+                    {editImage ? (
+                      <img src={editImage} alt="Preview" className="w-full h-full object-cover" />
+                    ) : (
+                      <>
+                        <Camera size={24} className="text-primary/50 group-hover:text-primary transition-colors" />
+                        <span className="text-[10px] text-secondary mt-1">Photo</span>
+                      </>
+                    )}
+                    <input 
+                      type="file" 
+                      accept="image/*" 
+                      className="hidden" 
+                      onChange={handleImageUpload}
+                    />
+                  </label>
+                  {editImage && (
+                    <button 
+                      type="button" 
+                      onClick={() => setEditImage('')}
+                      className="text-xs text-danger mt-2 hover:underline"
+                    >
+                      Remove Photo
+                    </button>
+                  )}
+                </div>
+
                 <div className="form-group">
                   <label>Full Name</label>
                   <input type="text" className="form-input w-full" value={editName} onChange={e => setEditName(e.target.value)} required />
@@ -208,6 +261,10 @@ export const CustomerProfile: React.FC = () => {
                   <label>Location/Address (Optional)</label>
                   <input type="text" className="form-input w-full" value={editLocation} onChange={e => setEditLocation(e.target.value)} />
                 </div>
+                <div className="form-group">
+                  <label>Notes (Optional)</label>
+                  <textarea className="form-input w-full" rows={2} value={editNotes} onChange={e => setEditNotes(e.target.value)}></textarea>
+                </div>
                 <div className="flex gap-3 pt-2">
                   <button type="button" className="btn btn-outline flex-1" onClick={() => setIsEditing(false)}>Cancel</button>
                   <button type="submit" className="btn btn-primary flex-1" disabled={isProcessing}>
@@ -216,6 +273,16 @@ export const CustomerProfile: React.FC = () => {
                 </div>
               </form>
             </div>
+          </div>
+        )}
+
+        {rawUpload && (
+          <div className="fixed inset-0 z-[60] bg-black">
+            <ImageCropper 
+              imageSrc={rawUpload}
+              onCropComplete={onCropComplete}
+              onCancel={() => setRawUpload(null)}
+            />
           </div>
         )}
 
