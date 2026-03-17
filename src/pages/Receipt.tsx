@@ -5,6 +5,7 @@ import { getTransactionItems } from '../store/types';
 import { Printer, ArrowLeft, Share2, Download, FileText } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
+import QRCode from 'react-qr-code';
 
 export const Receipt: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -349,8 +350,11 @@ export const Receipt: React.FC = () => {
 
         <div className="text-center mb-6">
           <div className="text-sm mb-1">Payment Method</div>
-          <div className="font-bold text-lg uppercase" style={{ color: tx.type === 'Cash' ? '#16a34a' : '#000' }}>
+          <div className="font-bold text-lg uppercase mb-4" style={{ color: tx.type === 'Cash' ? '#16a34a' : '#000' }}>
             {tx.type}
+          </div>
+          <div className="flex justify-center" style={{ padding: '8px', background: '#fff', display: 'inline-block', border: '1px solid #eee', borderRadius: '4px' }}>
+             <QRCode value={`receipt:${tx.id}`} size={64} level="L" />
           </div>
         </div>
 

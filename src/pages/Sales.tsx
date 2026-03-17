@@ -2,8 +2,9 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useAppContext } from '../store/AppContext';
 import type { Transaction, TransactionItem } from '../store/types';
 import { useNavigate } from 'react-router-dom';
-import { ShoppingCart, Trash2 } from 'lucide-react';
+import { ShoppingCart, Trash2, Camera } from 'lucide-react';
 import { useTranslation } from '../store/LanguageContext';
+import { QRScanner } from '../components/QRScanner';
 
 export const Sales: React.FC = () => {
   const { customers, products, transactions, recordSale } = useAppContext();
@@ -19,6 +20,14 @@ export const Sales: React.FC = () => {
   
   // Shopping Cart State
   const [cart, setCart] = useState<TransactionItem[]>([]);
+  const [showScanner, setShowScanner] = useState(false);
+
+  const handleScan = (decodedText: string) => {
+    if (customers.find(c => c.id === decodedText)) {
+      setCustomerId(decodedText);
+    }
+    setShowScanner(false);
+  };
 
   const activeProducts = products.filter(p => p.active);
   const categories = Array.from(new Set(activeProducts.map(p => p.category || 'Standard')));
@@ -232,7 +241,16 @@ export const Sales: React.FC = () => {
           </div>
 
           <div className="form-group mb-4 border-t pt-4">
-            <label className="form-label">{t('sales.selectCustomer')}</label>
+            <div className="flex justify-between items-center mb-2">
+              <label className="form-label mb-0">{t('sales.selectCustomer')}</label>
+              <button 
+                type="button" 
+                onClick={() => setShowScanner(true)}
+                className="btn btn-sm btn-outline text-primary border-primary flex items-center gap-1 px-2 py-1 shadow-sm"
+              >
+                <Camera size={14} /> Scan ID
+              </button>
+            </div>
             <select 
               className="form-select mb-2" 
               value={customerId} 
@@ -377,6 +395,12 @@ export const Sales: React.FC = () => {
             )}
         </div>
       </div>
+      {showScanner && (
+        <QRScanner 
+          onScan={handleScan} 
+          onClose={() => setShowScanner(false)} 
+        />
+      )}
     </div>
   );
 };

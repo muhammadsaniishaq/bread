@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useAppContext } from '../store/AppContext';
 import { ArrowLeft, Share2, Award } from 'lucide-react';
 import html2canvas from 'html2canvas';
+import QRCode from 'react-qr-code';
 
 export const CustomerIDAndCert: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -183,18 +184,23 @@ export const CustomerIDAndCert: React.FC = () => {
                     <div style={{ width: '4px', height: '4px', borderRadius: '50%', backgroundColor: '#4e342e' }}></div>
                   </div>
 
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', width: '100%', alignItems: 'stretch', padding: '0 8px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(78,52,46,0.1)', paddingBottom: '2px' }}>
-                      <span style={{ fontSize: '7px', fontWeight: 'bold', opacity: 0.6 }}>S/N:</span>
-                      <span style={{ fontFamily: 'monospace', fontSize: '8px', fontWeight: 'bold', color: '#4e342e' }}>{serialNumber}</span>
+                  <div style={{ display: 'flex', alignItems: 'center', width: '100%', padding: '0 8px', gap: '8px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(78,52,46,0.1)', paddingBottom: '2px' }}>
+                        <span style={{ fontSize: '7px', fontWeight: 'bold', opacity: 0.6 }}>S/N:</span>
+                        <span style={{ fontFamily: 'monospace', fontSize: '8px', fontWeight: 'bold', color: '#4e342e' }}>{serialNumber}</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(78,52,46,0.1)', paddingBottom: '2px' }}>
+                        <span style={{ fontSize: '7px', fontWeight: 'bold', opacity: 0.6 }}>Phone:</span>
+                        <span style={{ fontSize: '7px', fontWeight: 'bold', color: '#4e342e' }}>{customer.phone || 'N/A'}</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(78,52,46,0.1)', paddingBottom: '2px' }}>
+                        <span style={{ fontSize: '7px', fontWeight: 'bold', opacity: 0.6 }}>Address:</span>
+                        <span style={{ fontSize: '7px', fontWeight: 'bold', color: '#4e342e', textAlign: 'right', maxWidth: '60px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{customer.location || 'Local Customer'}</span>
+                      </div>
                     </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(78,52,46,0.1)', paddingBottom: '2px' }}>
-                      <span style={{ fontSize: '7px', fontWeight: 'bold', opacity: 0.6 }}>Phone:</span>
-                      <span style={{ fontSize: '7px', fontWeight: 'bold', color: '#4e342e' }}>{customer.phone || 'N/A'}</span>
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(78,52,46,0.1)', paddingBottom: '2px' }}>
-                      <span style={{ fontSize: '7px', fontWeight: 'bold', opacity: 0.6 }}>Address:</span>
-                      <span style={{ fontSize: '7px', fontWeight: 'bold', color: '#4e342e', textAlign: 'right', maxWidth: '80px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{customer.location || 'Local Customer'}</span>
+                    <div style={{ background: '#fff', padding: '2px', borderRadius: '4px', border: '1px solid rgba(78,52,46,0.2)' }}>
+                      <QRCode value={customer.id} size={36} level="L" />
                     </div>
                   </div>
                 </div>

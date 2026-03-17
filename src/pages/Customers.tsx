@@ -6,6 +6,7 @@ import { ImageCropper } from '../components/ImageCropper';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from '../store/LanguageContext';
 import { Award, Star, Crown, Medal, MessageCircle, X, Camera } from 'lucide-react';
+import { QRScanner } from '../components/QRScanner';
 
 export const getBadge = (points?: number) => {
   const p = points || 0;
@@ -23,6 +24,14 @@ export const Customers: React.FC = () => {
   
   const [isAdding, setIsAdding] = useState(false);
   const [search, setSearch] = useState('');
+  const [showScanner, setShowScanner] = useState(false);
+  
+  const handleScan = (decodedText: string) => {
+    if (customers.find(c => c.id === decodedText)) {
+      navigate(`/customers/${decodedText}`);
+    }
+    setShowScanner(false);
+  };
   
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
@@ -210,14 +219,23 @@ export const Customers: React.FC = () => {
         />
       )}
 
-      <div className="form-group mb-4">
-        <input 
-          type="text" 
-          className="form-input" 
-          placeholder={t('cust.searchCustomer')}
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-        />
+      <div className="flex gap-2 mb-4">
+        <div className="form-group flex-1 mb-0">
+          <input 
+            type="text" 
+            className="form-input" 
+            placeholder={t('cust.searchCustomer')}
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+          />
+        </div>
+        <button 
+          className="btn btn-outline text-primary border-primary flex items-center justify-center shadow-sm"
+          style={{ width: '3rem', padding: 0 }}
+          onClick={() => setShowScanner(true)}
+        >
+          <Camera size={20} />
+        </button>
       </div>
 
       <div className="flex flex-col gap-3">
@@ -306,6 +324,13 @@ export const Customers: React.FC = () => {
         )}
       </div>
       </div>
+
+      {showScanner && (
+        <QRScanner 
+          onScan={handleScan} 
+          onClose={() => setShowScanner(false)} 
+        />
+      )}
     </AnimatedPage>
   );
 };

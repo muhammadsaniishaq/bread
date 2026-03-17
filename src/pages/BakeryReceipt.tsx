@@ -4,6 +4,7 @@ import { useAppContext } from '../store/AppContext';
 import type { BakeryPayment } from '../store/types';
 import { ArrowLeft, Printer, Share2 } from 'lucide-react';
 import html2canvas from 'html2canvas';
+import QRCode from 'react-qr-code';
 
 export const BakeryReceipt: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -219,6 +220,9 @@ export const BakeryReceipt: React.FC = () => {
             <div className="flex justify-between text-sm">
               <span>Current Outstanding Balance:</span>
               <span className="font-bold">₦{currentBalance.toLocaleString()}</span>
+            </div>
+            <div className="flex justify-center mt-6" style={{ padding: '8px', background: '#fff', display: 'inline-block', border: '1px solid #eee', borderRadius: '4px' }}>
+               <QRCode value={`bakery-receipt:${payment.id}`} size={64} level="L" />
             </div>
           </div>
 
