@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import Webcam from 'react-webcam';
 import jsQR from 'jsqr';
 import { X, Camera as CameraIcon, CheckCircle2, ScanLine, Image as ImageIcon } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 
 interface QRScannerProps {
   onScan: (decodedText: string) => void;
@@ -133,14 +133,17 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScan, onClose }) => {
   };
 
   const portalContent = (
-    <AnimatePresence>
-      <div className="fixed inset-0 z-[9999] flex items-start justify-center pt-24 px-4 pb-4">
+      <div 
+        className="fixed z-[9999] flex items-start justify-center pt-[10vh] px-4"
+        style={{ top: 0, left: 0, right: 0, bottom: 0, position: 'fixed', height: '100vh', width: '100vw' }}
+      >
         {/* Deep blur backdrop for premium feel */}
         <motion.div 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="absolute inset-0 bg-black/40 backdrop-blur-md"
+            className="absolute bg-black/50 backdrop-blur-md"
+            style={{ top: 0, left: 0, right: 0, bottom: 0 }}
             onClick={onClose}
         />
         
@@ -149,7 +152,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScan, onClose }) => {
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.9, y: 30 }}
           transition={{ type: "spring", stiffness: 300, damping: 25 }}
-          className="relative w-full max-w-[320px] bg-white/90 dark:bg-zinc-900/90 backdrop-blur-xl rounded-[2.5rem] shadow-[0_20px_60px_-15px_rgba(0,0,0,0.5)] overflow-hidden border border-white/20 mx-auto flex flex-col"
+          className="relative w-full max-w-[320px] bg-white/90 dark:bg-zinc-900/90 backdrop-blur-xl rounded-[2.5rem] shadow-[0_20px_60px_-15px_rgba(0,0,0,0.5)] overflow-hidden border border-white/20 mx-auto flex flex-col z-10"
         >
           {/* Elegant header */}
           <div className="flex justify-between items-center px-6 py-5">
@@ -282,7 +285,6 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScan, onClose }) => {
           </div>
         </motion.div>
       </div>
-    </AnimatePresence>
   );
 
   return createPortal(portalContent, document.body);
