@@ -3,7 +3,9 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useAppContext } from '../store/AppContext';
 import { ArrowLeft, Share2, Award } from 'lucide-react';
 import html2canvas from 'html2canvas';
-import QRCode from 'react-qr-code';
+import QRCodeImport from 'react-qr-code';
+
+const QRCode = (QRCodeImport as any).default || QRCodeImport;
 
 export const CustomerIDAndCert: React.FC = () => {
   const { id } = useParams<{ id: string }>();

@@ -4,7 +4,9 @@ import { useAppContext } from '../store/AppContext';
 import type { BakeryPayment } from '../store/types';
 import { ArrowLeft, Printer, Share2 } from 'lucide-react';
 import html2canvas from 'html2canvas';
-import QRCode from 'react-qr-code';
+
+import QRCodeImport from 'react-qr-code';
+const QRCode = (QRCodeImport as any).default || QRCodeImport;
 
 export const BakeryReceipt: React.FC = () => {
   const { id } = useParams<{ id: string }>();

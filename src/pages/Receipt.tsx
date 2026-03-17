@@ -5,7 +5,8 @@ import { getTransactionItems } from '../store/types';
 import { Printer, ArrowLeft, Share2, Download, FileText } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
-import QRCode from 'react-qr-code';
+import QRCodeImport from 'react-qr-code';
+const QRCode = (QRCodeImport as any).default || QRCodeImport;
 
 export const Receipt: React.FC = () => {
   const { id } = useParams<{ id: string }>();
