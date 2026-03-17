@@ -111,11 +111,6 @@ export const Reports: React.FC = () => {
     const txCount = filteredTxs.length;
     const avgSaleValue = txCount > 0 ? Math.round(totalSales / txCount) : 0;
 
-    // Debt collected this period
-    const now = new Date();
-    const todayStr = now.toISOString().split('T')[0];
-    const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-    const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
     const debtCollected = filterByPeriod(debtPayments).reduce((s, dp) => s + dp.amount, 0);
 
     // Amount paid to the company in this period
