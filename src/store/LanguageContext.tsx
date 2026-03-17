@@ -41,6 +41,12 @@ const en = {
   'dash.noSalesYet': 'No sales yet today',
   'dash.smartInsights': 'Smart Insights',
   'dash.insightPlaceholder': 'Ready for a great day of sales! Keep the momentum going.',
+  'dash.dailyGoal': 'Daily Goal',
+  'dash.dailyGoalProgress': 'today',
+  'dash.receiveBread': 'Receive Bread',
+  'dash.netProfit': 'Net Profit',
+  'dash.bakeryShare': 'Bakery 90%',
+  'dash.ourShare': 'Ours 10%',
 
   // Sales
   'sales.title': 'Record Sale',
@@ -211,6 +217,12 @@ const ha = {
   'dash.noSalesYet': 'Babu siyarwa tukuna yau',
   'dash.smartInsights': 'Fahimtar Kasuwanci',
   'dash.insightPlaceholder': 'Ka shirya don kyakkyawar ranar siyarwa! Ci gaba da himma.',
+  'dash.dailyGoal': 'Buri na Yau',
+  'dash.dailyGoalProgress': 'yau',
+  'dash.receiveBread': 'Karɓi Burodi',
+  'dash.netProfit': 'Ribar Mu (Net Profit)',
+  'dash.bakeryShare': 'Bakery 90%',
+  'dash.ourShare': 'Mu 10%',
 
   // Sales
   'sales.title': 'Yi Siyarwa',

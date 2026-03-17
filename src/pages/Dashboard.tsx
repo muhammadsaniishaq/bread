@@ -5,7 +5,7 @@ import { AnimatedPage } from '../components/AnimatedPage';
 import { DashboardChart } from '../components/DashboardChart';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from '../store/LanguageContext';
-import { TrendingUp, Wallet, Package, Users, PlusCircle, UserPlus, Activity, AlertTriangle, Clock, Search, X } from 'lucide-react';
+import { TrendingUp, TrendingDown, Wallet, Package, PlusCircle, UserPlus, Activity, AlertTriangle, Clock, Search, X, Crosshair, ArrowUpRight, ArrowDownRight, PackagePlus, Receipt, ChevronRight } from 'lucide-react';
 
 export const Dashboard: React.FC = () => {
   const { transactions, products, customers, expenses } = useAppContext();
@@ -38,32 +38,54 @@ export const Dashboard: React.FC = () => {
     const todaysExpenses = expenses.filter(e => e.date.startsWith(today));
     const totalExpenses = todaysExpenses.reduce((sum, e) => sum + e.amount, 0);
     
-    const profit = totalSales * 0.1; // 10% gross profit
-    const netProfit = profit - totalExpenses;
+    // 10/90 Business Model
+    const ourShare = totalSales * 0.1; 
+    const bakeryOwed = totalSales * 0.9;
+    const netProfit = ourShare - totalExpenses;
     
     const outstandingDebt = customers.reduce((sum, c) => sum + c.debtBalance, 0);
-    const stockRemaining = products.reduce((sum, p) => sum + p.stock, 0);
+    const stockRemaining = products.filter(p => p.active).reduce((sum, p) => sum + p.stock, 0);
     
+    // Sort bread sold map by highest quantity
+    const topProducts = Object.entries(breadSoldMap)
+      .map(([id, qty]) => {
+        const product = products.find(p => p.id === id);
+        return {
+          id,
+          name: product?.name || 'Unknown',
+          image: product?.image,
+          price: product?.price || 0,
+          qty
+        };
+      })
+      .sort((a, b) => b.qty - a.qty)
+      .slice(0, 4);
+    
+    const dailyGoal = 500000; // Easily configurable later
+
     return {
       totalSales,
       totalCash,
       breadSold,
-      profit,
+      ourShare,
+      bakeryOwed,
       netProfit,
       totalExpenses,
       outstandingDebt,
       stockRemaining,
-      breadSoldMap,
-      lowStockProducts: products.filter(p => p.stock > 0 && p.stock < 20),
+      topProducts,
+      dailyGoal,
+      goalProgress: Math.min(100, Math.round((totalSales / dailyGoal) * 100)),
+      lowStockProducts: products.filter(p => p.active && p.stock > 0 && p.stock < 20),
       recentActivity: transactions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 5)
     };
   }, [transactions, products, customers, expenses]);
 
   const greetingObj = useMemo(() => {
     const hour = new Date().getHours();
-    if (hour < 12) return { text: t('dash.goodMorning') + ' ☀️', gradient: 'from-orange-400 to-rose-400' };
-    if (hour < 17) return { text: t('dash.goodAfternoon') + ' 🌤️', gradient: 'from-blue-400 to-indigo-500' };
-    return { text: t('dash.goodEvening') + ' 🌙', gradient: 'from-indigo-900 to-purple-800 dark:from-indigo-400 dark:to-purple-400' };
+    if (hour < 12) return { text: t('dash.goodMorning') + ' ☀️', gradient: 'from-[#f59e0b] to-[#ef4444]' };
+    if (hour < 17) return { text: t('dash.goodAfternoon') + ' 🌤️', gradient: 'from-[#3b82f6] to-[#8b5cf6]' };
+    return { text: t('dash.goodEvening') + ' 🌙', gradient: 'from-[#4f46e5] to-[#c026d3]' };
   }, [t]);
 
   const searchResults = useMemo(() => {
@@ -85,63 +107,45 @@ export const Dashboard: React.FC = () => {
 
   const getCustomerName = (id?: string) => customers.find(c => c.id === id)?.name || 'Walk-in';
 
-  const aisInsight = useMemo(() => {
-    if (metrics.totalSales === 0) return t('dash.insightPlaceholder');
-    
-    let topProduct = '';
-    let maxSold = 0;
-    Object.entries(metrics.breadSoldMap).forEach(([id, count]) => {
-      if (count > maxSold) {
-        maxSold = count;
-        topProduct = products.find(p => p.id === id)?.name || 'Product';
-      }
-    });
-
-    if (maxSold > 0) {
-      if (metrics.stockRemaining < 50) {
-        return `${t('dash.lowStockMsg')} (${metrics.stockRemaining}). ${topProduct} (x${maxSold})`;
-      }
-      return `${topProduct} (x${maxSold}). ${t('dash.insightPlaceholder')}`;
-    }
-    
-    return t('dash.insightPlaceholder');
-  }, [metrics, products, t]);
-
   return (
     <AnimatedPage>
-      <div className="container pb-20">
-        <div className="flex justify-between items-end mb-6">
-          <div>
-            <h1 className={`text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r ${greetingObj.gradient}`}>
-              {greetingObj.text}
-            </h1>
-            <p className="text-secondary text-sm">{new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}</p>
-          </div>
+      <div className="container pb-20 pt-4 px-4 overflow-x-hidden">
+        {/* Header & Greeting */}
+        <div className="mb-6">
+          <h1 className={`text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r ${greetingObj.gradient}`}>
+            {greetingObj.text}
+          </h1>
+          <p className="text-secondary text-xs uppercase tracking-wider font-bold mt-1">
+            {new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
+          </p>
         </div>
-        <div className="relative mb-6 z-10">
-          <div className="flex items-center bg-[var(--surface-color)] border border-[var(--border-color)] rounded-full px-4 py-3 focus-within:border-primary focus-within:ring-2 ring-primary/20 transition-all shadow-sm">
-            <Search size={18} className="text-secondary mr-2" />
+
+        {/* Global Search Bar */}
+        <div className="relative mb-6 z-40">
+          <div className="flex items-center bg-[var(--surface-color)] border border-[var(--border-color)] rounded-[16px] px-4 py-3.5 focus-within:border-primary focus-within:ring-4 ring-primary/10 transition-all shadow-sm">
+            <Search size={18} className="text-secondary mr-3" />
             <input 
               type="text" 
-              placeholder="Search customers, products..." 
-              className="bg-transparent border-none outline-none w-full text-sm"
+              placeholder={t('rep.search')}
+              className="bg-transparent border-none outline-none w-full text-sm font-medium"
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
             />
             {searchQuery && (
-              <button onClick={() => setSearchQuery('')} className="text-secondary hover:text-primary ml-2">
-                <X size={16} />
+              <button onClick={() => setSearchQuery('')} className="text-secondary hover:text-primary p-1 bg-black/5 dark:bg-white/5 rounded-full ml-2">
+                <X size={14} />
               </button>
             )}
           </div>
           
+          {/* Dropdown Results */}
           {searchResults && (searchResults.customers.length > 0 || searchResults.products.length > 0) && (
-            <div className="absolute top-full left-0 right-0 mt-2 bg-[var(--surface-color)] border border-[var(--border-color)] rounded-xl shadow-xl overflow-hidden animate-fade-in z-50">
+            <div className="absolute top-full left-0 right-0 mt-2 bg-[var(--surface-color)] border border-[var(--border-color)] rounded-[20px] shadow-2xl overflow-hidden animate-fade-in z-50 divide-y divide-[var(--border-color)]">
               {searchResults.customers.length > 0 && (
                 <div>
                   <div className="text-[10px] font-bold text-secondary uppercase tracking-widest px-4 py-2 bg-black/5 dark:bg-white/5">{t('nav.customers')}</div>
                   {searchResults.customers.map(c => (
-                     <div key={c.id} onClick={() => navigate(`/customer/${c.id}`)} className="px-4 py-3 flex justify-between items-center hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer border-b border-[var(--border-color)] last:border-none">
+                     <div key={c.id} onClick={() => navigate(`/customer/${c.id}`)} className="px-4 py-3 flex justify-between items-center hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer">
                        <div>
                          <div className="font-bold text-sm tracking-tight">{c.name}</div>
                          <div className="text-xs text-secondary mt-0.5">{c.phone || 'No phone'}</div>
@@ -155,9 +159,9 @@ export const Dashboard: React.FC = () => {
               )}
               {searchResults.products.length > 0 && (
                 <div>
-                  <div className="text-[10px] font-bold text-secondary uppercase tracking-widest px-4 py-2 bg-black/5 dark:bg-white/5">Products</div>
+                  <div className="text-[10px] font-bold text-secondary uppercase tracking-widest px-4 py-2 bg-black/5 dark:bg-white/5">{t('nav.inventory')}</div>
                   {searchResults.products.map(p => (
-                     <div key={p.id} onClick={() => navigate('/inventory')} className="px-4 py-3 flex justify-between items-center hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer border-b border-[var(--border-color)] last:border-none">
+                     <div key={p.id} onClick={() => navigate('/inventory')} className="px-4 py-3 flex justify-between items-center hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer">
                        <div className="flex items-center gap-3">
                          {p.image ? (
                            <img src={p.image} className="w-10 h-10 rounded-full object-cover shadow-sm" alt="" />
@@ -172,7 +176,7 @@ export const Dashboard: React.FC = () => {
                          </div>
                        </div>
                        <div className={`text-xs font-bold uppercase tracking-wider ${p.stock > 0 ? 'text-success' : 'text-danger'}`}>
-                         {p.stock} in stock
+                         {p.stock} left
                        </div>
                      </div>
                   ))}
@@ -181,164 +185,200 @@ export const Dashboard: React.FC = () => {
             </div>
           )}
         </div>
-      
-        <div className="flex gap-2 mb-6 overflow-x-auto pb-2 no-print" style={{ scrollbarWidth: 'none' }}>
-          <button 
-            onClick={() => navigate('/sales')}
-            className="btn btn-primary flex-none flex items-center gap-2" 
-            style={{ borderRadius: 'var(--radius-full)', padding: '0.5rem 1rem' }}
-          >
-            <PlusCircle size={18} /> {t('dash.newSale')}
-          </button>
-          <button 
-            onClick={() => navigate('/customers')}
-            className="btn btn-outline flex-none flex items-center gap-2" 
-            style={{ borderRadius: 'var(--radius-full)', padding: '0.5rem 1rem' }}
-          >
-            <UserPlus size={18} /> {t('dash.addCustomer')}
-          </button>
-          <button 
-            onClick={() => navigate('/reports')}
-            className="btn btn-outline flex-none flex items-center gap-2" 
-            style={{ borderRadius: 'var(--radius-full)', padding: '0.5rem 1rem' }}
-          >
-            <Activity size={18} /> {t('dash.reports')}
-          </button>
+
+        {/* Premium Net Profit Card (Glassmorphism + 10/90 Integration) */}
+        <div className={`relative overflow-hidden rounded-[24px] p-6 mb-6 text-white ${metrics.netProfit >= 0 ? 'bg-gradient-to-br from-[#4f46e5] to-[#7c3aed] shadow-[0_12px_30px_rgba(79,70,229,0.3)]' : 'bg-gradient-to-br from-[#dc2626] to-[#991b1b] shadow-[0_12px_30px_rgba(220,38,38,0.3)]'}`}>
+          <div className="absolute top-[-20px] right-[-20px] w-32 h-32 rounded-full bg-white opacity-10 blur-2xl" />
+          <div className="absolute bottom-[-10px] left-[-10px] w-24 h-24 rounded-full bg-black opacity-10 blur-xl" />
+          
+          <div className="relative z-10">
+            <div className="flex justify-between items-start mb-4">
+              <div className="flex items-center gap-2 bg-white/20 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/20 shadow-inner">
+                {metrics.netProfit >= 0 ? <TrendingUp size={14} className="text-white" /> : <TrendingDown size={14} className="text-white" />}
+                <span className="text-xs font-bold tracking-wide uppercase text-white drop-shadow-sm">{t('dash.netProfit')}</span>
+              </div>
+              <Activity className="text-white/40" size={24} />
+            </div>
+            
+            <div className="text-[42px] font-black tracking-tighter leading-none mb-1 drop-shadow-md">
+              ₦{metrics.netProfit.toLocaleString()}
+            </div>
+            
+            {/* Revenue Split Details */}
+            <div className="mt-6 pt-5 border-t border-white/20">
+              <div className="flex justify-between items-end mb-2">
+                <div className="text-[10px] font-bold uppercase tracking-widest text-white/70">Daily Sales</div>
+                <div className="font-bold">₦{metrics.totalSales.toLocaleString()}</div>
+              </div>
+              
+              <div className="h-1.5 w-full bg-black/20 rounded-full overflow-hidden flex shadow-inner">
+                <div className="h-full bg-white transition-all duration-1000 ease-out" style={{ width: '10%' }} />
+                <div className="h-full bg-black/40 transition-all duration-1000 ease-out" style={{ width: '90%' }} />
+              </div>
+              
+              <div className="flex justify-between mt-2 text-xs">
+                <div>
+                  <div className="font-bold text-white drop-shadow-sm">{t('dash.ourShare')}</div>
+                  <div className="text-white/80 font-mono mt-0.5">₦{metrics.ourShare.toLocaleString()}</div>
+                </div>
+                <div className="text-right">
+                  <div className="font-bold text-white/70">{t('dash.bakeryShare')}</div>
+                  <div className="text-white/60 font-mono mt-0.5">₦{metrics.bakeryOwed.toLocaleString()}</div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
-        {metrics.lowStockProducts.length > 0 && (
-          <div className="card mb-6 flex flex-col gap-2 relative overflow-hidden" style={{ background: 'rgba(var(--danger-rgb), 0.05)', borderColor: 'var(--danger-color)' }}>
-            <h3 className="font-bold text-danger flex items-center gap-2">
-              <AlertTriangle size={18} /> {t('dash.stockAlert')}
-            </h3>
-            {metrics.lowStockProducts.map(p => (
-              <div key={p.id} className="flex justify-between text-sm opacity-90">
-                <span>{p.name}</span>
-                <span className="font-bold text-danger">{p.stock} units left</span>
+        {/* Daily Goal Tracker */}
+        <div className="bg-[var(--surface-color)] border border-[var(--border-color)] rounded-[20px] p-5 mb-6 shadow-sm">
+          <div className="flex justify-between items-center mb-3">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-full bg-[#10b981]/10 flex items-center justify-center text-[#10b981]">
+                <Crosshair size={16} />
               </div>
-            ))}
+              <span className="text-sm font-bold">{t('dash.dailyGoal')}</span>
+            </div>
+            <span className="text-xs font-bold bg-[#10b981]/10 text-[#10b981] px-2.5 py-1 rounded-full">
+              {metrics.goalProgress}%
+            </span>
+          </div>
+          <div className="flex justify-between items-end mb-2">
+            <div className="text-lg font-black tracking-tight">₦{metrics.totalSales.toLocaleString()}</div>
+            <div className="text-xs text-secondary font-medium">/ ₦{metrics.dailyGoal.toLocaleString()} {t('dash.dailyGoalProgress')}</div>
+          </div>
+          <div className="h-2.5 w-full bg-[var(--border-color)] rounded-full overflow-hidden">
+            <div 
+              className="h-full bg-gradient-to-r from-[#10b981] to-[#34d399] rounded-full transition-all duration-1000 ease-out shadow-sm" 
+              style={{ width: `${metrics.goalProgress}%` }} 
+            />
+          </div>
+        </div>
+
+        {/* Smart Insights Notice */}
+        {metrics.lowStockProducts.length > 0 && (
+          <div className="bg-[#fef2f2] dark:bg-[#7f1d1d]/20 border border-[#fca5a5] dark:border-[#7f1d1d] rounded-[16px] p-4 mb-6 flex gap-3">
+             <AlertTriangle className="text-[#dc2626] shrink-0 mt-0.5" size={20} />
+             <div>
+               <h3 className="font-bold text-[#dc2626] text-sm mb-1">{t('dash.stockAlert')}</h3>
+               <p className="text-xs text-[#dc2626]/80">{t('dash.lowStockMsg')}: <span className="font-bold">{metrics.lowStockProducts.map(p => p.name).join(', ')}</span></p>
+             </div>
           </div>
         )}
 
-        <div className="flex flex-col gap-3">
-          <div className="card p-4 relative overflow-hidden bg-gradient-to-br from-indigo-500/10 to-purple-500/10 border border-primary/20 backdrop-blur-xl">
-             <div className="flex items-center gap-2 mb-2">
-               <div className="w-2 h-2 rounded-full bg-primary animate-pulse shadow-[0_0_8px_rgba(var(--primary-rgb),0.8)]"></div>
-               <span className="text-xs font-bold uppercase tracking-widest text-primary">{t('dash.smartInsights')}</span>
-             </div>
-             <p className="text-sm font-medium leading-relaxed opacity-90">{aisInsight}</p>
-          </div>
+        {/* Quick Actions Carousel */}
+        <div className="flex gap-3 mb-6 overflow-x-auto pb-2 -mx-4 px-4 snap-x no-print" style={{ scrollbarWidth: 'none' }}>
+          <button onClick={() => navigate('/sales')} className="snap-start flex-none w-[110px] aspect-[4/3] bg-primary text-white rounded-[18px] p-3 flex flex-col justify-between hover:-translate-y-1 transition-transform shadow-[0_4px_14px_rgba(var(--primary-rgb),0.3)] border-none">
+            <PlusCircle size={22} className="opacity-90" />
+            <span className="font-bold text-xs text-left leading-tight">{t('dash.newSale')}</span>
+          </button>
+          <button onClick={() => navigate('/inventory')} className="snap-start flex-none w-[110px] aspect-[4/3] bg-[var(--surface-color)] border border-[var(--border-color)] text-[var(--text-color)] rounded-[18px] p-3 flex flex-col justify-between hover:-translate-y-1 transition-transform shadow-sm">
+            <PackagePlus size={22} className="text-[#f59e0b]" />
+            <span className="font-bold text-xs text-left leading-tight">{t('dash.receiveBread')}</span>
+          </button>
+          <button onClick={() => navigate('/customers')} className="snap-start flex-none w-[110px] aspect-[4/3] bg-[var(--surface-color)] border border-[var(--border-color)] text-[var(--text-color)] rounded-[18px] p-3 flex flex-col justify-between hover:-translate-y-1 transition-transform shadow-sm">
+            <UserPlus size={22} className="text-[#10b981]" />
+            <span className="font-bold text-xs text-left leading-tight">{t('dash.addCustomer')}</span>
+          </button>
+          <button onClick={() => navigate('/reports')} className="snap-start flex-none w-[110px] aspect-[4/3] bg-[var(--surface-color)] border border-[var(--border-color)] text-[var(--text-color)] rounded-[18px] p-3 flex flex-col justify-between hover:-translate-y-1 transition-transform shadow-sm">
+            <Activity size={22} className="text-[#6366f1]" />
+            <span className="font-bold text-xs text-left leading-tight">{t('dash.reports')}</span>
+          </button>
+        </div>
 
-          <div className={`card text-white relative overflow-hidden p-6 ${metrics.netProfit >= 0 ? 'bg-gradient-to-br from-primary to-indigo-600 shadow-[0_8px_30px_rgba(var(--primary-rgb),0.3)]' : 'bg-gradient-to-br from-danger to-rose-700 shadow-[0_8px_30px_rgba(var(--danger-rgb),0.3)]'}`} style={{ border: 'none' }}>
-            <TrendingUp size={100} className="absolute right-0 bottom-0 opacity-[0.05]" style={{ transform: 'translate(10%, 10%)' }} />
-            <div className="text-sm opacity-80 flex items-center gap-2 mb-1">
-              <Wallet size={16} /> {t('dash.estimatedProfit')}
+        {/* Today's Stats Grid */}
+        <div className="grid grid-cols-2 gap-3 mb-6">
+           <div className="bg-[var(--surface-color)] border border-[var(--border-color)] rounded-[20px] p-4 flex flex-col items-center justify-center text-center">
+             <div className="w-10 h-10 rounded-full bg-[#10b981]/10 flex items-center justify-center text-[#10b981] mb-2">
+               <ArrowDownRight size={20} />
+             </div>
+             <div className="text-[10px] text-secondary font-bold uppercase tracking-wider mb-1">{t('dash.cashGenerated')}</div>
+             <div className="text-xl font-black">₦{metrics.totalCash.toLocaleString()}</div>
+           </div>
+           <div className="bg-[var(--surface-color)] border border-[var(--border-color)] rounded-[20px] p-4 flex flex-col items-center justify-center text-center">
+             <div className="w-10 h-10 rounded-full bg-[#ef4444]/10 flex items-center justify-center text-[#ef4444] mb-2">
+               <ArrowUpRight size={20} />
+             </div>
+             <div className="text-[10px] text-secondary font-bold uppercase tracking-wider mb-1">Expenses</div>
+             <div className="text-xl font-black">₦{metrics.totalExpenses.toLocaleString()}</div>
+           </div>
+           <div className="bg-[var(--surface-color)] border border-[var(--border-color)] rounded-[20px] p-4 flex flex-col items-center justify-center text-center col-span-2">
+             <div className="flex items-center gap-2 mb-2">
+               <Package size={16} className="text-primary" />
+               <span className="text-sm font-bold">{t('dash.breadSold')}</span>
+             </div>
+             <div className="text-2xl font-black text-primary mb-3">{metrics.breadSold} <span className="text-sm font-medium text-secondary">units today</span></div>
+             
+             {/* Visual Top Products */}
+             <div className="w-full flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
+               {metrics.topProducts.map(p => (
+                 <div key={p.id} className="bg-black/5 dark:bg-white/5 rounded-[12px] p-2 flex items-center gap-2 min-w-[120px] flex-none">
+                    <div className="w-8 h-8 rounded-full bg-white dark:bg-black shadow-sm flex items-center justify-center font-bold text-[#f59e0b] text-xs">
+                       x{p.qty}
+                    </div>
+                    <div className="text-left">
+                       <div className="text-[10px] font-bold truncate max-w-[70px]">{p.name}</div>
+                       <div className="text-[9px] text-secondary">₦{p.price.toLocaleString()}</div>
+                    </div>
+                 </div>
+               ))}
+             </div>
+           </div>
+        </div>
+
+        {/* Recent Activity List */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <Clock size={16} className="text-primary" />
+              <h2 className="text-base font-bold">{t('dash.recentActivity')}</h2>
             </div>
-            <div className="text-3xl font-bold mt-1 tracking-tight">₦{metrics.netProfit.toLocaleString()}</div>
-            {metrics.totalExpenses > 0 && (
-               <div className="text-xs opacity-70 mt-3 pt-3 flex justify-between uppercase tracking-wider" style={{ borderTop: '1px solid rgba(255,255,255,0.1)' }}>
-                 <span>Gross ₦{metrics.profit.toLocaleString()}</span>
-                 <span>Exp ₦{metrics.totalExpenses.toLocaleString()}</span>
-               </div>
+            <button onClick={() => navigate('/reports')} className="text-xs font-bold text-primary px-2 py-1 bg-primary/10 rounded-full">
+              View All
+            </button>
+          </div>
+          
+          <div className="flex flex-col gap-3">
+            {metrics.recentActivity.length === 0 ? (
+              <div className="text-center py-6 bg-[var(--surface-color)] border border-[var(--border-color)] rounded-[20px]">
+                <div className="w-12 h-12 rounded-full bg-black/5 dark:bg-white/5 flex items-center justify-center mx-auto mb-2 text-secondary">
+                  <Receipt size={20} />
+                </div>
+                <div className="text-sm font-bold text-secondary">{t('dash.noSalesYet')}</div>
+              </div>
+            ) : (
+              metrics.recentActivity.map(tx => (
+                <div key={tx.id} onClick={() => navigate(`/receipt/${tx.id}`)} className="bg-[var(--surface-color)] border border-[var(--border-color)] rounded-[18px] p-3.5 flex justify-between items-center cursor-pointer transition-transform hover:-translate-y-0.5 hover:shadow-md">
+                  <div className="flex items-center gap-3">
+                    <div className="relative">
+                      <div className="w-11 h-11 rounded-full flex items-center justify-center font-black text-lg bg-gradient-to-br from-gray-100 to-gray-200 dark:from-zinc-800 dark:to-zinc-900 text-primary shadow-inner">
+                        {getCustomerName(tx.customerId).charAt(0).toUpperCase()}
+                      </div>
+                      <div className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-[var(--surface-color)] flex items-center justify-center ${tx.type === 'Cash' ? 'bg-[#10b981]' : 'bg-[#dc2626]'}`}>
+                        {tx.type === 'Cash' ? <Wallet size={8} color="white" /> : <AlertTriangle size={8} color="white" />}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="font-bold text-sm tracking-tight">{getCustomerName(tx.customerId)}</div>
+                      <div className="text-xs text-secondary font-medium">{new Date(tx.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="font-bold text-sm tracking-tight">₦{tx.totalPrice.toLocaleString()}</div>
+                    <div className="text-[10px] font-bold text-secondary mt-0.5 flex gap-1 justify-end items-center">
+                       {getTransactionItems(tx).reduce((s, i) => s + i.quantity, 0)} items <ChevronRight size={10} />
+                    </div>
+                  </div>
+                </div>
+              ))
             )}
           </div>
-          
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
-            <div className="card relative overflow-hidden">
-              <div className="w-8 h-8 flex items-center justify-center mb-1 text-success">
-                <Wallet size={18} />
-              </div>
-              <div className="text-xs text-secondary font-medium">{t('dash.cashGenerated')}</div>
-              <div className="text-lg font-bold mt-0.5">₦{metrics.totalCash.toLocaleString()}</div>
-            </div>
-            
-            <div className="card relative overflow-hidden">
-              <div className="w-8 h-8 flex items-center justify-center mb-1 text-primary">
-                <TrendingUp size={18} />
-              </div>
-              <div className="text-xs text-secondary font-medium">{t('dash.totalValue')}</div>
-              <div className="text-lg font-bold mt-0.5">₦{metrics.totalSales.toLocaleString()}</div>
-            </div>
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
-            <div className="card relative overflow-hidden">
-              <div className="flex items-center gap-2 text-xs text-secondary font-medium border-b pb-2 mb-2" style={{ borderColor: 'var(--border-color)' }}>
-                <Package size={14} /> {t('dash.breadSold')}
-              </div>
-              <div className="text-lg font-bold mb-2">{metrics.breadSold} units</div>
-              <div className="flex flex-col gap-1 text-xs">
-                {products.map(p => {
-                  const sold = metrics.breadSoldMap[p.id] || 0;
-                  if (sold === 0) return null;
-                  return (
-                    <div key={p.id} className="flex justify-between items-center py-0.5 opacity-90">
-                      <span className="truncate mr-2">{p.name}</span>
-                      <span className="font-bold text-accent">{sold}</span>
-                    </div>
-                  );
-                })}
-                {metrics.breadSold === 0 && <span className="opacity-50 italic">No sales yet</span>}
-              </div>
-            </div>
-            
-            <div className="card relative overflow-hidden">
-              <div className="flex items-center gap-2 text-xs text-secondary font-medium border-b pb-2 mb-2" style={{ borderColor: 'var(--border-color)' }}>
-                <Package size={14} /> {t('dash.stockAvailable')}
-              </div>
-              <div className="text-lg font-bold mb-2">{metrics.stockRemaining} units</div>
-              <div className="flex flex-col gap-1 text-xs">
-                {products.filter(p => p.active).map(p => (
-                  <div key={p.id} className="flex justify-between items-center py-0.5 opacity-90">
-                    <span className="truncate mr-2">{p.name}</span>
-                    <span className="font-bold" style={{ color: p.stock < 20 ? 'var(--danger-color)' : 'inherit' }}>{p.stock}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-          
-          <div className="card border-danger relative overflow-hidden">
-             <div className="w-8 h-8 flex items-center justify-center mb-1 text-danger">
-              <Users size={18} />
-            </div>
-            <div className="text-xs text-secondary font-medium">{t('dash.outstandingDebt')}</div>
-            <div className="text-lg font-bold text-danger mt-0.5">₦{metrics.outstandingDebt.toLocaleString()}</div>
-          </div>
         </div>
 
-        <div className="mt-8 mb-4 flex items-center gap-2">
-          <Clock size={18} className="text-primary" />
-          <h2 className="text-lg font-bold">{t('dash.recentActivity')}</h2>
+        {/* Existing Chart integrated smoothly */}
+        <div className="bg-[var(--surface-color)] border border-[var(--border-color)] rounded-[20px] p-4 shadow-sm mb-6">
+          <DashboardChart />
         </div>
-        
-        <div className="flex flex-col gap-2 mb-8">
-          {metrics.recentActivity.length === 0 ? (
-            <p className="text-sm text-secondary text-center py-4">No recent transactions.</p>
-          ) : (
-            metrics.recentActivity.map(tx => (
-              <div key={tx.id} onClick={() => navigate(`/receipt/${tx.id}`)} className="card p-3 flex justify-between items-center" style={{ marginBottom: 0, cursor: 'pointer', padding: '1rem' }}>
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm bg-gray-100 dark:bg-zinc-800 text-primary">
-                    {getCustomerName(tx.customerId).charAt(0).toUpperCase()}
-                  </div>
-                  <div>
-                    <div className="font-bold text-sm tracking-tight">{getCustomerName(tx.customerId)}</div>
-                    <div className="text-xs text-secondary">{new Date(tx.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <div className="font-bold text-sm tracking-tight">₦{tx.totalPrice.toLocaleString()}</div>
-                  <div className={`text-[10px] uppercase font-bold mt-1 px-1.5 py-0.5 rounded inline-block ${tx.type === 'Cash' ? 'bg-[rgba(var(--success-rgb),0.1)] text-success' : 'bg-[rgba(var(--danger-rgb),0.1)] text-danger'}`}>
-                    {tx.type}
-                  </div>
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-
-        <DashboardChart />
       </div>
     </AnimatedPage>
   );
