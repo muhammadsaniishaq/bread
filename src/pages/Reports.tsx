@@ -53,7 +53,7 @@ const MiniBar = ({ data, color = '#4f46e5' }: { data: { label: string; value: nu
 };
 
 export const Reports: React.FC = () => {
-  const { transactions, expenses, products, customers, inventoryLogs, debtPayments, appSettings } = useAppContext();
+  const { transactions, expenses, products, customers, inventoryLogs, debtPayments, appSettings, bakeryPayments } = useAppContext();
   const { t } = useTranslation();
   const navigate = useNavigate();
   const reportRef = useRef<HTMLDivElement>(null);
