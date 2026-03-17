@@ -133,36 +133,45 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScan, onClose }) => {
   };
 
   const portalContent = (
-      <div className="scanner-widget-portal">
+      <div 
+        style={{ 
+            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, 
+            height: '100vh', width: '100vw', zIndex: 9999, 
+            display: 'flex', alignItems: 'flex-start', justifyContent: 'center', 
+            paddingTop: '12vh', paddingLeft: '1rem', paddingRight: '1rem',
+            pointerEvents: 'none'
+        }}
+      >
         {/* Deep blur backdrop for premium feel */}
         <motion.div 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="scanner-widget-backdrop"
+            style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)', pointerEvents: 'auto' }}
             onClick={onClose}
         />
         
         <motion.div 
-          initial={{ opacity: 0, scale: 0.8, y: 15 }}
+          initial={{ opacity: 0, scale: 0.9, y: 30 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.8, y: 15 }}
-          transition={{ type: "spring", stiffness: 400, damping: 25 }}
-          className="scanner-widget-container"
+          exit={{ opacity: 0, scale: 0.9, y: 30 }}
+          transition={{ type: "spring", stiffness: 350, damping: 25 }}
+          style={{ pointerEvents: 'auto' }}
+          className="relative w-full max-w-[260px] bg-white/95 dark:bg-zinc-900/95 backdrop-blur-3xl rounded-[2rem] shadow-2xl overflow-hidden border border-white/40 dark:border-white/10 mx-auto flex flex-col z-10"
         >
           {/* Elegant header */}
-          <div className="flex justify-between items-center px-3 py-2.5 bg-gradient-to-b from-white/80 to-transparent dark:from-white/10">
-              <div className="flex items-center gap-1.5">
-                  <div className="w-5 h-5 rounded-full bg-gradient-to-br from-primary/30 to-primary/10 flex items-center justify-center shadow-[inset_0_1px_2px_rgba(255,255,255,0.8)]">
-                    <ScanLine size={10} className="text-primary" />
+          <div className="flex justify-between items-center px-5 py-4 bg-gradient-to-b from-white/60 to-transparent dark:from-white/10">
+              <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shadow-inner">
+                    <ScanLine size={16} className="text-primary" />
                   </div>
-                  <span className="font-extrabold text-[10px] tracking-tight text-gray-800 dark:text-gray-100 uppercase">Scanner</span>
+                  <span className="font-bold text-sm tracking-tight text-gray-900 dark:text-gray-100">Smart Scanner</span>
               </div>
               <button 
                   onClick={onClose}
-                  className="w-5 h-5 rounded-full bg-black/5 dark:bg-white/10 flex items-center justify-center text-gray-600 hover:text-danger hover:bg-red-100 dark:hover:bg-red-500/30 transition-all shadow-sm"
+                  className="w-8 h-8 rounded-full bg-gray-100 dark:bg-white/10 flex items-center justify-center text-gray-500 hover:text-danger hover:bg-red-50 dark:hover:bg-red-500/20 transition-all shadow-sm"
               >
-                  <X size={10} />
+                  <X size={16} />
               </button>
           </div>
 
@@ -174,8 +183,8 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScan, onClose }) => {
                           <CameraIcon size={24} className="text-red-500" />
                       </div>
                       <h3 className="text-white text-base font-bold mb-2">Camera Blocked</h3>
-                      <p className="text-gray-400 text-xs mb-6 px-4">Allow camera access to scan physical codes.</p>
-                      <button onClick={onClose} className="btn bg-white text-black font-bold py-2 px-6 rounded-full text-sm">
+                      <p className="text-gray-400 text-xs mb-6 px-4">Allow camera access to scan codes.</p>
+                      <button onClick={onClose} className="bg-white text-black font-bold py-2 px-6 rounded-full text-sm">
                           Close
                       </button>
                   </div>
@@ -209,18 +218,18 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScan, onClose }) => {
                       {hasCameraPermission === true && !isProcessingImage && (
                           <div className="absolute inset-0 z-10 pointer-events-none">
                               {/* Dark frame */}
-                              <div className="absolute inset-x-0 top-0 h-[15%] bg-black/40 backdrop-blur-[1px]" />
-                              <div className="absolute inset-x-0 bottom-0 h-[15%] bg-black/40 backdrop-blur-[1px]" />
-                              <div className="absolute top-[15%] bottom-[15%] left-0 w-[15%] bg-black/40 backdrop-blur-[1px]" />
-                              <div className="absolute top-[15%] bottom-[15%] right-0 w-[15%] bg-black/40 backdrop-blur-[1px]" />
+                              <div className="absolute inset-x-0 top-0 h-[15%] bg-black/40 backdrop-blur-[2px]" />
+                              <div className="absolute inset-x-0 bottom-0 h-[15%] bg-black/40 backdrop-blur-[2px]" />
+                              <div className="absolute top-[15%] bottom-[15%] left-0 w-[15%] bg-black/40 backdrop-blur-[2px]" />
+                              <div className="absolute top-[15%] bottom-[15%] right-0 w-[15%] bg-black/40 backdrop-blur-[2px]" />
 
                               {/* Center cutout */}
-                              <div className="absolute top-[15%] bottom-[15%] left-[15%] right-[15%] rounded-2xl border border-white/30 shadow-[0_0_0_9999px_rgba(0,0,0,0.2)] overflow-hidden">
+                              <div className="absolute top-[15%] bottom-[15%] left-[15%] right-[15%] rounded-2xl border border-white/30 shadow-[0_0_0_9999px_rgba(0,0,0,0.1)] overflow-hidden">
                                   {isScanning ? (
                                       <motion.div 
                                           animate={{ y: ['0%', '300%', '0%'] }}
                                           transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
-                                          className="scanner-reticle-line" 
+                                          style={{ position: 'absolute', left: 0, right: 0, height: '2px', backgroundColor: '#4f46e5', boxShadow: '0 0 20px 3px rgba(79, 70, 229, 0.8)', zIndex: 20 }}
                                       />
                                   ) : (
                                       <div className="absolute inset-0 bg-success/40 flex items-center justify-center backdrop-blur-sm">
@@ -228,7 +237,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScan, onClose }) => {
                                               initial={{ scale: 0, opacity: 0 }}
                                               animate={{ scale: 1, opacity: 1 }}
                                               transition={{ type: "spring", damping: 12 }}
-                                              className="bg-white text-success p-4 rounded-full shadow-2xl"
+                                              className="bg-white text-success p-4 rounded-full shadow-xl"
                                           >
                                               <CheckCircle2 size={40} />
                                           </motion.div>
@@ -248,17 +257,17 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScan, onClose }) => {
           </div>
 
           {errorMsg && (
-              <div className="bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 text-xs py-2 px-4 text-center font-medium border-y border-red-100 dark:border-red-900/50">
+              <div className="bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 text-xs py-3 px-4 text-center font-medium border-y border-red-100 dark:border-red-900/50">
                  {errorMsg}
               </div>
           )}
 
           {/* Bottom Actions Area */}
-          <div className="p-2.5 bg-gradient-to-t from-gray-50/95 to-white/90 dark:from-zinc-900 border-t border-black/5 dark:border-white/5">
-              <p className={`text-center font-bold text-[8.5px] mb-2 uppercase tracking-wider transition-colors duration-300 ${isScanning ? 'text-gray-400' : 'text-success'}`}>
+          <div className="p-5 bg-white dark:bg-zinc-900 border-t border-gray-100 dark:border-white/5">
+              <p className={`text-center font-semibold text-xs mb-4 transition-colors duration-300 ${isScanning ? 'text-gray-500' : 'text-success'}`}>
                   {isScanning 
-                      ? "Align in frame" 
-                      : "Captured!"}
+                      ? "Align code within frame" 
+                      : "Captured Successfully!"}
               </p>
               
               <input 
@@ -271,12 +280,12 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScan, onClose }) => {
               
               <button 
                   onClick={() => fileInputRef.current?.click()}
-                  className="w-full flex items-center justify-center gap-1.5 py-1.5 px-2 bg-white/80 backdrop-blur hover:bg-gray-100 dark:bg-zinc-800 dark:hover:bg-zinc-700 border border-gray-200/50 dark:border-white/10 rounded-[0.5rem] transition-all group shadow-sm hover:shadow"
+                  className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-gray-50/80 hover:bg-gray-100 dark:bg-zinc-800 dark:hover:bg-zinc-700 border border-gray-200/50 dark:border-white/10 rounded-xl transition-all group shadow-sm hover:shadow"
               >
-                  <div className="w-4 h-4 rounded-full bg-primary/10 flex items-center justify-center group-hover:scale-110 transition-transform">
-                      <ImageIcon size={8} className="text-primary" />
+                  <div className="w-8 h-8 rounded-full bg-white dark:bg-zinc-900 shadow-sm flex items-center justify-center group-hover:scale-110 transition-transform">
+                      <ImageIcon size={14} className="text-primary" />
                   </div>
-                  <span className="text-[9.5px] font-bold text-gray-700 dark:text-gray-200">Upload Image</span>
+                  <span className="text-sm font-bold text-gray-700 dark:text-gray-200">Upload Gallery Image</span>
               </button>
           </div>
         </motion.div>
