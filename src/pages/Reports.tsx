@@ -6,8 +6,8 @@ import { useTranslation } from '../store/LanguageContext';
 import {
   BarChart2, TrendingUp, TrendingDown, ShoppingBag, CreditCard,
   Package, Receipt, Search, ChevronRight,
-  Wallet, Users, AlertTriangle, RefreshCw, Printer, Share2,
-  ArrowUpRight, ArrowDownRight, DollarSign, Building2, Percent, MinusCircle, PlusCircle
+  Wallet, Users,AlertTriangle, RefreshCw, Printer, Share2,
+  ArrowUpRight, ArrowDownRight, DollarSign, Building2, Percent
 } from 'lucide-react';
 
 type Period = 'Today' | 'Week' | 'Month' | 'All';
