@@ -116,8 +116,8 @@ export const Reports: React.FC = () => {
     // Amount paid to the company in this period
     const companyPaid = filterByPeriod(bakeryPayments).reduce((s, bp) => s + Number(bp.amount || 0), 0);
 
-    // Remaining Balance = 90% owed - Debt Issued (no cash yet) + Debt Collected (cash received today) - Already Paid to Company
-    const netBakeryOwed = Math.max(0, bakeryOwed - debtSales + debtCollected - companyPaid);
+    // Remaining Balance = 90% owed - Already Paid to Company
+    const netBakeryOwed = Math.max(0, bakeryOwed - companyPaid);
 
     return {
       totalSales, cashSales, debtSales, totalExpenses, breadSold,
@@ -202,8 +202,6 @@ export const Reports: React.FC = () => {
         `Bread Sold:      ${metrics.breadSold} units\n`, sep,
         `Our Share(10%):  ${p(metrics.ourShare)}\n`,
         `Bakery Owed(90%):${p(metrics.bakeryOwed)}\n`,
-        `Debt Issued:     -${p(metrics.debtSales)}\n`,
-        `Debt Collected:  +${p(metrics.debtCollected)}\n`,
         `Company Paid:    -${p(metrics.companyPaid)}\n`,
         `Remaining Bal:   ${p(metrics.netBakeryOwed)}\n`,
         `Our Expenses:    ${p(metrics.totalExpenses)}\n`, sep,
@@ -237,8 +235,6 @@ export const Reports: React.FC = () => {
       `=========================\n` +
       `🏭 Total Sales (100%): ${fmt(metrics.totalSales)}\n` +
       `📉 Bakery Share (90%): ${fmt(metrics.bakeryOwed)}\n` +
-      `➖ Debt Issued: -${fmt(metrics.debtSales)}\n` +
-      `➕ Debt Collected: +${fmt(metrics.debtCollected)}\n` +
       `💸 Paid to Company: -${fmt(metrics.companyPaid)}\n` +
       `*⚠️ Remaining Balance: ${fmt(metrics.netBakeryOwed)}*\n` +
       `=========================\n\n` +
@@ -345,28 +341,6 @@ export const Reports: React.FC = () => {
             <Percent size={28} color='#92400e30' />
           </div>
         </div>
-
-        {/* Debt Issued row (Deduction) */}
-        {metrics.debtSales > 0 && (
-          <div style={{ background: '#dc262608', borderTop: '1px dashed #dc262630', padding: '10px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <MinusCircle size={14} color='#dc2626' />
-              <div style={{ fontSize: '11px', fontWeight: 700, color: '#dc2626' }}>{t('rep.debtIssuedDeduct')}</div>
-            </div>
-            <div style={{ fontSize: '13px', fontWeight: 800, color: '#dc2626' }}>-{fmt(metrics.debtSales)}</div>
-          </div>
-        )}
-        
-        {/* Debt Collected row (Addition) */}
-        {metrics.debtCollected > 0 && (
-          <div style={{ background: '#16a34a08', borderTop: '1px dashed #16a34a30', padding: '10px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <PlusCircle size={14} color='#16a34a' />
-              <div style={{ fontSize: '11px', fontWeight: 700, color: '#16a34a' }}>{t('rep.debtCollectedAdd')}</div>
-            </div>
-            <div style={{ fontSize: '13px', fontWeight: 800, color: '#16a34a' }}>+{fmt(metrics.debtCollected)}</div>
-          </div>
-        )}
 
         {/* Step 3: Amount Paid */}
         <div style={{ background: '#f59e0b10', borderTop: '1px solid #92400e15', padding: '14px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
