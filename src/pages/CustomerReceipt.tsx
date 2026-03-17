@@ -234,6 +234,12 @@ export const CustomerReceipt: React.FC = () => {
           .mt-8 { margin-top: 8px !important; }
           .pb-4 { padding-bottom: 4px !important; }
           .pt-4 { padding-top: 4px !important; }
+
+          /* CRITICAL: Force QR Code SVG to print correctly */
+          svg { display: block !important; print-color-adjust: exact !important; -webkit-print-color-adjust: exact !important; }
+          svg rect, svg path { fill: #000 !important; }
+          svg > rect:first-child { fill: #fff !important; }
+          svg * { color: inherit !important; }
         }
       `}</style>
 

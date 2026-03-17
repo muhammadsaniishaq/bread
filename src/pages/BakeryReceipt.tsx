@@ -289,6 +289,12 @@ export const BakeryReceipt: React.FC = () => {
           .mb-6 { margin-bottom: 6px !important; }
           .mb-4 { margin-bottom: 4px !important; }
           .mt-8 { margin-top: 8px !important; }
+
+          /* CRITICAL: Force QR Code SVG to print correctly */
+          svg { display: block !important; print-color-adjust: exact !important; -webkit-print-color-adjust: exact !important; }
+          svg rect, svg path { fill: #000 !important; }
+          svg > rect:first-child { fill: #fff !important; }
+          svg * { color: inherit !important; }
         }
       `}</style>
     </div>
