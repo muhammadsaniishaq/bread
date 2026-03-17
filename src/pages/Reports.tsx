@@ -118,12 +118,34 @@ export const Reports: React.FC = () => {
     const totalExpenses = filteredExps.reduce((s, e) => s + e.amount, 0);
     const breadSold = filteredTxs.reduce((s, t) => s + getTransactionItems(t).reduce((ss, i) => ss + i.quantity, 0), 0);
     const returnLogs = filteredLogs.filter(l => l.type === 'Return');
-    const receiveLogs = filteredLogs.filter(l => l.type !== 'Return');
     const totalReturnsValue = returnLogs.reduce((s, l) => s + l.quantityReceived * l.costPrice, 0);
-    const totalStockCostReceived = receiveLogs.reduce((s, l) => s + l.quantityReceived * l.costPrice, 0);
-    const totalUnitsReceived = receiveLogs.reduce((s, l) => s + l.quantityReceived, 0);
-    const avgCostPerUnit = totalUnitsReceived > 0 ? totalStockCostReceived / totalUnitsReceived : 0;
-    const estimatedCOGS = avgCostPerUnit > 0 ? breadSold * avgCostPerUnit : totalSales * 0.55;
+
+    // ── ACCURATE COGS: use per-product cost price from ALL inventory history ──
+    // Build a map of the most recent cost price per product from all inventory logs
+    const productCostMap: Record<string, number> = {};
+    [...inventoryLogs]
+      .filter(l => l.type !== 'Return' && l.costPrice > 0)
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+      .forEach(l => { productCostMap[l.productId] = l.costPrice; });
+
+    // Calculate COGS by multiplying each sold item by its known cost price
+    let estimatedCOGS = 0;
+    let itemsWithCost = 0;
+    let itemsWithoutCost = 0;
+    filteredTxs.forEach(t => {
+      getTransactionItems(t).forEach(item => {
+        const costPrice = productCostMap[item.productId];
+        if (costPrice && costPrice > 0) {
+          estimatedCOGS += item.quantity * costPrice;
+          itemsWithCost += item.quantity;
+        } else {
+          // Fallback: use unit sale price * 0.55 for items with no cost data
+          estimatedCOGS += item.quantity * item.unitPrice * 0.55;
+          itemsWithoutCost += item.quantity;
+        }
+      });
+    });
+
     const grossProfit = Math.max(0, totalSales - estimatedCOGS - totalReturnsValue);
     const netProfit = grossProfit - totalExpenses;
     const outstandingDebt = customers.reduce((s, c) => s + (c.debtBalance || 0), 0);
@@ -144,14 +166,15 @@ export const Reports: React.FC = () => {
     }).reduce((s, dp) => s + dp.amount, 0);
 
     const grossMarginPct = totalSales > 0 ? Math.round((grossProfit / totalSales) * 100) : 0;
+    const hasCostData = itemsWithCost > 0;
 
     return {
       totalSales, cashSales, debtSales, totalExpenses, breadSold,
       grossProfit, netProfit, outstandingDebt, stockRetailValue,
       txCount, avgSaleValue, debtCollected, totalReturnsValue,
-      estimatedCOGS, grossMarginPct,
+      estimatedCOGS, grossMarginPct, hasCostData,
     };
-  }, [filteredTxs, filteredExps, filteredLogs, customers, products, debtPayments, period]);
+  }, [filteredTxs, filteredExps, filteredLogs, customers, products, debtPayments, period, inventoryLogs]);
 
   // ── Product Performance ──
   const productStats = useMemo(() => {
@@ -181,6 +204,20 @@ export const Reports: React.FC = () => {
     });
   }, [transactions]);
 
+  // ── Hourly chart (Today only) ──
+  const hourlyTrend = useMemo(() => {
+    const todayStr = new Date().toISOString().split('T')[0];
+    const todayTxs = transactions.filter(t => t.date.startsWith(todayStr));
+    return Array.from({ length: 12 }, (_, i) => {
+      const hour = i * 2; // Every 2 hours → 12 bars for 24h
+      const label = hour < 12 ? `${hour || 12}${hour < 12 ? 'a' : 'p'}` : `${hour - 12 || 12}p`;
+      const value = todayTxs
+        .filter(t => { const h = new Date(t.date).getHours(); return h >= hour && h < hour + 2; })
+        .reduce((s, t) => s + t.totalPrice, 0);
+      return { label, value };
+    });
+  }, [transactions]);
+
   // ── Transaction List ──
   const displayedTxs = useMemo(() => {
     const q = txSearch.toLowerCase();
@@ -202,8 +239,10 @@ export const Reports: React.FC = () => {
     customers.filter(c => c.debtBalance > 0).sort((a, b) => b.debtBalance - a.debtBalance),
     [customers]);
 
-  // ── Print via Bluetooth ──
+  // ── Print via Bluetooth (ESC/POS safe — no ₦ symbol, use N instead) ──
   const handlePrint = async () => {
+    // Helper: format for ESC/POS (no Unicode symbols, use ASCII-safe N for Naira)
+    const p = (n: number) => `N${Math.round(n).toLocaleString()}`;
     try {
       if (!(navigator as any).bluetooth) throw new Error('No Bluetooth');
       const device = await (navigator as any).bluetooth.requestDevice({
@@ -221,38 +260,47 @@ export const Reports: React.FC = () => {
       const char = chars.find((c: any) => c.properties.write || c.properties.writeWithoutResponse);
       if (!char) throw new Error('No writable char');
 
-      const co = appSettings.companyName || 'BREAD APP';
-      const sep = '================================\n';
+      const co = (appSettings.companyName || 'BREAD APP').replace(/[^\x00-\x7F]/g, '');
+      const sep = '--------------------------------\n';
       const lines = [
-        `\x1Ba\x01`, `\x1BE\x01${co.toUpperCase()}\n\x1BE\x00`,
-        `FINANCIAL REPORT - ${period.toUpperCase()}\n`, sep,
+        `\x1Ba\x01`,
+        `\x1BE\x01${co.toUpperCase()}\x1BE\x00\n`,
+        `FINANCIAL REPORT - ${period.toUpperCase()}\n`,
+        `Date: ${new Date().toLocaleDateString()}\n`,
+        sep,
         `\x1Ba\x00`,
-        `Total Sales:      ${fmt(metrics.totalSales)}\n`,
-        `Cash Sales:       ${fmt(metrics.cashSales)}\n`,
-        `Debt Issued:      ${fmt(metrics.debtSales)}\n`,
-        `Debt Collected:   ${fmt(metrics.debtCollected)}\n`,
+        `Total Sales:      ${p(metrics.totalSales)}\n`,
+        `Cash Sales:       ${p(metrics.cashSales)}\n`,
+        `Debt Issued:      ${p(metrics.debtSales)}\n`,
+        `Debt Collected:   ${p(metrics.debtCollected)}\n`,
         sep,
         `Bread Sold:       ${metrics.breadSold} units\n`,
-        `Est. COGS:        ${fmt(metrics.estimatedCOGS)}\n`,
-        `Gross Profit:     ${fmt(metrics.grossProfit)} (${metrics.grossMarginPct}%)\n`,
-        `Total Expenses:   ${fmt(metrics.totalExpenses)}\n`,
+        `Est. COGS:        ${p(metrics.estimatedCOGS)}\n`,
+        `Gross Profit:     ${p(metrics.grossProfit)} (${metrics.grossMarginPct}%)\n`,
+        `Total Expenses:   ${p(metrics.totalExpenses)}\n`,
         sep,
-        `\x1BE\x01NET PROFIT:       ${fmt(metrics.netProfit)}\x1BE\x00\n`,
+        `\x1BE\x01NET PROFIT: ${p(metrics.netProfit)}\x1BE\x00\n`,
         sep,
-        `Outstanding Debt: ${fmt(metrics.outstandingDebt)}\n`,
-        `Stock Value:      ${fmt(metrics.stockRetailValue)}\n`,
+        `Outstanding Debt: ${p(metrics.outstandingDebt)}\n`,
+        `Stock Value:      ${p(metrics.stockRetailValue)}\n`,
         sep,
-        `Printed: ${new Date().toLocaleString()}\n\n\n`,
+        `Cost data: ${metrics.hasCostData ? 'Actual' : 'Estimated'}\n`,
+        `Customers: ${customers.length}\n`,
+        sep,
+        `\x1Ba\x01`,
+        `${co}\n`,
+        `\x1Ba\x00\n\n\n`,
       ];
       const encoder = new TextEncoder();
       for (const line of lines) {
-        const data = encoder.encode(line);
+        const safe = line.replace(/[^\x00-\x7F]/g, '?');
+        const data = encoder.encode(safe);
         for (let i = 0; i < data.length; i += 512) {
           await char.writeValue(data.slice(i, i + 512));
           await new Promise(r => setTimeout(r, 30));
         }
       }
-      await new Promise(r => setTimeout(r, 500));
+      await new Promise(r => setTimeout(r, 600));
       device.gatt.disconnect();
     } catch {
       window.print();
@@ -373,16 +421,21 @@ export const Reports: React.FC = () => {
       {/* ══════ OVERVIEW TAB ══════ */}
       {activeTab === 'overview' && (
         <div style={{ padding: '0 16px' }}>
-          {/* 7-Day Chart */}
+          {/* Chart - 7 day or Hourly (Today) */}
           <div style={{ background: 'var(--surface-color)', border: '1px solid var(--border-color)', borderRadius: '18px', padding: '16px', marginBottom: '14px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
               <div>
-                <div style={{ fontWeight: 700, fontSize: '13px' }}>7-Day Sales Chart</div>
-                <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Last 7 days revenue</div>
+                <div style={{ fontWeight: 700, fontSize: '13px' }}>{period === 'Today' ? '⏰ Today by Hour' : '📅 7-Day Sales Trend'}</div>
+                <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>{period === 'Today' ? 'Sales per 2-hour window' : 'Last 7 days revenue'}</div>
               </div>
-              <div style={{ fontSize: '13px', fontWeight: 800, color: '#4f46e5' }}>{fmt(weekTrend.reduce((s, d) => s + d.value, 0))}</div>
+              <div style={{ textAlign: 'right' }}>
+                <div style={{ fontSize: '13px', fontWeight: 800, color: '#4f46e5' }}>{fmt(period === 'Today' ? metrics.totalSales : weekTrend.reduce((s, d) => s + d.value, 0))}</div>
+                <div style={{ fontSize: '10px', padding: '2px 6px', borderRadius: '6px', background: metrics.hasCostData ? '#16a34a15' : '#d9770615', color: metrics.hasCostData ? '#16a34a' : '#d97706', fontWeight: 600, marginTop: 2 }}>
+                  {metrics.hasCostData ? '✓ Actual Cost' : '~ Estimated Cost'}
+                </div>
+              </div>
             </div>
-            <MiniBar data={weekTrend} color="#4f46e5" />
+            <MiniBar data={period === 'Today' ? hourlyTrend : weekTrend} color={period === 'Today' ? '#7c3aed' : '#4f46e5'} />
           </div>
 
           {/* Cash Flow Row */}
