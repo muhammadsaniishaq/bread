@@ -133,17 +133,13 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScan, onClose }) => {
   };
 
   const portalContent = (
-      <div 
-        className="fixed z-[9999] flex items-start justify-center pt-[10vh] px-4"
-        style={{ top: 0, left: 0, right: 0, bottom: 0, position: 'fixed', height: '100vh', width: '100vw' }}
-      >
+      <div className="scanner-widget-portal">
         {/* Deep blur backdrop for premium feel */}
         <motion.div 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="absolute bg-black/50 backdrop-blur-md"
-            style={{ top: 0, left: 0, right: 0, bottom: 0 }}
+            className="scanner-widget-backdrop"
             onClick={onClose}
         />
         
@@ -152,7 +148,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScan, onClose }) => {
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.8, y: 15 }}
           transition={{ type: "spring", stiffness: 400, damping: 25 }}
-          className="relative w-[190px] bg-white/80 dark:bg-zinc-900/80 backdrop-blur-[40px] rounded-[1.25rem] shadow-[0_30px_60px_-10px_rgba(0,0,0,0.8),0_0_0_1px_rgba(255,255,255,0.4)_inset] overflow-hidden border border-white/60 dark:border-white/20 mx-auto flex flex-col z-10"
+          className="scanner-widget-container"
         >
           {/* Elegant header */}
           <div className="flex justify-between items-center px-3 py-2.5 bg-gradient-to-b from-white/80 to-transparent dark:from-white/10">
@@ -224,7 +220,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScan, onClose }) => {
                                       <motion.div 
                                           animate={{ y: ['0%', '300%', '0%'] }}
                                           transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
-                                          className="absolute left-0 right-0 h-[2px] bg-primary shadow-[0_0_20px_3px_rgba(var(--primary-rgb),0.8)] z-20" 
+                                          className="scanner-reticle-line" 
                                       />
                                   ) : (
                                       <div className="absolute inset-0 bg-success/40 flex items-center justify-center backdrop-blur-sm">

@@ -298,3 +298,58 @@ h2 {
 .opacity-90 { opacity: 0.9; }
 .w-full { width: 100%; }
 .uppercase { text-transform: uppercase; letter-spacing: 0.05em; }
+
+/* HARDCODED SCANNER WIDGET STYLES TO BYPASS TAILWIND JIT */
+.scanner-widget-portal {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  height: 100vh; width: 100vw;
+  z-index: 9999;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 10vh;
+  padding-left: 1rem;
+  padding-right: 1rem;
+  pointer-events: none;
+}
+.scanner-widget-portal > * { pointer-events: auto; }
+
+.scanner-widget-backdrop {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background-color: rgba(0,0,0,0.6);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.scanner-widget-container {
+  position: relative;
+  width: 190px !important;
+  max-width: 190px !important;
+  background: rgba(255,255,255,0.85);
+  backdrop-filter: blur(40px);
+  -webkit-backdrop-filter: blur(40px);
+  border-radius: 20px;
+  box-shadow: 0 30px 60px -10px rgba(0,0,0,0.8), inset 0 0 0 1px rgba(255,255,255,0.4);
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.6);
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  z-index: 10;
+}
+[data-theme='dark'] .scanner-widget-container {
+  background: rgba(24,24,27,0.85); /* zinc-900 */
+  border-color: rgba(255,255,255,0.2);
+}
+
+/* Reticle Lines */
+.scanner-reticle-line {
+  position: absolute;
+  left: 0; right: 0;
+  height: 2px;
+  background-color: var(--primary-color);
+  box-shadow: 0 0 20px 3px rgba(var(--primary-rgb), 0.8);
+  z-index: 20;
+}
