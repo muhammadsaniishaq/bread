@@ -4,6 +4,7 @@ import Webcam from 'react-webcam';
 import jsQR from 'jsqr';
 import { X, Camera as CameraIcon, CheckCircle2, ScanLine, Image as ImageIcon } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { useTranslation } from '../store/LanguageContext';
 
 interface QRScannerProps {
   onScan: (decodedText: string) => void;
@@ -17,6 +18,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScan, onClose }) => {
   const [isScanning, setIsScanning] = useState(true);
   const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
   const [isProcessingImage, setIsProcessingImage] = useState(false);
+  const { t } = useTranslation();
 
   const handleSuccess = useCallback((data: string) => {
     // Validate QR code to prevent crashing
@@ -27,11 +29,11 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScan, onClose }) => {
                        (!data.includes(' ') && !data.toLowerCase().startsWith('http') && data.length >= 5 && data.length <= 50);
 
     if (!isOurAppQR) {
-        setErrorMsg("⚠️ Wannan ba QR Code na wannan asusun bane!");
+        setErrorMsg(t('qr.invalidCode'));
         setIsProcessingImage(false);
-        if (navigator.vibrate) navigator.vibrate([100, 50, 100]); // Error vibration
+        if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
         setTimeout(() => setErrorMsg(null), 4000);
-        return; // Reject scan, do not close or route
+        return;
     }
 
     setIsScanning(false);
@@ -194,11 +196,12 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScan, onClose }) => {
                   <div style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: 'rgba(79, 70, 229, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <ScanLine size={16} color="#4f46e5" />
                   </div>
-                  <span style={{ fontWeight: 'bold', fontSize: '14px', color: '#111827' }}>Smart Scanner</span>
+                  <span style={{ fontWeight: 'bold', fontSize: '14px', color: '#111827' }}>{t('qr.title')}</span>
               </div>
               <button 
                   onClick={onClose}
                   style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: 'rgba(0,0,0,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', cursor: 'pointer' }}
+                  aria-label={t('qr.close')}
               >
                   <X size={16} color="#6b7280" />
               </button>
@@ -211,10 +214,10 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScan, onClose }) => {
                       <div style={{ width: '64px', height: '64px', backgroundColor: 'rgba(239,68,68,0.1)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '16px' }}>
                           <CameraIcon size={24} color="#ef4444" />
                       </div>
-                      <h3 style={{ color: '#fff', fontSize: '16px', fontWeight: 'bold', margin: '0 0 8px 0' }}>Camera Blocked</h3>
-                      <p style={{ color: '#9ca3af', fontSize: '12px', margin: '0 0 24px 0', padding: '0 16px' }}>Allow camera access to scan codes.</p>
+                      <h3 style={{ color: '#fff', fontSize: '16px', fontWeight: 'bold', margin: '0 0 8px 0' }}>{t('qr.cameraBlocked')}</h3>
+                      <p style={{ color: '#9ca3af', fontSize: '12px', margin: '0 0 24px 0', padding: '0 16px' }}>{t('qr.cameraMsg')}</p>
                       <button onClick={onClose} style={{ backgroundColor: '#fff', color: '#000', fontWeight: 'bold', padding: '8px 24px', borderRadius: '9999px', fontSize: '14px', border: 'none', cursor: 'pointer' }}>
-                          Close
+                          {t('qr.close')}
                       </button>
                   </div>
               ) : (
@@ -237,7 +240,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScan, onClose }) => {
                           <div style={{ position: 'absolute', top:0, left:0, right:0, bottom:0, backgroundColor: '#18181b', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                                   <ScanLine size={32} color="#4f46e5" style={{ marginBottom: '12px' }} />
-                                  <span style={{ color: '#fff', fontSize: '14px', fontWeight: 500 }}>Scanning Image...</span>
+                                  <span style={{ color: '#fff', fontSize: '14px', fontWeight: 500 }}>{t('qr.scanning')}</span>
                               </div>
                           </div>
                       )}
@@ -293,9 +296,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScan, onClose }) => {
           {/* Bottom Actions Area */}
           <div style={{ padding: '20px', backgroundColor: '#fff', borderTop: '1px solid rgba(0,0,0,0.05)' }}>
               <p style={{ textAlign: 'center', fontWeight: 600, fontSize: '12px', margin: '0 0 16px 0', color: isScanning ? '#6b7280' : '#10b981', transition: 'color 0.3s' }}>
-                  {isScanning 
-                      ? "Align code within frame" 
-                      : "Captured Successfully!"}
+                  {isScanning ? t('qr.align') : t('qr.captured')}
               </p>
               
               <input 
@@ -313,7 +314,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScan, onClose }) => {
                   <div style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: '#fff', boxShadow: '0 1px 2px rgba(0,0,0,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       <ImageIcon size={14} color="#4f46e5" />
                   </div>
-                  <span style={{ fontSize: '14px', fontWeight: 'bold', color: '#374151' }}>Upload Gallery Image</span>
+                  <span style={{ fontSize: '14px', fontWeight: 'bold', color: '#374151' }}>{t('qr.upload')}</span>
               </button>
           </div>
         </motion.div>

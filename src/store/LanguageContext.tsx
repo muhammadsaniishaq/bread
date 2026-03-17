@@ -110,6 +110,17 @@ const en = {
   'set.export': 'Backup Data (Export)',
   'set.import': 'Restore Backup (Import)',
   'set.logout': 'Log Out',
+
+  // QR Scanner
+  'qr.title': 'Smart Scanner',
+  'qr.close': 'Close',
+  'qr.cameraBlocked': 'Camera Blocked',
+  'qr.cameraMsg': 'Allow camera access to scan codes.',
+  'qr.align': 'Align code within frame',
+  'qr.captured': 'Captured Successfully!',
+  'qr.upload': 'Upload Gallery Image',
+  'qr.scanning': 'Scanning Image...',
+  'qr.invalidCode': '⚠️ This QR Code does not belong to this app!',
 };
 
 // Hausa Dictionary
@@ -212,6 +223,17 @@ const ha = {
   'set.export': 'Ajiye Bayanai (Export)',
   'set.import': 'Dawo da Bayanai (Import)',
   'set.logout': 'Fita',
+
+  // QR Scanner
+  'qr.title': 'Kyamarar Scan',
+  'qr.close': 'Rufe',
+  'qr.cameraBlocked': 'Kyamara ta Hana',
+  'qr.cameraMsg': 'Ka ba da izinin kyamara don scanning.',
+  'qr.align': 'Daidaita lamba a cikin gidan',
+  'qr.captured': 'An Samu!',
+  'qr.upload': 'Dora Hoton Gallery',
+  'qr.scanning': 'Ana Duba Hoto...',
+  'qr.invalidCode': '⚠️ Wannan ba QR Code na wannan asusun bane!',
 };
 
 const dictionaries: Record<Language, Record<string, string>> = { en, ha };
