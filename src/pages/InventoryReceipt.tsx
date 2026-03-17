@@ -4,6 +4,9 @@ import { useAppContext } from '../store/AppContext';
 import { AnimatedPage } from '../components/AnimatedPage';
 import { ArrowLeft, Printer, Share2, Download, FileText } from 'lucide-react';
 import html2canvas from 'html2canvas';
+
+import QRCodeImport from 'react-qr-code';
+const QRCode = (QRCodeImport as any).default || QRCodeImport;
 import { jsPDF } from 'jspdf';
 
 export const InventoryReceipt: React.FC = () => {
@@ -343,6 +346,10 @@ export const InventoryReceipt: React.FC = () => {
             <span>₦{totalValue.toLocaleString()}</span>
           </div>
           
+          <div className="flex justify-center mb-4 p-2 bg-white inline-block border border-gray-200 rounded mx-auto" style={{ width: 'fit-content' }}>
+            <QRCode value={`inventory:${type}:${id}`} size={64} level="L" />
+          </div>
+
           <div className="text-center text-sm border-t border-dashed pt-4 font-mono" style={{ borderColor: '#aaa' }}>
             {appSettings.receiptFooter ? (
               <p style={{ whiteSpace: 'pre-line' }}>{appSettings.receiptFooter}</p>

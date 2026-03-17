@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Plus, ShoppingCart, UserPlus, FileText } from 'lucide-react';
+import { Plus, ShoppingCart, UserPlus, FileText, Camera } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { QRScanner } from './QRScanner';
 
 export const Fab: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [isOpen, setIsOpen] = useState(false);
+  const [showScanner, setShowScanner] = useState(false);
 
   // Hide FAB on the Sales page itself or Receipts
   if (location.pathname === '/sales' || location.pathname.startsWith('/receipt')) {
@@ -16,9 +18,10 @@ export const Fab: React.FC = () => {
   const toggleOpen = () => setIsOpen(!isOpen);
   
   const actions = [
-    { icon: <ShoppingCart size={20} />, label: 'New Sale', path: '/sales', color: 'var(--primary-color)' },
-    { icon: <UserPlus size={20} />, label: 'Add Customer', path: '/customers', color: 'var(--success-color)' },
-    { icon: <FileText size={20} />, label: 'New Expense', path: '/expenses', color: 'var(--accent-color)' },
+    { icon: <ShoppingCart size={20} />, label: 'New Sale', action: () => navigate('/sales'), color: 'var(--primary-color)' },
+    { icon: <UserPlus size={20} />, label: 'Add Customer', action: () => navigate('/customers'), color: 'var(--success-color)' },
+    { icon: <FileText size={20} />, label: 'New Expense', action: () => navigate('/expenses'), color: 'var(--accent-color)' },
+    { icon: <Camera size={20} />, label: 'Scan ID', action: () => setShowScanner(true), color: '#8b5cf6' },
   ];
 
   return (
@@ -82,7 +85,7 @@ export const Fab: React.FC = () => {
                     whileTap={{ scale: 0.9 }}
                     onClick={() => {
                       setIsOpen(false);
-                      navigate(action.path);
+                      action.action();
                     }}
                     style={{
                       width: '2.8rem',
@@ -132,6 +135,16 @@ export const Fab: React.FC = () => {
           <Plus size={28} />
         </motion.button>
       </div>
+      
+      {showScanner && (
+        <QRScanner 
+          onScan={(decodedId) => {
+            setShowScanner(false);
+            navigate(`/customers/${decodedId}`);
+          }} 
+          onClose={() => setShowScanner(false)} 
+        />
+      )}
     </>
   );
 };

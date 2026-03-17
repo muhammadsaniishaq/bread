@@ -8,6 +8,8 @@ interface QRScannerProps {
 }
 
 export const QRScanner: React.FC<QRScannerProps> = ({ onScan, onClose }) => {
+  const [errorMsg, setErrorMsg] = React.useState<string | null>(null);
+
   useEffect(() => {
     let scanner: Html5QrcodeScanner | null = null;
     let isMounted = true;
@@ -19,7 +21,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScan, onClose }) => {
       try {
         scanner = new Html5QrcodeScanner(
           "qr-reader",
-          { fps: 10, qrbox: { width: 250, height: 250 }, supportedScanTypes: [0] },
+          { fps: 10, qrbox: { width: 250, height: 250 } },
           false
         );
 
@@ -31,20 +33,20 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScan, onClose }) => {
             onScan(decodedText);
           },
           () => {
-            // Continuous scanning generates many errors when no QR is present, we ignore them.
+            // Ignore continuous scanning errors
           }
         );
-      } catch (e) {
+      } catch (e: any) {
          console.warn("Scanner init bypassed:", e);
+         setErrorMsg(e?.message || "Camera permission denied or not supported by browser.");
       }
-    }, 100);
+    }, 150);
 
     return () => {
       isMounted = false;
       clearTimeout(timer);
       if (scanner) {
         try {
-          // html5-qrcode clear throws if not rendering, so we catch it silently.
           scanner.clear().catch(() => {});
         } catch(e) { /* ignore */ }
       }
@@ -61,6 +63,13 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScan, onClose }) => {
           <X size={20} />
         </button>
         <h2 className="text-xl font-bold mb-4 text-center text-black">Scan Barcode / QR</h2>
+        
+        {errorMsg && (
+          <div className="bg-red-100 text-red-700 p-3 rounded mb-4 text-sm font-medium text-center">
+            {errorMsg}
+          </div>
+        )}
+        
         <div id="qr-reader" className="w-full rounded overflow-hidden shadow-inner bg-black"></div>
         <p className="text-center text-sm text-gray-500 mt-4">
           Point your camera at the Customer ID Card.
