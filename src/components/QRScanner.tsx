@@ -19,13 +19,28 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScan, onClose }) => {
   const [isProcessingImage, setIsProcessingImage] = useState(false);
 
   const handleSuccess = useCallback((data: string) => {
+    // Validate QR code to prevent crashing
+    const isOurAppQR = data.startsWith('receipt:') || 
+                       data.startsWith('payment:') || 
+                       data.startsWith('bakery-receipt:') || 
+                       data.startsWith('inventory:') || 
+                       (!data.includes(' ') && !data.toLowerCase().startsWith('http') && data.length >= 5 && data.length <= 50);
+
+    if (!isOurAppQR) {
+        setErrorMsg("⚠️ Wannan ba QR Code na wannan asusun bane!");
+        setIsProcessingImage(false);
+        if (navigator.vibrate) navigator.vibrate([100, 50, 100]); // Error vibration
+        setTimeout(() => setErrorMsg(null), 4000);
+        return; // Reject scan, do not close or route
+    }
+
     setIsScanning(false);
+    setErrorMsg(null);
     if (navigator.vibrate) navigator.vibrate(50);
     setTimeout(() => {
        onScan(data);
     }, 500); 
   }, [onScan]);
-
   const capture = useCallback(() => {
     if (!isScanning) return;
     
