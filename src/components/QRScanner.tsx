@@ -9,32 +9,46 @@ interface QRScannerProps {
 
 export const QRScanner: React.FC<QRScannerProps> = ({ onScan, onClose }) => {
   useEffect(() => {
+    let scanner: Html5QrcodeScanner | null = null;
+    let isMounted = true;
+
     // We delay slightly to ensure the DOM element is fully rendered before mounting the scanner
     const timer = setTimeout(() => {
-      const scanner = new Html5QrcodeScanner(
-        "qr-reader",
-        { fps: 10, qrbox: { width: 250, height: 250 }, supportedScanTypes: [0] },
-        false
-      );
+      if (!isMounted) return;
+      
+      try {
+        scanner = new Html5QrcodeScanner(
+          "qr-reader",
+          { fps: 10, qrbox: { width: 250, height: 250 }, supportedScanTypes: [0] },
+          false
+        );
 
-      scanner.render(
-        (decodedText) => {
-          scanner.clear();
-          onScan(decodedText);
-        },
-        () => {
-          // Continuous scanning generates many errors when no QR is present, we ignore them.
-        }
-      );
-
-      return () => {
-        scanner.clear().catch(error => {
-          console.error("Failed to clear html5QrcodeScanner. ", error);
-        });
-      };
+        scanner.render(
+          (decodedText) => {
+            if (scanner && isMounted) {
+                scanner.clear().catch(console.error);
+            }
+            onScan(decodedText);
+          },
+          () => {
+            // Continuous scanning generates many errors when no QR is present, we ignore them.
+          }
+        );
+      } catch (e) {
+         console.warn("Scanner init bypassed:", e);
+      }
     }, 100);
 
-    return () => clearTimeout(timer);
+    return () => {
+      isMounted = false;
+      clearTimeout(timer);
+      if (scanner) {
+        try {
+          // html5-qrcode clear throws if not rendering, so we catch it silently.
+          scanner.clear().catch(() => {});
+        } catch(e) { /* ignore */ }
+      }
+    };
   }, [onScan]);
 
   return (
