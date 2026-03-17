@@ -6,7 +6,7 @@ import {
   BarChart2, TrendingUp, TrendingDown, ShoppingBag, CreditCard,
   Package, Receipt, Search, ChevronRight,
   Wallet, Users, AlertTriangle, RefreshCw, Printer, Share2,
-  ArrowUpRight, ArrowDownRight, DollarSign
+  ArrowUpRight, ArrowDownRight, DollarSign, Building2, Percent
 } from 'lucide-react';
 
 type Period = 'Today' | 'Week' | 'Month' | 'All';
@@ -18,26 +18,11 @@ const fmtDate = (iso: string) => {
   return d.toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 };
 
-// ── Reusable Stat Card ──
-const StatCard = ({
-  label, value, sub, color = '#4f46e5',
-  icon: Icon, onClick, trend
-}: any) => (
-  <div
-    onClick={onClick}
-    style={{
-      background: 'var(--surface-color)',
-      border: '1px solid var(--border-color)',
-      borderRadius: '18px',
-      padding: '16px',
-      cursor: onClick ? 'pointer' : 'default',
-      transition: 'transform 0.15s, box-shadow 0.15s',
-      position: 'relative',
-      overflow: 'hidden',
-    }}
+// ── Stat Card ──
+const StatCard = ({ label, value, sub, color = '#4f46e5', icon: Icon, onClick }: any) => (
+  <div onClick={onClick} style={{ background: 'var(--surface-color)', border: `1px solid var(--border-color)`, borderRadius: '18px', padding: '16px', cursor: onClick ? 'pointer' : 'default', transition: 'transform 0.15s, box-shadow 0.15s', position: 'relative', overflow: 'hidden' }}
     onMouseEnter={e => { if (onClick) { (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 8px 24px rgba(0,0,0,0.1)'; } }}
-    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = ''; (e.currentTarget as HTMLElement).style.boxShadow = ''; }}
-  >
+    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = ''; (e.currentTarget as HTMLElement).style.boxShadow = ''; }}>
     <div style={{ position: 'absolute', top: -12, right: -12, width: 60, height: 60, borderRadius: '50%', background: `${color}10` }} />
     <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
       <div style={{ width: 36, height: 36, borderRadius: '10px', background: `${color}18`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -46,34 +31,21 @@ const StatCard = ({
       <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>{label}</span>
     </div>
     <div style={{ fontSize: '21px', fontWeight: 800, color: 'var(--text-color)', lineHeight: 1.1 }}>{value}</div>
-    {trend !== undefined && (
-      <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 4, fontSize: 11, color: trend >= 0 ? '#16a34a' : '#dc2626', fontWeight: 600 }}>
-        {trend >= 0 ? <ArrowUpRight size={12} /> : <ArrowDownRight size={12} />}
-        {Math.abs(trend)}% vs prev period
-      </div>
-    )}
-    {sub && !trend && <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '5px' }}>{sub}</div>}
+    {sub && <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '5px' }}>{sub}</div>}
   </div>
 );
 
 // ── Mini Bar Chart ──
-const MiniBar = ({ data, color = '#4f46e5', highlight = -1 }: { data: { label: string; value: number }[]; color?: string; highlight?: number }) => {
+const MiniBar = ({ data, color = '#4f46e5' }: { data: { label: string; value: number }[]; color?: string }) => {
   const max = Math.max(...data.map(d => d.value), 1);
   return (
     <div style={{ display: 'flex', alignItems: 'flex-end', gap: '5px', height: '68px' }}>
       {data.map((d, i) => {
-        const isToday = i === highlight || i === data.length - 1;
+        const isLast = i === data.length - 1;
         return (
           <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px' }}>
-            <div style={{
-              width: '100%',
-              height: `${(d.value / max) * 52}px`,
-              background: isToday ? color : `${color}55`,
-              borderRadius: '5px 5px 0 0',
-              minHeight: d.value > 0 ? '4px' : '0',
-              transition: 'height 0.4s ease',
-            }} />
-            <div style={{ fontSize: '8px', color: isToday ? color : 'var(--text-secondary)', fontWeight: isToday ? 700 : 400 }}>{d.label}</div>
+            <div style={{ width: '100%', height: `${(d.value / max) * 52}px`, background: isLast ? color : `${color}55`, borderRadius: '5px 5px 0 0', minHeight: d.value > 0 ? '4px' : '0', transition: 'height 0.4s ease' }} />
+            <div style={{ fontSize: '8px', color: isLast ? color : 'var(--text-secondary)', fontWeight: isLast ? 700 : 400 }}>{d.label}</div>
           </div>
         );
       })}
@@ -91,7 +63,7 @@ export const Reports: React.FC = () => {
   const [txSearch, setTxSearch] = useState('');
   const [txTypeFilter, setTxTypeFilter] = useState<'All' | 'Cash' | 'Debt'>('All');
 
-  // ── Filtering ──
+  // ── Period Filtering ──
   const { filteredTxs, filteredExps, filteredLogs } = useMemo(() => {
     const now = new Date();
     const todayStr = now.toISOString().split('T')[0];
@@ -103,14 +75,10 @@ export const Reports: React.FC = () => {
       if (period === 'Month') return arr.filter(x => new Date(x.date) >= monthAgo);
       return arr;
     };
-    return {
-      filteredTxs: filterByPeriod(transactions),
-      filteredExps: filterByPeriod(expenses),
-      filteredLogs: filterByPeriod(inventoryLogs),
-    };
+    return { filteredTxs: filterByPeriod(transactions), filteredExps: filterByPeriod(expenses), filteredLogs: filterByPeriod(inventoryLogs) };
   }, [period, transactions, expenses, inventoryLogs]);
 
-  // ── Core Metrics ──
+  // ── Core Metrics (Bread Distribution: 10% profit, 90% to bakery) ──
   const metrics = useMemo(() => {
     const totalSales = filteredTxs.reduce((s, t) => s + t.totalPrice, 0);
     const cashSales = filteredTxs.filter(t => t.type === 'Cash').reduce((s, t) => s + t.totalPrice, 0);
@@ -120,40 +88,17 @@ export const Reports: React.FC = () => {
     const returnLogs = filteredLogs.filter(l => l.type === 'Return');
     const totalReturnsValue = returnLogs.reduce((s, l) => s + l.quantityReceived * l.costPrice, 0);
 
-    // ── ACCURATE COGS: use per-product cost price from ALL inventory history ──
-    // Build a map of the most recent cost price per product from all inventory logs
-    const productCostMap: Record<string, number> = {};
-    [...inventoryLogs]
-      .filter(l => l.type !== 'Return' && l.costPrice > 0)
-      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-      .forEach(l => { productCostMap[l.productId] = l.costPrice; });
+    // ── BUSINESS MODEL: Company keeps 10%, pays 90% to Bakery ──
+    const ourShare = totalSales * 0.10;          // Our 10% gross profit
+    const bakeryOwed = totalSales * 0.90;        // 90% we owe to bakery/supplier
+    const netProfit = ourShare - totalExpenses;  // Net after our expenses
 
-    // Calculate COGS by multiplying each sold item by its known cost price
-    let estimatedCOGS = 0;
-    let itemsWithCost = 0;
-    let itemsWithoutCost = 0;
-    filteredTxs.forEach(t => {
-      getTransactionItems(t).forEach(item => {
-        const costPrice = productCostMap[item.productId];
-        if (costPrice && costPrice > 0) {
-          estimatedCOGS += item.quantity * costPrice;
-          itemsWithCost += item.quantity;
-        } else {
-          // Fallback: use unit sale price * 0.55 for items with no cost data
-          estimatedCOGS += item.quantity * item.unitPrice * 0.55;
-          itemsWithoutCost += item.quantity;
-        }
-      });
-    });
-
-    const grossProfit = Math.max(0, totalSales - estimatedCOGS - totalReturnsValue);
-    const netProfit = grossProfit - totalExpenses;
     const outstandingDebt = customers.reduce((s, c) => s + (c.debtBalance || 0), 0);
     const stockRetailValue = products.filter(p => p.active).reduce((s, p) => s + p.stock * p.price, 0);
     const txCount = filteredTxs.length;
     const avgSaleValue = txCount > 0 ? Math.round(totalSales / txCount) : 0;
 
-    // Debt collected this filtered period
+    // Debt collected this period
     const now = new Date();
     const todayStr = now.toISOString().split('T')[0];
     const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
@@ -165,16 +110,12 @@ export const Reports: React.FC = () => {
       return true;
     }).reduce((s, dp) => s + dp.amount, 0);
 
-    const grossMarginPct = totalSales > 0 ? Math.round((grossProfit / totalSales) * 100) : 0;
-    const hasCostData = itemsWithCost > 0;
-
     return {
       totalSales, cashSales, debtSales, totalExpenses, breadSold,
-      grossProfit, netProfit, outstandingDebt, stockRetailValue,
+      ourShare, bakeryOwed, netProfit, outstandingDebt, stockRetailValue,
       txCount, avgSaleValue, debtCollected, totalReturnsValue,
-      estimatedCOGS, grossMarginPct, hasCostData,
     };
-  }, [filteredTxs, filteredExps, filteredLogs, customers, products, debtPayments, period, inventoryLogs]);
+  }, [filteredTxs, filteredExps, filteredLogs, customers, products, debtPayments, period]);
 
   // ── Product Performance ──
   const productStats = useMemo(() => {
@@ -192,109 +133,77 @@ export const Reports: React.FC = () => {
   }, [filteredTxs, products]);
 
   // ── 7-Day Chart ──
-  const weekTrend = useMemo(() => {
-    return Array.from({ length: 7 }, (_, i) => {
-      const d = new Date();
-      d.setDate(d.getDate() - (6 - i));
-      const ds = d.toISOString().split('T')[0];
-      return {
-        label: d.toLocaleDateString([], { weekday: 'short' }).charAt(0),
-        value: transactions.filter(t => t.date.startsWith(ds)).reduce((s, t) => s + t.totalPrice, 0),
-      };
-    });
-  }, [transactions]);
+  const weekTrend = useMemo(() => Array.from({ length: 7 }, (_, i) => {
+    const d = new Date();
+    d.setDate(d.getDate() - (6 - i));
+    const ds = d.toISOString().split('T')[0];
+    return { label: d.toLocaleDateString([], { weekday: 'short' }).charAt(0), value: transactions.filter(t => t.date.startsWith(ds)).reduce((s, t) => s + t.totalPrice, 0) };
+  }), [transactions]);
 
-  // ── Hourly chart (Today only) ──
+  // ── Hourly Chart (Today) ──
   const hourlyTrend = useMemo(() => {
     const todayStr = new Date().toISOString().split('T')[0];
     const todayTxs = transactions.filter(t => t.date.startsWith(todayStr));
     return Array.from({ length: 12 }, (_, i) => {
-      const hour = i * 2; // Every 2 hours → 12 bars for 24h
-      const label = hour < 12 ? `${hour || 12}${hour < 12 ? 'a' : 'p'}` : `${hour - 12 || 12}p`;
-      const value = todayTxs
-        .filter(t => { const h = new Date(t.date).getHours(); return h >= hour && h < hour + 2; })
-        .reduce((s, t) => s + t.totalPrice, 0);
-      return { label, value };
+      const hour = i * 2;
+      const label = hour === 0 ? '12a' : hour < 12 ? `${hour}a` : hour === 12 ? '12p' : `${hour - 12}p`;
+      return { label, value: todayTxs.filter(t => { const h = new Date(t.date).getHours(); return h >= hour && h < hour + 2; }).reduce((s, t) => s + t.totalPrice, 0) };
     });
   }, [transactions]);
 
   // ── Transaction List ──
   const displayedTxs = useMemo(() => {
     const q = txSearch.toLowerCase();
-    return [...filteredTxs]
-      .filter(t => {
-        const matchType = txTypeFilter === 'All' || t.type === txTypeFilter;
-        const customer = customers.find(c => c.id === t.customerId);
-        const matchSearch = !q || customer?.name.toLowerCase().includes(q) ||
-          getTransactionItems(t).some(item => products.find(p => p.id === item.productId)?.name.toLowerCase().includes(q));
-        return matchType && matchSearch;
-      })
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    return [...filteredTxs].filter(t => {
+      const matchType = txTypeFilter === 'All' || t.type === txTypeFilter;
+      const customer = customers.find(c => c.id === t.customerId);
+      const matchSearch = !q || customer?.name.toLowerCase().includes(q) ||
+        getTransactionItems(t).some(item => products.find(p => p.id === item.productId)?.name.toLowerCase().includes(q));
+      return matchType && matchSearch;
+    }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [filteredTxs, txSearch, txTypeFilter, customers, products]);
 
   const getCustomerName = (id?: string) => id ? (customers.find(c => c.id === id)?.name || 'Unknown') : 'Walk-in';
+  const debtors = useMemo(() => customers.filter(c => c.debtBalance > 0).sort((a, b) => b.debtBalance - a.debtBalance), [customers]);
 
-  // ── Debtors list ──
-  const debtors = useMemo(() =>
-    customers.filter(c => c.debtBalance > 0).sort((a, b) => b.debtBalance - a.debtBalance),
-    [customers]);
-
-  // ── Print via Bluetooth (ESC/POS safe — no ₦ symbol, use N instead) ──
+  // ── Bluetooth Print (ESC/POS safe — uses N not ₦) ──
   const handlePrint = async () => {
-    // Helper: format for ESC/POS (no Unicode symbols, use ASCII-safe N for Naira)
     const p = (n: number) => `N${Math.round(n).toLocaleString()}`;
     try {
       if (!(navigator as any).bluetooth) throw new Error('No Bluetooth');
       const device = await (navigator as any).bluetooth.requestDevice({
-        filters: [
-          { services: ['000018f0-0000-1000-8000-00805f9b34fb'] },
-          { namePrefix: 'MTP' }, { namePrefix: 'PT' }, { namePrefix: 'RP' }, { namePrefix: 'Printer' }
-        ],
+        filters: [{ services: ['000018f0-0000-1000-8000-00805f9b34fb'] }, { namePrefix: 'MTP' }, { namePrefix: 'PT' }, { namePrefix: 'RP' }, { namePrefix: 'Printer' }],
         optionalServices: ['000018f0-0000-1000-8000-00805f9b34fb', '49535343-fe7d-4ae5-8fa9-9fafd205e455', 'e7810a71-73ae-499d-8c15-faa9aef0c3f2']
       });
       if (!device.gatt) throw new Error('No GATT');
       const server = await device.gatt.connect();
       const services = await server.getPrimaryServices();
-      const service = services[0];
-      const chars = await service.getCharacteristics();
+      const chars = await services[0].getCharacteristics();
       const char = chars.find((c: any) => c.properties.write || c.properties.writeWithoutResponse);
-      if (!char) throw new Error('No writable char');
-
+      if (!char) throw new Error('No char');
       const co = (appSettings.companyName || 'BREAD APP').replace(/[^\x00-\x7F]/g, '');
       const sep = '--------------------------------\n';
       const lines = [
-        `\x1Ba\x01`,
-        `\x1BE\x01${co.toUpperCase()}\x1BE\x00\n`,
+        `\x1Ba\x01`, `\x1BE\x01${co.toUpperCase()}\x1BE\x00\n`,
         `FINANCIAL REPORT - ${period.toUpperCase()}\n`,
-        `Date: ${new Date().toLocaleDateString()}\n`,
-        sep,
+        `Date: ${new Date().toLocaleDateString()}\n`, sep,
         `\x1Ba\x00`,
-        `Total Sales:      ${p(metrics.totalSales)}\n`,
-        `Cash Sales:       ${p(metrics.cashSales)}\n`,
-        `Debt Issued:      ${p(metrics.debtSales)}\n`,
-        `Debt Collected:   ${p(metrics.debtCollected)}\n`,
-        sep,
-        `Bread Sold:       ${metrics.breadSold} units\n`,
-        `Est. COGS:        ${p(metrics.estimatedCOGS)}\n`,
-        `Gross Profit:     ${p(metrics.grossProfit)} (${metrics.grossMarginPct}%)\n`,
-        `Total Expenses:   ${p(metrics.totalExpenses)}\n`,
-        sep,
-        `\x1BE\x01NET PROFIT: ${p(metrics.netProfit)}\x1BE\x00\n`,
-        sep,
-        `Outstanding Debt: ${p(metrics.outstandingDebt)}\n`,
-        `Stock Value:      ${p(metrics.stockRetailValue)}\n`,
-        sep,
-        `Cost data: ${metrics.hasCostData ? 'Actual' : 'Estimated'}\n`,
-        `Customers: ${customers.length}\n`,
-        sep,
-        `\x1Ba\x01`,
-        `${co}\n`,
-        `\x1Ba\x00\n\n\n`,
+        `Total Sales:     ${p(metrics.totalSales)}\n`,
+        `Cash Sales:      ${p(metrics.cashSales)}\n`,
+        `Debt Issued:     ${p(metrics.debtSales)}\n`,
+        `Debt Collected:  ${p(metrics.debtCollected)}\n`,
+        `Bread Sold:      ${metrics.breadSold} units\n`, sep,
+        `OUR SHARE (10%): ${p(metrics.ourShare)}\n`,
+        `Bakery Owed(90%):${p(metrics.bakeryOwed)}\n`,
+        `Our Expenses:    ${p(metrics.totalExpenses)}\n`, sep,
+        `\x1BE\x01NET PROFIT: ${p(metrics.netProfit)}\x1BE\x00\n`, sep,
+        `Outstanding Debt:${p(metrics.outstandingDebt)}\n`,
+        `Stock Value:     ${p(metrics.stockRetailValue)}\n`, sep,
+        `\x1Ba\x01`, `${co}\n`, `\x1Ba\x00\n\n\n`,
       ];
       const encoder = new TextEncoder();
       for (const line of lines) {
-        const safe = line.replace(/[^\x00-\x7F]/g, '?');
-        const data = encoder.encode(safe);
+        const data = encoder.encode(line.replace(/[^\x00-\x7F]/g, '?'));
         for (let i = 0; i < data.length; i += 512) {
           await char.writeValue(data.slice(i, i + 512));
           await new Promise(r => setTimeout(r, 30));
@@ -302,18 +211,17 @@ export const Reports: React.FC = () => {
       }
       await new Promise(r => setTimeout(r, 600));
       device.gatt.disconnect();
-    } catch {
-      window.print();
-    }
+    } catch { window.print(); }
   };
 
-  // ── Share as Text ──
+  // ── WhatsApp Share ──
   const handleShare = () => {
     const text = `📊 *${appSettings.companyName || 'Bread App'} - ${period} Report*\n\n` +
       `💰 Total Sales: ${fmt(metrics.totalSales)}\n` +
       `✅ Cash: ${fmt(metrics.cashSales)} | 💳 Debt: ${fmt(metrics.debtSales)}\n` +
-      `🍞 Bread Sold: ${metrics.breadSold} units\n` +
-      `📈 Gross Profit: ${fmt(metrics.grossProfit)} (${metrics.grossMarginPct}%)\n` +
+      `🍞 Bread Sold: ${metrics.breadSold} units\n\n` +
+      `📈 *Our 10% Share: ${fmt(metrics.ourShare)}*\n` +
+      `🏭 Bakery Owed (90%): ${fmt(metrics.bakeryOwed)}\n` +
       `💸 Expenses: ${fmt(metrics.totalExpenses)}\n` +
       `*💵 Net Profit: ${fmt(metrics.netProfit)}*\n\n` +
       `⚠️ Outstanding Debt: ${fmt(metrics.outstandingDebt)}\n` +
@@ -322,31 +230,22 @@ export const Reports: React.FC = () => {
     if (navigator.share) {
       navigator.share({ title: 'Sales Report', text }).catch(() => {});
     } else {
-      const wa = `https://wa.me/?text=${encodeURIComponent(text)}`;
-      window.open(wa, '_blank');
+      window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
     }
   };
 
-  // ── Pill style ──
   const pillStyle = (active: boolean, col = '#4f46e5'): React.CSSProperties => ({
-    padding: '7px 16px', borderRadius: '999px',
-    border: active ? 'none' : '1px solid var(--border-color)',
-    background: active ? col : 'transparent',
-    color: active ? '#fff' : 'var(--text-secondary)',
+    padding: '7px 16px', borderRadius: '999px', border: active ? 'none' : '1px solid var(--border-color)',
+    background: active ? col : 'transparent', color: active ? '#fff' : 'var(--text-secondary)',
     fontWeight: 600, fontSize: '12px', cursor: 'pointer', whiteSpace: 'nowrap', transition: 'all 0.2s',
   });
-
   const tabStyle = (active: boolean): React.CSSProperties => ({
-    flex: 1, padding: '10px 0', border: 'none',
-    borderBottom: active ? '2px solid #4f46e5' : '2px solid transparent',
-    background: 'transparent',
-    color: active ? '#4f46e5' : 'var(--text-secondary)',
-    fontWeight: active ? 700 : 500, fontSize: '12px', cursor: 'pointer', transition: 'color 0.2s',
+    flex: 1, padding: '10px 0', border: 'none', borderBottom: active ? '2px solid #4f46e5' : '2px solid transparent',
+    background: 'transparent', color: active ? '#4f46e5' : 'var(--text-secondary)', fontWeight: active ? 700 : 500, fontSize: '12px', cursor: 'pointer', transition: 'color 0.2s',
   });
 
   return (
     <div ref={reportRef} style={{ paddingBottom: '5rem' }}>
-      {/* Print CSS */}
       <style>{`
         @media print {
           @page { margin: 0; size: 58mm auto; }
@@ -354,14 +253,13 @@ export const Reports: React.FC = () => {
           .no-print { display: none !important; }
           nav, header, footer { display: none !important; }
           * { font-family: monospace !important; color: #000 !important; }
-          .print-section { display: block !important; }
         }
       `}</style>
 
-      {/* ── Header ── */}
+      {/* Header */}
       <div className="no-print" style={{ padding: '16px 16px 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
         <div>
-          <h1 style={{ fontSize: '22px', fontWeight: 900, margin: 0, color: 'var(--text-color)' }}>📊 Records</h1>
+          <h1 style={{ fontSize: '22px', fontWeight: 900, margin: 0 }}>📊 Records</h1>
           <p style={{ fontSize: '11px', color: 'var(--text-secondary)', margin: '2px 0 0' }}>{appSettings.companyName}</p>
         </div>
         <div style={{ display: 'flex', gap: '8px' }}>
@@ -374,87 +272,121 @@ export const Reports: React.FC = () => {
         </div>
       </div>
 
-      {/* ── Period Pills ── */}
+      {/* Period Pills */}
       <div className="no-print" style={{ display: 'flex', gap: '8px', overflowX: 'auto', padding: '0 16px 12px', scrollbarWidth: 'none' }}>
         {(['Today', 'Week', 'Month', 'All'] as Period[]).map(p => (
           <button key={p} style={pillStyle(period === p)} onClick={() => setPeriod(p)}>{p}</button>
         ))}
       </div>
 
-      {/* ── Net Profit Hero ── */}
+      {/* ── HERO: Net Profit ── */}
       <div style={{ margin: '0 16px 16px', borderRadius: '22px', padding: '22px', background: metrics.netProfit >= 0 ? 'linear-gradient(135deg,#4f46e5,#7c3aed)' : 'linear-gradient(135deg,#b91c1c,#ef4444)', color: '#fff', position: 'relative', overflow: 'hidden' }}>
-        {/* Decorative circles */}
         <div style={{ position: 'absolute', top: -20, right: -20, width: 110, height: 110, borderRadius: '50%', background: 'rgba(255,255,255,0.07)' }} />
-        <div style={{ position: 'absolute', bottom: -30, left: -10, width: 90, height: 90, borderRadius: '50%', background: 'rgba(255,255,255,0.05)' }} />
-        <div style={{ position: 'absolute', top: '50%', right: 20, transform: 'translateY(-50%)', opacity: 0.08 }}>
-          <DollarSign size={80} />
-        </div>
+        <div style={{ position: 'absolute', top: '50%', right: 20, transform: 'translateY(-50%)', opacity: 0.08 }}><DollarSign size={80} /></div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px', opacity: 0.85, fontSize: '12px', fontWeight: 600 }}>
           {metrics.netProfit >= 0 ? <TrendingUp size={15} /> : <TrendingDown size={15} />}
-          Net Profit · {period}
+          Ribar Mu (Net Profit) · {period}
         </div>
         <div style={{ fontSize: '38px', fontWeight: 900, letterSpacing: '-1px', marginBottom: '4px' }}>{fmt(metrics.netProfit)}</div>
-        <div style={{ fontSize: '12px', opacity: 0.75, marginBottom: '14px' }}>Gross Margin: {metrics.grossMarginPct}%</div>
+        <div style={{ fontSize: '12px', opacity: 0.75, marginBottom: '14px' }}>Gross: {fmt(metrics.ourShare)} (10%) · Expenses: {fmt(metrics.totalExpenses)}</div>
+        {/* 10% / 90% split breakdown */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px', borderTop: '1px solid rgba(255,255,255,0.2)', paddingTop: '14px' }}>
-          <div><div style={{ fontSize: '10px', opacity: 0.7, marginBottom: 2 }}>Revenue</div><div style={{ fontSize: '15px', fontWeight: 700 }}>{fmt(metrics.totalSales)}</div></div>
-          <div><div style={{ fontSize: '10px', opacity: 0.7, marginBottom: 2 }}>Est. COGS</div><div style={{ fontSize: '15px', fontWeight: 700 }}>{fmt(metrics.estimatedCOGS)}</div></div>
-          <div><div style={{ fontSize: '10px', opacity: 0.7, marginBottom: 2 }}>Expenses</div><div style={{ fontSize: '15px', fontWeight: 700 }}>{fmt(metrics.totalExpenses)}</div></div>
+          <div>
+            <div style={{ fontSize: '10px', opacity: 0.7, marginBottom: 2 }}>Jimillar Sales</div>
+            <div style={{ fontSize: '15px', fontWeight: 700 }}>{fmt(metrics.totalSales)}</div>
+          </div>
+          <div>
+            <div style={{ fontSize: '10px', opacity: 0.7, marginBottom: 2 }}>Rabinmu 10%</div>
+            <div style={{ fontSize: '15px', fontWeight: 700 }}>{fmt(metrics.ourShare)}</div>
+          </div>
+          <div>
+            <div style={{ fontSize: '10px', opacity: 0.7, marginBottom: 2 }}>Bakery 90%</div>
+            <div style={{ fontSize: '15px', fontWeight: 700 }}>{fmt(metrics.bakeryOwed)}</div>
+          </div>
         </div>
       </div>
 
-      {/* ── Tabs ── */}
+      {/* ── BAKERY OWED ALERT CARD ── */}
+      <div style={{ margin: '0 16px 16px', borderRadius: '16px', padding: '16px 20px', background: '#78350f12', border: '1.5px solid #92400e40', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+            <Building2 size={15} color='#92400e' />
+            <span style={{ fontSize: '11px', fontWeight: 700, color: '#92400e', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Kuɗin Bakery / Supplier</span>
+          </div>
+          <div style={{ fontSize: '26px', fontWeight: 900, color: '#92400e' }}>{fmt(metrics.bakeryOwed)}</div>
+          <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: 2 }}>90% na {fmt(metrics.totalSales)} sales</div>
+        </div>
+        <div style={{ textAlign: 'right' }}>
+          <Percent size={32} color='#92400e40' />
+          <div style={{ fontSize: '32px', fontWeight: 900, color: '#92400e60' }}>90</div>
+        </div>
+      </div>
+
+      {/* Tabs */}
       <div className="no-print" style={{ display: 'flex', borderBottom: '1px solid var(--border-color)', margin: '0 16px 16px', overflowX: 'auto', scrollbarWidth: 'none' }}>
         {([
           { id: 'overview', icon: BarChart2, label: 'Overview' },
           { id: 'transactions', icon: Receipt, label: 'Sales' },
-          { id: 'products', icon: Package, label: 'Products' },
-          { id: 'expenses', icon: ArrowDownRight, label: 'Expenses' },
-          { id: 'debts', icon: CreditCard, label: 'Debts' },
+          { id: 'products', icon: Package, label: 'Kayan' },
+          { id: 'expenses', icon: ArrowDownRight, label: 'Kashe' },
+          { id: 'debts', icon: CreditCard, label: 'Bashi' },
         ] as { id: Tab; icon: any; label: string }[]).map(tab => (
           <button key={tab.id} style={{ ...tabStyle(activeTab === tab.id), minWidth: 60, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }} onClick={() => setActiveTab(tab.id)}>
-            <tab.icon size={12} />
-            {tab.label}
+            <tab.icon size={12} />{tab.label}
           </button>
         ))}
       </div>
 
-      {/* ══════ OVERVIEW TAB ══════ */}
+      {/* ══════ OVERVIEW ══════ */}
       {activeTab === 'overview' && (
         <div style={{ padding: '0 16px' }}>
-          {/* Chart - 7 day or Hourly (Today) */}
+          {/* Chart */}
           <div style={{ background: 'var(--surface-color)', border: '1px solid var(--border-color)', borderRadius: '18px', padding: '16px', marginBottom: '14px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
               <div>
-                <div style={{ fontWeight: 700, fontSize: '13px' }}>{period === 'Today' ? '⏰ Today by Hour' : '📅 7-Day Sales Trend'}</div>
-                <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>{period === 'Today' ? 'Sales per 2-hour window' : 'Last 7 days revenue'}</div>
+                <div style={{ fontWeight: 700, fontSize: '13px' }}>{period === 'Today' ? '⏰ Yau da Awa' : '📅 Kwana 7'}</div>
+                <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>{period === 'Today' ? 'Sales kowane awa 2' : 'Revenue na kwana 7'}</div>
               </div>
-              <div style={{ textAlign: 'right' }}>
-                <div style={{ fontSize: '13px', fontWeight: 800, color: '#4f46e5' }}>{fmt(period === 'Today' ? metrics.totalSales : weekTrend.reduce((s, d) => s + d.value, 0))}</div>
-                <div style={{ fontSize: '10px', padding: '2px 6px', borderRadius: '6px', background: metrics.hasCostData ? '#16a34a15' : '#d9770615', color: metrics.hasCostData ? '#16a34a' : '#d97706', fontWeight: 600, marginTop: 2 }}>
-                  {metrics.hasCostData ? '✓ Actual Cost' : '~ Estimated Cost'}
-                </div>
-              </div>
+              <div style={{ fontSize: '13px', fontWeight: 800, color: '#4f46e5' }}>{fmt(period === 'Today' ? metrics.totalSales : weekTrend.reduce((s, d) => s + d.value, 0))}</div>
             </div>
             <MiniBar data={period === 'Today' ? hourlyTrend : weekTrend} color={period === 'Today' ? '#7c3aed' : '#4f46e5'} />
           </div>
 
-          {/* Cash Flow Row */}
+          {/* Our 10% vs Bakery 90% Visual */}
+          <div style={{ background: 'var(--surface-color)', border: '1px solid var(--border-color)', borderRadius: '18px', padding: '16px', marginBottom: '14px' }}>
+            <div style={{ fontWeight: 700, fontSize: '13px', marginBottom: '10px' }}>💰 Rabon Kuɗi</div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+              <div style={{ background: '#4f46e510', borderRadius: '12px', padding: '12px', textAlign: 'center' }}>
+                <div style={{ fontSize: '11px', color: '#4f46e5', fontWeight: 700, marginBottom: 4 }}>RABINMU (10%)</div>
+                <div style={{ fontSize: '20px', fontWeight: 900, color: '#4f46e5' }}>{fmt(metrics.ourShare)}</div>
+              </div>
+              <div style={{ background: '#92400e10', borderRadius: '12px', padding: '12px', textAlign: 'center' }}>
+                <div style={{ fontSize: '11px', color: '#92400e', fontWeight: 700, marginBottom: 4 }}>BAKERY (90%)</div>
+                <div style={{ fontSize: '20px', fontWeight: 900, color: '#92400e' }}>{fmt(metrics.bakeryOwed)}</div>
+              </div>
+            </div>
+            {/* Bar showing split */}
+            <div style={{ height: '10px', borderRadius: '999px', overflow: 'hidden', display: 'flex', marginTop: '12px', gap: '2px' }}>
+              <div style={{ width: '10%', background: '#4f46e5', borderRadius: '999px 0 0 999px' }} />
+              <div style={{ flex: 1, background: '#92400e', borderRadius: '0 999px 999px 0' }} />
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4, fontSize: '10px', color: 'var(--text-secondary)' }}>
+              <span style={{ color: '#4f46e5', fontWeight: 700 }}>Mu 10%</span>
+              <span style={{ color: '#92400e', fontWeight: 700 }}>Bakery 90%</span>
+            </div>
+          </div>
+
+          {/* Cash Flow */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '14px' }}>
             <div style={{ background: '#16a34a12', border: '1px solid #16a34a30', borderRadius: '14px', padding: '14px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
-                <ArrowUpRight size={15} color="#16a34a" />
-                <span style={{ fontSize: '11px', color: '#16a34a', fontWeight: 700 }}>CASH IN</span>
-              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}><ArrowUpRight size={15} color="#16a34a" /><span style={{ fontSize: '11px', color: '#16a34a', fontWeight: 700 }}>CASH IN</span></div>
               <div style={{ fontSize: '20px', fontWeight: 800, color: '#16a34a' }}>{fmt(metrics.cashSales + metrics.debtCollected)}</div>
               <div style={{ fontSize: '10px', color: 'var(--text-secondary)', marginTop: 4 }}>Sales + Debt Collected</div>
             </div>
             <div style={{ background: '#dc262612', border: '1px solid #dc262630', borderRadius: '14px', padding: '14px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
-                <ArrowDownRight size={15} color="#dc2626" />
-                <span style={{ fontSize: '11px', color: '#dc2626', fontWeight: 700 }}>CASH OUT</span>
-              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}><ArrowDownRight size={15} color="#dc2626" /><span style={{ fontSize: '11px', color: '#dc2626', fontWeight: 700 }}>KASHE</span></div>
               <div style={{ fontSize: '20px', fontWeight: 800, color: '#dc2626' }}>{fmt(metrics.totalExpenses)}</div>
-              <div style={{ fontSize: '10px', color: 'var(--text-secondary)', marginTop: 4 }}>Total Expenses</div>
+              <div style={{ fontSize: '10px', color: 'var(--text-secondary)', marginTop: 4 }}>Kashe-kashen mu</div>
             </div>
           </div>
 
@@ -463,30 +395,28 @@ export const Reports: React.FC = () => {
             <StatCard label="Cash Sales" value={fmt(metrics.cashSales)} icon={Wallet} color="#16a34a" sub={`${filteredTxs.filter(t => t.type === 'Cash').length} sales`} />
             <StatCard label="Debt Issued" value={fmt(metrics.debtSales)} icon={CreditCard} color="#dc2626" sub={`${filteredTxs.filter(t => t.type === 'Debt').length} sales`} />
             <StatCard label="Debt Collected" value={fmt(metrics.debtCollected)} icon={RefreshCw} color="#0891b2" />
-            <StatCard label="Bread Sold" value={`${metrics.breadSold} units`} icon={ShoppingBag} color="#7c3aed" sub={`Avg ${fmt(metrics.avgSaleValue)}/sale`} />
+            <StatCard label="Bread Sold" value={`${metrics.breadSold}`} icon={ShoppingBag} color="#7c3aed" sub={`Avg ${fmt(metrics.avgSaleValue)}/sale`} />
           </div>
-
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '14px' }}>
-            <StatCard label="Outstanding Debt" value={fmt(metrics.outstandingDebt)} icon={AlertTriangle} color="#d97706" sub="All customers" onClick={() => setActiveTab('debts')} />
+            <StatCard label="Bashi na Kwastoma" value={fmt(metrics.outstandingDebt)} icon={AlertTriangle} color="#d97706" onClick={() => setActiveTab('debts')} />
             <StatCard label="Returns Value" value={fmt(metrics.totalReturnsValue)} icon={TrendingDown} color="#6b7280" />
           </div>
-
           <StatCard label="Stock Retail Value" value={fmt(metrics.stockRetailValue)} icon={Package} color="#4f46e5"
-            sub={`${products.filter(p => p.active).reduce((s, p) => s + p.stock, 0)} total units across ${products.filter(p => p.active).length} products`} />
-          <div style={{ marginTop: '10px' }}>
-            <StatCard label="Total Customers" value={customers.length} icon={Users} color="#0891b2"
-              sub={`${customers.filter(c => c.debtBalance > 0).length} with debt · ${customers.filter(c => c.debtBalance === 0).length} cleared`}
+            sub={`${products.filter(p => p.active).reduce((s, p) => s + p.stock, 0)} units · ${products.filter(p => p.active).length} products`} />
+          <div style={{ marginTop: '10px', marginBottom: '14px' }}>
+            <StatCard label="Kwastoma" value={customers.length} icon={Users} color="#0891b2"
+              sub={`${customers.filter(c => c.debtBalance > 0).length} da bashi · ${customers.filter(c => c.debtBalance === 0).length} sun biya`}
               onClick={() => navigate('/customers')} />
           </div>
         </div>
       )}
 
-      {/* ══════ TRANSACTIONS TAB ══════ */}
+      {/* ══════ SALES TAB ══════ */}
       {activeTab === 'transactions' && (
         <div style={{ padding: '0 16px' }}>
           <div style={{ display: 'flex', alignItems: 'center', background: 'var(--surface-color)', border: '1px solid var(--border-color)', borderRadius: '12px', padding: '10px 14px', gap: '8px', marginBottom: '10px' }}>
             <Search size={15} color="var(--text-secondary)" />
-            <input value={txSearch} onChange={e => setTxSearch(e.target.value)} placeholder="Search by customer or product..."
+            <input value={txSearch} onChange={e => setTxSearch(e.target.value)} placeholder="Nemi kwastoma ko kaya..."
               style={{ border: 'none', background: 'transparent', outline: 'none', flex: 1, fontSize: '13px', color: 'var(--text-color)' }} />
           </div>
           <div style={{ display: 'flex', gap: '8px', marginBottom: '14px', alignItems: 'center' }}>
@@ -495,33 +425,27 @@ export const Reports: React.FC = () => {
             ))}
             <span style={{ marginLeft: 'auto', fontSize: '12px', color: 'var(--text-secondary)' }}>{displayedTxs.length} records</span>
           </div>
-
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
             {displayedTxs.length === 0 ? (
-              <div style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '32px', fontSize: '14px' }}>No transactions found</div>
-            ) : displayedTxs.map(tx => {
-              const items = getTransactionItems(tx);
-              return (
-                <div key={tx.id} onClick={() => navigate(`/receipt/${tx.id}`)}
-                  style={{ background: 'var(--surface-color)', border: '1px solid var(--border-color)', borderRadius: '14px', padding: '14px', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px' }}>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontWeight: 700, fontSize: '14px', color: 'var(--text-color)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: 2 }}>
-                      {getCustomerName(tx.customerId)}
-                    </div>
-                    <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginBottom: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {items.map(item => `${item.quantity}× ${products.find(p => p.id === item.productId)?.name || 'Item'}`).join(', ')}
-                    </div>
-                    <div style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>{fmtDate(tx.date)}</div>
+              <div style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '32px' }}>Babu transactions</div>
+            ) : displayedTxs.map(tx => (
+              <div key={tx.id} onClick={() => navigate(`/receipt/${tx.id}`)}
+                style={{ background: 'var(--surface-color)', border: '1px solid var(--border-color)', borderRadius: '14px', padding: '14px', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px' }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontWeight: 700, fontSize: '14px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: 2 }}>{getCustomerName(tx.customerId)}</div>
+                  <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginBottom: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {getTransactionItems(tx).map(item => `${item.quantity}× ${products.find(p => p.id === item.productId)?.name || 'Item'}`).join(', ')}
                   </div>
-                  <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                    <div style={{ fontWeight: 800, fontSize: '15px', color: 'var(--text-color)' }}>{fmt(tx.totalPrice)}</div>
-                    <div style={{ fontSize: '10px', fontWeight: 700, color: tx.type === 'Cash' ? '#16a34a' : '#dc2626', textTransform: 'uppercase', marginTop: 2 }}>{tx.type}</div>
-                    {tx.discount && tx.discount > 0 && <div style={{ fontSize: '10px', color: '#f59e0b', marginTop: 2 }}>-{fmt(tx.discount)}</div>}
-                  </div>
-                  <ChevronRight size={14} color="var(--text-secondary)" />
+                  <div style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>{fmtDate(tx.date)}</div>
                 </div>
-              );
-            })}
+                <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                  <div style={{ fontWeight: 800, fontSize: '15px' }}>{fmt(tx.totalPrice)}</div>
+                  <div style={{ fontSize: '10px', fontWeight: 700, color: tx.type === 'Cash' ? '#16a34a' : '#dc2626', textTransform: 'uppercase', marginTop: 2 }}>{tx.type}</div>
+                  {tx.discount && tx.discount > 0 && <div style={{ fontSize: '10px', color: '#f59e0b', marginTop: 2 }}>-{fmt(tx.discount)}</div>}
+                </div>
+                <ChevronRight size={14} color="var(--text-secondary)" />
+              </div>
+            ))}
           </div>
         </div>
       )}
@@ -529,9 +453,9 @@ export const Reports: React.FC = () => {
       {/* ══════ PRODUCTS TAB ══════ */}
       {activeTab === 'products' && (
         <div style={{ padding: '0 16px' }}>
-          <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '12px' }}>Best-selling products this period</div>
+          <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '12px' }}>Kayan da aka siyar da yawa</div>
           {productStats.length === 0 ? (
-            <div style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '32px' }}>No product data</div>
+            <div style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '32px' }}>Babu bayani</div>
           ) : productStats.map((ps, idx) => {
             const totalRev = productStats.reduce((s, p) => s + p.revenue, 1);
             const pct = Math.round((ps.revenue / totalRev) * 100);
@@ -539,7 +463,7 @@ export const Reports: React.FC = () => {
               <div key={ps.id} style={{ background: 'var(--surface-color)', border: '1px solid var(--border-color)', borderRadius: '16px', padding: '14px', marginBottom: '10px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <div style={{ width: 32, height: 32, borderRadius: '10px', background: idx === 0 ? '#fef3c710' : '#4f46e510', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: 800, color: idx === 0 ? '#d97706' : '#4f46e5' }}>
+                    <div style={{ width: 32, height: 32, borderRadius: '10px', background: '#4f46e510', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: 800, color: '#4f46e5' }}>
                       {idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : `#${idx + 1}`}
                     </div>
                     <div>
@@ -553,7 +477,7 @@ export const Reports: React.FC = () => {
                   </div>
                 </div>
                 <div style={{ height: '5px', background: 'var(--border-color)', borderRadius: '999px', overflow: 'hidden' }}>
-                  <div style={{ height: '100%', width: `${pct}%`, background: idx === 0 ? 'linear-gradient(90deg,#f59e0b,#fbbf24)' : 'linear-gradient(90deg,#4f46e5,#7c3aed)', borderRadius: '999px', transition: 'width 0.5s' }} />
+                  <div style={{ height: '100%', width: `${pct}%`, background: idx === 0 ? 'linear-gradient(90deg,#f59e0b,#fbbf24)' : 'linear-gradient(90deg,#4f46e5,#7c3aed)', borderRadius: '999px' }} />
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '6px', fontSize: '10px', color: 'var(--text-secondary)' }}>
                   <span>Stock: {ps.stock} units</span>
@@ -570,14 +494,13 @@ export const Reports: React.FC = () => {
         <div style={{ padding: '0 16px' }}>
           <div style={{ background: '#dc262612', border: '1px solid #dc262630', borderRadius: '16px', padding: '16px', marginBottom: '14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
-              <div style={{ fontSize: '11px', color: '#dc2626', fontWeight: 700, marginBottom: 4 }}>TOTAL EXPENSES · {period}</div>
+              <div style={{ fontSize: '11px', color: '#dc2626', fontWeight: 700, marginBottom: 4 }}>JIMILLAR KASHE · {period}</div>
               <div style={{ fontSize: '28px', fontWeight: 900, color: '#dc2626' }}>{fmt(metrics.totalExpenses)}</div>
             </div>
             <ArrowDownRight size={40} color="#dc262630" />
           </div>
-
           {filteredExps.length === 0 ? (
-            <div style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '32px' }}>No expenses recorded</div>
+            <div style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '32px' }}>Babu kashe-kashe</div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               {[...filteredExps].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map(exp => (
@@ -599,15 +522,14 @@ export const Reports: React.FC = () => {
         <div style={{ padding: '0 16px' }}>
           <div style={{ background: '#d9770612', border: '1px solid #d9770630', borderRadius: '16px', padding: '16px', marginBottom: '14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
-              <div style={{ fontSize: '11px', color: '#d97706', fontWeight: 700, marginBottom: 4 }}>TOTAL OUTSTANDING DEBT</div>
+              <div style={{ fontSize: '11px', color: '#d97706', fontWeight: 700, marginBottom: 4 }}>JIMILLAR BASHI NA KWASTOMA</div>
               <div style={{ fontSize: '28px', fontWeight: 900, color: '#d97706' }}>{fmt(metrics.outstandingDebt)}</div>
-              <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: 4 }}>{debtors.length} customers owe money</div>
+              <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: 4 }}>{debtors.length} kwastoma suna da bashi</div>
             </div>
             <AlertTriangle size={40} color="#d9770630" />
           </div>
-
           {debtors.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '32px', fontSize: '14px', color: '#16a34a', fontWeight: 700 }}>🎉 No outstanding debts!</div>
+            <div style={{ textAlign: 'center', padding: '32px', fontSize: '14px', color: '#16a34a', fontWeight: 700 }}>🎉 Babu bashi!</div>
           ) : debtors.map(c => {
             const pct = Math.min(100, Math.round((c.debtBalance / metrics.outstandingDebt) * 100));
             return (
@@ -625,15 +547,13 @@ export const Reports: React.FC = () => {
                   </div>
                   <div style={{ textAlign: 'right' }}>
                     <div style={{ fontWeight: 800, fontSize: '16px', color: '#dc2626' }}>{fmt(c.debtBalance)}</div>
-                    <div style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>{pct}% of total</div>
+                    <div style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>{pct}% na jimillar</div>
                   </div>
                 </div>
                 <div style={{ height: '4px', background: 'var(--border-color)', borderRadius: '999px', overflow: 'hidden' }}>
                   <div style={{ height: '100%', width: `${pct}%`, background: 'linear-gradient(90deg,#d97706,#f59e0b)', borderRadius: '999px' }} />
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 6, fontSize: '11px', color: '#4f46e5', fontWeight: 600 }}>
-                  View Profile →
-                </div>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 6, fontSize: '11px', color: '#4f46e5', fontWeight: 600 }}>View Profile →</div>
               </div>
             );
           })}
