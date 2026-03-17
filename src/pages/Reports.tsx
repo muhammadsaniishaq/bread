@@ -1,88 +1,108 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { useAppContext } from '../store/AppContext';
 import { getTransactionItems } from '../store/types';
 import { useNavigate } from 'react-router-dom';
-import { useTranslation } from '../store/LanguageContext';
-import { 
-  BarChart2, TrendingUp, TrendingDown, ShoppingBag, CreditCard, 
-  Package, Receipt, Search, ChevronRight, 
-  Wallet, Users, AlertTriangle, RefreshCw, Download
+import {
+  BarChart2, TrendingUp, TrendingDown, ShoppingBag, CreditCard,
+  Package, Receipt, Search, ChevronRight,
+  Wallet, Users, AlertTriangle, RefreshCw, Printer, Share2,
+  ArrowUpRight, ArrowDownRight, DollarSign
 } from 'lucide-react';
 
 type Period = 'Today' | 'Week' | 'Month' | 'All';
-type Tab = 'overview' | 'transactions' | 'products';
+type Tab = 'overview' | 'transactions' | 'products' | 'expenses' | 'debts';
 
-const fmt = (n: number) => `₦${n.toLocaleString()}`;
+const fmt = (n: number) => `₦${Math.round(n).toLocaleString()}`;
 const fmtDate = (iso: string) => {
   const d = new Date(iso);
   return d.toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 };
 
-// ─────────── Reusable Stat Card ────────────
-const StatCard = ({ label, value, sub, color = '#4f46e5', icon: Icon, onClick }: any) => (
+// ── Reusable Stat Card ──
+const StatCard = ({
+  label, value, sub, color = '#4f46e5',
+  icon: Icon, onClick, trend
+}: any) => (
   <div
     onClick={onClick}
     style={{
       background: 'var(--surface-color)',
       border: '1px solid var(--border-color)',
-      borderRadius: '16px',
+      borderRadius: '18px',
       padding: '16px',
       cursor: onClick ? 'pointer' : 'default',
       transition: 'transform 0.15s, box-shadow 0.15s',
+      position: 'relative',
+      overflow: 'hidden',
     }}
-    onMouseEnter={e => { if (onClick) { (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 8px 24px rgba(0,0,0,0.1)'; }}}
+    onMouseEnter={e => { if (onClick) { (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 8px 24px rgba(0,0,0,0.1)'; } }}
     onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = ''; (e.currentTarget as HTMLElement).style.boxShadow = ''; }}
   >
+    <div style={{ position: 'absolute', top: -12, right: -12, width: 60, height: 60, borderRadius: '50%', background: `${color}10` }} />
     <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
       <div style={{ width: 36, height: 36, borderRadius: '10px', background: `${color}18`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <Icon size={18} color={color} />
       </div>
-      <span style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: 600 }}>{label}</span>
+      <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>{label}</span>
     </div>
-    <div style={{ fontSize: '22px', fontWeight: 800, color: 'var(--text-color)', lineHeight: 1 }}>{value}</div>
-    {sub && <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '6px' }}>{sub}</div>}
+    <div style={{ fontSize: '21px', fontWeight: 800, color: 'var(--text-color)', lineHeight: 1.1 }}>{value}</div>
+    {trend !== undefined && (
+      <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 4, fontSize: 11, color: trend >= 0 ? '#16a34a' : '#dc2626', fontWeight: 600 }}>
+        {trend >= 0 ? <ArrowUpRight size={12} /> : <ArrowDownRight size={12} />}
+        {Math.abs(trend)}% vs prev period
+      </div>
+    )}
+    {sub && !trend && <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '5px' }}>{sub}</div>}
   </div>
 );
 
-// ─────────── Mini Bar Chart ────────────
-const MiniBar = ({ data, color = '#4f46e5' }: { data: { label: string; value: number }[]; color?: string }) => {
+// ── Mini Bar Chart ──
+const MiniBar = ({ data, color = '#4f46e5', highlight = -1 }: { data: { label: string; value: number }[]; color?: string; highlight?: number }) => {
   const max = Math.max(...data.map(d => d.value), 1);
   return (
-    <div style={{ display: 'flex', alignItems: 'flex-end', gap: '4px', height: '60px' }}>
-      {data.map((d, i) => (
-        <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
-          <div style={{ width: '100%', height: `${(d.value / max) * 50}px`, background: color, borderRadius: '4px 4px 0 0', minHeight: d.value > 0 ? '4px' : '0', opacity: 0.85 }} />
-          <div style={{ fontSize: '8px', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>{d.label}</div>
-        </div>
-      ))}
+    <div style={{ display: 'flex', alignItems: 'flex-end', gap: '5px', height: '68px' }}>
+      {data.map((d, i) => {
+        const isToday = i === highlight || i === data.length - 1;
+        return (
+          <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px' }}>
+            <div style={{
+              width: '100%',
+              height: `${(d.value / max) * 52}px`,
+              background: isToday ? color : `${color}55`,
+              borderRadius: '5px 5px 0 0',
+              minHeight: d.value > 0 ? '4px' : '0',
+              transition: 'height 0.4s ease',
+            }} />
+            <div style={{ fontSize: '8px', color: isToday ? color : 'var(--text-secondary)', fontWeight: isToday ? 700 : 400 }}>{d.label}</div>
+          </div>
+        );
+      })}
     </div>
   );
 };
 
 export const Reports: React.FC = () => {
   const { transactions, expenses, products, customers, inventoryLogs, debtPayments, appSettings } = useAppContext();
-  const { t: _t } = useTranslation();
   const navigate = useNavigate();
+  const reportRef = useRef<HTMLDivElement>(null);
 
   const [period, setPeriod] = useState<Period>('Today');
   const [activeTab, setActiveTab] = useState<Tab>('overview');
   const [txSearch, setTxSearch] = useState('');
   const [txTypeFilter, setTxTypeFilter] = useState<'All' | 'Cash' | 'Debt'>('All');
 
-  // ─────────── Data Filtering ────────────
+  // ── Filtering ──
   const { filteredTxs, filteredExps, filteredLogs } = useMemo(() => {
     const now = new Date();
     const todayStr = now.toISOString().split('T')[0];
     const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
     const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-
     const filterByPeriod = <T extends { date: string }>(arr: T[]): T[] => {
       if (period === 'Today') return arr.filter(x => x.date.startsWith(todayStr));
       if (period === 'Week') return arr.filter(x => new Date(x.date) >= weekAgo);
       if (period === 'Month') return arr.filter(x => new Date(x.date) >= monthAgo);
       return arr;
     };
-
     return {
       filteredTxs: filterByPeriod(transactions),
       filteredExps: filterByPeriod(expenses),
@@ -90,87 +110,85 @@ export const Reports: React.FC = () => {
     };
   }, [period, transactions, expenses, inventoryLogs]);
 
-  // ─────────── Core Metrics ────────────
+  // ── Core Metrics ──
   const metrics = useMemo(() => {
     const totalSales = filteredTxs.reduce((s, t) => s + t.totalPrice, 0);
     const cashSales = filteredTxs.filter(t => t.type === 'Cash').reduce((s, t) => s + t.totalPrice, 0);
     const debtSales = filteredTxs.filter(t => t.type === 'Debt').reduce((s, t) => s + t.totalPrice, 0);
     const totalExpenses = filteredExps.reduce((s, e) => s + e.amount, 0);
     const breadSold = filteredTxs.reduce((s, t) => s + getTransactionItems(t).reduce((ss, i) => ss + i.quantity, 0), 0);
-
-    // Cost of goods = sum of (item.quantity * product.costPrice or approx)
-    // We use actual transaction items + inventory cost price
     const returnLogs = filteredLogs.filter(l => l.type === 'Return');
     const receiveLogs = filteredLogs.filter(l => l.type !== 'Return');
     const totalReturnsValue = returnLogs.reduce((s, l) => s + l.quantityReceived * l.costPrice, 0);
     const totalStockCostReceived = receiveLogs.reduce((s, l) => s + l.quantityReceived * l.costPrice, 0);
-
-    // Avg cost per unit across all receipts
     const totalUnitsReceived = receiveLogs.reduce((s, l) => s + l.quantityReceived, 0);
     const avgCostPerUnit = totalUnitsReceived > 0 ? totalStockCostReceived / totalUnitsReceived : 0;
-    const estimatedCOGS = avgCostPerUnit > 0 ? breadSold * avgCostPerUnit : totalSales * 0.55; // fallback 55% COGS
-
-    // Accurate gross profit = Sales - estimated COGS - returns value
+    const estimatedCOGS = avgCostPerUnit > 0 ? breadSold * avgCostPerUnit : totalSales * 0.55;
     const grossProfit = Math.max(0, totalSales - estimatedCOGS - totalReturnsValue);
     const netProfit = grossProfit - totalExpenses;
-
     const outstandingDebt = customers.reduce((s, c) => s + (c.debtBalance || 0), 0);
     const stockRetailValue = products.filter(p => p.active).reduce((s, p) => s + p.stock * p.price, 0);
     const txCount = filteredTxs.length;
     const avgSaleValue = txCount > 0 ? Math.round(totalSales / txCount) : 0;
-    
-    // Debt collected this period
-    const debtCollected = debtPayments
-      .filter(dp => {
-        const now = new Date(); const todayStr = now.toISOString().split('T')[0];
-        const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-        const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-        if (period === 'Today') return dp.date.startsWith(todayStr);
-        if (period === 'Week') return new Date(dp.date) >= weekAgo;
-        if (period === 'Month') return new Date(dp.date) >= monthAgo;
-        return true;
-      })
-      .reduce((s, dp) => s + dp.amount, 0);
 
-    return { totalSales, cashSales, debtSales, totalExpenses, breadSold, grossProfit, netProfit, outstandingDebt, stockRetailValue, txCount, avgSaleValue, debtCollected, totalReturnsValue, estimatedCOGS };
+    // Debt collected this filtered period
+    const now = new Date();
+    const todayStr = now.toISOString().split('T')[0];
+    const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    const debtCollected = debtPayments.filter(dp => {
+      if (period === 'Today') return dp.date.startsWith(todayStr);
+      if (period === 'Week') return new Date(dp.date) >= weekAgo;
+      if (period === 'Month') return new Date(dp.date) >= monthAgo;
+      return true;
+    }).reduce((s, dp) => s + dp.amount, 0);
+
+    const grossMarginPct = totalSales > 0 ? Math.round((grossProfit / totalSales) * 100) : 0;
+
+    return {
+      totalSales, cashSales, debtSales, totalExpenses, breadSold,
+      grossProfit, netProfit, outstandingDebt, stockRetailValue,
+      txCount, avgSaleValue, debtCollected, totalReturnsValue,
+      estimatedCOGS, grossMarginPct,
+    };
   }, [filteredTxs, filteredExps, filteredLogs, customers, products, debtPayments, period]);
 
-  // ─────────── Product Performance ────────────
+  // ── Product Performance ──
   const productStats = useMemo(() => {
-    const salesMap: Record<string, { qty: number; revenue: number }> = {};
+    const map: Record<string, { qty: number; revenue: number }> = {};
     filteredTxs.forEach(t => {
       getTransactionItems(t).forEach(item => {
-        if (!salesMap[item.productId]) salesMap[item.productId] = { qty: 0, revenue: 0 };
-        salesMap[item.productId].qty += item.quantity;
-        salesMap[item.productId].revenue += item.quantity * item.unitPrice;
+        if (!map[item.productId]) map[item.productId] = { qty: 0, revenue: 0 };
+        map[item.productId].qty += item.quantity;
+        map[item.productId].revenue += item.quantity * item.unitPrice;
       });
     });
-    return Object.entries(salesMap)
-      .map(([id, data]) => ({ id, name: products.find(p => p.id === id)?.name || 'Unknown', ...data }))
+    return Object.entries(map)
+      .map(([id, data]) => ({ id, name: products.find(p => p.id === id)?.name || 'Unknown', ...data, stock: products.find(p => p.id === id)?.stock || 0, price: products.find(p => p.id === id)?.price || 0 }))
       .sort((a, b) => b.revenue - a.revenue);
   }, [filteredTxs, products]);
 
-  // ─────────── 7-Day Trend For Chart ────────────
+  // ── 7-Day Chart ──
   const weekTrend = useMemo(() => {
-    const days: { label: string; value: number }[] = [];
-    for (let i = 6; i >= 0; i--) {
+    return Array.from({ length: 7 }, (_, i) => {
       const d = new Date();
-      d.setDate(d.getDate() - i);
+      d.setDate(d.getDate() - (6 - i));
       const ds = d.toISOString().split('T')[0];
-      const dayTotal = transactions.filter(t => t.date.startsWith(ds)).reduce((s, t) => s + t.totalPrice, 0);
-      days.push({ label: d.toLocaleDateString([], { weekday: 'short' }).charAt(0), value: dayTotal });
-    }
-    return days;
+      return {
+        label: d.toLocaleDateString([], { weekday: 'short' }).charAt(0),
+        value: transactions.filter(t => t.date.startsWith(ds)).reduce((s, t) => s + t.totalPrice, 0),
+      };
+    });
   }, [transactions]);
 
-  // ─────────── Transaction list with filter ────────────
+  // ── Transaction List ──
   const displayedTxs = useMemo(() => {
     const q = txSearch.toLowerCase();
     return [...filteredTxs]
       .filter(t => {
         const matchType = txTypeFilter === 'All' || t.type === txTypeFilter;
         const customer = customers.find(c => c.id === t.customerId);
-        const matchSearch = !q || (customer?.name.toLowerCase().includes(q)) ||
+        const matchSearch = !q || customer?.name.toLowerCase().includes(q) ||
           getTransactionItems(t).some(item => products.find(p => p.id === item.productId)?.name.toLowerCase().includes(q));
         return matchType && matchSearch;
       })
@@ -179,58 +197,133 @@ export const Reports: React.FC = () => {
 
   const getCustomerName = (id?: string) => id ? (customers.find(c => c.id === id)?.name || 'Unknown') : 'Walk-in';
 
-  // ─────────── Styles ────────────
+  // ── Debtors list ──
+  const debtors = useMemo(() =>
+    customers.filter(c => c.debtBalance > 0).sort((a, b) => b.debtBalance - a.debtBalance),
+    [customers]);
+
+  // ── Print via Bluetooth ──
+  const handlePrint = async () => {
+    try {
+      if (!(navigator as any).bluetooth) throw new Error('No Bluetooth');
+      const device = await (navigator as any).bluetooth.requestDevice({
+        filters: [
+          { services: ['000018f0-0000-1000-8000-00805f9b34fb'] },
+          { namePrefix: 'MTP' }, { namePrefix: 'PT' }, { namePrefix: 'RP' }, { namePrefix: 'Printer' }
+        ],
+        optionalServices: ['000018f0-0000-1000-8000-00805f9b34fb', '49535343-fe7d-4ae5-8fa9-9fafd205e455', 'e7810a71-73ae-499d-8c15-faa9aef0c3f2']
+      });
+      if (!device.gatt) throw new Error('No GATT');
+      const server = await device.gatt.connect();
+      const services = await server.getPrimaryServices();
+      const service = services[0];
+      const chars = await service.getCharacteristics();
+      const char = chars.find((c: any) => c.properties.write || c.properties.writeWithoutResponse);
+      if (!char) throw new Error('No writable char');
+
+      const co = appSettings.companyName || 'BREAD APP';
+      const sep = '================================\n';
+      const lines = [
+        `\x1Ba\x01`, `\x1BE\x01${co.toUpperCase()}\n\x1BE\x00`,
+        `FINANCIAL REPORT - ${period.toUpperCase()}\n`, sep,
+        `\x1Ba\x00`,
+        `Total Sales:      ${fmt(metrics.totalSales)}\n`,
+        `Cash Sales:       ${fmt(metrics.cashSales)}\n`,
+        `Debt Issued:      ${fmt(metrics.debtSales)}\n`,
+        `Debt Collected:   ${fmt(metrics.debtCollected)}\n`,
+        sep,
+        `Bread Sold:       ${metrics.breadSold} units\n`,
+        `Est. COGS:        ${fmt(metrics.estimatedCOGS)}\n`,
+        `Gross Profit:     ${fmt(metrics.grossProfit)} (${metrics.grossMarginPct}%)\n`,
+        `Total Expenses:   ${fmt(metrics.totalExpenses)}\n`,
+        sep,
+        `\x1BE\x01NET PROFIT:       ${fmt(metrics.netProfit)}\x1BE\x00\n`,
+        sep,
+        `Outstanding Debt: ${fmt(metrics.outstandingDebt)}\n`,
+        `Stock Value:      ${fmt(metrics.stockRetailValue)}\n`,
+        sep,
+        `Printed: ${new Date().toLocaleString()}\n\n\n`,
+      ];
+      const encoder = new TextEncoder();
+      for (const line of lines) {
+        const data = encoder.encode(line);
+        for (let i = 0; i < data.length; i += 512) {
+          await char.writeValue(data.slice(i, i + 512));
+          await new Promise(r => setTimeout(r, 30));
+        }
+      }
+      await new Promise(r => setTimeout(r, 500));
+      device.gatt.disconnect();
+    } catch {
+      window.print();
+    }
+  };
+
+  // ── Share as Text ──
+  const handleShare = () => {
+    const text = `📊 *${appSettings.companyName || 'Bread App'} - ${period} Report*\n\n` +
+      `💰 Total Sales: ${fmt(metrics.totalSales)}\n` +
+      `✅ Cash: ${fmt(metrics.cashSales)} | 💳 Debt: ${fmt(metrics.debtSales)}\n` +
+      `🍞 Bread Sold: ${metrics.breadSold} units\n` +
+      `📈 Gross Profit: ${fmt(metrics.grossProfit)} (${metrics.grossMarginPct}%)\n` +
+      `💸 Expenses: ${fmt(metrics.totalExpenses)}\n` +
+      `*💵 Net Profit: ${fmt(metrics.netProfit)}*\n\n` +
+      `⚠️ Outstanding Debt: ${fmt(metrics.outstandingDebt)}\n` +
+      `📦 Stock Value: ${fmt(metrics.stockRetailValue)}\n\n` +
+      `🕐 ${new Date().toLocaleString()}`;
+    if (navigator.share) {
+      navigator.share({ title: 'Sales Report', text }).catch(() => {});
+    } else {
+      const wa = `https://wa.me/?text=${encodeURIComponent(text)}`;
+      window.open(wa, '_blank');
+    }
+  };
+
+  // ── Pill style ──
+  const pillStyle = (active: boolean, col = '#4f46e5'): React.CSSProperties => ({
+    padding: '7px 16px', borderRadius: '999px',
+    border: active ? 'none' : '1px solid var(--border-color)',
+    background: active ? col : 'transparent',
+    color: active ? '#fff' : 'var(--text-secondary)',
+    fontWeight: 600, fontSize: '12px', cursor: 'pointer', whiteSpace: 'nowrap', transition: 'all 0.2s',
+  });
+
   const tabStyle = (active: boolean): React.CSSProperties => ({
-    flex: 1,
-    padding: '10px 0',
-    border: 'none',
+    flex: 1, padding: '10px 0', border: 'none',
     borderBottom: active ? '2px solid #4f46e5' : '2px solid transparent',
     background: 'transparent',
     color: active ? '#4f46e5' : 'var(--text-secondary)',
-    fontWeight: active ? 700 : 500,
-    fontSize: '13px',
-    cursor: 'pointer',
-    transition: 'color 0.2s',
-  });
-
-  const pillStyle = (active: boolean): React.CSSProperties => ({
-    padding: '6px 14px',
-    borderRadius: '999px',
-    border: active ? 'none' : '1px solid var(--border-color)',
-    background: active ? '#4f46e5' : 'transparent',
-    color: active ? '#fff' : 'var(--text-secondary)',
-    fontWeight: 600,
-    fontSize: '12px',
-    cursor: 'pointer',
-    whiteSpace: 'nowrap',
-    transition: 'all 0.2s',
+    fontWeight: active ? 700 : 500, fontSize: '12px', cursor: 'pointer', transition: 'color 0.2s',
   });
 
   return (
-    <div style={{ paddingBottom: '5rem', maxWidth: '480px', margin: '0 auto', padding: '0 0 5rem 0' }}>
+    <div ref={reportRef} style={{ paddingBottom: '5rem' }}>
       {/* Print CSS */}
       <style>{`
         @media print {
           @page { margin: 0; size: 58mm auto; }
           html, body { margin: 0 !important; width: 58mm !important; background: #fff !important; }
           .no-print { display: none !important; }
+          nav, header, footer { display: none !important; }
           * { font-family: monospace !important; color: #000 !important; }
+          .print-section { display: block !important; }
         }
       `}</style>
 
       {/* ── Header ── */}
       <div className="no-print" style={{ padding: '16px 16px 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
         <div>
-          <h1 style={{ fontSize: '22px', fontWeight: 800, margin: 0, color: 'var(--text-color)' }}>📊 Records</h1>
-          <p style={{ fontSize: '12px', color: 'var(--text-secondary)', margin: '2px 0 0' }}>{appSettings.companyName}</p>
+          <h1 style={{ fontSize: '22px', fontWeight: 900, margin: 0, color: 'var(--text-color)' }}>📊 Records</h1>
+          <p style={{ fontSize: '11px', color: 'var(--text-secondary)', margin: '2px 0 0' }}>{appSettings.companyName}</p>
         </div>
-        <button
-          onClick={() => window.print()}
-          className="no-print"
-          style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px', background: '#4f46e5', color: '#fff', border: 'none', borderRadius: '10px', fontSize: '13px', fontWeight: 700, cursor: 'pointer' }}
-        >
-          <Download size={14} /> Export
-        </button>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <button onClick={handleShare} style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '8px 12px', background: '#16a34a', color: '#fff', border: 'none', borderRadius: '10px', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}>
+            <Share2 size={13} /> Share
+          </button>
+          <button onClick={handlePrint} style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '8px 12px', background: '#4f46e5', color: '#fff', border: 'none', borderRadius: '10px', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}>
+            <Printer size={13} /> Print
+          </button>
+        </div>
       </div>
 
       {/* ── Period Pills ── */}
@@ -240,107 +333,137 @@ export const Reports: React.FC = () => {
         ))}
       </div>
 
-      {/* ── Net Profit Hero Card ── */}
-      <div style={{ margin: '0 16px 16px', borderRadius: '20px', padding: '20px', background: metrics.netProfit >= 0 ? 'linear-gradient(135deg,#4f46e5,#7c3aed)' : 'linear-gradient(135deg,#dc2626,#ef4444)', color: '#fff', position: 'relative', overflow: 'hidden' }}>
-        <div style={{ position: 'absolute', top: -20, right: -20, width: 100, height: 100, borderRadius: '50%', background: 'rgba(255,255,255,0.08)' }} />
-        <div style={{ position: 'absolute', bottom: -30, left: -10, width: 80, height: 80, borderRadius: '50%', background: 'rgba(255,255,255,0.06)' }} />
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', opacity: 0.85, fontSize: '13px', fontWeight: 600 }}>
-          {metrics.netProfit >= 0 ? <TrendingUp size={16} /> : <TrendingDown size={16} />}
+      {/* ── Net Profit Hero ── */}
+      <div style={{ margin: '0 16px 16px', borderRadius: '22px', padding: '22px', background: metrics.netProfit >= 0 ? 'linear-gradient(135deg,#4f46e5,#7c3aed)' : 'linear-gradient(135deg,#b91c1c,#ef4444)', color: '#fff', position: 'relative', overflow: 'hidden' }}>
+        {/* Decorative circles */}
+        <div style={{ position: 'absolute', top: -20, right: -20, width: 110, height: 110, borderRadius: '50%', background: 'rgba(255,255,255,0.07)' }} />
+        <div style={{ position: 'absolute', bottom: -30, left: -10, width: 90, height: 90, borderRadius: '50%', background: 'rgba(255,255,255,0.05)' }} />
+        <div style={{ position: 'absolute', top: '50%', right: 20, transform: 'translateY(-50%)', opacity: 0.08 }}>
+          <DollarSign size={80} />
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px', opacity: 0.85, fontSize: '12px', fontWeight: 600 }}>
+          {metrics.netProfit >= 0 ? <TrendingUp size={15} /> : <TrendingDown size={15} />}
           Net Profit · {period}
         </div>
-        <div style={{ fontSize: '36px', fontWeight: 900, letterSpacing: '-1px' }}>{fmt(metrics.netProfit)}</div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px', marginTop: '16px', borderTop: '1px solid rgba(255,255,255,0.2)', paddingTop: '12px' }}>
-          <div><div style={{ fontSize: '10px', opacity: 0.75, marginBottom: 2 }}>Revenue</div><div style={{ fontSize: '14px', fontWeight: 700 }}>{fmt(metrics.totalSales)}</div></div>
-          <div><div style={{ fontSize: '10px', opacity: 0.75, marginBottom: 2 }}>Est. COGS</div><div style={{ fontSize: '14px', fontWeight: 700 }}>{fmt(metrics.estimatedCOGS)}</div></div>
-          <div><div style={{ fontSize: '10px', opacity: 0.75, marginBottom: 2 }}>Expenses</div><div style={{ fontSize: '14px', fontWeight: 700 }}>{fmt(metrics.totalExpenses)}</div></div>
+        <div style={{ fontSize: '38px', fontWeight: 900, letterSpacing: '-1px', marginBottom: '4px' }}>{fmt(metrics.netProfit)}</div>
+        <div style={{ fontSize: '12px', opacity: 0.75, marginBottom: '14px' }}>Gross Margin: {metrics.grossMarginPct}%</div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px', borderTop: '1px solid rgba(255,255,255,0.2)', paddingTop: '14px' }}>
+          <div><div style={{ fontSize: '10px', opacity: 0.7, marginBottom: 2 }}>Revenue</div><div style={{ fontSize: '15px', fontWeight: 700 }}>{fmt(metrics.totalSales)}</div></div>
+          <div><div style={{ fontSize: '10px', opacity: 0.7, marginBottom: 2 }}>Est. COGS</div><div style={{ fontSize: '15px', fontWeight: 700 }}>{fmt(metrics.estimatedCOGS)}</div></div>
+          <div><div style={{ fontSize: '10px', opacity: 0.7, marginBottom: 2 }}>Expenses</div><div style={{ fontSize: '15px', fontWeight: 700 }}>{fmt(metrics.totalExpenses)}</div></div>
         </div>
       </div>
 
       {/* ── Tabs ── */}
-      <div className="no-print" style={{ display: 'flex', borderBottom: '1px solid var(--border-color)', margin: '0 16px', marginBottom: '16px' }}>
-        <button style={tabStyle(activeTab === 'overview')} onClick={() => setActiveTab('overview')}><BarChart2 size={14} style={{ display: 'inline', marginRight: 4 }} />Overview</button>
-        <button style={tabStyle(activeTab === 'transactions')} onClick={() => setActiveTab('transactions')}><Receipt size={14} style={{ display: 'inline', marginRight: 4 }} />Transactions</button>
-        <button style={tabStyle(activeTab === 'products')} onClick={() => setActiveTab('products')}><Package size={14} style={{ display: 'inline', marginRight: 4 }} />Products</button>
+      <div className="no-print" style={{ display: 'flex', borderBottom: '1px solid var(--border-color)', margin: '0 16px 16px', overflowX: 'auto', scrollbarWidth: 'none' }}>
+        {([
+          { id: 'overview', icon: BarChart2, label: 'Overview' },
+          { id: 'transactions', icon: Receipt, label: 'Sales' },
+          { id: 'products', icon: Package, label: 'Products' },
+          { id: 'expenses', icon: ArrowDownRight, label: 'Expenses' },
+          { id: 'debts', icon: CreditCard, label: 'Debts' },
+        ] as { id: Tab; icon: any; label: string }[]).map(tab => (
+          <button key={tab.id} style={{ ...tabStyle(activeTab === tab.id), minWidth: 60, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }} onClick={() => setActiveTab(tab.id)}>
+            <tab.icon size={12} />
+            {tab.label}
+          </button>
+        ))}
       </div>
 
-      {/* ══════════════ OVERVIEW TAB ══════════════ */}
+      {/* ══════ OVERVIEW TAB ══════ */}
       {activeTab === 'overview' && (
         <div style={{ padding: '0 16px' }}>
-          {/* 7-day mini chart */}
-          <div style={{ background: 'var(--surface-color)', border: '1px solid var(--border-color)', borderRadius: '16px', padding: '16px', marginBottom: '16px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-              <span style={{ fontWeight: 700, fontSize: '13px' }}>7-Day Sales Trend</span>
-              <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Last 7 days</span>
+          {/* 7-Day Chart */}
+          <div style={{ background: 'var(--surface-color)', border: '1px solid var(--border-color)', borderRadius: '18px', padding: '16px', marginBottom: '14px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
+              <div>
+                <div style={{ fontWeight: 700, fontSize: '13px' }}>7-Day Sales Chart</div>
+                <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Last 7 days revenue</div>
+              </div>
+              <div style={{ fontSize: '13px', fontWeight: 800, color: '#4f46e5' }}>{fmt(weekTrend.reduce((s, d) => s + d.value, 0))}</div>
             </div>
             <MiniBar data={weekTrend} color="#4f46e5" />
           </div>
 
+          {/* Cash Flow Row */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '14px' }}>
+            <div style={{ background: '#16a34a12', border: '1px solid #16a34a30', borderRadius: '14px', padding: '14px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+                <ArrowUpRight size={15} color="#16a34a" />
+                <span style={{ fontSize: '11px', color: '#16a34a', fontWeight: 700 }}>CASH IN</span>
+              </div>
+              <div style={{ fontSize: '20px', fontWeight: 800, color: '#16a34a' }}>{fmt(metrics.cashSales + metrics.debtCollected)}</div>
+              <div style={{ fontSize: '10px', color: 'var(--text-secondary)', marginTop: 4 }}>Sales + Debt Collected</div>
+            </div>
+            <div style={{ background: '#dc262612', border: '1px solid #dc262630', borderRadius: '14px', padding: '14px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+                <ArrowDownRight size={15} color="#dc2626" />
+                <span style={{ fontSize: '11px', color: '#dc2626', fontWeight: 700 }}>CASH OUT</span>
+              </div>
+              <div style={{ fontSize: '20px', fontWeight: 800, color: '#dc2626' }}>{fmt(metrics.totalExpenses)}</div>
+              <div style={{ fontSize: '10px', color: 'var(--text-secondary)', marginTop: 4 }}>Total Expenses</div>
+            </div>
+          </div>
+
           {/* KPI Grid */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
-            <StatCard label="Cash Sales" value={fmt(metrics.cashSales)} icon={Wallet} color="#16a34a" sub={`${filteredTxs.filter(t => t.type === 'Cash').length} transactions`} />
-            <StatCard label="Debt Issued" value={fmt(metrics.debtSales)} icon={CreditCard} color="#dc2626" sub={`${filteredTxs.filter(t => t.type === 'Debt').length} transactions`} />
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '14px' }}>
+            <StatCard label="Cash Sales" value={fmt(metrics.cashSales)} icon={Wallet} color="#16a34a" sub={`${filteredTxs.filter(t => t.type === 'Cash').length} sales`} />
+            <StatCard label="Debt Issued" value={fmt(metrics.debtSales)} icon={CreditCard} color="#dc2626" sub={`${filteredTxs.filter(t => t.type === 'Debt').length} sales`} />
             <StatCard label="Debt Collected" value={fmt(metrics.debtCollected)} icon={RefreshCw} color="#0891b2" />
-            <StatCard label="Outstanding Debt" value={fmt(metrics.outstandingDebt)} icon={AlertTriangle} color="#d97706" sub="All customers" />
-            <StatCard label="Bread Sold" value={`${metrics.breadSold} units`} icon={ShoppingBag} color="#7c3aed" sub={`Avg ₦${metrics.avgSaleValue.toLocaleString()} / sale`} />
+            <StatCard label="Bread Sold" value={`${metrics.breadSold} units`} icon={ShoppingBag} color="#7c3aed" sub={`Avg ${fmt(metrics.avgSaleValue)}/sale`} />
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '14px' }}>
+            <StatCard label="Outstanding Debt" value={fmt(metrics.outstandingDebt)} icon={AlertTriangle} color="#d97706" sub="All customers" onClick={() => setActiveTab('debts')} />
             <StatCard label="Returns Value" value={fmt(metrics.totalReturnsValue)} icon={TrendingDown} color="#6b7280" />
-            <div style={{ gridColumn: '1 / -1' }}>
-              <StatCard label="Stock Retail Value" value={fmt(metrics.stockRetailValue)} icon={Package} color="#4f46e5" sub={`${products.filter(p => p.active).reduce((s, p) => s + p.stock, 0)} units in stock`} />
-            </div>
-            <div style={{ gridColumn: '1 / -1' }}>
-              <StatCard label="Total Customers" value={customers.length} icon={Users} color="#0891b2" sub={`${customers.filter(c => c.debtBalance > 0).length} with outstanding debt`} onClick={() => navigate('/customers')} />
-            </div>
+          </div>
+
+          <StatCard label="Stock Retail Value" value={fmt(metrics.stockRetailValue)} icon={Package} color="#4f46e5"
+            sub={`${products.filter(p => p.active).reduce((s, p) => s + p.stock, 0)} total units across ${products.filter(p => p.active).length} products`} />
+          <div style={{ marginTop: '10px' }}>
+            <StatCard label="Total Customers" value={customers.length} icon={Users} color="#0891b2"
+              sub={`${customers.filter(c => c.debtBalance > 0).length} with debt · ${customers.filter(c => c.debtBalance === 0).length} cleared`}
+              onClick={() => navigate('/customers')} />
           </div>
         </div>
       )}
 
-      {/* ══════════════ TRANSACTIONS TAB ══════════════ */}
+      {/* ══════ TRANSACTIONS TAB ══════ */}
       {activeTab === 'transactions' && (
         <div style={{ padding: '0 16px' }}>
-          {/* Search + Filter */}
           <div style={{ display: 'flex', alignItems: 'center', background: 'var(--surface-color)', border: '1px solid var(--border-color)', borderRadius: '12px', padding: '10px 14px', gap: '8px', marginBottom: '10px' }}>
             <Search size={15} color="var(--text-secondary)" />
-            <input
-              value={txSearch}
-              onChange={e => setTxSearch(e.target.value)}
-              placeholder="Search by customer or product..."
-              style={{ border: 'none', background: 'transparent', outline: 'none', flex: 1, fontSize: '13px', color: 'var(--text-color)' }}
-            />
+            <input value={txSearch} onChange={e => setTxSearch(e.target.value)} placeholder="Search by customer or product..."
+              style={{ border: 'none', background: 'transparent', outline: 'none', flex: 1, fontSize: '13px', color: 'var(--text-color)' }} />
           </div>
-          <div style={{ display: 'flex', gap: '8px', marginBottom: '14px' }}>
+          <div style={{ display: 'flex', gap: '8px', marginBottom: '14px', alignItems: 'center' }}>
             {(['All', 'Cash', 'Debt'] as const).map(f => (
-              <button key={f} style={pillStyle(txTypeFilter === f)} onClick={() => setTxTypeFilter(f)}>{f}</button>
+              <button key={f} style={pillStyle(txTypeFilter === f, f === 'Cash' ? '#16a34a' : f === 'Debt' ? '#dc2626' : '#4f46e5')} onClick={() => setTxTypeFilter(f)}>{f}</button>
             ))}
-            <span style={{ marginLeft: 'auto', fontSize: '12px', color: 'var(--text-secondary)', alignSelf: 'center' }}>{displayedTxs.length} records</span>
+            <span style={{ marginLeft: 'auto', fontSize: '12px', color: 'var(--text-secondary)' }}>{displayedTxs.length} records</span>
           </div>
 
-          {/* Transaction List */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
             {displayedTxs.length === 0 ? (
               <div style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '32px', fontSize: '14px' }}>No transactions found</div>
             ) : displayedTxs.map(tx => {
               const items = getTransactionItems(tx);
               return (
-                <div
-                  key={tx.id}
-                  onClick={() => navigate(`/receipt/${tx.id}`)}
-                  style={{ background: 'var(--surface-color)', border: '1px solid var(--border-color)', borderRadius: '14px', padding: '14px', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px' }}
-                >
+                <div key={tx.id} onClick={() => navigate(`/receipt/${tx.id}`)}
+                  style={{ background: 'var(--surface-color)', border: '1px solid var(--border-color)', borderRadius: '14px', padding: '14px', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px' }}>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontWeight: 700, fontSize: '14px', color: 'var(--text-color)', marginBottom: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <div style={{ fontWeight: 700, fontSize: '14px', color: 'var(--text-color)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: 2 }}>
                       {getCustomerName(tx.customerId)}
                     </div>
-                    <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '4px' }}>
-                      {items.map((item, _i) => {
-                        const p = products.find(p => p.id === item.productId);
-                        return `${item.quantity}× ${p?.name || 'Item'}`;
-                      }).join(', ')}
+                    <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginBottom: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {items.map(item => `${item.quantity}× ${products.find(p => p.id === item.productId)?.name || 'Item'}`).join(', ')}
                     </div>
                     <div style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>{fmtDate(tx.date)}</div>
                   </div>
                   <div style={{ textAlign: 'right', flexShrink: 0 }}>
                     <div style={{ fontWeight: 800, fontSize: '15px', color: 'var(--text-color)' }}>{fmt(tx.totalPrice)}</div>
-                    <div style={{ fontSize: '10px', fontWeight: 700, color: tx.type === 'Cash' ? '#16a34a' : '#dc2626', textTransform: 'uppercase', marginTop: '2px' }}>{tx.type}</div>
-                    {tx.discount && tx.discount > 0 && <div style={{ fontSize: '10px', color: '#f59e0b', marginTop: '2px' }}>-{fmt(tx.discount)} disc</div>}
+                    <div style={{ fontSize: '10px', fontWeight: 700, color: tx.type === 'Cash' ? '#16a34a' : '#dc2626', textTransform: 'uppercase', marginTop: 2 }}>{tx.type}</div>
+                    {tx.discount && tx.discount > 0 && <div style={{ fontSize: '10px', color: '#f59e0b', marginTop: 2 }}>-{fmt(tx.discount)}</div>}
                   </div>
                   <ChevronRight size={14} color="var(--text-secondary)" />
                 </div>
@@ -350,50 +473,117 @@ export const Reports: React.FC = () => {
         </div>
       )}
 
-      {/* ══════════════ PRODUCTS TAB ══════════════ */}
+      {/* ══════ PRODUCTS TAB ══════ */}
       {activeTab === 'products' && (
         <div style={{ padding: '0 16px' }}>
-          <div style={{ marginBottom: '12px', fontSize: '13px', color: 'var(--text-secondary)' }}>
-            Best-selling products in selected period
-          </div>
+          <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '12px' }}>Best-selling products this period</div>
           {productStats.length === 0 ? (
-            <div style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '32px', fontSize: '14px' }}>No product sales data</div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              {productStats.map((ps, idx) => {
-                const product = products.find(p => p.id === ps.id);
-                const totalRevenue = productStats.reduce((s, p) => s + p.revenue, 1);
-                const pct = Math.round((ps.revenue / totalRevenue) * 100);
-                return (
-                  <div key={ps.id} style={{ background: 'var(--surface-color)', border: '1px solid var(--border-color)', borderRadius: '14px', padding: '14px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <div style={{ width: 28, height: 28, borderRadius: '8px', background: '#4f46e510', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: 800, color: '#4f46e5' }}>
-                          #{idx + 1}
-                        </div>
-                        <div>
-                          <div style={{ fontWeight: 700, fontSize: '14px' }}>{ps.name}</div>
-                          <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>{ps.qty} units sold • ₦{product?.price.toLocaleString()} each</div>
-                        </div>
-                      </div>
-                      <div style={{ textAlign: 'right' }}>
-                        <div style={{ fontWeight: 800, fontSize: '15px' }}>{fmt(ps.revenue)}</div>
-                        <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>{pct}% of sales</div>
-                      </div>
+            <div style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '32px' }}>No product data</div>
+          ) : productStats.map((ps, idx) => {
+            const totalRev = productStats.reduce((s, p) => s + p.revenue, 1);
+            const pct = Math.round((ps.revenue / totalRev) * 100);
+            return (
+              <div key={ps.id} style={{ background: 'var(--surface-color)', border: '1px solid var(--border-color)', borderRadius: '16px', padding: '14px', marginBottom: '10px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div style={{ width: 32, height: 32, borderRadius: '10px', background: idx === 0 ? '#fef3c710' : '#4f46e510', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: 800, color: idx === 0 ? '#d97706' : '#4f46e5' }}>
+                      {idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : `#${idx + 1}`}
                     </div>
-                    {/* Progress bar */}
-                    <div style={{ height: '4px', background: 'var(--border-color)', borderRadius: '999px', overflow: 'hidden' }}>
-                      <div style={{ height: '100%', width: `${pct}%`, background: 'linear-gradient(90deg,#4f46e5,#7c3aed)', borderRadius: '999px', transition: 'width 0.5s' }} />
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '6px', fontSize: '10px', color: 'var(--text-secondary)' }}>
-                      <span>{product?.stock || 0} in stock</span>
-                      <span style={{ color: product && product.stock < 20 ? '#dc2626' : '#16a34a', fontWeight: 600 }}>{product && product.stock < 20 ? '⚠ Low Stock' : '✓ OK'}</span>
+                    <div>
+                      <div style={{ fontWeight: 700, fontSize: '14px' }}>{ps.name}</div>
+                      <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>{ps.qty} units · ₦{ps.price.toLocaleString()} each</div>
                     </div>
                   </div>
-                );
-              })}
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontWeight: 800, fontSize: '15px' }}>{fmt(ps.revenue)}</div>
+                    <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>{pct}%</div>
+                  </div>
+                </div>
+                <div style={{ height: '5px', background: 'var(--border-color)', borderRadius: '999px', overflow: 'hidden' }}>
+                  <div style={{ height: '100%', width: `${pct}%`, background: idx === 0 ? 'linear-gradient(90deg,#f59e0b,#fbbf24)' : 'linear-gradient(90deg,#4f46e5,#7c3aed)', borderRadius: '999px', transition: 'width 0.5s' }} />
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '6px', fontSize: '10px', color: 'var(--text-secondary)' }}>
+                  <span>Stock: {ps.stock} units</span>
+                  <span style={{ color: ps.stock < 20 ? '#dc2626' : '#16a34a', fontWeight: 700 }}>{ps.stock < 20 ? '⚠ Low Stock' : '✓ OK'}</span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* ══════ EXPENSES TAB ══════ */}
+      {activeTab === 'expenses' && (
+        <div style={{ padding: '0 16px' }}>
+          <div style={{ background: '#dc262612', border: '1px solid #dc262630', borderRadius: '16px', padding: '16px', marginBottom: '14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+              <div style={{ fontSize: '11px', color: '#dc2626', fontWeight: 700, marginBottom: 4 }}>TOTAL EXPENSES · {period}</div>
+              <div style={{ fontSize: '28px', fontWeight: 900, color: '#dc2626' }}>{fmt(metrics.totalExpenses)}</div>
+            </div>
+            <ArrowDownRight size={40} color="#dc262630" />
+          </div>
+
+          {filteredExps.length === 0 ? (
+            <div style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '32px' }}>No expenses recorded</div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {[...filteredExps].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map(exp => (
+                <div key={exp.id} style={{ background: 'var(--surface-color)', border: '1px solid var(--border-color)', borderRadius: '14px', padding: '14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <div style={{ fontWeight: 700, fontSize: '14px', marginBottom: 2 }}>{exp.description || 'Expense'}</div>
+                    <div style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>{fmtDate(exp.date)}</div>
+                  </div>
+                  <div style={{ fontWeight: 800, fontSize: '16px', color: '#dc2626' }}>{fmt(exp.amount)}</div>
+                </div>
+              ))}
             </div>
           )}
+        </div>
+      )}
+
+      {/* ══════ DEBTS TAB ══════ */}
+      {activeTab === 'debts' && (
+        <div style={{ padding: '0 16px' }}>
+          <div style={{ background: '#d9770612', border: '1px solid #d9770630', borderRadius: '16px', padding: '16px', marginBottom: '14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+              <div style={{ fontSize: '11px', color: '#d97706', fontWeight: 700, marginBottom: 4 }}>TOTAL OUTSTANDING DEBT</div>
+              <div style={{ fontSize: '28px', fontWeight: 900, color: '#d97706' }}>{fmt(metrics.outstandingDebt)}</div>
+              <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: 4 }}>{debtors.length} customers owe money</div>
+            </div>
+            <AlertTriangle size={40} color="#d9770630" />
+          </div>
+
+          {debtors.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '32px', fontSize: '14px', color: '#16a34a', fontWeight: 700 }}>🎉 No outstanding debts!</div>
+          ) : debtors.map(c => {
+            const pct = Math.min(100, Math.round((c.debtBalance / metrics.outstandingDebt) * 100));
+            return (
+              <div key={c.id} onClick={() => navigate(`/customers/${c.id}`)}
+                style={{ background: 'var(--surface-color)', border: '1px solid var(--border-color)', borderRadius: '14px', padding: '14px', marginBottom: '8px', cursor: 'pointer' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div style={{ width: 36, height: 36, borderRadius: '50%', background: '#d9770618', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '14px', color: '#d97706' }}>
+                      {c.name.charAt(0).toUpperCase()}
+                    </div>
+                    <div>
+                      <div style={{ fontWeight: 700, fontSize: '14px' }}>{c.name}</div>
+                      {c.phone && <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>{c.phone}</div>}
+                    </div>
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontWeight: 800, fontSize: '16px', color: '#dc2626' }}>{fmt(c.debtBalance)}</div>
+                    <div style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>{pct}% of total</div>
+                  </div>
+                </div>
+                <div style={{ height: '4px', background: 'var(--border-color)', borderRadius: '999px', overflow: 'hidden' }}>
+                  <div style={{ height: '100%', width: `${pct}%`, background: 'linear-gradient(90deg,#d97706,#f59e0b)', borderRadius: '999px' }} />
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 6, fontSize: '11px', color: '#4f46e5', fontWeight: 600 }}>
+                  View Profile →
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
     </div>
