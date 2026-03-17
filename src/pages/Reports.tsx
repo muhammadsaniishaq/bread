@@ -7,7 +7,7 @@ import {
   BarChart2, TrendingUp, TrendingDown, ShoppingBag, CreditCard,
   Package, Receipt, Search, ChevronRight,
   Wallet, Users, AlertTriangle, RefreshCw, Printer, Share2,
-  ArrowUpRight, ArrowDownRight, DollarSign, Building2, Percent, MinusCircle
+  ArrowUpRight, ArrowDownRight, DollarSign, Building2, Percent, MinusCircle, PlusCircle
 } from 'lucide-react';
 
 type Period = 'Today' | 'Week' | 'Month' | 'All';
@@ -117,8 +117,8 @@ export const Reports: React.FC = () => {
       return true;
     }).reduce((s, dp) => s + dp.amount, 0);
 
-    // Net bakery payment = 90% owed MINUS debt that customers already paid us (which goes to bakery)
-    const netBakeryOwed = Math.max(0, bakeryOwed - debtCollected);
+    // Net bakery payment = 90% owed - Debt Issued (no cash yet) + Debt Collected (cash received today)
+    const netBakeryOwed = Math.max(0, bakeryOwed - debtSales + debtCollected);
 
     return {
       totalSales, cashSales, debtSales, totalExpenses, breadSold,
@@ -205,7 +205,8 @@ export const Reports: React.FC = () => {
         `Bread Sold:      ${metrics.breadSold} units\n`, sep,
         `Our Share(10%):  ${p(metrics.ourShare)}\n`,
         `Bakery Owed(90%):${p(metrics.bakeryOwed)}\n`,
-        `Debt Credit:     -${p(metrics.debtCollected)}\n`,
+        `Debt Issued:     -${p(metrics.debtSales)}\n`,
+        `Debt Collected:  +${p(metrics.debtCollected)}\n`,
         `Net Bakery Pay:  ${p(metrics.netBakeryOwed)}\n`,
         `Our Expenses:    ${p(metrics.totalExpenses)}\n`, sep,
         `\x1BE\x01NET PROFIT: ${p(metrics.netProfit)}\x1BE\x00\n`, sep,
@@ -236,7 +237,8 @@ export const Reports: React.FC = () => {
       `💸 Our Expenses: ${fmt(metrics.totalExpenses)}\n` +
       `*💵 Net Profit: ${fmt(metrics.netProfit)}*\n\n` +
       `🏭 Bakery Owed (90%): ${fmt(metrics.bakeryOwed)}\n` +
-      `➖ Debt Collected: -${fmt(metrics.debtCollected)}\n` +
+      `➖ Debt Issued: -${fmt(metrics.debtSales)}\n` +
+      `➕ Debt Collected: +${fmt(metrics.debtCollected)}\n` +
       `*🏭 Net to Pay Bakery: ${fmt(metrics.netBakeryOwed)}*\n\n` +
       `⚠️ Customer Debt: ${fmt(metrics.outstandingDebt)}\n` +
       `📦 Stock Value: ${fmt(metrics.stockRetailValue)}\n\n` +
@@ -328,17 +330,30 @@ export const Reports: React.FC = () => {
             <div style={{ fontSize: '28px', fontWeight: 900, color: '#92400e60' }}>90</div>
           </div>
         </div>
-        {/* Debt deduction row */}
+        {/* Debt Issued row (Deduction) */}
+        {metrics.debtSales > 0 && (
+          <div style={{ background: '#dc262608', borderTop: '1px solid #dc262620', padding: '12px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <MinusCircle size={16} color='#dc2626' />
+              <div>
+                <div style={{ fontSize: '12px', fontWeight: 700, color: '#dc2626' }}>{t('rep.debtIssuedDeduct')}</div>
+                <div style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>{t('rep.debtIssuedNote')}</div>
+              </div>
+            </div>
+            <div style={{ fontSize: '16px', fontWeight: 800, color: '#dc2626' }}>-{fmt(metrics.debtSales)}</div>
+          </div>
+        )}
+        {/* Debt Collected row (Addition) */}
         {metrics.debtCollected > 0 && (
           <div style={{ background: '#16a34a08', borderTop: '1px solid #16a34a20', padding: '12px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <MinusCircle size={16} color='#16a34a' />
+              <PlusCircle size={16} color='#16a34a' />
               <div>
-                <div style={{ fontSize: '12px', fontWeight: 700, color: '#16a34a' }}>{t('rep.debtDeducted')}</div>
-                <div style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>Collected from customers → goes to bakery</div>
+                <div style={{ fontSize: '12px', fontWeight: 700, color: '#16a34a' }}>{t('rep.debtCollectedAdd')}</div>
+                <div style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>{t('rep.debtCollectedNote')}</div>
               </div>
             </div>
-            <div style={{ fontSize: '16px', fontWeight: 800, color: '#16a34a' }}>-{fmt(metrics.debtCollected)}</div>
+            <div style={{ fontSize: '16px', fontWeight: 800, color: '#16a34a' }}>+{fmt(metrics.debtCollected)}</div>
           </div>
         )}
         {/* Net to pay */}
