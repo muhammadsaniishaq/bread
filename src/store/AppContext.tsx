@@ -172,54 +172,68 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const recordSale = async (tx: Transaction) => {
-    await dbTransactions.setItem(tx.id, tx); // Save the transaction first
+    // 1. ALWAYS save transaction first — this is the most critical step
+    await dbTransactions.setItem(tx.id, tx);
     
-    // Update company metrics
-    const metrics = { ...companyMetrics };
-    if (tx.type === 'Cash') {
-      metrics.totalValueReceived += tx.totalPrice;
-    }
-    await dbCompanyMetrics.setItem('main', metrics);
-    setCompanyMetrics(metrics);
-    
-    // Update stock logic supporting multi-items
-    const items = tx.items?.length ? tx.items : (tx.productId ? [{ productId: tx.productId, quantity: tx.quantity || 0 }] : []);
-    
-    const updatedProducts = [...products];
-    for (const item of items) {
-      if (item.productId && item.quantity) {
-        const productIndex = updatedProducts.findIndex(p => p.id === item.productId);
-        if (productIndex !== -1) {
-          updatedProducts[productIndex] = {
-            ...updatedProducts[productIndex],
-            stock: Math.max(0, Number(updatedProducts[productIndex].stock || 0) - Number(item.quantity))
-          };
-          await dbProducts.setItem(updatedProducts[productIndex].id, updatedProducts[productIndex]);
-        }
-      }
-    }
-    setProducts(updatedProducts);
+    // 2. Immediately update the in-memory state so UI reflects the new sale instantly
+    //    This ensures history shows even before refreshData completes
+    setTransactions(prev => [tx, ...prev]);
 
-    // Update customer debt and points if applicable
-    if (tx.customerId) {
-      const customer = customers.find(c => c.id === tx.customerId);
-      if (customer) {
-        const updatedCustomer = { ...customer };
-        if (tx.type === 'Debt') {
-          updatedCustomer.debtBalance += tx.totalPrice;
-        }
-        if (tx.pointsUsed) {
-          updatedCustomer.loyaltyPoints = Math.max(0, (updatedCustomer.loyaltyPoints || 0) - tx.pointsUsed);
-        }
-        if (tx.pointsEarned) {
-          updatedCustomer.loyaltyPoints = (updatedCustomer.loyaltyPoints || 0) + tx.pointsEarned;
-        }
-        await dbCustomers.setItem(customer.id, updatedCustomer);
+    // 3. Update company metrics
+    try {
+      const metrics = { ...companyMetrics };
+      if (tx.type === 'Cash') {
+        metrics.totalValueReceived += tx.totalPrice;
       }
-    }
+      await dbCompanyMetrics.setItem('main', metrics);
+      setCompanyMetrics(metrics);
+    } catch (e) { console.error('Metrics update failed', e); }
     
-    await refreshData();
+    // 4. Update stock for each item in the sale
+    try {
+      const items = tx.items?.length ? tx.items : (tx.productId ? [{ productId: tx.productId, quantity: tx.quantity || 0, unitPrice: 0 }] : []);
+      
+      const updatedProducts = [...products];
+      for (const item of items) {
+        if (item.productId && item.quantity) {
+          const productIndex = updatedProducts.findIndex(p => p.id === item.productId);
+          if (productIndex !== -1) {
+            updatedProducts[productIndex] = {
+              ...updatedProducts[productIndex],
+              stock: Math.max(0, Number(updatedProducts[productIndex].stock || 0) - Number(item.quantity))
+            };
+            await dbProducts.setItem(updatedProducts[productIndex].id, updatedProducts[productIndex]);
+          }
+        }
+      }
+      setProducts(updatedProducts);
+    } catch (e) { console.error('Stock update failed', e); }
+
+    // 5. Update customer debt/points if applicable
+    try {
+      if (tx.customerId) {
+        const customer = customers.find(c => c.id === tx.customerId);
+        if (customer) {
+          const updatedCustomer = { ...customer };
+          if (tx.type === 'Debt') {
+            updatedCustomer.debtBalance += tx.totalPrice;
+          }
+          if (tx.pointsUsed) {
+            updatedCustomer.loyaltyPoints = Math.max(0, (updatedCustomer.loyaltyPoints || 0) - tx.pointsUsed);
+          }
+          if (tx.pointsEarned) {
+            updatedCustomer.loyaltyPoints = (updatedCustomer.loyaltyPoints || 0) + tx.pointsEarned;
+          }
+          await dbCustomers.setItem(customer.id, updatedCustomer);
+          setCustomers(prev => prev.map(c => c.id === customer.id ? updatedCustomer : c));
+        }
+      }
+    } catch (e) { console.error('Customer update failed', e); }
+    
+    // 6. Refresh full data from DB to ensure consistency (non-blocking)
+    refreshData().catch(e => console.error('refreshData failed', e));
   };
+
 
   const recordDebtPayment = async (payment: DebtPayment) => {
     await dbDebtPayments.setItem(payment.id, payment);
