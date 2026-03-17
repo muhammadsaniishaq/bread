@@ -317,7 +317,11 @@ export const Reports: React.FC = () => {
       </div>
 
       {/* 4-Step Company Balance Flow */}
-      <div style={{ margin: '0 16px 16px', borderRadius: '16px', overflow: 'hidden', border: '1.5px solid #92400e40' }}>
+      <div style={{ margin: '0 16px 16px', borderRadius: '16px', overflow: 'hidden', border: '1.5px solid #92400e40' }} 
+           onClick={() => {
+             const diagStr = `Sales: ${metrics.totalSales}\nBakOwed: ${metrics.bakeryOwed}\nPaid: ${metrics.companyPaid}\nNet: ${metrics.netBakeryOwed}\n\nBPayments: ${bakeryPayments.length}\nFiltered: ${filterByPeriod(bakeryPayments).length}\n\nAll BPayments:\n${bakeryPayments.map(b => b.amount + ' (' + b.date.substring(0,10) + ')').join(', ')}`;
+             alert(diagStr);
+           }}>
         
         {/* Step 1: Total Sales */}
         <div style={{ background: '#78350f08', padding: '12px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #92400e15' }}>
