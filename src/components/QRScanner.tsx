@@ -148,25 +148,25 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScan, onClose }) => {
         />
         
         <motion.div 
-          initial={{ opacity: 0, scale: 0.9, y: 30 }}
+          initial={{ opacity: 0, scale: 0.8, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.9, y: 30 }}
-          transition={{ type: "spring", stiffness: 300, damping: 25 }}
-          className="relative w-full max-w-[280px] bg-white/95 dark:bg-zinc-900/95 backdrop-blur-2xl rounded-[2rem] shadow-[0_25px_50px_-12px_rgba(0,0,0,0.5)] overflow-hidden border border-white/40 dark:border-white/10 mx-auto flex flex-col z-10"
+          exit={{ opacity: 0, scale: 0.8, y: 20 }}
+          transition={{ type: "spring", stiffness: 400, damping: 25 }}
+          className="relative w-full max-w-[245px] bg-white/95 dark:bg-zinc-900/95 backdrop-blur-3xl rounded-[1.75rem] shadow-[0_30px_60px_-10px_rgba(0,0,0,0.6)] overflow-hidden border-2 border-white/50 dark:border-white/20 mx-auto flex flex-col z-10"
         >
           {/* Elegant header */}
-          <div className="flex justify-between items-center px-5 py-4 bg-gradient-to-b from-white/50 to-transparent dark:from-white/5">
-              <div className="flex items-center gap-2">
-                  <div className="w-7 h-7 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center shadow-inner">
-                    <ScanLine size={14} className="text-primary" />
+          <div className="flex justify-between items-center px-4 py-3 bg-gradient-to-b from-white/60 to-transparent dark:from-white/10">
+              <div className="flex items-center gap-1.5">
+                  <div className="w-6 h-6 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center shadow-inner">
+                    <ScanLine size={12} className="text-primary" />
                   </div>
-                  <span className="font-bold text-sm tracking-tight text-gray-800 dark:text-gray-100">Smart Scanner</span>
+                  <span className="font-bold text-xs tracking-tight text-gray-800 dark:text-gray-100">Smart Scanner</span>
               </div>
               <button 
                   onClick={onClose}
-                  className="w-7 h-7 rounded-full bg-gray-100/80 dark:bg-white/10 flex items-center justify-center text-gray-500 hover:text-danger hover:bg-red-50 dark:hover:bg-red-500/20 transition-all shadow-sm"
+                  className="w-6 h-6 rounded-full bg-gray-100/90 dark:bg-white/10 flex items-center justify-center text-gray-500 hover:text-danger hover:bg-red-50 dark:hover:bg-red-500/20 transition-all shadow-sm"
               >
-                  <X size={14} />
+                  <X size={12} />
               </button>
           </div>
 
@@ -258,8 +258,8 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScan, onClose }) => {
           )}
 
           {/* Bottom Actions Area */}
-          <div className="p-4 bg-gradient-to-t from-gray-50/80 to-white dark:from-zinc-900 dark:to-zinc-800">
-              <p className={`text-center font-semibold text-[11px] mb-3 transition-colors duration-300 ${isScanning ? 'text-gray-500' : 'text-success font-bold'}`}>
+          <div className="p-3 bg-gradient-to-t from-gray-50/90 to-white dark:from-zinc-900 border-t border-black/5 dark:border-white/5">
+              <p className={`text-center font-bold text-[10px] mb-2.5 transition-colors duration-300 ${isScanning ? 'text-gray-500' : 'text-success'}`}>
                   {isScanning 
                       ? "Align code within frame" 
                       : "Captured Successfully!"}
@@ -275,12 +275,12 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScan, onClose }) => {
               
               <button 
                   onClick={() => fileInputRef.current?.click()}
-                  className="w-full flex items-center justify-center gap-2 py-2.5 px-4 bg-white hover:bg-gray-50 dark:bg-zinc-800 dark:hover:bg-zinc-700 border border-gray-200/80 dark:border-white/10 rounded-[1rem] transition-all group shadow-sm hover:shadow"
+                  className="w-full flex items-center justify-center gap-1.5 py-2 px-3 bg-white hover:bg-gray-50 dark:bg-zinc-800 dark:hover:bg-zinc-700 border border-gray-200/80 dark:border-white/10 rounded-[0.85rem] transition-all group shadow-sm hover:shadow"
               >
-                  <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center group-hover:scale-110 transition-transform">
-                      <ImageIcon size={12} className="text-primary" />
+                  <div className="w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                      <ImageIcon size={10} className="text-primary" />
                   </div>
-                  <span className="text-xs font-bold text-gray-700 dark:text-gray-200">Upload Gallery Image</span>
+                  <span className="text-[11px] font-bold text-gray-700 dark:text-gray-200">Upload Gallery Image</span>
               </button>
           </div>
         </motion.div>
