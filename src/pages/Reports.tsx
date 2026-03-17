@@ -71,19 +71,25 @@ export const Reports: React.FC = () => {
   };
 
   // ── Period Filtering ──
-  const { filteredTxs, filteredExps, filteredLogs } = useMemo(() => {
+  const { todayStr, weekAgo, monthAgo } = useMemo(() => {
     const now = new Date();
-    const todayStr = now.toISOString().split('T')[0];
-    const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-    const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-    const filterByPeriod = <T extends { date: string }>(arr: T[]): T[] => {
-      if (period === 'Today') return arr.filter(x => x.date.startsWith(todayStr));
-      if (period === 'Week') return arr.filter(x => new Date(x.date) >= weekAgo);
-      if (period === 'Month') return arr.filter(x => new Date(x.date) >= monthAgo);
-      return arr;
+    return {
+      todayStr: now.toISOString().split('T')[0],
+      weekAgo: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000),
+      monthAgo: new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
     };
+  }, []);
+
+  const filterByPeriod = <T extends { date: string }>(arr: T[]): T[] => {
+    if (period === 'Today') return arr.filter(x => x.date.startsWith(todayStr));
+    if (period === 'Week') return arr.filter(x => new Date(x.date) >= weekAgo);
+    if (period === 'Month') return arr.filter(x => new Date(x.date) >= monthAgo);
+    return arr;
+  };
+
+  const { filteredTxs, filteredExps, filteredLogs } = useMemo(() => {
     return { filteredTxs: filterByPeriod(transactions), filteredExps: filterByPeriod(expenses), filteredLogs: filterByPeriod(inventoryLogs) };
-  }, [period, transactions, expenses, inventoryLogs]);
+  }, [period, transactions, expenses, inventoryLogs, todayStr, weekAgo, monthAgo]);
 
   // ── Core Metrics — Bread Distribution: 10% ours, 90% to bakery ──
   const metrics = useMemo(() => {
