@@ -140,7 +140,11 @@ export const Fab: React.FC = () => {
         <QRScanner 
           onScan={(decodedId) => {
             setShowScanner(false);
-            navigate(`/customers/${decodedId}`);
+            if (decodedId.startsWith('receipt:')) navigate(`/receipt/${decodedId.split(':')[1]}`);
+            else if (decodedId.startsWith('payment:')) navigate(`/customer-receipt/${decodedId.split(':')[1]}`);
+            else if (decodedId.startsWith('bakery-receipt:')) navigate(`/bakery-receipt/${decodedId.split(':')[1]}`);
+            else if (decodedId.startsWith('inventory:')) navigate(`/inventory/receipt/${decodedId.split(':')[2]}`);
+            else navigate(`/customers/${decodedId}`);
           }} 
           onClose={() => setShowScanner(false)} 
         />

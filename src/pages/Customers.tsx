@@ -26,11 +26,13 @@ export const Customers: React.FC = () => {
   const [search, setSearch] = useState('');
   const [showScanner, setShowScanner] = useState(false);
   
-  const handleScan = (decodedText: string) => {
-    if (customers.find(c => c.id === decodedText)) {
-      navigate(`/customers/${decodedText}`);
-    }
+  const handleScan = (decodedId: string) => {
     setShowScanner(false);
+    if (decodedId.startsWith('receipt:')) navigate(`/receipt/${decodedId.split(':')[1]}`);
+    else if (decodedId.startsWith('payment:')) navigate(`/customer-receipt/${decodedId.split(':')[1]}`);
+    else if (decodedId.startsWith('bakery-receipt:')) navigate(`/bakery-receipt/${decodedId.split(':')[1]}`);
+    else if (decodedId.startsWith('inventory:')) navigate(`/inventory/receipt/${decodedId.split(':')[2]}`);
+    else if (customers.find(c => c.id === decodedId)) navigate(`/customers/${decodedId}`);
   };
   
   const [name, setName] = useState('');
