@@ -111,10 +111,10 @@ export const Reports: React.FC = () => {
     const txCount = filteredTxs.length;
     const avgSaleValue = txCount > 0 ? Math.round(totalSales / txCount) : 0;
 
-    const debtCollected = filterByPeriod(debtPayments).reduce((s, dp) => s + dp.amount, 0);
+    const debtCollected = filterByPeriod(debtPayments).reduce((s, dp) => s + Number(dp.amount || 0), 0);
 
     // Amount paid to the company in this period
-    const companyPaid = filterByPeriod(bakeryPayments).reduce((s, bp) => s + bp.amount, 0);
+    const companyPaid = filterByPeriod(bakeryPayments).reduce((s, bp) => s + Number(bp.amount || 0), 0);
 
     // Remaining Balance = 90% owed - Debt Issued (no cash yet) + Debt Collected (cash received today) - Already Paid to Company
     const netBakeryOwed = Math.max(0, bakeryOwed - debtSales + debtCollected - companyPaid);
@@ -244,6 +244,7 @@ export const Reports: React.FC = () => {
       `=========================\n\n` +
       `⚠️ Customer Debt: ${fmt(metrics.outstandingDebt)}\n` +
       `📦 Stock Value: ${fmt(metrics.stockRetailValue)}\n\n` +
+      `*DIAGNOSTICS: BP_len[${bakeryPayments.length}] BP_filt[${filterByPeriod(bakeryPayments).length}] DT_len[${debtPayments.length}] DT_filt[${filterByPeriod(debtPayments).length}]*\n` +
       `🕐 ${new Date().toLocaleString()}`;
     if (navigator.share) {
       navigator.share({ title: 'Sales Report', text }).catch(() => {});
