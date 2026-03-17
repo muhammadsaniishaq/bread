@@ -1,4 +1,5 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import Webcam from 'react-webcam';
 import jsQR from 'jsqr';
 import { X, Camera as CameraIcon, CheckCircle2, ScanLine, Image as ImageIcon } from 'lucide-react';
@@ -131,9 +132,9 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScan, onClose }) => {
       if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  return (
+  const portalContent = (
     <AnimatePresence>
-      <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+      <div className="fixed inset-0 z-[9999] flex items-start justify-center pt-24 px-4 pb-4">
         {/* Deep blur backdrop for premium feel */}
         <motion.div 
             initial={{ opacity: 0 }}
@@ -283,4 +284,6 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScan, onClose }) => {
       </div>
     </AnimatePresence>
   );
+
+  return createPortal(portalContent, document.body);
 };
