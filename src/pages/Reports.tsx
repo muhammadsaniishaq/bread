@@ -2,11 +2,12 @@ import React, { useState, useMemo, useRef } from 'react';
 import { useAppContext } from '../store/AppContext';
 import { getTransactionItems } from '../store/types';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from '../store/LanguageContext';
 import {
   BarChart2, TrendingUp, TrendingDown, ShoppingBag, CreditCard,
   Package, Receipt, Search, ChevronRight,
   Wallet, Users, AlertTriangle, RefreshCw, Printer, Share2,
-  ArrowUpRight, ArrowDownRight, DollarSign, Building2, Percent
+  ArrowUpRight, ArrowDownRight, DollarSign, Building2, Percent, MinusCircle
 } from 'lucide-react';
 
 type Period = 'Today' | 'Week' | 'Month' | 'All';
@@ -18,9 +19,8 @@ const fmtDate = (iso: string) => {
   return d.toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 };
 
-// ── Stat Card ──
 const StatCard = ({ label, value, sub, color = '#4f46e5', icon: Icon, onClick }: any) => (
-  <div onClick={onClick} style={{ background: 'var(--surface-color)', border: `1px solid var(--border-color)`, borderRadius: '18px', padding: '16px', cursor: onClick ? 'pointer' : 'default', transition: 'transform 0.15s, box-shadow 0.15s', position: 'relative', overflow: 'hidden' }}
+  <div onClick={onClick} style={{ background: 'var(--surface-color)', border: '1px solid var(--border-color)', borderRadius: '18px', padding: '16px', cursor: onClick ? 'pointer' : 'default', transition: 'transform 0.15s, box-shadow 0.15s', position: 'relative', overflow: 'hidden' }}
     onMouseEnter={e => { if (onClick) { (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 8px 24px rgba(0,0,0,0.1)'; } }}
     onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = ''; (e.currentTarget as HTMLElement).style.boxShadow = ''; }}>
     <div style={{ position: 'absolute', top: -12, right: -12, width: 60, height: 60, borderRadius: '50%', background: `${color}10` }} />
@@ -35,7 +35,6 @@ const StatCard = ({ label, value, sub, color = '#4f46e5', icon: Icon, onClick }:
   </div>
 );
 
-// ── Mini Bar Chart ──
 const MiniBar = ({ data, color = '#4f46e5' }: { data: { label: string; value: number }[]; color?: string }) => {
   const max = Math.max(...data.map(d => d.value), 1);
   return (
@@ -55,6 +54,7 @@ const MiniBar = ({ data, color = '#4f46e5' }: { data: { label: string; value: nu
 
 export const Reports: React.FC = () => {
   const { transactions, expenses, products, customers, inventoryLogs, debtPayments, appSettings } = useAppContext();
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const reportRef = useRef<HTMLDivElement>(null);
 
@@ -62,6 +62,13 @@ export const Reports: React.FC = () => {
   const [activeTab, setActiveTab] = useState<Tab>('overview');
   const [txSearch, setTxSearch] = useState('');
   const [txTypeFilter, setTxTypeFilter] = useState<'All' | 'Cash' | 'Debt'>('All');
+
+  const periodLabel: Record<Period, string> = {
+    Today: t('rep.period.today'),
+    Week: t('rep.period.week'),
+    Month: t('rep.period.month'),
+    All: t('rep.period.all'),
+  };
 
   // ── Period Filtering ──
   const { filteredTxs, filteredExps, filteredLogs } = useMemo(() => {
@@ -78,7 +85,7 @@ export const Reports: React.FC = () => {
     return { filteredTxs: filterByPeriod(transactions), filteredExps: filterByPeriod(expenses), filteredLogs: filterByPeriod(inventoryLogs) };
   }, [period, transactions, expenses, inventoryLogs]);
 
-  // ── Core Metrics (Bread Distribution: 10% profit, 90% to bakery) ──
+  // ── Core Metrics — Bread Distribution: 10% ours, 90% to bakery ──
   const metrics = useMemo(() => {
     const totalSales = filteredTxs.reduce((s, t) => s + t.totalPrice, 0);
     const cashSales = filteredTxs.filter(t => t.type === 'Cash').reduce((s, t) => s + t.totalPrice, 0);
@@ -88,10 +95,10 @@ export const Reports: React.FC = () => {
     const returnLogs = filteredLogs.filter(l => l.type === 'Return');
     const totalReturnsValue = returnLogs.reduce((s, l) => s + l.quantityReceived * l.costPrice, 0);
 
-    // ── BUSINESS MODEL: Company keeps 10%, pays 90% to Bakery ──
-    const ourShare = totalSales * 0.10;          // Our 10% gross profit
-    const bakeryOwed = totalSales * 0.90;        // 90% we owe to bakery/supplier
-    const netProfit = ourShare - totalExpenses;  // Net after our expenses
+    // 10/90 split
+    const ourShare = totalSales * 0.10;
+    const bakeryOwed = totalSales * 0.90;
+    const netProfit = ourShare - totalExpenses;
 
     const outstandingDebt = customers.reduce((s, c) => s + (c.debtBalance || 0), 0);
     const stockRetailValue = products.filter(p => p.active).reduce((s, p) => s + p.stock * p.price, 0);
@@ -110,18 +117,22 @@ export const Reports: React.FC = () => {
       return true;
     }).reduce((s, dp) => s + dp.amount, 0);
 
+    // Net bakery payment = 90% owed MINUS debt that customers already paid us (which goes to bakery)
+    const netBakeryOwed = Math.max(0, bakeryOwed - debtCollected);
+
     return {
       totalSales, cashSales, debtSales, totalExpenses, breadSold,
-      ourShare, bakeryOwed, netProfit, outstandingDebt, stockRetailValue,
-      txCount, avgSaleValue, debtCollected, totalReturnsValue,
+      ourShare, bakeryOwed, netBakeryOwed, netProfit,
+      outstandingDebt, stockRetailValue, txCount, avgSaleValue,
+      debtCollected, totalReturnsValue,
     };
   }, [filteredTxs, filteredExps, filteredLogs, customers, products, debtPayments, period]);
 
   // ── Product Performance ──
   const productStats = useMemo(() => {
     const map: Record<string, { qty: number; revenue: number }> = {};
-    filteredTxs.forEach(t => {
-      getTransactionItems(t).forEach(item => {
+    filteredTxs.forEach(tx => {
+      getTransactionItems(tx).forEach(item => {
         if (!map[item.productId]) map[item.productId] = { qty: 0, revenue: 0 };
         map[item.productId].qty += item.quantity;
         map[item.productId].revenue += item.quantity * item.unitPrice;
@@ -132,33 +143,32 @@ export const Reports: React.FC = () => {
       .sort((a, b) => b.revenue - a.revenue);
   }, [filteredTxs, products]);
 
-  // ── 7-Day Chart ──
+  // ── Charts ──
   const weekTrend = useMemo(() => Array.from({ length: 7 }, (_, i) => {
     const d = new Date();
     d.setDate(d.getDate() - (6 - i));
     const ds = d.toISOString().split('T')[0];
-    return { label: d.toLocaleDateString([], { weekday: 'short' }).charAt(0), value: transactions.filter(t => t.date.startsWith(ds)).reduce((s, t) => s + t.totalPrice, 0) };
+    return { label: d.toLocaleDateString([], { weekday: 'short' }).charAt(0), value: transactions.filter(tx => tx.date.startsWith(ds)).reduce((s, tx) => s + tx.totalPrice, 0) };
   }), [transactions]);
 
-  // ── Hourly Chart (Today) ──
   const hourlyTrend = useMemo(() => {
     const todayStr = new Date().toISOString().split('T')[0];
-    const todayTxs = transactions.filter(t => t.date.startsWith(todayStr));
+    const todayTxs = transactions.filter(tx => tx.date.startsWith(todayStr));
     return Array.from({ length: 12 }, (_, i) => {
       const hour = i * 2;
       const label = hour === 0 ? '12a' : hour < 12 ? `${hour}a` : hour === 12 ? '12p' : `${hour - 12}p`;
-      return { label, value: todayTxs.filter(t => { const h = new Date(t.date).getHours(); return h >= hour && h < hour + 2; }).reduce((s, t) => s + t.totalPrice, 0) };
+      return { label, value: todayTxs.filter(tx => { const h = new Date(tx.date).getHours(); return h >= hour && h < hour + 2; }).reduce((s, tx) => s + tx.totalPrice, 0) };
     });
   }, [transactions]);
 
   // ── Transaction List ──
   const displayedTxs = useMemo(() => {
     const q = txSearch.toLowerCase();
-    return [...filteredTxs].filter(t => {
-      const matchType = txTypeFilter === 'All' || t.type === txTypeFilter;
-      const customer = customers.find(c => c.id === t.customerId);
+    return [...filteredTxs].filter(tx => {
+      const matchType = txTypeFilter === 'All' || tx.type === txTypeFilter;
+      const customer = customers.find(c => c.id === tx.customerId);
       const matchSearch = !q || customer?.name.toLowerCase().includes(q) ||
-        getTransactionItems(t).some(item => products.find(p => p.id === item.productId)?.name.toLowerCase().includes(q));
+        getTransactionItems(tx).some(item => products.find(p => p.id === item.productId)?.name.toLowerCase().includes(q));
       return matchType && matchSearch;
     }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [filteredTxs, txSearch, txTypeFilter, customers, products]);
@@ -166,7 +176,7 @@ export const Reports: React.FC = () => {
   const getCustomerName = (id?: string) => id ? (customers.find(c => c.id === id)?.name || 'Unknown') : 'Walk-in';
   const debtors = useMemo(() => customers.filter(c => c.debtBalance > 0).sort((a, b) => b.debtBalance - a.debtBalance), [customers]);
 
-  // ── Bluetooth Print (ESC/POS safe — uses N not ₦) ──
+  // ── Bluetooth Print ──
   const handlePrint = async () => {
     const p = (n: number) => `N${Math.round(n).toLocaleString()}`;
     try {
@@ -193,8 +203,10 @@ export const Reports: React.FC = () => {
         `Debt Issued:     ${p(metrics.debtSales)}\n`,
         `Debt Collected:  ${p(metrics.debtCollected)}\n`,
         `Bread Sold:      ${metrics.breadSold} units\n`, sep,
-        `OUR SHARE (10%): ${p(metrics.ourShare)}\n`,
+        `Our Share(10%):  ${p(metrics.ourShare)}\n`,
         `Bakery Owed(90%):${p(metrics.bakeryOwed)}\n`,
+        `Debt Credit:     -${p(metrics.debtCollected)}\n`,
+        `Net Bakery Pay:  ${p(metrics.netBakeryOwed)}\n`,
         `Our Expenses:    ${p(metrics.totalExpenses)}\n`, sep,
         `\x1BE\x01NET PROFIT: ${p(metrics.netProfit)}\x1BE\x00\n`, sep,
         `Outstanding Debt:${p(metrics.outstandingDebt)}\n`,
@@ -214,17 +226,19 @@ export const Reports: React.FC = () => {
     } catch { window.print(); }
   };
 
-  // ── WhatsApp Share ──
+  // ── Share ──
   const handleShare = () => {
     const text = `📊 *${appSettings.companyName || 'Bread App'} - ${period} Report*\n\n` +
       `💰 Total Sales: ${fmt(metrics.totalSales)}\n` +
       `✅ Cash: ${fmt(metrics.cashSales)} | 💳 Debt: ${fmt(metrics.debtSales)}\n` +
       `🍞 Bread Sold: ${metrics.breadSold} units\n\n` +
       `📈 *Our 10% Share: ${fmt(metrics.ourShare)}*\n` +
-      `🏭 Bakery Owed (90%): ${fmt(metrics.bakeryOwed)}\n` +
-      `💸 Expenses: ${fmt(metrics.totalExpenses)}\n` +
+      `💸 Our Expenses: ${fmt(metrics.totalExpenses)}\n` +
       `*💵 Net Profit: ${fmt(metrics.netProfit)}*\n\n` +
-      `⚠️ Outstanding Debt: ${fmt(metrics.outstandingDebt)}\n` +
+      `🏭 Bakery Owed (90%): ${fmt(metrics.bakeryOwed)}\n` +
+      `➖ Debt Collected: -${fmt(metrics.debtCollected)}\n` +
+      `*🏭 Net to Pay Bakery: ${fmt(metrics.netBakeryOwed)}*\n\n` +
+      `⚠️ Customer Debt: ${fmt(metrics.outstandingDebt)}\n` +
       `📦 Stock Value: ${fmt(metrics.stockRetailValue)}\n\n` +
       `🕐 ${new Date().toLocaleString()}`;
     if (navigator.share) {
@@ -241,7 +255,8 @@ export const Reports: React.FC = () => {
   });
   const tabStyle = (active: boolean): React.CSSProperties => ({
     flex: 1, padding: '10px 0', border: 'none', borderBottom: active ? '2px solid #4f46e5' : '2px solid transparent',
-    background: 'transparent', color: active ? '#4f46e5' : 'var(--text-secondary)', fontWeight: active ? 700 : 500, fontSize: '12px', cursor: 'pointer', transition: 'color 0.2s',
+    background: 'transparent', color: active ? '#4f46e5' : 'var(--text-secondary)',
+    fontWeight: active ? 700 : 500, fontSize: '12px', cursor: 'pointer', transition: 'color 0.2s',
   });
 
   return (
@@ -259,15 +274,15 @@ export const Reports: React.FC = () => {
       {/* Header */}
       <div className="no-print" style={{ padding: '16px 16px 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
         <div>
-          <h1 style={{ fontSize: '22px', fontWeight: 900, margin: 0 }}>📊 Records</h1>
+          <h1 style={{ fontSize: '22px', fontWeight: 900, margin: 0 }}>📊 {t('rep.title')}</h1>
           <p style={{ fontSize: '11px', color: 'var(--text-secondary)', margin: '2px 0 0' }}>{appSettings.companyName}</p>
         </div>
         <div style={{ display: 'flex', gap: '8px' }}>
           <button onClick={handleShare} style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '8px 12px', background: '#16a34a', color: '#fff', border: 'none', borderRadius: '10px', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}>
-            <Share2 size={13} /> Share
+            <Share2 size={13} /> {t('rep.share')}
           </button>
           <button onClick={handlePrint} style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '8px 12px', background: '#4f46e5', color: '#fff', border: 'none', borderRadius: '10px', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}>
-            <Printer size={13} /> Print
+            <Printer size={13} /> {t('rep.print')}
           </button>
         </div>
       </div>
@@ -275,64 +290,75 @@ export const Reports: React.FC = () => {
       {/* Period Pills */}
       <div className="no-print" style={{ display: 'flex', gap: '8px', overflowX: 'auto', padding: '0 16px 12px', scrollbarWidth: 'none' }}>
         {(['Today', 'Week', 'Month', 'All'] as Period[]).map(p => (
-          <button key={p} style={pillStyle(period === p)} onClick={() => setPeriod(p)}>{p}</button>
+          <button key={p} style={pillStyle(period === p)} onClick={() => setPeriod(p)}>{periodLabel[p]}</button>
         ))}
       </div>
 
-      {/* ── HERO: Net Profit ── */}
-      <div style={{ margin: '0 16px 16px', borderRadius: '22px', padding: '22px', background: metrics.netProfit >= 0 ? 'linear-gradient(135deg,#4f46e5,#7c3aed)' : 'linear-gradient(135deg,#b91c1c,#ef4444)', color: '#fff', position: 'relative', overflow: 'hidden' }}>
+      {/* Hero: Net Profit */}
+      <div style={{ margin: '0 16px 12px', borderRadius: '22px', padding: '22px', background: metrics.netProfit >= 0 ? 'linear-gradient(135deg,#4f46e5,#7c3aed)' : 'linear-gradient(135deg,#b91c1c,#ef4444)', color: '#fff', position: 'relative', overflow: 'hidden' }}>
         <div style={{ position: 'absolute', top: -20, right: -20, width: 110, height: 110, borderRadius: '50%', background: 'rgba(255,255,255,0.07)' }} />
         <div style={{ position: 'absolute', top: '50%', right: 20, transform: 'translateY(-50%)', opacity: 0.08 }}><DollarSign size={80} /></div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px', opacity: 0.85, fontSize: '12px', fontWeight: 600 }}>
           {metrics.netProfit >= 0 ? <TrendingUp size={15} /> : <TrendingDown size={15} />}
-          Ribar Mu (Net Profit) · {period}
+          {t('rep.netProfit')} · {periodLabel[period]}
         </div>
         <div style={{ fontSize: '38px', fontWeight: 900, letterSpacing: '-1px', marginBottom: '4px' }}>{fmt(metrics.netProfit)}</div>
-        <div style={{ fontSize: '12px', opacity: 0.75, marginBottom: '14px' }}>Gross: {fmt(metrics.ourShare)} (10%) · Expenses: {fmt(metrics.totalExpenses)}</div>
-        {/* 10% / 90% split breakdown */}
+        <div style={{ fontSize: '12px', opacity: 0.75, marginBottom: '14px' }}>{t('rep.ourShare')}: {fmt(metrics.ourShare)} — Expenses: {fmt(metrics.totalExpenses)}</div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px', borderTop: '1px solid rgba(255,255,255,0.2)', paddingTop: '14px' }}>
-          <div>
-            <div style={{ fontSize: '10px', opacity: 0.7, marginBottom: 2 }}>Jimillar Sales</div>
-            <div style={{ fontSize: '15px', fontWeight: 700 }}>{fmt(metrics.totalSales)}</div>
-          </div>
-          <div>
-            <div style={{ fontSize: '10px', opacity: 0.7, marginBottom: 2 }}>Rabinmu 10%</div>
-            <div style={{ fontSize: '15px', fontWeight: 700 }}>{fmt(metrics.ourShare)}</div>
-          </div>
-          <div>
-            <div style={{ fontSize: '10px', opacity: 0.7, marginBottom: 2 }}>Bakery 90%</div>
-            <div style={{ fontSize: '15px', fontWeight: 700 }}>{fmt(metrics.bakeryOwed)}</div>
-          </div>
+          <div><div style={{ fontSize: '10px', opacity: 0.7, marginBottom: 2 }}>Total Sales</div><div style={{ fontSize: '15px', fontWeight: 700 }}>{fmt(metrics.totalSales)}</div></div>
+          <div><div style={{ fontSize: '10px', opacity: 0.7, marginBottom: 2 }}>10% Ours</div><div style={{ fontSize: '15px', fontWeight: 700 }}>{fmt(metrics.ourShare)}</div></div>
+          <div><div style={{ fontSize: '10px', opacity: 0.7, marginBottom: 2 }}>Bakery 90%</div><div style={{ fontSize: '15px', fontWeight: 700 }}>{fmt(metrics.bakeryOwed)}</div></div>
         </div>
       </div>
 
-      {/* ── BAKERY OWED ALERT CARD ── */}
-      <div style={{ margin: '0 16px 16px', borderRadius: '16px', padding: '16px 20px', background: '#78350f12', border: '1.5px solid #92400e40', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-            <Building2 size={15} color='#92400e' />
-            <span style={{ fontSize: '11px', fontWeight: 700, color: '#92400e', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Kuɗin Bakery / Supplier</span>
+      {/* Bakery Owed Card with Debt Deduction */}
+      <div style={{ margin: '0 16px 16px', borderRadius: '16px', overflow: 'hidden', border: '1.5px solid #92400e40' }}>
+        {/* Main bakery owed row */}
+        <div style={{ background: '#78350f12', padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+              <Building2 size={15} color='#92400e' />
+              <span style={{ fontSize: '11px', fontWeight: 700, color: '#92400e', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{t('rep.bakeryOwed')}</span>
+            </div>
+            <div style={{ fontSize: '26px', fontWeight: 900, color: '#92400e' }}>{fmt(metrics.bakeryOwed)}</div>
+            <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: 2 }}>{t('rep.bakeryNote')}</div>
           </div>
-          <div style={{ fontSize: '26px', fontWeight: 900, color: '#92400e' }}>{fmt(metrics.bakeryOwed)}</div>
-          <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: 2 }}>90% na {fmt(metrics.totalSales)} sales</div>
+          <div style={{ textAlign: 'right' }}>
+            <Percent size={28} color='#92400e40' />
+            <div style={{ fontSize: '28px', fontWeight: 900, color: '#92400e60' }}>90</div>
+          </div>
         </div>
-        <div style={{ textAlign: 'right' }}>
-          <Percent size={32} color='#92400e40' />
-          <div style={{ fontSize: '32px', fontWeight: 900, color: '#92400e60' }}>90</div>
+        {/* Debt deduction row */}
+        {metrics.debtCollected > 0 && (
+          <div style={{ background: '#16a34a08', borderTop: '1px solid #16a34a20', padding: '12px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <MinusCircle size={16} color='#16a34a' />
+              <div>
+                <div style={{ fontSize: '12px', fontWeight: 700, color: '#16a34a' }}>{t('rep.debtDeducted')}</div>
+                <div style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>Collected from customers → goes to bakery</div>
+              </div>
+            </div>
+            <div style={{ fontSize: '16px', fontWeight: 800, color: '#16a34a' }}>-{fmt(metrics.debtCollected)}</div>
+          </div>
+        )}
+        {/* Net to pay */}
+        <div style={{ background: metrics.netBakeryOwed > 0 ? '#dc262608' : '#16a34a08', borderTop: '1px dashed var(--border-color)', padding: '12px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-color)' }}>{t('rep.netBakeryOwed')}</div>
+          <div style={{ fontSize: '20px', fontWeight: 900, color: metrics.netBakeryOwed > 0 ? '#dc2626' : '#16a34a' }}>{fmt(metrics.netBakeryOwed)}</div>
         </div>
       </div>
 
       {/* Tabs */}
       <div className="no-print" style={{ display: 'flex', borderBottom: '1px solid var(--border-color)', margin: '0 16px 16px', overflowX: 'auto', scrollbarWidth: 'none' }}>
         {([
-          { id: 'overview', icon: BarChart2, label: 'Overview' },
-          { id: 'transactions', icon: Receipt, label: 'Sales' },
-          { id: 'products', icon: Package, label: 'Kayan' },
-          { id: 'expenses', icon: ArrowDownRight, label: 'Kashe' },
-          { id: 'debts', icon: CreditCard, label: 'Bashi' },
-        ] as { id: Tab; icon: any; label: string }[]).map(tab => (
+          { id: 'overview', icon: BarChart2, key: 'rep.tab.overview' },
+          { id: 'transactions', icon: Receipt, key: 'rep.tab.sales' },
+          { id: 'products', icon: Package, key: 'rep.tab.products' },
+          { id: 'expenses', icon: ArrowDownRight, key: 'rep.tab.expenses' },
+          { id: 'debts', icon: CreditCard, key: 'rep.tab.debts' },
+        ] as { id: Tab; icon: any; key: string }[]).map(tab => (
           <button key={tab.id} style={{ ...tabStyle(activeTab === tab.id), minWidth: 60, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }} onClick={() => setActiveTab(tab.id)}>
-            <tab.icon size={12} />{tab.label}
+            <tab.icon size={12} />{t(tab.key)}
           </button>
         ))}
       </div>
@@ -344,90 +370,87 @@ export const Reports: React.FC = () => {
           <div style={{ background: 'var(--surface-color)', border: '1px solid var(--border-color)', borderRadius: '18px', padding: '16px', marginBottom: '14px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
               <div>
-                <div style={{ fontWeight: 700, fontSize: '13px' }}>{period === 'Today' ? '⏰ Yau da Awa' : '📅 Kwana 7'}</div>
-                <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>{period === 'Today' ? 'Sales kowane awa 2' : 'Revenue na kwana 7'}</div>
+                <div style={{ fontWeight: 700, fontSize: '13px' }}>{period === 'Today' ? t('rep.chartHourly') : t('rep.chart7day')}</div>
+                <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>{period === 'Today' ? t('rep.chartHourlySub') : t('rep.chart7daySub')}</div>
               </div>
               <div style={{ fontSize: '13px', fontWeight: 800, color: '#4f46e5' }}>{fmt(period === 'Today' ? metrics.totalSales : weekTrend.reduce((s, d) => s + d.value, 0))}</div>
             </div>
             <MiniBar data={period === 'Today' ? hourlyTrend : weekTrend} color={period === 'Today' ? '#7c3aed' : '#4f46e5'} />
           </div>
 
-          {/* Our 10% vs Bakery 90% Visual */}
+          {/* Revenue Split Visual */}
           <div style={{ background: 'var(--surface-color)', border: '1px solid var(--border-color)', borderRadius: '18px', padding: '16px', marginBottom: '14px' }}>
-            <div style={{ fontWeight: 700, fontSize: '13px', marginBottom: '10px' }}>💰 Rabon Kuɗi</div>
+            <div style={{ fontWeight: 700, fontSize: '13px', marginBottom: '10px' }}>💰 {t('rep.splitTitle')}</div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
               <div style={{ background: '#4f46e510', borderRadius: '12px', padding: '12px', textAlign: 'center' }}>
-                <div style={{ fontSize: '11px', color: '#4f46e5', fontWeight: 700, marginBottom: 4 }}>RABINMU (10%)</div>
+                <div style={{ fontSize: '11px', color: '#4f46e5', fontWeight: 700, marginBottom: 4 }}>{t('rep.us')}</div>
                 <div style={{ fontSize: '20px', fontWeight: 900, color: '#4f46e5' }}>{fmt(metrics.ourShare)}</div>
               </div>
               <div style={{ background: '#92400e10', borderRadius: '12px', padding: '12px', textAlign: 'center' }}>
-                <div style={{ fontSize: '11px', color: '#92400e', fontWeight: 700, marginBottom: 4 }}>BAKERY (90%)</div>
+                <div style={{ fontSize: '11px', color: '#92400e', fontWeight: 700, marginBottom: 4 }}>{t('rep.bakery90')}</div>
                 <div style={{ fontSize: '20px', fontWeight: 900, color: '#92400e' }}>{fmt(metrics.bakeryOwed)}</div>
               </div>
             </div>
-            {/* Bar showing split */}
             <div style={{ height: '10px', borderRadius: '999px', overflow: 'hidden', display: 'flex', marginTop: '12px', gap: '2px' }}>
               <div style={{ width: '10%', background: '#4f46e5', borderRadius: '999px 0 0 999px' }} />
               <div style={{ flex: 1, background: '#92400e', borderRadius: '0 999px 999px 0' }} />
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4, fontSize: '10px', color: 'var(--text-secondary)' }}>
-              <span style={{ color: '#4f46e5', fontWeight: 700 }}>Mu 10%</span>
-              <span style={{ color: '#92400e', fontWeight: 700 }}>Bakery 90%</span>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4, fontSize: '10px' }}>
+              <span style={{ color: '#4f46e5', fontWeight: 700 }}>{t('rep.us')}</span>
+              <span style={{ color: '#92400e', fontWeight: 700 }}>{t('rep.bakery90')}</span>
             </div>
           </div>
 
           {/* Cash Flow */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '14px' }}>
             <div style={{ background: '#16a34a12', border: '1px solid #16a34a30', borderRadius: '14px', padding: '14px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}><ArrowUpRight size={15} color="#16a34a" /><span style={{ fontSize: '11px', color: '#16a34a', fontWeight: 700 }}>CASH IN</span></div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}><ArrowUpRight size={15} color="#16a34a" /><span style={{ fontSize: '11px', color: '#16a34a', fontWeight: 700 }}>{t('rep.cashIn')}</span></div>
               <div style={{ fontSize: '20px', fontWeight: 800, color: '#16a34a' }}>{fmt(metrics.cashSales + metrics.debtCollected)}</div>
-              <div style={{ fontSize: '10px', color: 'var(--text-secondary)', marginTop: 4 }}>Sales + Debt Collected</div>
+              <div style={{ fontSize: '10px', color: 'var(--text-secondary)', marginTop: 4 }}>{t('rep.cashInSub')}</div>
             </div>
             <div style={{ background: '#dc262612', border: '1px solid #dc262630', borderRadius: '14px', padding: '14px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}><ArrowDownRight size={15} color="#dc2626" /><span style={{ fontSize: '11px', color: '#dc2626', fontWeight: 700 }}>KASHE</span></div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}><ArrowDownRight size={15} color="#dc2626" /><span style={{ fontSize: '11px', color: '#dc2626', fontWeight: 700 }}>{t('rep.cashOut')}</span></div>
               <div style={{ fontSize: '20px', fontWeight: 800, color: '#dc2626' }}>{fmt(metrics.totalExpenses)}</div>
-              <div style={{ fontSize: '10px', color: 'var(--text-secondary)', marginTop: 4 }}>Kashe-kashen mu</div>
             </div>
           </div>
 
-          {/* KPI Grid */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '14px' }}>
-            <StatCard label="Cash Sales" value={fmt(metrics.cashSales)} icon={Wallet} color="#16a34a" sub={`${filteredTxs.filter(t => t.type === 'Cash').length} sales`} />
-            <StatCard label="Debt Issued" value={fmt(metrics.debtSales)} icon={CreditCard} color="#dc2626" sub={`${filteredTxs.filter(t => t.type === 'Debt').length} sales`} />
-            <StatCard label="Debt Collected" value={fmt(metrics.debtCollected)} icon={RefreshCw} color="#0891b2" />
-            <StatCard label="Bread Sold" value={`${metrics.breadSold}`} icon={ShoppingBag} color="#7c3aed" sub={`Avg ${fmt(metrics.avgSaleValue)}/sale`} />
+            <StatCard label={t('rep.cashSales')} value={fmt(metrics.cashSales)} icon={Wallet} color="#16a34a" sub={`${filteredTxs.filter(tx => tx.type === 'Cash').length} sales`} />
+            <StatCard label={t('rep.debtIssued')} value={fmt(metrics.debtSales)} icon={CreditCard} color="#dc2626" sub={`${filteredTxs.filter(tx => tx.type === 'Debt').length} sales`} />
+            <StatCard label={t('rep.debtCollected')} value={fmt(metrics.debtCollected)} icon={RefreshCw} color="#0891b2" />
+            <StatCard label={t('rep.breadSold')} value={`${metrics.breadSold} ${t('rep.units')}`} icon={ShoppingBag} color="#7c3aed" sub={`${t('rep.avgSale')}: ${fmt(metrics.avgSaleValue)}`} />
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '14px' }}>
-            <StatCard label="Bashi na Kwastoma" value={fmt(metrics.outstandingDebt)} icon={AlertTriangle} color="#d97706" onClick={() => setActiveTab('debts')} />
-            <StatCard label="Returns Value" value={fmt(metrics.totalReturnsValue)} icon={TrendingDown} color="#6b7280" />
+            <StatCard label={t('rep.customerDebt')} value={fmt(metrics.outstandingDebt)} icon={AlertTriangle} color="#d97706" onClick={() => setActiveTab('debts')} />
+            <StatCard label={t('rep.returns')} value={fmt(metrics.totalReturnsValue)} icon={TrendingDown} color="#6b7280" />
           </div>
-          <StatCard label="Stock Retail Value" value={fmt(metrics.stockRetailValue)} icon={Package} color="#4f46e5"
-            sub={`${products.filter(p => p.active).reduce((s, p) => s + p.stock, 0)} units · ${products.filter(p => p.active).length} products`} />
+          <StatCard label={t('rep.stockValue')} value={fmt(metrics.stockRetailValue)} icon={Package} color="#4f46e5"
+            sub={`${products.filter(p => p.active).reduce((s, p) => s + p.stock, 0)} ${t('rep.units')} · ${products.filter(p => p.active).length} products`} />
           <div style={{ marginTop: '10px', marginBottom: '14px' }}>
-            <StatCard label="Kwastoma" value={customers.length} icon={Users} color="#0891b2"
-              sub={`${customers.filter(c => c.debtBalance > 0).length} da bashi · ${customers.filter(c => c.debtBalance === 0).length} sun biya`}
+            <StatCard label={t('rep.customers')} value={customers.length} icon={Users} color="#0891b2"
+              sub={`${customers.filter(c => c.debtBalance > 0).length} ${t('rep.debtors')} · ${customers.filter(c => c.debtBalance === 0).length} ${t('rep.cleared')}`}
               onClick={() => navigate('/customers')} />
           </div>
         </div>
       )}
 
-      {/* ══════ SALES TAB ══════ */}
+      {/* ══════ SALES ══════ */}
       {activeTab === 'transactions' && (
         <div style={{ padding: '0 16px' }}>
           <div style={{ display: 'flex', alignItems: 'center', background: 'var(--surface-color)', border: '1px solid var(--border-color)', borderRadius: '12px', padding: '10px 14px', gap: '8px', marginBottom: '10px' }}>
             <Search size={15} color="var(--text-secondary)" />
-            <input value={txSearch} onChange={e => setTxSearch(e.target.value)} placeholder="Nemi kwastoma ko kaya..."
+            <input value={txSearch} onChange={e => setTxSearch(e.target.value)} placeholder={t('rep.search')}
               style={{ border: 'none', background: 'transparent', outline: 'none', flex: 1, fontSize: '13px', color: 'var(--text-color)' }} />
           </div>
           <div style={{ display: 'flex', gap: '8px', marginBottom: '14px', alignItems: 'center' }}>
             {(['All', 'Cash', 'Debt'] as const).map(f => (
               <button key={f} style={pillStyle(txTypeFilter === f, f === 'Cash' ? '#16a34a' : f === 'Debt' ? '#dc2626' : '#4f46e5')} onClick={() => setTxTypeFilter(f)}>{f}</button>
             ))}
-            <span style={{ marginLeft: 'auto', fontSize: '12px', color: 'var(--text-secondary)' }}>{displayedTxs.length} records</span>
+            <span style={{ marginLeft: 'auto', fontSize: '12px', color: 'var(--text-secondary)' }}>{displayedTxs.length} {t('rep.records')}</span>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
             {displayedTxs.length === 0 ? (
-              <div style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '32px' }}>Babu transactions</div>
+              <div style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '32px' }}>{t('rep.noTx')}</div>
             ) : displayedTxs.map(tx => (
               <div key={tx.id} onClick={() => navigate(`/receipt/${tx.id}`)}
                 style={{ background: 'var(--surface-color)', border: '1px solid var(--border-color)', borderRadius: '14px', padding: '14px', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px' }}>
@@ -450,12 +473,12 @@ export const Reports: React.FC = () => {
         </div>
       )}
 
-      {/* ══════ PRODUCTS TAB ══════ */}
+      {/* ══════ PRODUCTS ══════ */}
       {activeTab === 'products' && (
         <div style={{ padding: '0 16px' }}>
-          <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '12px' }}>Kayan da aka siyar da yawa</div>
+          <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '12px' }}>{t('rep.bestSelling')}</div>
           {productStats.length === 0 ? (
-            <div style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '32px' }}>Babu bayani</div>
+            <div style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '32px' }}>{t('rep.noProducts')}</div>
           ) : productStats.map((ps, idx) => {
             const totalRev = productStats.reduce((s, p) => s + p.revenue, 1);
             const pct = Math.round((ps.revenue / totalRev) * 100);
@@ -468,7 +491,7 @@ export const Reports: React.FC = () => {
                     </div>
                     <div>
                       <div style={{ fontWeight: 700, fontSize: '14px' }}>{ps.name}</div>
-                      <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>{ps.qty} units · ₦{ps.price.toLocaleString()} each</div>
+                      <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>{ps.qty} {t('rep.units')} · ₦{ps.price.toLocaleString()} each</div>
                     </div>
                   </div>
                   <div style={{ textAlign: 'right' }}>
@@ -480,8 +503,8 @@ export const Reports: React.FC = () => {
                   <div style={{ height: '100%', width: `${pct}%`, background: idx === 0 ? 'linear-gradient(90deg,#f59e0b,#fbbf24)' : 'linear-gradient(90deg,#4f46e5,#7c3aed)', borderRadius: '999px' }} />
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '6px', fontSize: '10px', color: 'var(--text-secondary)' }}>
-                  <span>Stock: {ps.stock} units</span>
-                  <span style={{ color: ps.stock < 20 ? '#dc2626' : '#16a34a', fontWeight: 700 }}>{ps.stock < 20 ? '⚠ Low Stock' : '✓ OK'}</span>
+                  <span>{t('rep.stock')}: {ps.stock} {t('rep.units')}</span>
+                  <span style={{ color: ps.stock < 20 ? '#dc2626' : '#16a34a', fontWeight: 700 }}>{ps.stock < 20 ? t('rep.lowStock') : t('rep.okStock')}</span>
                 </div>
               </div>
             );
@@ -489,18 +512,18 @@ export const Reports: React.FC = () => {
         </div>
       )}
 
-      {/* ══════ EXPENSES TAB ══════ */}
+      {/* ══════ EXPENSES ══════ */}
       {activeTab === 'expenses' && (
         <div style={{ padding: '0 16px' }}>
           <div style={{ background: '#dc262612', border: '1px solid #dc262630', borderRadius: '16px', padding: '16px', marginBottom: '14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
-              <div style={{ fontSize: '11px', color: '#dc2626', fontWeight: 700, marginBottom: 4 }}>JIMILLAR KASHE · {period}</div>
+              <div style={{ fontSize: '11px', color: '#dc2626', fontWeight: 700, marginBottom: 4 }}>{t('rep.totalExpenses')} · {periodLabel[period]}</div>
               <div style={{ fontSize: '28px', fontWeight: 900, color: '#dc2626' }}>{fmt(metrics.totalExpenses)}</div>
             </div>
             <ArrowDownRight size={40} color="#dc262630" />
           </div>
           {filteredExps.length === 0 ? (
-            <div style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '32px' }}>Babu kashe-kashe</div>
+            <div style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '32px' }}>{t('rep.noExpenses')}</div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               {[...filteredExps].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map(exp => (
@@ -517,19 +540,19 @@ export const Reports: React.FC = () => {
         </div>
       )}
 
-      {/* ══════ DEBTS TAB ══════ */}
+      {/* ══════ DEBTS ══════ */}
       {activeTab === 'debts' && (
         <div style={{ padding: '0 16px' }}>
           <div style={{ background: '#d9770612', border: '1px solid #d9770630', borderRadius: '16px', padding: '16px', marginBottom: '14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
-              <div style={{ fontSize: '11px', color: '#d97706', fontWeight: 700, marginBottom: 4 }}>JIMILLAR BASHI NA KWASTOMA</div>
+              <div style={{ fontSize: '11px', color: '#d97706', fontWeight: 700, marginBottom: 4 }}>{t('rep.totalDebt')}</div>
               <div style={{ fontSize: '28px', fontWeight: 900, color: '#d97706' }}>{fmt(metrics.outstandingDebt)}</div>
-              <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: 4 }}>{debtors.length} kwastoma suna da bashi</div>
+              <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: 4 }}>{debtors.length} {t('rep.debtCount')}</div>
             </div>
             <AlertTriangle size={40} color="#d9770630" />
           </div>
           {debtors.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '32px', fontSize: '14px', color: '#16a34a', fontWeight: 700 }}>🎉 Babu bashi!</div>
+            <div style={{ textAlign: 'center', padding: '32px', fontSize: '14px', color: '#16a34a', fontWeight: 700 }}>{t('rep.noDebt')}</div>
           ) : debtors.map(c => {
             const pct = Math.min(100, Math.round((c.debtBalance / metrics.outstandingDebt) * 100));
             return (
@@ -547,13 +570,13 @@ export const Reports: React.FC = () => {
                   </div>
                   <div style={{ textAlign: 'right' }}>
                     <div style={{ fontWeight: 800, fontSize: '16px', color: '#dc2626' }}>{fmt(c.debtBalance)}</div>
-                    <div style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>{pct}% na jimillar</div>
+                    <div style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>{pct}% {t('rep.ofTotal')}</div>
                   </div>
                 </div>
                 <div style={{ height: '4px', background: 'var(--border-color)', borderRadius: '999px', overflow: 'hidden' }}>
                   <div style={{ height: '100%', width: `${pct}%`, background: 'linear-gradient(90deg,#d97706,#f59e0b)', borderRadius: '999px' }} />
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 6, fontSize: '11px', color: '#4f46e5', fontWeight: 600 }}>View Profile →</div>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 6, fontSize: '11px', color: '#4f46e5', fontWeight: 600 }}>{t('rep.viewProfile')}</div>
               </div>
             );
           })}
