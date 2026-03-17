@@ -230,7 +230,7 @@ export const Customers: React.FC = () => {
           />
         </div>
         <button 
-          className="btn btn-outline text-primary border-primary flex items-center justify-center shadow-sm"
+          className="btn btn-outline text-primary border-primary flex items-center justify-center shadow-sm flex-shrink-0"
           style={{ width: '3rem', padding: 0 }}
           onClick={() => setShowScanner(true)}
         >

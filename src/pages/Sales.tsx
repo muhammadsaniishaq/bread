@@ -246,9 +246,10 @@ export const Sales: React.FC = () => {
               <button 
                 type="button" 
                 onClick={() => setShowScanner(true)}
-                className="btn btn-sm btn-outline text-primary border-primary flex items-center gap-1 px-2 py-1 shadow-sm"
+                className="btn btn-sm btn-outline text-primary border-primary flex items-center gap-1 px-3 py-2 shadow-sm whitespace-nowrap"
+                style={{ flexShrink: 0, fontSize: '0.75rem' }}
               >
-                <Camera size={14} /> Scan ID
+                <Camera size={16} /> Scan
               </button>
             </div>
             <select 

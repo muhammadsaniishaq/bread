@@ -204,11 +204,11 @@ export const CustomerIDAndCert: React.FC = () => {
                     </div>
                   </div>
                 </div>
+              </div>
 
-                {/* Bottom Bar */}
-                <div style={{ height: '24px', width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', marginTop: 'auto', borderTop: '1px solid rgba(78, 52, 46, 0.2)' }}>
-                    <span style={{ fontSize: '7px', fontWeight: 'bold', letterSpacing: '0.1em', textTransform: 'uppercase', opacity: 0.7 }}>Valid & Verified</span>
-                </div>
+              {/* Bottom Bar */}
+              <div style={{ height: '24px', width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', marginTop: 'auto', borderTop: '1px solid rgba(78, 52, 46, 0.2)' }}>
+                  <span style={{ fontSize: '7px', fontWeight: 'bold', letterSpacing: '0.1em', textTransform: 'uppercase', opacity: 0.7 }}>Valid & Verified</span>
               </div>
             </div>
           </div>
