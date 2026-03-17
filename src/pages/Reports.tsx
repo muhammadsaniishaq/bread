@@ -117,16 +117,24 @@ export const Reports: React.FC = () => {
       return true;
     }).reduce((s, dp) => s + dp.amount, 0);
 
-    // Net bakery payment = 90% owed - Debt Issued (no cash yet) + Debt Collected (cash received today)
-    const netBakeryOwed = Math.max(0, bakeryOwed - debtSales + debtCollected);
+    // Amount paid to the company in this period
+    const companyPaid = bakeryPayments.filter(bp => {
+      if (period === 'Today') return bp.date.startsWith(todayStr);
+      if (period === 'Week') return new Date(bp.date) >= weekAgo;
+      if (period === 'Month') return new Date(bp.date) >= monthAgo;
+      return true;
+    }).reduce((s, bp) => s + bp.amount, 0);
+
+    // Remaining Balance = 90% owed - Debt Issued (no cash yet) + Debt Collected (cash received today) - Already Paid to Company
+    const netBakeryOwed = Math.max(0, bakeryOwed - debtSales + debtCollected - companyPaid);
 
     return {
       totalSales, cashSales, debtSales, totalExpenses, breadSold,
-      ourShare, bakeryOwed, netBakeryOwed, netProfit,
+      ourShare, bakeryOwed, companyPaid, netBakeryOwed, netProfit,
       outstandingDebt, stockRetailValue, txCount, avgSaleValue,
       debtCollected, totalReturnsValue,
     };
-  }, [filteredTxs, filteredExps, filteredLogs, customers, products, debtPayments, period]);
+  }, [filteredTxs, filteredExps, filteredLogs, customers, products, debtPayments, bakeryPayments, period]);
 
   // ── Product Performance ──
   const productStats = useMemo(() => {
@@ -200,14 +208,13 @@ export const Reports: React.FC = () => {
         `\x1Ba\x00`,
         `Total Sales:     ${p(metrics.totalSales)}\n`,
         `Cash Sales:      ${p(metrics.cashSales)}\n`,
-        `Debt Issued:     ${p(metrics.debtSales)}\n`,
-        `Debt Collected:  ${p(metrics.debtCollected)}\n`,
         `Bread Sold:      ${metrics.breadSold} units\n`, sep,
         `Our Share(10%):  ${p(metrics.ourShare)}\n`,
         `Bakery Owed(90%):${p(metrics.bakeryOwed)}\n`,
         `Debt Issued:     -${p(metrics.debtSales)}\n`,
         `Debt Collected:  +${p(metrics.debtCollected)}\n`,
-        `Net Bakery Pay:  ${p(metrics.netBakeryOwed)}\n`,
+        `Company Paid:    -${p(metrics.companyPaid)}\n`,
+        `Remaining Bal:   ${p(metrics.netBakeryOwed)}\n`,
         `Our Expenses:    ${p(metrics.totalExpenses)}\n`, sep,
         `\x1BE\x01NET PROFIT: ${p(metrics.netProfit)}\x1BE\x00\n`, sep,
         `Outstanding Debt:${p(metrics.outstandingDebt)}\n`,
@@ -236,10 +243,14 @@ export const Reports: React.FC = () => {
       `📈 *Our 10% Share: ${fmt(metrics.ourShare)}*\n` +
       `💸 Our Expenses: ${fmt(metrics.totalExpenses)}\n` +
       `*💵 Net Profit: ${fmt(metrics.netProfit)}*\n\n` +
-      `🏭 Bakery Owed (90%): ${fmt(metrics.bakeryOwed)}\n` +
+      `=========================\n` +
+      `🏭 Total Sales (100%): ${fmt(metrics.totalSales)}\n` +
+      `📉 Bakery Share (90%): ${fmt(metrics.bakeryOwed)}\n` +
       `➖ Debt Issued: -${fmt(metrics.debtSales)}\n` +
       `➕ Debt Collected: +${fmt(metrics.debtCollected)}\n` +
-      `*🏭 Net to Pay Bakery: ${fmt(metrics.netBakeryOwed)}*\n\n` +
+      `💸 Paid to Company: -${fmt(metrics.companyPaid)}\n` +
+      `*⚠️ Remaining Balance: ${fmt(metrics.netBakeryOwed)}*\n` +
+      `=========================\n\n` +
       `⚠️ Customer Debt: ${fmt(metrics.outstandingDebt)}\n` +
       `📦 Stock Value: ${fmt(metrics.stockRetailValue)}\n\n` +
       `🕐 ${new Date().toLocaleString()}`;
@@ -313,53 +324,67 @@ export const Reports: React.FC = () => {
         </div>
       </div>
 
-      {/* Bakery Owed Card with Debt Deduction */}
+      {/* 4-Step Company Balance Flow */}
       <div style={{ margin: '0 16px 16px', borderRadius: '16px', overflow: 'hidden', border: '1.5px solid #92400e40' }}>
-        {/* Main bakery owed row */}
-        <div style={{ background: '#78350f12', padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        
+        {/* Step 1: Total Sales */}
+        <div style={{ background: '#78350f08', padding: '12px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #92400e15' }}>
+          <div>
+            <div style={{ fontSize: '12px', fontWeight: 700, color: '#92400e' }}>1. {t('rep.totalSales100')}</div>
+          </div>
+          <div style={{ fontSize: '16px', fontWeight: 800, color: '#92400e' }}>{fmt(metrics.totalSales)}</div>
+        </div>
+
+        {/* Step 2: Bakery Share (90%) */}
+        <div style={{ background: '#78350f15', padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
               <Building2 size={15} color='#92400e' />
-              <span style={{ fontSize: '11px', fontWeight: 700, color: '#92400e', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{t('rep.bakeryOwed')}</span>
+              <span style={{ fontSize: '12px', fontWeight: 700, color: '#92400e', textTransform: 'uppercase', letterSpacing: '0.5px' }}>2. {t('rep.bakeryShare90')}</span>
             </div>
-            <div style={{ fontSize: '26px', fontWeight: 900, color: '#92400e' }}>{fmt(metrics.bakeryOwed)}</div>
+            <div style={{ fontSize: '24px', fontWeight: 900, color: '#92400e' }}>{fmt(metrics.bakeryOwed)}</div>
             <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: 2 }}>{t('rep.bakeryNote')}</div>
           </div>
           <div style={{ textAlign: 'right' }}>
-            <Percent size={28} color='#92400e40' />
-            <div style={{ fontSize: '28px', fontWeight: 900, color: '#92400e60' }}>90</div>
+            <Percent size={28} color='#92400e30' />
           </div>
         </div>
+
         {/* Debt Issued row (Deduction) */}
         {metrics.debtSales > 0 && (
-          <div style={{ background: '#dc262608', borderTop: '1px solid #dc262620', padding: '12px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ background: '#dc262608', borderTop: '1px dashed #dc262630', padding: '10px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <MinusCircle size={16} color='#dc2626' />
-              <div>
-                <div style={{ fontSize: '12px', fontWeight: 700, color: '#dc2626' }}>{t('rep.debtIssuedDeduct')}</div>
-                <div style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>{t('rep.debtIssuedNote')}</div>
-              </div>
+              <MinusCircle size={14} color='#dc2626' />
+              <div style={{ fontSize: '11px', fontWeight: 700, color: '#dc2626' }}>{t('rep.debtIssuedDeduct')}</div>
             </div>
-            <div style={{ fontSize: '16px', fontWeight: 800, color: '#dc2626' }}>-{fmt(metrics.debtSales)}</div>
+            <div style={{ fontSize: '13px', fontWeight: 800, color: '#dc2626' }}>-{fmt(metrics.debtSales)}</div>
           </div>
         )}
+        
         {/* Debt Collected row (Addition) */}
         {metrics.debtCollected > 0 && (
-          <div style={{ background: '#16a34a08', borderTop: '1px solid #16a34a20', padding: '12px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ background: '#16a34a08', borderTop: '1px dashed #16a34a30', padding: '10px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <PlusCircle size={16} color='#16a34a' />
-              <div>
-                <div style={{ fontSize: '12px', fontWeight: 700, color: '#16a34a' }}>{t('rep.debtCollectedAdd')}</div>
-                <div style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>{t('rep.debtCollectedNote')}</div>
-              </div>
+              <PlusCircle size={14} color='#16a34a' />
+              <div style={{ fontSize: '11px', fontWeight: 700, color: '#16a34a' }}>{t('rep.debtCollectedAdd')}</div>
             </div>
-            <div style={{ fontSize: '16px', fontWeight: 800, color: '#16a34a' }}>+{fmt(metrics.debtCollected)}</div>
+            <div style={{ fontSize: '13px', fontWeight: 800, color: '#16a34a' }}>+{fmt(metrics.debtCollected)}</div>
           </div>
         )}
-        {/* Net to pay */}
-        <div style={{ background: metrics.netBakeryOwed > 0 ? '#dc262608' : '#16a34a08', borderTop: '1px dashed var(--border-color)', padding: '12px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-color)' }}>{t('rep.netBakeryOwed')}</div>
-          <div style={{ fontSize: '20px', fontWeight: 900, color: metrics.netBakeryOwed > 0 ? '#dc2626' : '#16a34a' }}>{fmt(metrics.netBakeryOwed)}</div>
+
+        {/* Step 3: Amount Paid */}
+        <div style={{ background: '#f59e0b10', borderTop: '1px solid #92400e15', padding: '14px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <div style={{ fontSize: '12px', fontWeight: 700, color: '#d97706' }}>3. {t('rep.companyPaid')}</div>
+            <div style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>Amount sent to bakery this period</div>
+          </div>
+          <div style={{ fontSize: '18px', fontWeight: 800, color: '#d97706' }}>-{fmt(metrics.companyPaid)}</div>
+        </div>
+
+        {/* Step 4: Remaining Balance */}
+        <div style={{ background: metrics.netBakeryOwed > 0 ? '#dc262615' : '#16a34a15', borderTop: '2px solid #92400e20', padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ fontSize: '14px', fontWeight: 800, color: 'var(--text-color)' }}>4. {t('rep.remainingBalance')}</div>
+          <div style={{ fontSize: '24px', fontWeight: 900, color: metrics.netBakeryOwed > 0 ? '#dc2626' : '#16a34a' }}>{fmt(metrics.netBakeryOwed)}</div>
         </div>
       </div>
 
