@@ -308,8 +308,11 @@ export const CustomerReceipt: React.FC = () => {
             </div>
           </div>
 
-          <div className="flex justify-center mb-4 p-2 bg-white inline-block border border-gray-200 rounded mx-auto" style={{ width: 'fit-content' }}>
-            <QRCode value={`payment:${payment.id}`} size={64} level="L" />
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', margin: '0 0 16px 0' }}>
+            <div style={{ padding: '10px', background: '#fff', border: '2px solid #000', borderRadius: '6px', display: 'inline-block' }}>
+              <QRCode value={`payment:${payment.id}`} size={100} level="M" />
+            </div>
+            <p style={{ fontSize: '9px', fontFamily: 'monospace', color: '#555', margin: 0 }}>Scan to view payment receipt</p>
           </div>
 
           <div className="text-center text-xs text-gray-500 mt-4">

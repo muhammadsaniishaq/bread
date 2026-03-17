@@ -223,10 +223,14 @@ export const BakeryReceipt: React.FC = () => {
               <span>Current Outstanding Balance:</span>
               <span className="font-bold">₦{currentBalance.toLocaleString()}</span>
             </div>
-            <div className="flex justify-center mt-6" style={{ padding: '8px', background: '#fff', display: 'inline-block', border: '1px solid #eee', borderRadius: '4px' }}>
-               <QRCode value={`bakery-receipt:${payment.id}`} size={64} level="L" />
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', marginTop: '16px' }}>
+              <div style={{ padding: '10px', background: '#fff', border: '2px solid #000', borderRadius: '6px' }}>
+                <QRCode value={`bakery-receipt:${payment.id}`} size={100} level="M" />
+              </div>
+              <p style={{ fontSize: '9px', fontFamily: 'monospace', color: '#555', margin: 0 }}>Scan to view receipt</p>
             </div>
           </div>
+
 
           <div className="text-center text-xs text-gray-500 mt-8">
             <p>{appSettings.receiptFooter || 'Thank you for your business!'}</p>
