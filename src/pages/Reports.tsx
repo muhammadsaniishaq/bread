@@ -110,20 +110,10 @@ export const Reports: React.FC = () => {
     const todayStr = now.toISOString().split('T')[0];
     const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
     const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-    const debtCollected = debtPayments.filter(dp => {
-      if (period === 'Today') return dp.date.startsWith(todayStr);
-      if (period === 'Week') return new Date(dp.date) >= weekAgo;
-      if (period === 'Month') return new Date(dp.date) >= monthAgo;
-      return true;
-    }).reduce((s, dp) => s + dp.amount, 0);
+    const debtCollected = filterByPeriod(debtPayments).reduce((s, dp) => s + dp.amount, 0);
 
     // Amount paid to the company in this period
-    const companyPaid = bakeryPayments.filter(bp => {
-      if (period === 'Today') return bp.date.startsWith(todayStr);
-      if (period === 'Week') return new Date(bp.date) >= weekAgo;
-      if (period === 'Month') return new Date(bp.date) >= monthAgo;
-      return true;
-    }).reduce((s, bp) => s + bp.amount, 0);
+    const companyPaid = filterByPeriod(bakeryPayments).reduce((s, bp) => s + bp.amount, 0);
 
     // Remaining Balance = 90% owed - Debt Issued (no cash yet) + Debt Collected (cash received today) - Already Paid to Company
     const netBakeryOwed = Math.max(0, bakeryOwed - debtSales + debtCollected - companyPaid);
