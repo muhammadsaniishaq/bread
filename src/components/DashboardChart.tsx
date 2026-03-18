@@ -2,7 +2,6 @@ import React, { useMemo, useState } from 'react';
 import { useAppContext } from '../store/AppContext';
 import { AreaChart, Area, XAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { motion } from 'framer-motion';
-import { Calendar } from 'lucide-react';
 
 export const DashboardChart: React.FC = () => {
   const { transactions, expenses } = useAppContext();
