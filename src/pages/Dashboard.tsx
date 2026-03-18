@@ -5,7 +5,7 @@ import { AnimatedPage } from '../components/AnimatedPage';
 import { DashboardChart } from '../components/DashboardChart';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from '../store/LanguageContext';
-import { TrendingUp, Wallet, Package, Users, PlusCircle, UserPlus, Activity, AlertTriangle, Clock, Search, X, Zap, ArrowRight, TrendingDown, CreditCard } from 'lucide-react';
+import { TrendingUp, Wallet, Package, Users, PlusCircle, UserPlus, Activity, AlertTriangle, Clock, Search, X, Zap, ArrowRight, TrendingDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const containerVariants = {
@@ -16,13 +16,13 @@ const containerVariants = {
   }
 };
 
-const itemVariants = {
+const itemVariants: any = {
   hidden: { y: 20, opacity: 0, scale: 0.95 },
   show: { 
     y: 0, 
     opacity: 1, 
     scale: 1,
-    transition: { type: "spring" as const, stiffness: 300, damping: 24 } 
+    transition: { type: "spring", stiffness: 300, damping: 24 } 
   }
 };
 
@@ -80,9 +80,9 @@ export const Dashboard: React.FC = () => {
 
   const greetingObj = useMemo(() => {
     const hour = new Date().getHours();
-    if (hour < 12) return { text: t('dash.goodMorning') + ' ☀️', gradient: 'from-amber-400 to-orange-500' };
-    if (hour < 17) return { text: t('dash.goodAfternoon') + ' 🌤️', gradient: 'from-blue-400 to-indigo-500' };
-    return { text: t('dash.goodEvening') + ' 🌙', gradient: 'from-indigo-400 to-purple-600' };
+    if (hour < 12) return { text: t('dash.goodMorning') + ' ☀️', background: 'linear-gradient(to right, #fbbf24, #f97316)' }; // amber to orange
+    if (hour < 17) return { text: t('dash.goodAfternoon') + ' 🌤️', background: 'linear-gradient(to right, #60a5fa, #6366f1)' }; // blue to indigo
+    return { text: t('dash.goodEvening') + ' 🌙', background: 'linear-gradient(to right, #818cf8, #9333ea)' }; // indigo to purple
   }, [t]);
 
   const searchResults = useMemo(() => {
@@ -129,27 +129,37 @@ export const Dashboard: React.FC = () => {
   return (
     <AnimatedPage>
       <motion.div 
-        className="container pb-24"
+        className="container"
+        style={{ paddingBottom: '6rem' }}
         variants={containerVariants}
         initial="hidden"
         animate="show"
       >
         {/* Header Section */}
         <motion.div variants={itemVariants} className="flex flex-col mb-6 mt-2">
-          <h1 className={`text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r ${greetingObj.gradient}`}>
+          <h1 style={{ 
+            fontSize: '1.75rem', fontWeight: 800, background: greetingObj.background,
+            WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', display: 'inline-block' 
+          }}>
             {greetingObj.text}
           </h1>
-          <p className="text-secondary font-medium mt-1">{new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}</p>
+          <p className="text-secondary font-medium" style={{ marginTop: '0.25rem' }}>
+            {new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
+          </p>
         </motion.div>
 
         {/* Search Bar - Modernized */}
-        <motion.div variants={itemVariants} className="relative mb-8 z-10 group">
-          <div className="flex items-center bg-[var(--surface-color)] border border-[var(--border-color)] rounded-2xl px-5 py-3.5 focus-within:border-primary focus-within:ring-4 ring-primary/10 transition-all duration-300 shadow-sm group-hover:shadow-md backdrop-blur-md">
-            <Search size={20} className="text-secondary mr-3 transition-colors group-focus-within:text-primary" />
+        <motion.div variants={itemVariants} style={{ position: 'relative', marginBottom: '2rem', zIndex: 10 }}>
+          <div style={{ 
+            display: 'flex', alignItems: 'center', background: 'var(--surface-color)', 
+            border: '1px solid var(--border-color)', borderRadius: '16px', padding: '0.875rem 1.25rem',
+            boxShadow: 'var(--shadow-sm)'
+          }}>
+            <Search size={18} className="text-secondary" style={{ marginRight: '0.75rem' }} />
             <input 
               type="text" 
               placeholder="Search customers, products..." 
-              className="bg-transparent border-none outline-none w-full text-[15px] font-medium placeholder:text-secondary/70"
+              style={{ background: 'transparent', border: 'none', outline: 'none', width: '100%', fontSize: '0.95rem', color: 'var(--text-primary)' }}
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
             />
@@ -160,7 +170,8 @@ export const Dashboard: React.FC = () => {
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.8 }}
                   onClick={() => setSearchQuery('')} 
-                  className="text-secondary hover:text-primary ml-2 bg-gray-100 dark:bg-zinc-800 rounded-full p-1 transition-colors"
+                  className="text-secondary"
+                  style={{ background: 'rgba(0,0,0,0.05)', borderRadius: '50%', padding: '0.25rem', marginLeft: '0.5rem', border: 'none' }}
                 >
                   <X size={14} />
                 </motion.button>
@@ -175,44 +186,48 @@ export const Dashboard: React.FC = () => {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: 10 }}
-                className="absolute top-full left-0 right-0 mt-3 bg-[var(--surface-color)] border border-[var(--border-color)] rounded-2xl shadow-2xl overflow-hidden z-50 backdrop-blur-xl"
+                style={{ 
+                  position: 'absolute', top: '100%', left: 0, right: 0, marginTop: '0.75rem', 
+                  background: 'var(--surface-color)', border: '1px solid var(--border-color)', 
+                  borderRadius: '16px', boxShadow: 'var(--shadow-lg)', overflow: 'hidden', zIndex: 50 
+                }}
               >
                 {/* Search Results Content */}
                 {searchResults.customers.length > 0 && (
-                  <div className="py-2">
-                    <div className="text-[11px] font-bold text-secondary uppercase tracking-widest px-5 py-2">Customers</div>
+                  <div style={{ padding: '0.5rem 0' }}>
+                    <div style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', padding: '0.5rem 1.25rem' }}>Customers</div>
                     {searchResults.customers.map(c => (
-                       <div key={c.id} onClick={() => navigate(`/customer/${c.id}`)} className="px-5 py-3 flex justify-between items-center hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer transition-colors">
+                       <div key={c.id} onClick={() => navigate(`/customer/${c.id}`)} className="flex items-center justify-between" style={{ padding: '0.75rem 1.25rem', cursor: 'pointer', borderBottom: '1px solid var(--border-color)' }}>
                          <div>
-                           <div className="font-semibold text-[15px] tracking-tight">{c.name}</div>
-                           <div className="text-xs text-secondary mt-0.5">{c.phone || 'No phone'}</div>
+                           <div style={{ fontWeight: 600, fontSize: '0.95rem' }}>{c.name}</div>
+                           <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.125rem' }}>{c.phone || 'No phone'}</div>
                          </div>
-                         <div className="text-xs font-bold font-mono">
-                           {c.debtBalance > 0 ? <span className="text-danger flex items-center gap-1.5 px-2 py-1 bg-danger/10 rounded-lg"><AlertTriangle size={12}/> ₦{c.debtBalance.toLocaleString()}</span> : <span className="text-success bg-success/10 px-2 py-1 rounded-lg">Clean</span>}
+                         <div style={{ fontSize: '0.75rem', fontWeight: 'bold', fontFamily: 'monospace' }}>
+                           {c.debtBalance > 0 ? <span className="text-danger flex items-center gap-2" style={{ background: 'rgba(var(--danger-rgb), 0.1)', padding: '0.25rem 0.5rem', borderRadius: '8px' }}><AlertTriangle size={12}/> ₦{c.debtBalance.toLocaleString()}</span> : <span className="text-success" style={{ background: 'rgba(var(--success-rgb), 0.1)', padding: '0.25rem 0.5rem', borderRadius: '8px' }}>Clean</span>}
                          </div>
                        </div>
                     ))}
                   </div>
                 )}
                 {searchResults.products.length > 0 && (
-                  <div className="py-2 border-t border-[var(--border-color)]">
-                    <div className="text-[11px] font-bold text-secondary uppercase tracking-widest px-5 py-2">Products</div>
+                  <div style={{ padding: '0.5rem 0', borderTop: '1px solid var(--border-color)' }}>
+                    <div style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', padding: '0.5rem 1.25rem' }}>Products</div>
                     {searchResults.products.map(p => (
-                       <div key={p.id} onClick={() => navigate('/inventory')} className="px-5 py-3 flex justify-between items-center hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer transition-colors">
-                         <div className="flex items-center gap-3">
+                       <div key={p.id} onClick={() => navigate('/inventory')} className="flex items-center justify-between" style={{ padding: '0.75rem 1.25rem', cursor: 'pointer', borderBottom: '1px solid var(--border-color)' }}>
+                         <div className="flex items-center" style={{ gap: '0.75rem' }}>
                            {p.image ? (
-                             <img src={p.image} className="w-10 h-10 rounded-xl object-cover shadow-sm" alt="" />
+                             <img src={p.image} style={{ width: '2.5rem', height: '2.5rem', borderRadius: '8px', objectFit: 'cover' }} alt="" />
                            ) : (
-                             <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-bold text-sm shadow-sm ring-1 ring-primary/20">
+                             <div className="text-primary" style={{ width: '2.5rem', height: '2.5rem', borderRadius: '8px', background: 'rgba(var(--primary-rgb), 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>
                                {p.name.charAt(1) === '₦' ? p.name.charAt(p.name.indexOf(' ') + 1) : p.name.charAt(1)}
                              </div>
                            )}
                            <div>
-                             <div className="font-semibold text-[15px] tracking-tight">{p.name}</div>
-                             <div className="text-xs text-secondary mt-0.5">{p.category || 'Standard'} • ₦{p.price}</div>
+                             <div style={{ fontWeight: 600, fontSize: '0.95rem' }}>{p.name}</div>
+                             <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.125rem' }}>{p.category || 'Standard'} • ₦{p.price}</div>
                            </div>
                          </div>
-                         <div className={`text-[11px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-lg ${p.stock > 0 ? 'bg-success/10 text-success' : 'bg-danger/10 text-danger'}`}>
+                         <div className={p.stock > 0 ? 'text-success' : 'text-danger'} style={{ fontSize: '0.7rem', fontWeight: 'bold', textTransform: 'uppercase', background: p.stock > 0 ? 'rgba(var(--success-rgb), 0.1)' : 'rgba(var(--danger-rgb), 0.1)', padding: '0.25rem 0.5rem', borderRadius: '8px' }}>
                            {p.stock} in stock
                          </div>
                        </div>
@@ -225,32 +240,35 @@ export const Dashboard: React.FC = () => {
         </motion.div>
 
         {/* Quick Actions - Floating Pills */}
-        <motion.div variants={itemVariants} className="flex gap-3 mb-8 overflow-x-auto pb-4 no-print -mx-5 px-5 snap-x" style={{ scrollbarWidth: 'none' }}>
+        <motion.div variants={itemVariants} className="flex mb-8" style={{ gap: '0.75rem', overflowX: 'auto', paddingBottom: '1rem', scrollbarWidth: 'none', margin: '0 -1.25rem', padding: '0 1.25rem' }}>
           <motion.button 
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.95 }}
             onClick={() => navigate('/sales')}
-            className="flex-none flex items-center gap-2.5 bg-gradient-to-r from-primary to-indigo-600 text-white px-5 py-3.5 rounded-2xl shadow-lg shadow-primary/30 font-semibold tracking-wide snap-start ring-1 ring-white/20"
+            className="btn btn-primary flex flex-none items-center justify-center"
+            style={{ borderRadius: '16px', padding: '0.75rem 1.25rem', gap: '0.5rem', border: 'none', boxShadow: '0 4px 14px 0 rgba(var(--primary-rgb), 0.39)', minHeight: 'auto', width: 'auto' }}
           >
-            <PlusCircle size={20} className="opacity-90" /> {t('dash.newSale')}
+            <PlusCircle size={18} /> {t('dash.newSale')}
           </motion.button>
           
           <motion.button 
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.95 }}
             onClick={() => navigate('/customers')}
-            className="flex-none flex items-center gap-2.5 bg-[var(--surface-color)] border border-[var(--border-color)] px-5 py-3.5 rounded-2xl shadow-sm hover:shadow-md transition-shadow font-semibold text-secondary snap-start backdrop-blur-md"
+            className="btn flex flex-none items-center justify-center"
+            style={{ background: 'var(--surface-color)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', borderRadius: '16px', padding: '0.75rem 1.25rem', gap: '0.5rem', minHeight: 'auto', width: 'auto' }}
           >
-            <UserPlus size={20} className="text-primary/70" /> {t('dash.addCustomer')}
+            <UserPlus size={18} className="text-primary" style={{ opacity: 0.8 }} /> {t('dash.addCustomer')}
           </motion.button>
           
           <motion.button 
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.95 }}
             onClick={() => navigate('/reports')}
-            className="flex-none flex items-center gap-2.5 bg-[var(--surface-color)] border border-[var(--border-color)] px-5 py-3.5 rounded-2xl shadow-sm hover:shadow-md transition-shadow font-semibold text-secondary snap-start backdrop-blur-md"
+            className="btn flex flex-none items-center justify-center"
+            style={{ background: 'var(--surface-color)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', borderRadius: '16px', padding: '0.75rem 1.25rem', gap: '0.5rem', minHeight: 'auto', width: 'auto' }}
           >
-            <Activity size={20} className="text-accent/70" /> {t('dash.reports')}
+            <Activity size={18} className="text-accent" style={{ opacity: 0.8 }} /> {t('dash.reports')}
           </motion.button>
         </motion.div>
 
@@ -263,16 +281,15 @@ export const Dashboard: React.FC = () => {
               exit={{ opacity: 0, height: 0 }}
               className="mb-8"
             >
-              <div className="p-4 rounded-2xl border flex flex-col gap-3 relative overflow-hidden bg-red-500/5 dark:bg-red-500/10 border-red-500/20 backdrop-blur-md">
-                <div className="absolute top-0 left-0 w-1 h-full bg-red-500 rounded-l-2xl"></div>
-                <h3 className="font-bold text-red-600 dark:text-red-400 flex items-center gap-2 text-[15px]">
-                  <AlertTriangle size={18} /> {t('dash.stockAlert')}
+              <div className="card" style={{ background: 'rgba(var(--danger-rgb), 0.05)', borderColor: 'rgba(var(--danger-rgb), 0.3)', borderLeft: '4px solid var(--danger-color)', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                <h3 className="font-bold text-danger flex items-center gap-2" style={{ fontSize: '0.95rem' }}>
+                  <AlertTriangle size={16} /> {t('dash.stockAlert')}
                 </h3>
-                <div className="grid gap-2">
+                <div style={{ display: 'grid', gap: '0.5rem' }}>
                   {metrics.lowStockProducts.map(p => (
-                    <div key={p.id} className="flex justify-between items-center text-sm bg-white/50 dark:bg-black/20 p-2.5 rounded-xl border border-red-500/10">
+                    <div key={p.id} className="flex justify-between items-center text-sm" style={{ background: 'rgba(255,255,255,0.5)', padding: '0.5rem 0.75rem', borderRadius: '8px', border: '1px solid rgba(var(--danger-rgb), 0.1)' }}>
                       <span className="font-medium">{p.name}</span>
-                      <span className="font-bold text-red-600 dark:text-red-400 flex items-center gap-1.5"><TrendingDown size={14} className="opacity-70"/> {p.stock} units</span>
+                      <span className="font-bold text-danger flex items-center gap-2"><TrendingDown size={14} style={{ opacity: 0.7 }}/> {p.stock} units</span>
                     </div>
                   ))}
                 </div>
@@ -282,46 +299,45 @@ export const Dashboard: React.FC = () => {
         </AnimatePresence>
 
         {/* Main Metrics Grid */}
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col" style={{ gap: '1rem' }}>
           {/* Smart AI Insight Widget */}
-          <motion.div variants={itemVariants} className="p-5 rounded-3xl relative overflow-hidden bg-gradient-to-br from-indigo-500/10 via-purple-500/5 to-pink-500/10 border border-primary/20 backdrop-blur-2xl shadow-sm">
-             <div className="flex items-center gap-2.5 mb-3">
-               <div className="relative flex h-3 w-3">
-                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
-                 <span className="relative inline-flex rounded-full h-3 w-3 bg-primary"></span>
-               </div>
-               <span className="text-xs font-bold uppercase tracking-widest text-primary bg-primary/10 px-2 py-0.5 rounded-md">Smart Insight</span>
+          <motion.div variants={itemVariants} className="card" style={{ background: 'linear-gradient(135deg, rgba(var(--primary-rgb), 0.05), rgba(var(--accent-rgb), 0.05))', borderColor: 'rgba(var(--primary-rgb), 0.2)', padding: '1.25rem', borderRadius: '20px' }}>
+             <div className="flex items-center" style={{ gap: '0.625rem', marginBottom: '0.75rem' }}>
+               <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--primary-color)', boxShadow: '0 0 8px var(--primary-color)' }}></div>
+               <span className="text-primary" style={{ fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', background: 'rgba(var(--primary-rgb), 0.1)', padding: '0.125rem 0.375rem', borderRadius: '4px' }}>Smart Insight</span>
              </div>
-             <p className="text-[15px] font-medium leading-relaxed opacity-90 text-primary-900 dark:text-primary-100 flex items-start gap-2">
-               <Zap size={18} className="text-accent flex-shrink-0 mt-0.5" />
+             <p className="font-medium opacity-90" style={{ fontSize: '0.9rem', lineHeight: 1.5, display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}>
+               <Zap size={16} className="text-accent" style={{ flexShrink: 0, marginTop: '0.125rem' }} />
                {aisInsight}
              </p>
           </motion.div>
 
           {/* Hero Metric - Profit */}
-          <motion.div variants={itemVariants} className={`relative overflow-hidden p-6 rounded-3xl text-white shadow-xl transition-all ${metrics.netProfit >= 0 ? 'bg-gradient-to-br from-primary via-indigo-600 to-indigo-800' : 'bg-gradient-to-br from-red-500 to-rose-700'}`}>
-            {/* Decal background */}
-            <TrendingUp size={140} className="absolute -right-6 -bottom-6 opacity-[0.07] rotate-12 pointer-events-none" />
-            <div className="absolute top-0 left-0 w-full h-full bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI4IiBoZWlnaHQ9IjgiPgo8cmVjdCB3aWR0aD0iOCIgaGVpZ2h0PSI4IiBmaWxsPSIjZmZmIiBmaWxsLW9wYWNpdHk9IjAuMDUiLz4KPC9zdmc+')] opacity-20 pointer-events-none mix-blend-overlay"></div>
+          <motion.div variants={itemVariants} className="card" style={{ 
+            background: metrics.netProfit >= 0 ? 'linear-gradient(135deg, var(--primary-color), #4338ca)' : 'linear-gradient(135deg, var(--danger-color), #be123c)', 
+            color: 'white', border: 'none', padding: '1.5rem', borderRadius: '24px', position: 'relative', overflow: 'hidden',
+            boxShadow: metrics.netProfit >= 0 ? '0 10px 25px -5px rgba(var(--primary-rgb), 0.4)' : '0 10px 25px -5px rgba(var(--danger-rgb), 0.4)'
+          }}>
+            <TrendingUp size={120} style={{ position: 'absolute', right: '-10%', bottom: '-10%', opacity: 0.1, transform: 'rotate(15deg)', pointerEvents: 'none' }} />
             
-            <div className="relative z-10">
-              <div className="flex items-center gap-2 opacity-80 mb-2">
-                <div className="p-1.5 bg-white/20 rounded-lg backdrop-blur-md">
-                  <Wallet size={16} className="text-white" />
+            <div style={{ position: 'relative', zIndex: 10 }}>
+              <div className="flex items-center gap-2" style={{ opacity: 0.8, marginBottom: '0.5rem' }}>
+                <div style={{ background: 'rgba(255,255,255,0.2)', padding: '0.375rem', borderRadius: '8px' }}>
+                  <Wallet size={16} />
                 </div>
-                <span className="text-sm font-semibold tracking-wide uppercase">{t('dash.estimatedProfit')}</span>
+                <span style={{ fontSize: '0.875rem', fontWeight: 600, letterSpacing: '0.02em', textTransform: 'uppercase' }}>{t('dash.estimatedProfit')}</span>
               </div>
-              <div className="text-4xl font-extrabold mt-1 tracking-tight drop-shadow-sm">₦{metrics.netProfit.toLocaleString()}</div>
+              <div style={{ fontSize: '2.5rem', fontWeight: 800, letterSpacing: '-0.02em', marginBottom: '0.5rem' }}>₦{metrics.netProfit.toLocaleString()}</div>
               
               {metrics.totalExpenses > 0 && (
-                 <div className="mt-5 pt-4 flex justify-between tracking-wide border-t border-white/15">
+                 <div className="flex justify-between" style={{ marginTop: '1.25rem', paddingTop: '1rem', borderTop: '1px solid rgba(255,255,255,0.15)' }}>
                    <div className="flex flex-col">
-                     <span className="text-[10px] uppercase opacity-70 font-bold">Gross Income</span>
-                     <span className="text-sm font-bold">₦{metrics.profit.toLocaleString()}</span>
+                     <span style={{ fontSize: '0.625rem', textTransform: 'uppercase', opacity: 0.7, fontWeight: 700 }}>Gross Income</span>
+                     <span style={{ fontSize: '0.875rem', fontWeight: 700 }}>₦{metrics.profit.toLocaleString()}</span>
                    </div>
                    <div className="flex flex-col text-right">
-                     <span className="text-[10px] uppercase opacity-70 font-bold">Expenses</span>
-                     <span className="text-sm font-bold opacity-90">₦{metrics.totalExpenses.toLocaleString()}</span>
+                     <span style={{ fontSize: '0.625rem', textTransform: 'uppercase', opacity: 0.7, fontWeight: 700 }}>Expenses</span>
+                     <span style={{ fontSize: '0.875rem', fontWeight: 700, opacity: 0.9 }}>₦{metrics.totalExpenses.toLocaleString()}</span>
                    </div>
                  </div>
               )}
@@ -329,59 +345,57 @@ export const Dashboard: React.FC = () => {
           </motion.div>
           
           {/* Sub-Metrics Grid */}
-          <motion.div variants={itemVariants} className="grid grid-cols-2 gap-4 mt-2">
-            <div className="bg-[var(--surface-color)] border border-[var(--border-color)] p-5 rounded-3xl shadow-sm backdrop-blur-md hover:shadow-md transition-shadow relative overflow-hidden group">
-              <div className="absolute top-0 right-0 w-16 h-16 bg-success/5 rounded-bl-[100px] transition-transform group-hover:scale-110"></div>
-              <div className="w-10 h-10 rounded-2xl bg-success/10 flex items-center justify-center mb-3 text-success">
+          <motion.div variants={itemVariants} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+            <div className="card" style={{ padding: '1.25rem', borderRadius: '20px', position: 'relative', overflow: 'hidden' }}>
+              <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: 'rgba(var(--success-rgb), 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '0.75rem', color: 'var(--success-color)' }}>
                 <Wallet size={20} />
               </div>
-              <div className="text-xs text-secondary font-semibold uppercase tracking-wider">{t('dash.cashGenerated')}</div>
-              <div className="text-xl font-bold mt-1 tracking-tight text-gray-800 dark:text-gray-100">₦{metrics.totalCash.toLocaleString()}</div>
+              <div className="text-secondary" style={{ fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('dash.cashGenerated')}</div>
+              <div style={{ fontSize: '1.25rem', fontWeight: 800, marginTop: '0.25rem' }}>₦{metrics.totalCash.toLocaleString()}</div>
             </div>
             
-            <div className="bg-[var(--surface-color)] border border-[var(--border-color)] p-5 rounded-3xl shadow-sm backdrop-blur-md hover:shadow-md transition-shadow relative overflow-hidden group">
-              <div className="absolute top-0 right-0 w-16 h-16 bg-primary/5 rounded-bl-[100px] transition-transform group-hover:scale-110"></div>
-              <div className="w-10 h-10 rounded-2xl bg-primary/10 flex items-center justify-center mb-3 text-primary">
+            <div className="card" style={{ padding: '1.25rem', borderRadius: '20px', position: 'relative', overflow: 'hidden' }}>
+              <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: 'rgba(var(--primary-rgb), 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '0.75rem', color: 'var(--primary-color)' }}>
                 <TrendingUp size={20} />
               </div>
-              <div className="text-xs text-secondary font-semibold uppercase tracking-wider">{t('dash.totalValue')}</div>
-              <div className="text-xl font-bold mt-1 tracking-tight text-gray-800 dark:text-gray-100">₦{metrics.totalSales.toLocaleString()}</div>
+              <div className="text-secondary" style={{ fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('dash.totalValue')}</div>
+              <div style={{ fontSize: '1.25rem', fontWeight: 800, marginTop: '0.25rem' }}>₦{metrics.totalSales.toLocaleString()}</div>
             </div>
           </motion.div>
 
-          <motion.div variants={itemVariants} className="grid grid-cols-2 gap-4">
-            <div className="bg-[var(--surface-color)] border border-[var(--border-color)] p-5 rounded-3xl shadow-sm backdrop-blur-md relative">
-              <div className="flex items-center gap-2.5 text-xs text-secondary font-bold uppercase tracking-wider border-b border-[var(--border-color)] pb-3 mb-3">
-                <div className="bg-orange-500/10 p-1.5 rounded-lg text-orange-500"><Package size={14} /></div>
+          <motion.div variants={itemVariants} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+            <div className="card" style={{ padding: '1.25rem', borderRadius: '20px' }}>
+              <div className="flex items-center text-secondary" style={{ gap: '0.5rem', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.75rem', marginBottom: '0.75rem' }}>
+                <div style={{ background: 'rgba(249, 115, 22, 0.1)', padding: '0.375rem', borderRadius: '8px', color: '#f97316' }}><Package size={14} /></div>
                 {t('dash.breadSold')}
               </div>
-              <div className="text-2xl font-bold mb-3 tracking-tight">{metrics.breadSold} <span className="text-sm font-medium text-secondary">units</span></div>
-              <div className="flex flex-col gap-2">
+              <div style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: '0.75rem' }}>{metrics.breadSold} <span className="text-secondary" style={{ fontSize: '0.875rem', fontWeight: 500 }}>units</span></div>
+              <div className="flex flex-col" style={{ gap: '0.5rem' }}>
                 {products.map(p => {
                   const sold = metrics.breadSoldMap[p.id] || 0;
                   if (sold === 0) return null;
                   return (
-                    <div key={p.id} className="flex justify-between items-center bg-gray-50/50 dark:bg-white/5 p-2 rounded-xl">
-                      <span className="truncate mr-2 text-sm font-medium">{p.name}</span>
-                      <span className="font-bold text-orange-500 bg-orange-500/10 px-2 py-0.5 rounded-md text-xs">{sold}</span>
+                    <div key={p.id} className="flex justify-between items-center" style={{ background: 'rgba(0,0,0,0.02)', padding: '0.5rem', borderRadius: '8px' }}>
+                      <span style={{ fontSize: '0.875rem', fontWeight: 500 }}>{p.name}</span>
+                      <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#f97316', background: 'rgba(249, 115, 22, 0.1)', padding: '0.125rem 0.375rem', borderRadius: '4px' }}>{sold}</span>
                     </div>
                   );
                 })}
-                {metrics.breadSold === 0 && <span className="opacity-50 italic text-sm text-center py-2">No sales yet</span>}
+                {metrics.breadSold === 0 && <span className="text-secondary" style={{ fontSize: '0.875rem', fontStyle: 'italic', textAlign: 'center', padding: '0.5rem' }}>No sales yet</span>}
               </div>
             </div>
             
-            <div className="bg-[var(--surface-color)] border border-[var(--border-color)] p-5 rounded-3xl shadow-sm backdrop-blur-md relative">
-              <div className="flex items-center gap-2.5 text-xs text-secondary font-bold uppercase tracking-wider border-b border-[var(--border-color)] pb-3 mb-3">
-                <div className="bg-blue-500/10 p-1.5 rounded-lg text-blue-500"><Package size={14} /></div>
+            <div className="card" style={{ padding: '1.25rem', borderRadius: '20px' }}>
+              <div className="flex items-center text-secondary" style={{ gap: '0.5rem', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.75rem', marginBottom: '0.75rem' }}>
+                <div style={{ background: 'rgba(59, 130, 246, 0.1)', padding: '0.375rem', borderRadius: '8px', color: '#3b82f6' }}><Package size={14} /></div>
                 {t('dash.stockAvailable')}
               </div>
-              <div className="text-2xl font-bold mb-3 tracking-tight">{metrics.stockRemaining} <span className="text-sm font-medium text-secondary">units</span></div>
-              <div className="flex flex-col gap-2">
+              <div style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: '0.75rem' }}>{metrics.stockRemaining} <span className="text-secondary" style={{ fontSize: '0.875rem', fontWeight: 500 }}>units</span></div>
+              <div className="flex flex-col" style={{ gap: '0.5rem' }}>
                 {products.filter(p => p.active).map(p => (
-                  <div key={p.id} className="flex justify-between items-center bg-gray-50/50 dark:bg-white/5 p-2 rounded-xl">
-                    <span className="truncate mr-2 text-sm font-medium">{p.name}</span>
-                    <span className={`font-bold text-xs px-2 py-0.5 rounded-md ${p.stock < 20 ? 'bg-red-500/10 text-red-500' : 'bg-gray-200 dark:bg-zinc-700'}`}>{p.stock}</span>
+                  <div key={p.id} className="flex justify-between items-center" style={{ background: 'rgba(0,0,0,0.02)', padding: '0.5rem', borderRadius: '8px' }}>
+                    <span style={{ fontSize: '0.875rem', fontWeight: 500 }}>{p.name}</span>
+                    <span style={{ fontSize: '0.75rem', fontWeight: 700, color: p.stock < 20 ? 'white' : 'inherit', background: p.stock < 20 ? 'var(--danger-color)' : 'rgba(0,0,0,0.05)', padding: '0.125rem 0.375rem', borderRadius: '4px' }}>{p.stock}</span>
                   </div>
                 ))}
               </div>
@@ -389,38 +403,37 @@ export const Dashboard: React.FC = () => {
           </motion.div>
           
           {metrics.outstandingDebt > 0 && (
-            <motion.div variants={itemVariants} className="bg-red-500/5 border border-red-500/30 p-5 rounded-3xl shadow-sm relative overflow-hidden">
-               <div className="absolute top-0 right-0 w-32 h-32 bg-red-500/5 rounded-bl-full pointer-events-none"></div>
-               <div className="flex items-center gap-3 mb-1">
-                 <div className="w-10 h-10 rounded-2xl bg-red-500/10 flex items-center justify-center text-red-600">
+            <motion.div variants={itemVariants} className="card border-danger" style={{ background: 'rgba(var(--danger-rgb), 0.05)', padding: '1.25rem', borderRadius: '20px' }}>
+               <div className="flex items-center" style={{ gap: '0.75rem' }}>
+                 <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: 'rgba(var(--danger-rgb), 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--danger-color)' }}>
                   <Users size={20} />
                  </div>
                  <div>
-                   <div className="text-xs font-bold uppercase tracking-wider text-red-600/80">{t('dash.outstandingDebt')}</div>
-                   <div className="text-2xl font-extrabold text-red-600 mt-0.5 tracking-tight">₦{metrics.outstandingDebt.toLocaleString()}</div>
+                   <div style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--danger-color)', opacity: 0.8 }}>{t('dash.outstandingDebt')}</div>
+                   <div className="text-danger" style={{ fontSize: '1.5rem', fontWeight: 800, marginTop: '0.125rem', letterSpacing: '-0.02em' }}>₦{metrics.outstandingDebt.toLocaleString()}</div>
                  </div>
                </div>
             </motion.div>
           )}
         </div>
 
-        <motion.div variants={itemVariants} className="mt-12 mb-6 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="bg-primary/10 p-2 rounded-xl text-primary">
+        <motion.div variants={itemVariants} className="flex items-center justify-between" style={{ marginTop: '2.5rem', marginBottom: '1.25rem' }}>
+          <div className="flex items-center" style={{ gap: '0.625rem' }}>
+            <div className="text-primary" style={{ background: 'rgba(var(--primary-rgb), 0.1)', padding: '0.5rem', borderRadius: '10px' }}>
               <Clock size={18} />
             </div>
-            <h2 className="text-[19px] font-bold tracking-tight">{t('dash.recentActivity')}</h2>
+            <h2 style={{ fontSize: '1.125rem', fontWeight: 800, letterSpacing: '-0.01em' }}>{t('dash.recentActivity')}</h2>
           </div>
-          <button onClick={() => navigate('/sales')} className="text-sm font-semibold text-primary flex items-center gap-1 hover:underline">
+          <button onClick={() => navigate('/sales')} className="text-primary" style={{ fontSize: '0.875rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.25rem', background: 'transparent', border: 'none', cursor: 'pointer' }}>
             View All <ArrowRight size={14} />
           </button>
         </motion.div>
         
-        <motion.div variants={itemVariants} className="flex flex-col gap-3 mb-10">
+        <motion.div variants={itemVariants} className="flex flex-col" style={{ gap: '0.75rem', marginBottom: '2.5rem' }}>
           {metrics.recentActivity.length === 0 ? (
-            <div className="bg-[var(--surface-color)] border border-[var(--border-color)] p-8 rounded-3xl text-center text-secondary border-dashed backdrop-blur-sm">
-              <Activity size={32} className="mx-auto mb-3 opacity-20" />
-              <p className="text-sm font-medium">No recent transactions yet today.</p>
+            <div className="card text-center text-secondary" style={{ padding: '2rem', borderStyle: 'dashed', background: 'transparent' }}>
+              <Activity size={32} style={{ margin: '0 auto 0.75rem auto', opacity: 0.2 }} />
+              <p style={{ fontSize: '0.875rem', fontWeight: 500 }}>No recent transactions yet today.</p>
             </div>
           ) : (
             metrics.recentActivity.map((tx, idx) => (
@@ -430,33 +443,30 @@ export const Dashboard: React.FC = () => {
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: idx * 0.1 }}
                 onClick={() => navigate(`/receipt/${tx.id}`)} 
-                className="bg-[var(--surface-color)] border border-[var(--border-color)] p-4 rounded-2xl flex justify-between items-center hover:shadow-md cursor-pointer transition-all hover:bg-gray-50/50 dark:hover:bg-white-[0.02] active:scale-95 group backdrop-blur-md"
+                className="card flex justify-between items-center"
+                style={{ cursor: 'pointer', padding: '1rem 1.25rem', marginBottom: 0, borderRadius: '16px' }}
               >
-                <div className="flex items-center gap-4">
-                  <div className="relative">
-                    <div className="w-12 h-12 rounded-full flex items-center justify-center font-bold text-lg bg-gradient-to-br from-gray-100 to-gray-200 dark:from-zinc-800 dark:to-zinc-900 text-primary shadow-sm ring-1 ring-black/5 dark:ring-white/5">
+                <div className="flex items-center" style={{ gap: '1rem' }}>
+                  <div style={{ position: 'relative' }}>
+                    <div className="text-primary" style={{ width: '3rem', height: '3rem', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '1.125rem', background: 'var(--bg-color)', border: '1px solid var(--border-color)' }}>
                       {getCustomerName(tx.customerId).charAt(0).toUpperCase()}
                     </div>
-                    {tx.type === 'Cash' ? (
-                      <div className="absolute -bottom-1 -right-1 bg-success text-white p-1 rounded-full border-2 border-[var(--surface-color)]">
-                        <Wallet size={10} />
-                      </div>
-                    ) : (
-                      <div className="absolute -bottom-1 -right-1 bg-danger text-white p-1 rounded-full border-2 border-[var(--surface-color)]">
-                        <CreditCard size={10} />
-                      </div>
-                    )}
                   </div>
                   <div>
-                    <div className="font-bold text-[15px] tracking-tight group-hover:text-primary transition-colors">{getCustomerName(tx.customerId)}</div>
-                    <div className="text-xs text-secondary font-medium flex items-center gap-1">
+                    <div style={{ fontWeight: 700, fontSize: '0.95rem' }}>{getCustomerName(tx.customerId)}</div>
+                    <div className="text-secondary" style={{ fontSize: '0.75rem', fontWeight: 500, marginTop: '0.125rem' }}>
                       {new Date(tx.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </div>
                   </div>
                 </div>
                 <div className="text-right">
-                  <div className="font-extrabold text-[15px] tracking-tight">₦{tx.totalPrice.toLocaleString()}</div>
-                  <div className={`text-[10px] uppercase font-bold mt-1.5 px-2 py-0.5 rounded-lg inline-block tracking-wider ${tx.type === 'Cash' ? 'bg-success/10 text-success' : 'bg-red-500/10 text-red-600'}`}>
+                  <div style={{ fontWeight: 800, fontSize: '0.95rem' }}>₦{tx.totalPrice.toLocaleString()}</div>
+                  <div style={{ 
+                    fontSize: '0.625rem', textTransform: 'uppercase', fontWeight: 800, marginTop: '0.375rem', 
+                    display: 'inline-block', padding: '0.125rem 0.5rem', borderRadius: '6px', letterSpacing: '0.05em',
+                    background: tx.type === 'Cash' ? 'rgba(var(--success-rgb), 0.1)' : 'rgba(var(--danger-rgb), 0.1)',
+                    color: tx.type === 'Cash' ? 'var(--success-color)' : 'var(--danger-color)'
+                  }}>
                     {tx.type}
                   </div>
                 </div>

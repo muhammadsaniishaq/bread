@@ -47,27 +47,38 @@ export const DashboardChart: React.FC = () => {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.3, type: "spring", stiffness: 300, damping: 24 }}
-      className="bg-[var(--surface-color)] backdrop-blur-md border border-[var(--border-color)] mb-6 p-6 pb-2 rounded-3xl shadow-sm hover:shadow-md transition-shadow relative overflow-hidden"
+      className="card"
+      style={{ marginBottom: '1.5rem', padding: '1.5rem', paddingBottom: '0.5rem', borderRadius: '24px', position: 'relative', overflow: 'hidden' }}
     >
-      <div className="flex justify-between items-center mb-6">
-        <h3 className="font-bold text-gray-800 dark:text-gray-100 flex items-center gap-2">
-          <div className="bg-primary/10 text-primary p-2 rounded-xl">
+      <div className="flex items-center justify-between" style={{ marginBottom: '1.5rem' }}>
+        <h3 style={{ fontWeight: 800, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <div className="text-primary" style={{ background: 'rgba(var(--primary-rgb), 0.1)', padding: '0.5rem', borderRadius: '12px' }}>
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
           </div>
           Revenue Trend
         </h3>
         
         {/* Modern Toggle */}
-        <div className="flex bg-gray-100 dark:bg-zinc-800/50 p-1 rounded-xl">
+        <div className="flex" style={{ background: 'rgba(0,0,0,0.05)', padding: '0.25rem', borderRadius: '12px' }}>
           <button 
             onClick={() => setTimeRange('7d')}
-            className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${timeRange === '7d' ? 'bg-white dark:bg-zinc-700 text-primary shadow-sm' : 'text-secondary hover:text-gray-800 dark:hover:text-gray-200'}`}
+            style={{ 
+              padding: '0.375rem 0.75rem', fontSize: '0.75rem', fontWeight: 800, borderRadius: '8px', border: 'none', cursor: 'pointer', transition: 'all 0.2s',
+              background: timeRange === '7d' ? 'var(--surface-color)' : 'transparent',
+              color: timeRange === '7d' ? 'var(--primary-color)' : 'var(--text-secondary)',
+              boxShadow: timeRange === '7d' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
+            }}
           >
             7D
           </button>
           <button 
             onClick={() => setTimeRange('30d')}
-            className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${timeRange === '30d' ? 'bg-white dark:bg-zinc-700 text-primary shadow-sm' : 'text-secondary hover:text-gray-800 dark:hover:text-gray-200'}`}
+            style={{ 
+              padding: '0.375rem 0.75rem', fontSize: '0.75rem', fontWeight: 800, borderRadius: '8px', border: 'none', cursor: 'pointer', transition: 'all 0.2s',
+              background: timeRange === '30d' ? 'var(--surface-color)' : 'transparent',
+              color: timeRange === '30d' ? 'var(--primary-color)' : 'var(--text-secondary)',
+              boxShadow: timeRange === '30d' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
+            }}
           >
             30D
           </button>
