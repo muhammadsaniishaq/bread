@@ -92,12 +92,12 @@ export const Dashboard: React.FC = () => {
     const matchedCustomers = customers.filter(c => 
       c.name.toLowerCase().includes(q) || 
       (c.phone && c.phone.includes(q))
-    ).slice(0, 3);
+    );
     
     const matchedProducts = products.filter(p => 
       p.name.toLowerCase().includes(q) || 
       (p.category && p.category.toLowerCase().includes(q))
-    ).slice(0, 3);
+    );
     
     return { customers: matchedCustomers, products: matchedProducts };
   }, [searchQuery, customers, products]);
@@ -190,7 +190,7 @@ export const Dashboard: React.FC = () => {
                 style={{ 
                   position: 'absolute', top: '100%', right: 0, marginTop: '0.5rem', width: '100%', minWidth: '300px',
                   background: 'var(--surface-color)', border: '1px solid var(--border-color)', backdropFilter: 'blur(20px)',
-                  borderRadius: '16px', boxShadow: 'var(--shadow-lg)', overflow: 'hidden', zIndex: 50 
+                  borderRadius: '16px', boxShadow: 'var(--shadow-lg)', overflowY: 'auto', overflowX: 'hidden', maxHeight: '50vh', zIndex: 50 
                 }}
               >
                 {/* Search Results Content */}
@@ -241,15 +241,15 @@ export const Dashboard: React.FC = () => {
         </motion.div>
 
         {/* Quick Actions - Floating Pills */}
-        <motion.div variants={itemVariants} className="flex mb-6" style={{ gap: '0.75rem', overflowX: 'auto', paddingBottom: '0.5rem', scrollbarWidth: 'none', margin: '0 -1.25rem', padding: '0 1.25rem' }}>
+        <motion.div variants={itemVariants} className="flex mb-6" style={{ gap: '0.5rem', overflowX: 'auto', paddingBottom: '0.5rem', scrollbarWidth: 'none', margin: '0 -1.25rem', padding: '0 1.25rem' }}>
           <motion.button 
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.95 }}
             onClick={() => navigate('/sales')}
             className="btn btn-primary flex flex-none items-center justify-center"
-            style={{ borderRadius: '16px', padding: '0.75rem 1.25rem', gap: '0.5rem', border: 'none', boxShadow: '0 4px 14px 0 rgba(var(--primary-rgb), 0.39)', minHeight: 'auto', width: 'auto' }}
+            style={{ borderRadius: '14px', padding: '0.5rem 1rem', fontSize: '0.85rem', fontWeight: 600, gap: '0.4rem', border: 'none', boxShadow: '0 4px 14px 0 rgba(var(--primary-rgb), 0.39)', minHeight: 'auto', width: 'auto' }}
           >
-            <PlusCircle size={18} /> {t('dash.newSale')}
+            <PlusCircle size={16} /> {t('dash.newSale')}
           </motion.button>
           
           <motion.button 
@@ -257,9 +257,9 @@ export const Dashboard: React.FC = () => {
             whileTap={{ scale: 0.95 }}
             onClick={() => navigate('/customers')}
             className="btn flex flex-none items-center justify-center"
-            style={{ background: 'var(--surface-color)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', borderRadius: '16px', padding: '0.75rem 1.25rem', gap: '0.5rem', minHeight: 'auto', width: 'auto' }}
+            style={{ background: 'var(--surface-color)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', borderRadius: '14px', padding: '0.5rem 1rem', fontSize: '0.85rem', fontWeight: 600, gap: '0.4rem', minHeight: 'auto', width: 'auto' }}
           >
-            <UserPlus size={18} className="text-primary" style={{ opacity: 0.8 }} /> {t('dash.addCustomer')}
+            <UserPlus size={16} className="text-primary" style={{ opacity: 0.8 }} /> {t('dash.addCustomer')}
           </motion.button>
           
           <motion.button 
@@ -267,9 +267,9 @@ export const Dashboard: React.FC = () => {
             whileTap={{ scale: 0.95 }}
             onClick={() => navigate('/reports')}
             className="btn flex flex-none items-center justify-center"
-            style={{ background: 'var(--surface-color)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', borderRadius: '16px', padding: '0.75rem 1.25rem', gap: '0.5rem', minHeight: 'auto', width: 'auto' }}
+            style={{ background: 'var(--surface-color)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', borderRadius: '14px', padding: '0.5rem 1rem', fontSize: '0.85rem', fontWeight: 600, gap: '0.4rem', minHeight: 'auto', width: 'auto' }}
           >
-            <Activity size={18} className="text-accent" style={{ opacity: 0.8 }} /> {t('dash.reports')}
+            <Activity size={16} className="text-accent" style={{ opacity: 0.8 }} /> {t('dash.reports')}
           </motion.button>
         </motion.div>
 
