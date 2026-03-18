@@ -135,17 +135,17 @@ export const Dashboard: React.FC = () => {
         initial="hidden"
         animate="show"
       >
-        {/* Compact Modern Top Bar */}
-        <motion.div variants={itemVariants} className="flex items-center justify-between" style={{ marginBottom: '1.5rem', marginTop: '0.5rem', gap: '0.75rem', position: 'relative', zIndex: 10 }}>
+        {/* Ultra-Compact Top Bar */}
+        <motion.div variants={itemVariants} className="flex items-center justify-between" style={{ marginBottom: '1rem', marginTop: '0', gap: '0.5rem', position: 'relative', zIndex: 10 }}>
           {/* Greeting Column */}
           <div className="flex flex-col" style={{ flexShrink: 0 }}>
             <h1 style={{ 
-              fontSize: '1.2rem', fontWeight: 800, background: greetingObj.background,
-              WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', display: 'inline-block', letterSpacing: '-0.02em', lineHeight: 1.2
+              fontSize: '1.1rem', fontWeight: 800, background: greetingObj.background,
+              WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', display: 'inline-block', letterSpacing: '-0.02em', lineHeight: 1.1
             }}>
               {greetingObj.text}
             </h1>
-            <p className="text-secondary" style={{ fontSize: '0.7rem', fontWeight: 600 }}>
+            <p className="text-secondary" style={{ fontSize: '0.65rem', fontWeight: 600 }}>
               {new Date().toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
             </p>
           </div>
@@ -153,10 +153,10 @@ export const Dashboard: React.FC = () => {
           {/* Compact Search Bar */}
           <div style={{ 
             display: 'flex', alignItems: 'center', background: 'rgba(var(--primary-rgb), 0.04)', 
-            border: '1px solid rgba(var(--primary-rgb), 0.1)', borderRadius: '99px', padding: '0.4rem 0.8rem',
+            border: '1px solid rgba(var(--primary-rgb), 0.1)', borderRadius: '99px', padding: '0.25rem 0.6rem',
             flexGrow: 1, maxWidth: '280px', transition: 'all 0.3s'
           }}>
-            <Search size={14} className="text-primary" style={{ marginRight: '0.4rem', opacity: 0.7 }} />
+            <Search size={14} className="text-primary" style={{ marginRight: '0.3rem', opacity: 0.7 }} />
             <input 
               type="text" 
               placeholder="Search..." 
@@ -198,7 +198,7 @@ export const Dashboard: React.FC = () => {
                   <div style={{ padding: '0.5rem 0' }}>
                     <div style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', padding: '0.5rem 1.25rem' }}>Customers</div>
                     {searchResults.customers.map(c => (
-                       <div key={c.id} onClick={() => navigate(`/customer/${c.id}`)} className="flex items-center justify-between" style={{ padding: '0.75rem 1.25rem', cursor: 'pointer', borderBottom: '1px solid var(--border-color)' }}>
+                       <div key={c.id} onClick={() => { setSearchQuery(''); navigate(`/customers/${c.id}`); }} className="flex items-center justify-between" style={{ padding: '0.75rem 1.25rem', cursor: 'pointer', borderBottom: '1px solid var(--border-color)' }}>
                          <div>
                            <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>{c.name}</div>
                            <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '0.125rem' }}>{c.phone || 'No phone'}</div>
@@ -214,7 +214,7 @@ export const Dashboard: React.FC = () => {
                   <div style={{ padding: '0.5rem 0', borderTop: '1px solid var(--border-color)' }}>
                     <div style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', padding: '0.5rem 1.25rem' }}>Products</div>
                     {searchResults.products.map(p => (
-                       <div key={p.id} onClick={() => navigate('/inventory')} className="flex items-center justify-between" style={{ padding: '0.75rem 1.25rem', cursor: 'pointer', borderBottom: '1px solid var(--border-color)' }}>
+                       <div key={p.id} onClick={() => { setSearchQuery(''); navigate('/inventory'); }} className="flex items-center justify-between" style={{ padding: '0.75rem 1.25rem', cursor: 'pointer', borderBottom: '1px solid var(--border-color)' }}>
                          <div className="flex items-center" style={{ gap: '0.75rem' }}>
                            {p.image ? (
                              <img src={p.image} style={{ width: '2rem', height: '2rem', borderRadius: '6px', objectFit: 'cover' }} alt="" />
