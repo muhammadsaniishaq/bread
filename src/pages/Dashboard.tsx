@@ -135,31 +135,32 @@ export const Dashboard: React.FC = () => {
         initial="hidden"
         animate="show"
       >
-        {/* Header Section */}
-        <motion.div variants={itemVariants} className="flex flex-col mb-6 mt-2">
-          <h1 style={{ 
-            fontSize: '1.75rem', fontWeight: 800, background: greetingObj.background,
-            WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', display: 'inline-block' 
-          }}>
-            {greetingObj.text}
-          </h1>
-          <p className="text-secondary font-medium" style={{ marginTop: '0.25rem' }}>
-            {new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
-          </p>
-        </motion.div>
+        {/* Compact Modern Top Bar */}
+        <motion.div variants={itemVariants} className="flex items-center justify-between" style={{ marginBottom: '1.5rem', marginTop: '0.5rem', gap: '0.75rem', position: 'relative', zIndex: 10 }}>
+          {/* Greeting Column */}
+          <div className="flex flex-col" style={{ flexShrink: 0 }}>
+            <h1 style={{ 
+              fontSize: '1.2rem', fontWeight: 800, background: greetingObj.background,
+              WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', display: 'inline-block', letterSpacing: '-0.02em', lineHeight: 1.2
+            }}>
+              {greetingObj.text}
+            </h1>
+            <p className="text-secondary" style={{ fontSize: '0.7rem', fontWeight: 600 }}>
+              {new Date().toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
+            </p>
+          </div>
 
-        {/* Search Bar - Modernized */}
-        <motion.div variants={itemVariants} style={{ position: 'relative', marginBottom: '2rem', zIndex: 10 }}>
+          {/* Compact Search Bar */}
           <div style={{ 
-            display: 'flex', alignItems: 'center', background: 'var(--surface-color)', 
-            border: '1px solid var(--border-color)', borderRadius: '16px', padding: '0.875rem 1.25rem',
-            boxShadow: 'var(--shadow-sm)'
+            display: 'flex', alignItems: 'center', background: 'rgba(var(--primary-rgb), 0.04)', 
+            border: '1px solid rgba(var(--primary-rgb), 0.1)', borderRadius: '99px', padding: '0.4rem 0.8rem',
+            flexGrow: 1, maxWidth: '280px', transition: 'all 0.3s'
           }}>
-            <Search size={18} className="text-secondary" style={{ marginRight: '0.75rem' }} />
+            <Search size={14} className="text-primary" style={{ marginRight: '0.4rem', opacity: 0.7 }} />
             <input 
               type="text" 
-              placeholder="Search customers, products..." 
-              style={{ background: 'transparent', border: 'none', outline: 'none', width: '100%', fontSize: '0.95rem', color: 'var(--text-primary)' }}
+              placeholder="Search..." 
+              style={{ background: 'transparent', border: 'none', outline: 'none', width: '100%', fontSize: '0.8rem', color: 'var(--text-primary)', fontWeight: 500 }}
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
             />
@@ -171,14 +172,14 @@ export const Dashboard: React.FC = () => {
                   exit={{ opacity: 0, scale: 0.8 }}
                   onClick={() => setSearchQuery('')} 
                   className="text-secondary"
-                  style={{ background: 'rgba(0,0,0,0.05)', borderRadius: '50%', padding: '0.25rem', marginLeft: '0.5rem', border: 'none' }}
+                  style={{ background: 'rgba(0,0,0,0.05)', borderRadius: '50%', padding: '0.15rem', marginLeft: '0.25rem', border: 'none', cursor: 'pointer' }}
                 >
-                  <X size={14} />
+                  <X size={12} />
                 </motion.button>
               )}
             </AnimatePresence>
           </div>
-          
+
           {/* Search Dropdown */}
           <AnimatePresence>
             {searchResults && (searchResults.customers.length > 0 || searchResults.products.length > 0) && (
@@ -187,8 +188,8 @@ export const Dashboard: React.FC = () => {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: 10 }}
                 style={{ 
-                  position: 'absolute', top: '100%', left: 0, right: 0, marginTop: '0.75rem', 
-                  background: 'var(--surface-color)', border: '1px solid var(--border-color)', 
+                  position: 'absolute', top: '100%', right: 0, marginTop: '0.5rem', width: '100%', minWidth: '300px',
+                  background: 'var(--surface-color)', border: '1px solid var(--border-color)', backdropFilter: 'blur(20px)',
                   borderRadius: '16px', boxShadow: 'var(--shadow-lg)', overflow: 'hidden', zIndex: 50 
                 }}
               >
@@ -199,11 +200,11 @@ export const Dashboard: React.FC = () => {
                     {searchResults.customers.map(c => (
                        <div key={c.id} onClick={() => navigate(`/customer/${c.id}`)} className="flex items-center justify-between" style={{ padding: '0.75rem 1.25rem', cursor: 'pointer', borderBottom: '1px solid var(--border-color)' }}>
                          <div>
-                           <div style={{ fontWeight: 600, fontSize: '0.95rem' }}>{c.name}</div>
-                           <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.125rem' }}>{c.phone || 'No phone'}</div>
+                           <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>{c.name}</div>
+                           <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '0.125rem' }}>{c.phone || 'No phone'}</div>
                          </div>
-                         <div style={{ fontSize: '0.75rem', fontWeight: 'bold', fontFamily: 'monospace' }}>
-                           {c.debtBalance > 0 ? <span className="text-danger flex items-center gap-2" style={{ background: 'rgba(var(--danger-rgb), 0.1)', padding: '0.25rem 0.5rem', borderRadius: '8px' }}><AlertTriangle size={12}/> ₦{c.debtBalance.toLocaleString()}</span> : <span className="text-success" style={{ background: 'rgba(var(--success-rgb), 0.1)', padding: '0.25rem 0.5rem', borderRadius: '8px' }}>Clean</span>}
+                         <div style={{ fontSize: '0.7rem', fontWeight: 'bold', fontFamily: 'monospace' }}>
+                           {c.debtBalance > 0 ? <span className="text-danger flex items-center gap-1" style={{ background: 'rgba(var(--danger-rgb), 0.1)', padding: '0.25rem 0.5rem', borderRadius: '8px' }}><AlertTriangle size={10}/> ₦{c.debtBalance.toLocaleString()}</span> : <span className="text-success" style={{ background: 'rgba(var(--success-rgb), 0.1)', padding: '0.25rem 0.5rem', borderRadius: '8px' }}>Clean</span>}
                          </div>
                        </div>
                     ))}
@@ -216,18 +217,18 @@ export const Dashboard: React.FC = () => {
                        <div key={p.id} onClick={() => navigate('/inventory')} className="flex items-center justify-between" style={{ padding: '0.75rem 1.25rem', cursor: 'pointer', borderBottom: '1px solid var(--border-color)' }}>
                          <div className="flex items-center" style={{ gap: '0.75rem' }}>
                            {p.image ? (
-                             <img src={p.image} style={{ width: '2.5rem', height: '2.5rem', borderRadius: '8px', objectFit: 'cover' }} alt="" />
+                             <img src={p.image} style={{ width: '2rem', height: '2rem', borderRadius: '6px', objectFit: 'cover' }} alt="" />
                            ) : (
-                             <div className="text-primary" style={{ width: '2.5rem', height: '2.5rem', borderRadius: '8px', background: 'rgba(var(--primary-rgb), 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>
+                             <div className="text-primary" style={{ width: '2rem', height: '2rem', borderRadius: '6px', background: 'rgba(var(--primary-rgb), 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '0.8rem' }}>
                                {p.name.charAt(1) === '₦' ? p.name.charAt(p.name.indexOf(' ') + 1) : p.name.charAt(1)}
                              </div>
                            )}
                            <div>
-                             <div style={{ fontWeight: 600, fontSize: '0.95rem' }}>{p.name}</div>
-                             <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.125rem' }}>{p.category || 'Standard'} • ₦{p.price}</div>
+                             <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>{p.name}</div>
+                             <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '0.125rem' }}>{p.category || 'Standard'} • ₦{p.price}</div>
                            </div>
                          </div>
-                         <div className={p.stock > 0 ? 'text-success' : 'text-danger'} style={{ fontSize: '0.7rem', fontWeight: 'bold', textTransform: 'uppercase', background: p.stock > 0 ? 'rgba(var(--success-rgb), 0.1)' : 'rgba(var(--danger-rgb), 0.1)', padding: '0.25rem 0.5rem', borderRadius: '8px' }}>
+                         <div className={p.stock > 0 ? 'text-success' : 'text-danger'} style={{ fontSize: '0.65rem', fontWeight: 'bold', textTransform: 'uppercase', background: p.stock > 0 ? 'rgba(var(--success-rgb), 0.1)' : 'rgba(var(--danger-rgb), 0.1)', padding: '0.2rem 0.4rem', borderRadius: '6px' }}>
                            {p.stock} in stock
                          </div>
                        </div>
@@ -240,7 +241,7 @@ export const Dashboard: React.FC = () => {
         </motion.div>
 
         {/* Quick Actions - Floating Pills */}
-        <motion.div variants={itemVariants} className="flex mb-8" style={{ gap: '0.75rem', overflowX: 'auto', paddingBottom: '1rem', scrollbarWidth: 'none', margin: '0 -1.25rem', padding: '0 1.25rem' }}>
+        <motion.div variants={itemVariants} className="flex mb-6" style={{ gap: '0.75rem', overflowX: 'auto', paddingBottom: '0.5rem', scrollbarWidth: 'none', margin: '0 -1.25rem', padding: '0 1.25rem' }}>
           <motion.button 
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.95 }}
@@ -279,7 +280,7 @@ export const Dashboard: React.FC = () => {
               initial={{ opacity: 0, height: 0 }} 
               animate={{ opacity: 1, height: 'auto' }} 
               exit={{ opacity: 0, height: 0 }}
-              className="mb-8"
+              className="mb-6"
             >
               <div className="card" style={{ background: 'rgba(var(--danger-rgb), 0.05)', borderColor: 'rgba(var(--danger-rgb), 0.3)', borderLeft: '4px solid var(--danger-color)', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                 <h3 className="font-bold text-danger flex items-center gap-2" style={{ fontSize: '0.95rem' }}>
