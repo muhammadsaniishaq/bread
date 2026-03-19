@@ -118,7 +118,7 @@ export const CustomerProfile: React.FC = () => {
       <AnimatedPage>
         <div className="container mt-8 text-center text-secondary">
           Customer not found.
-          <button className="btn btn-outline mt-4" onClick={() => navigate('/customers')}>Go Back</button>
+          <button className="btn btn-outline mt-4" onClick={() => navigate(-1)}>Go Back</button>
         </div>
       </AnimatedPage>
     );
@@ -130,7 +130,7 @@ export const CustomerProfile: React.FC = () => {
     <AnimatedPage>
       <div className="container">
         <div className="flex items-center gap-4 mb-6">
-          <button onClick={() => navigate('/customers')} className="btn btn-outline btn-icon" style={{ padding: '0.6rem' }}>
+          <button onClick={() => navigate(-1)} className="btn btn-outline btn-icon" style={{ padding: '0.6rem' }}>
             <ArrowLeft size={20} />
           </button>
           <h1 className="text-2xl font-bold m-0 flex-1 truncate">{customer.name}</h1>
