@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'; // Changed BrowserRouter to Router
-import { AppProvider, useAppContext } from './store/AppContext';
+import { AppProvider } from './store/AppContext';
+import { AuthProvider, useAuth } from './store/AuthContext';
 import { LanguageProvider } from './store/LanguageContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import Layout from './components/Layout';
@@ -23,7 +24,8 @@ import BakeryReceipt from './pages/BakeryReceipt';
 import { SplashScreen } from './components/SplashScreen';
 
 const AppContent: React.FC = () => {
-  const { isAuthenticated, loading, logout } = useAppContext();
+  const { user, loading, signOut } = useAuth();
+  const isAuthenticated = !!user;
   const [showSplash, setShowSplash] = React.useState(true);
   
   const theme = localStorage.getItem('theme') as 'light' | 'dark' || 'light';
@@ -41,7 +43,7 @@ const AppContent: React.FC = () => {
       clearTimeout(timeoutId);
       if (isAuthenticated) {
         timeoutId = setTimeout(() => {
-          logout();
+          signOut();
         }, 5 * 60 * 1000); // 5 minutes
       }
     };
@@ -57,7 +59,7 @@ const AppContent: React.FC = () => {
       clearTimeout(timeoutId);
       events.forEach(event => document.removeEventListener(event, resetTimer));
     };
-  }, [isAuthenticated, logout]);
+  }, [isAuthenticated, signOut]);
 
   if (loading) {
     return <div style={{display:'flex', justifyContent:'center', alignItems:'center', height:'100vh', backgroundColor:'var(--background-color)', color:'var(--primary-color)'}}>Loading App Data...</div>;
@@ -102,9 +104,11 @@ const AppContent: React.FC = () => {
 
 function App() {
   return (
-    <AppProvider>
-      <AppContent />
-    </AppProvider>
+    <AuthProvider>
+      <AppProvider>
+        <AppContent />
+      </AppProvider>
+    </AuthProvider>
   );
 }
 

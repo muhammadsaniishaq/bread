@@ -1,12 +1,17 @@
 import React from 'react';
-import { Navigate } from 'react-router-dom';
-import { useAppContext } from '../store/AppContext';
+import { Navigate, useLocation } from 'react-router-dom';
+import { useAuth } from '../store/AuthContext';
 
 export const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { isAuthenticated } = useAppContext();
+  const { user, loading } = useAuth();
+  const location = useLocation();
   
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
+  if (loading) {
+    return <div style={{display:'flex', justifyContent:'center', alignItems:'center', height:'100vh', backgroundColor:'var(--background-color)', color:'var(--primary-color)'}}>Loading Application...</div>;
+  }
+  
+  if (!user) {
+    return <Navigate to="/login" state={{ from: location }} replace />;
   }
   
   return <>{children}</>;

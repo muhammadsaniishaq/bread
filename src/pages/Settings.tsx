@@ -6,9 +6,10 @@ import { AnimatedPage } from '../components/AnimatedPage';
 import { DownloadCloud, UploadCloud, LogOut, Check } from 'lucide-react';
 import { exportData, importData } from '../store/backup';
 import { useTranslation } from '../store/LanguageContext';
-
+import { useAuth } from '../store/AuthContext';
 export const Settings: React.FC = () => {
-  const { products, addProduct, updateProduct, deleteProduct, updatePin, refreshData, logout, appSettings, updateSettings } = useAppContext();
+  const { products, addProduct, updateProduct, deleteProduct, updatePin, refreshData, appSettings, updateSettings, logout } = useAppContext();
+  const { signOut } = useAuth();
   const { t, language, setLanguage } = useTranslation();
   const theme = document.documentElement.getAttribute('data-theme') || 'light';
   
@@ -196,7 +197,7 @@ export const Settings: React.FC = () => {
       <div className="container">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-bold">{t('set.title')}</h1>
-          <button className="btn btn-outline btn-icon border-danger text-danger" onClick={logout} title={t('set.logout')}>
+          <button className="btn btn-outline btn-icon border-danger text-danger" onClick={async () => { logout(); await signOut(); }} title={t('set.logout')}>
             <LogOut size={20} />
           </button>
         </div>
