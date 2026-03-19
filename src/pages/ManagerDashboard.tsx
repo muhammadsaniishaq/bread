@@ -28,6 +28,15 @@ export const ManagerDashboard: React.FC = () => {
   Object.entries(itemMap).forEach(([id, qty]) => {
     if (qty > highestQty) { bestSellerId = id; highestQty = qty; }
   });
+
+  const { expenses, customers } = useAppContext();
+  
+  // Calculate today's expenses
+  const todayExpenses = expenses.filter(e => new Date(e.date).toDateString() === new Date().toDateString()).reduce((acc, curr) => acc + curr.amount, 0);
+
+  // Calculate global metrics
+  const outstandingDebt = customers.reduce((sum, c) => sum + (c.debtBalance || 0), 0);
+  const stockRetailValue = products.filter(p => p.active).reduce((sum, p) => sum + (p.stock * p.price), 0);
   
   // Actually get the product name from appContext
   // To avoid importing products, we can assume the appContext has it if we pull it in
@@ -45,6 +54,7 @@ export const ManagerDashboard: React.FC = () => {
     { name: 'Full Reports', icon: <FileBarChart size={24} />, path: '/manager/reports', color: 'text-indigo-500', bg: 'bg-indigo-500/10' },
     { name: 'Customers Base', icon: <Users size={24} />, path: '/manager/customers', color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
     { name: 'Mgt Expenses', icon: <Banknote size={24} />, path: '/manager/expenses', color: 'text-red-500', bg: 'bg-red-500/10' },
+    { name: 'System Audit', icon: <Shield size={24} />, path: '/manager/audit', color: 'text-zinc-500', bg: 'bg-zinc-500/10' },
     { name: 'App Settings', icon: <Settings size={24} />, path: '/manager/settings', color: 'text-gray-500', bg: 'bg-gray-500/10' },
   ];
 
@@ -74,6 +84,33 @@ export const ManagerDashboard: React.FC = () => {
             >
               <LogOut size={18} strokeWidth={2.5} />
             </button>
+          </div>
+        </div>
+        
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+          <div className="bg-gradient-to-br from-indigo-500 to-indigo-700 text-white p-5 rounded-[var(--radius-xl)] shadow-lg relative overflow-hidden transition-transform hover:scale-[1.02]">
+            <div className="absolute -right-4 -top-4 opacity-10"><TrendingUp size={100} /></div>
+            <div className="flex items-center gap-2 mb-2 opacity-90"><TrendingUp size={16} strokeWidth={3} /><h2 className="font-bold text-xs uppercase tracking-wider">Today's Revenue</h2></div>
+            <div className="text-2xl font-black tracking-tight">₦{totalRevenue.toLocaleString()}</div>
+            <div className="text-[10px] mt-2 opacity-80 font-bold bg-black/20 inline-block px-2 py-0.5 rounded-full">{salesCount} Sales Today</div>
+          </div>
+          
+          <div className="bg-gradient-to-br from-rose-500 to-rose-700 text-white p-5 rounded-[var(--radius-xl)] shadow-lg relative overflow-hidden transition-transform hover:scale-[1.02]">
+            <div className="absolute -right-4 -top-4 opacity-10"><Banknote size={100} /></div>
+            <div className="flex items-center gap-2 mb-2 opacity-90"><Banknote size={16} strokeWidth={3} /><h2 className="font-bold text-xs uppercase tracking-wider">Today's Expenses</h2></div>
+            <div className="text-2xl font-black tracking-tight">₦{todayExpenses.toLocaleString()}</div>
+          </div>
+
+          <div className="bg-gradient-to-br from-amber-500 to-amber-700 text-white p-5 rounded-[var(--radius-xl)] shadow-lg relative overflow-hidden transition-transform hover:scale-[1.02]" onClick={() => navigate('/manager/reports')}>
+            <div className="absolute -right-4 -top-4 opacity-10"><Users size={100} /></div>
+            <div className="flex items-center gap-2 mb-2 opacity-90"><Users size={16} strokeWidth={3} /><h2 className="font-bold text-xs uppercase tracking-wider">Market Debtors</h2></div>
+            <div className="text-2xl font-black tracking-tight">₦{outstandingDebt.toLocaleString()}</div>
+          </div>
+
+          <div className="bg-gradient-to-br from-emerald-500 to-emerald-700 text-white p-5 rounded-[var(--radius-xl)] shadow-lg relative overflow-hidden transition-transform hover:scale-[1.02]">
+            <div className="absolute -right-4 -top-4 opacity-10"><Package size={100} /></div>
+            <div className="flex items-center gap-2 mb-2 opacity-90"><Package size={16} strokeWidth={3} /><h2 className="font-bold text-xs uppercase tracking-wider">Stock Value</h2></div>
+            <div className="text-2xl font-black tracking-tight">₦{stockRetailValue.toLocaleString()}</div>
           </div>
         </div>
         
@@ -111,35 +148,26 @@ export const ManagerDashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* Dynamic Quick Links */}
-        <div className="grid grid-cols-2 gap-4 mb-8">
-          <div className="bg-gradient-to-br from-primary to-indigo-700 text-white p-5 rounded-[var(--radius-xl)] shadow-[0_10px_30px_rgba(var(--primary-rgb),0.3)] relative overflow-hidden transition-transform hover:scale-[1.02]">
-            <div className="absolute -right-4 -top-4 opacity-10">
-              <TrendingUp size={100} />
-            </div>
-            <div className="flex items-center gap-2 mb-2 opacity-90">
-              <TrendingUp size={16} strokeWidth={3} />
-              <h2 className="font-bold text-sm uppercase tracking-wider">Today's Revenue</h2>
-            </div>
-            <div className="text-2xl sm:text-3xl font-black tracking-tight">₦{totalRevenue.toLocaleString()}</div>
-            <div className="text-xs mt-2 opacity-80 font-medium bg-black/20 inline-block px-2 py-1 rounded-full">{salesCount} Sales Today</div>
+        {/* Top Product Hero */}
+        <div className="bg-white dark:bg-zinc-800 p-5 rounded-3xl shadow-md border border-[var(--border-color)] relative overflow-hidden transition-transform hover:scale-[1.01] mb-8">
+          <div className="absolute -right-4 -top-4 opacity-[0.03] dark:opacity-5 text-black dark:text-white">
+            <Archive size={100} />
           </div>
-          
-          <div className="bg-white dark:bg-zinc-800 p-5 rounded-[var(--radius-xl)] shadow-md border border-[var(--border-color)] relative overflow-hidden transition-transform hover:scale-[1.02]">
-            <div className="absolute -right-4 -top-4 opacity-[0.03] dark:opacity-5 text-black dark:text-white">
-              <Archive size={100} />
+          <div className="flex items-center justify-between relative z-10">
+            <div>
+              <div className="flex items-center gap-2 mb-2 text-secondary">
+                <TrendingUp size={16} strokeWidth={3} className="text-success" />
+                <h2 className="font-bold text-sm uppercase tracking-wider">Top Performing Product</h2>
+              </div>
+              <div className="text-2xl sm:text-3xl font-black tracking-tight text-[var(--text-primary)]">
+                {bestSellerId ? products.find(p => p.id === bestSellerId)?.name || 'N/A' : 'No Sales Yet'}
+              </div>
+              <div className="text-xs mt-2 text-success font-bold bg-success/10 inline-block px-3 py-1.5 rounded-full">Best Seller Today ({highestQty} sold)</div>
             </div>
-            <div className="flex items-center gap-2 mb-2 text-secondary relative z-10">
-              <TrendingUp size={16} strokeWidth={3} className="text-success" />
-              <h2 className="font-bold text-sm uppercase tracking-wider">Top Product</h2>
-            </div>
-            <div className="text-2xl sm:text-3xl font-black tracking-tight text-[var(--text-primary)] relative z-10">
-              {bestSellerId ? products.find(p => p.id === bestSellerId)?.name || 'N/A' : 'No Sales Yet'}
-            </div>
-            <div className="text-xs mt-2 text-success font-bold bg-success/10 inline-block px-2 py-1 rounded-full relative z-10">Best Seller Today ({highestQty} sold)</div>
+            <Archive size={48} className="text-success opacity-20 mr-4" />
           </div>
         </div>
-        
+
         {/* Core System App Grid (iOS Style) */}
         <div className="mb-8">
           <h2 className="font-black text-lg mb-4 flex items-center gap-2 tracking-tight">

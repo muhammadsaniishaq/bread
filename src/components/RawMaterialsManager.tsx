@@ -35,6 +35,9 @@ export const RawMaterialsManager: React.FC = () => {
     setLoading(false);
   };
 
+  const [actionType, setActionType] = useState<'edit' | 'add_stock' | 'deduct_usage' | null>(null);
+  const [actionAmount, setActionAmount] = useState('');
+
   const handleSave = async () => {
     if (!name.trim() || !quantity) return;
     
@@ -48,6 +51,20 @@ export const RawMaterialsManager: React.FC = () => {
     }
     
     resetForm();
+    fetchMaterials();
+  };
+
+  const handleStockAction = async (mat: RawMaterial) => {
+    if (!actionAmount || parseFloat(actionAmount) <= 0) return;
+    const amount = parseFloat(actionAmount);
+    let newQty = mat.quantity_remaining;
+
+    if (actionType === 'add_stock') newQty += amount;
+    if (actionType === 'deduct_usage') newQty = Math.max(0, newQty - amount);
+
+    await supabase.from('raw_materials').update({ quantity_remaining: newQty }).eq('id', mat.id);
+    setActionType(null);
+    setActionAmount('');
     fetchMaterials();
   };
 
@@ -119,26 +136,60 @@ export const RawMaterialsManager: React.FC = () => {
             </div>
           )}
 
-          <div className="grid gap-3">
+          <div className="grid gap-4">
             {materials.length === 0 ? (
               <p className="text-sm opacity-50 text-center py-6 border border-dashed rounded-xl">No materials tracked yet.</p>
             ) : (
               materials.map(mat => (
-                <div key={mat.id} className="flex justify-between items-center p-4 border rounded-2xl bg-black/5 dark:bg-white/5 hover:bg-transparent transition-colors" style={{ borderColor: 'var(--border-color)' }}>
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary">
-                      <Package size={20} strokeWidth={2.5} />
-                    </div>
-                    <div>
-                      <div className="font-bold text-lg mb-0.5 tracking-tight">{mat.name}</div>
-                      <div className="text-sm font-medium text-secondary bg-black/5 dark:bg-white/10 px-2 py-0.5 rounded-md inline-block">
-                        {mat.quantity_remaining} {mat.unit} left
+                <div key={mat.id} className="p-5 border rounded-3xl bg-surface hover:shadow-md transition-all relative overflow-hidden group" style={{ borderColor: 'var(--border-color)' }}>
+                  {mat.quantity_remaining <= 5 && <div className="absolute top-0 right-0 w-16 h-16 bg-red-500/10 rounded-bl-full border-l border-b border-red-500/20" />}
+                  
+                  <div className="flex justify-between items-start mb-4">
+                    <div className="flex items-center gap-4">
+                      <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-500/10 to-purple-500/10 flex items-center justify-center text-primary shadow-inner border border-primary/20">
+                        <Package size={24} strokeWidth={2} />
+                      </div>
+                      <div>
+                        <div className="font-black text-xl mb-0.5 tracking-tight">{mat.name}</div>
+                        <div className={`text-xs font-bold px-2.5 py-1 rounded-full inline-block ${mat.quantity_remaining <= 5 ? 'bg-red-500/10 text-red-600' : 'bg-success/10 text-success'}`}>
+                          {mat.quantity_remaining} {mat.unit} Available
+                        </div>
                       </div>
                     </div>
+                    <button className="p-2 text-secondary hover:text-primary hover:bg-primary/10 rounded-full transition-colors opacity-0 group-hover:opacity-100" onClick={() => startEdit(mat)}>
+                      <Edit2 size={16} />
+                    </button>
                   </div>
-                  <button className="p-3 text-secondary hover:text-primary hover:bg-primary/10 rounded-full transition-colors" onClick={() => startEdit(mat)}>
-                    <Edit2 size={18} />
-                  </button>
+
+                  {actionType && editingId === mat.id && actionType !== 'edit' ? (
+                    <div className="bg-black/5 dark:bg-white/5 p-4 rounded-2xl flex items-center gap-3 animate-bounce-in-up">
+                      <input 
+                        type="number" 
+                        placeholder={`Amount to ${actionType === 'add_stock' ? 'add' : 'deduct'}...`}
+                        className="form-input py-2 font-bold w-full bg-white dark:bg-black"
+                        value={actionAmount}
+                        onChange={e => setActionAmount(e.target.value)}
+                        autoFocus
+                      />
+                      <button className="btn bg-success text-white py-2 px-4 whitespace-nowrap" onClick={() => handleStockAction(mat)}>Confirm</button>
+                      <button className="btn border border-[var(--border-color)] text-secondary py-2 px-3" onClick={() => { setActionType(null); setEditingId(null); setActionAmount(''); }}>Cancel</button>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-2 gap-3 mt-2 border-t border-[var(--border-color)] pt-4">
+                      <button 
+                         className="flex items-center justify-center gap-2 py-2 px-4 rounded-xl bg-indigo-500/10 text-indigo-600 font-bold text-sm tracking-wide hover:bg-indigo-500 hover:text-white transition-all w-full border border-indigo-500/20"
+                         onClick={() => { setEditingId(mat.id); setActionType('add_stock'); }}
+                      >
+                         <Plus size={16} strokeWidth={3} /> Restock
+                      </button>
+                      <button 
+                         className="flex items-center justify-center gap-2 py-2 px-4 rounded-xl bg-amber-500/10 text-amber-600 font-bold text-sm tracking-wide hover:bg-amber-500 hover:text-white transition-all w-full border border-amber-500/20"
+                         onClick={() => { setEditingId(mat.id); setActionType('deduct_usage'); }}
+                      >
+                         Deduct Usage
+                      </button>
+                    </div>
+                  )}
                 </div>
               ))
             )}
