@@ -6,7 +6,7 @@ import { useAuth } from '../store/AuthContext';
 import { LogOut, TrendingUp, Archive, Users, Package, Banknote, LayoutDashboard, Settings, FileBarChart, Shield, ArrowRightLeft, Scale } from 'lucide-react';
 
 export const ManagerDashboard: React.FC = () => {
-  const { transactions, logout } = useAppContext();
+  const { transactions, products, logout } = useAppContext();
   const { signOut } = useAuth();
   const navigate = useNavigate();
   
@@ -14,6 +14,23 @@ export const ManagerDashboard: React.FC = () => {
   const todaySales = transactions.filter(t => new Date(t.date).toDateString() === new Date().toDateString());
   const totalRevenue = todaySales.reduce((acc, curr) => acc + curr.totalPrice, 0);
   const salesCount = todaySales.length;
+
+  // Calculate Top Selling Item
+  const itemMap: Record<string, number> = {};
+  todaySales.forEach(tx => {
+    tx.items?.forEach(item => {
+      itemMap[item.productId] = (itemMap[item.productId] || 0) + item.quantity;
+    });
+  });
+  let bestSellerId = '';
+  let highestQty = 0;
+  Object.entries(itemMap).forEach(([id, qty]) => {
+    if (qty > highestQty) { bestSellerId = id; highestQty = qty; }
+  });
+  
+  // Actually get the product name from appContext
+  // To avoid importing products, we can assume the appContext has it if we pull it in
+  // Wait, I will need to pull products from useAppContext!
 
   const quickLinks = [
     { name: 'Raw Materials', icon: <Package size={24} />, path: '/manager/raw-materials', color: 'text-amber-500', bg: 'bg-amber-500/10' },
@@ -64,14 +81,14 @@ export const ManagerDashboard: React.FC = () => {
             <div className="absolute -right-4 -top-4 opacity-[0.03] dark:opacity-5 text-black dark:text-white">
               <Archive size={100} />
             </div>
-            <div className="flex items-center gap-2 mb-2 text-secondary">
-              <Archive size={16} strokeWidth={3} />
-              <h2 className="font-bold text-sm uppercase tracking-wider">Total Vault</h2>
+            <div className="flex items-center gap-2 mb-2 text-secondary relative z-10">
+              <TrendingUp size={16} strokeWidth={3} className="text-success" />
+              <h2 className="font-bold text-sm uppercase tracking-wider">Top Product</h2>
             </div>
-            <div className="text-2xl sm:text-3xl font-black tracking-tight text-[var(--text-primary)]">
-              ₦{transactions.reduce((acc, curr) => acc + curr.totalPrice, 0).toLocaleString()}
+            <div className="text-2xl sm:text-3xl font-black tracking-tight text-[var(--text-primary)] relative z-10">
+              {bestSellerId ? products.find(p => p.id === bestSellerId)?.name || 'N/A' : 'No Sales Yet'}
             </div>
-            <div className="text-xs mt-2 text-success font-medium bg-success/10 inline-block px-2 py-1 rounded-full">Lifetime Gross</div>
+            <div className="text-xs mt-2 text-success font-bold bg-success/10 inline-block px-2 py-1 rounded-full relative z-10">Best Seller Today ({highestQty} sold)</div>
           </div>
         </div>
         

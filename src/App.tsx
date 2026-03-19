@@ -5,7 +5,6 @@ import { AuthProvider, useAuth } from './store/AuthContext';
 import { LanguageProvider } from './store/LanguageContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import Layout from './components/Layout';
-import ManagerLayout from './components/ManagerLayout';
 import { RoleGuard } from './components/RoleGuard';
 import RoleRouter from './components/RoleRouter';
 
@@ -97,17 +96,14 @@ const AppContent: React.FC = () => {
             </ProtectedRoute>
           } />
 
-          {/* New Role-Specific Dashboards */}
+          {/* Role-Specific Dashboards wrapped in intelligent Layout */}
           
-          <Route element={<ManagerLayout />}>
+          <Route element={<Layout />}>
             <Route path="/manager" element={<RoleGuard allowedRoles={['MANAGER']}><ManagerDashboard /></RoleGuard>} />
             <Route path="/manager/raw-materials" element={<RoleGuard allowedRoles={['MANAGER']}><RawMaterialsManager /></RoleGuard>} />
             <Route path="/manager/staff" element={<RoleGuard allowedRoles={['MANAGER']}><UserManagement /></RoleGuard>} />
             <Route path="/manager/stock-assignment" element={<RoleGuard allowedRoles={['MANAGER']}><StockAssignment /></RoleGuard>} />
             <Route path="/manager/reconciliation" element={<RoleGuard allowedRoles={['MANAGER']}><FinancialReconciliation /></RoleGuard>} />
-          </Route>
-
-          <Route element={<Layout />}>
             <Route path="/supplier" element={<RoleGuard allowedRoles={['SUPPLIER']}><SupplierDashboard /></RoleGuard>} />
           </Route>
           <Route path="/store" element={<RoleGuard allowedRoles={['STORE_KEEPER']}><StoreDashboard /></RoleGuard>} />
