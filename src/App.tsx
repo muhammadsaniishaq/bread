@@ -5,6 +5,13 @@ import { AuthProvider, useAuth } from './store/AuthContext';
 import { LanguageProvider } from './store/LanguageContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import Layout from './components/Layout';
+import { RoleGuard } from './components/RoleGuard';
+import RoleRouter from './components/RoleRouter';
+
+import ManagerDashboard from './pages/ManagerDashboard';
+import StoreDashboard from './pages/StoreDashboard';
+import SupplierDashboard from './pages/SupplierDashboard';
+import CustomerStorefront from './pages/CustomerStorefront';
 
 import Dashboard from './pages/Dashboard';
 import Settings from './pages/Settings';
@@ -77,24 +84,42 @@ const AppContent: React.FC = () => {
         <Routes>
           <Route path="/login" element={<Login />} />
           
+          {/* Root Role-Based Redirector */}
           <Route path="/" element={
             <ProtectedRoute>
-              <Layout />
+              <RoleRouter />
+            </ProtectedRoute>
+          } />
+
+          {/* New Role-Specific Dashboards */}
+          <Route element={<Layout />}>
+            <Route path="/manager" element={<RoleGuard allowedRoles={['MANAGER']}><ManagerDashboard /></RoleGuard>} />
+            <Route path="/supplier" element={<RoleGuard allowedRoles={['SUPPLIER']}><SupplierDashboard /></RoleGuard>} />
+          </Route>
+          <Route path="/store" element={<RoleGuard allowedRoles={['STORE_KEEPER']}><StoreDashboard /></RoleGuard>} />
+          <Route path="/customer" element={<RoleGuard allowedRoles={['CUSTOMER']}><CustomerStorefront /></RoleGuard>} />
+
+          {/* Legacy App Routes - Protected and shared across Managers/Suppliers until fully migrated */}
+          <Route element={
+            <ProtectedRoute>
+              <RoleGuard allowedRoles={['MANAGER', 'SUPPLIER', 'STORE_KEEPER']}>
+                <Layout />
+              </RoleGuard>
             </ProtectedRoute>
           }>
-            <Route index element={<Dashboard />} />
-            <Route path="sales" element={<Sales />} />
-            <Route path="customers" element={<Customers />} />
-            <Route path="customers/:id" element={<CustomerProfile />} />
-            <Route path="customer-receipt/:id" element={<CustomerReceipt />} />
-            <Route path="customer-docs/:id" element={<CustomerIDAndCert />} />
-            <Route path="inventory" element={<Inventory />} />
-            <Route path="inventory/receipt/:id" element={<InventoryReceipt />} />
-            <Route path="bakery-receipt/:id" element={<BakeryReceipt />} />
-            <Route path="settings" element={<Settings />} />
-            <Route path="receipt/:id" element={<Receipt />} /> {/* Updated path for receipt */}
-            <Route path="reports" element={<Reports />} />
-            <Route path="expenses" element={<Expenses />} />
+            <Route path="/legacy" element={<Dashboard />} />
+            <Route path="/sales" element={<Sales />} />
+            <Route path="/customers" element={<Customers />} />
+            <Route path="/customers/:id" element={<CustomerProfile />} />
+            <Route path="/customer-receipt/:id" element={<CustomerReceipt />} />
+            <Route path="/customer-docs/:id" element={<CustomerIDAndCert />} />
+            <Route path="/inventory" element={<Inventory />} />
+            <Route path="/inventory/receipt/:id" element={<InventoryReceipt />} />
+            <Route path="/bakery-receipt/:id" element={<BakeryReceipt />} />
+            <Route path="/settings" element={<RoleGuard allowedRoles={['MANAGER']}><Settings /></RoleGuard>} />
+            <Route path="/receipt/:id" element={<Receipt />} />
+            <Route path="/reports" element={<RoleGuard allowedRoles={['MANAGER']}><Reports /></RoleGuard>} />
+            <Route path="/expenses" element={<RoleGuard allowedRoles={['MANAGER']}><Expenses /></RoleGuard>} />
           </Route>
         </Routes>
       </Router>

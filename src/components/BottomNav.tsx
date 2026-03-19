@@ -1,5 +1,5 @@
 import React from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useLocation } from 'react-router-dom';
 import { Home, ShoppingCart, Users, Package, Banknote, MoreHorizontal } from 'lucide-react';
 import { useAppContext } from '../store/AppContext';
 
@@ -10,10 +10,12 @@ const BottomNav: React.FC = () => {
   const isAdmin = appSettings?.role === 'Admin' || !appSettings?.role; // Default to Admin for legacy
 
   const hasLowStock = products.some(p => p.active && p.stock > 0 && p.stock < 20);
+  const location = useLocation();
+  const isHomeActive = ['/', '/manager', '/supplier', '/store', '/customer', '/legacy'].includes(location.pathname);
 
   return (
     <nav className="bottom-nav">
-      <NavLink to="/" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+      <NavLink to="/" className={`nav-item ${isHomeActive ? 'active' : ''}`}>
         <Home size={22} strokeWidth={2.5} />
         <span>Home</span>
       </NavLink>
