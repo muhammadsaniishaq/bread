@@ -129,106 +129,132 @@ export const CustomerProfile: React.FC = () => {
   return (
     <AnimatedPage>
       <div className="container">
-        <div className="flex items-center gap-4 mb-6">
-          <button onClick={() => navigate(-1)} className="btn btn-outline btn-icon" style={{ padding: '0.6rem' }}>
-            <ArrowLeft size={20} />
-          </button>
-          <h1 className="text-2xl font-bold m-0 flex-1 truncate">{customer.name}</h1>
-          <div className="flex gap-2">
-            <button onClick={() => setIsEditing(true)} className="btn btn-outline btn-icon border-emerald-200 text-emerald-600 bg-emerald-50 hover:bg-emerald-100" style={{ padding: '0.6rem' }} title="Edit Customer">
-              <Edit2 size={18} />
-            </button>
-            <button onClick={handleDelete} className="btn btn-outline btn-icon border-red-200 text-red-600 bg-red-50 hover:bg-red-100" style={{ padding: '0.6rem' }} title="Delete Customer">
-              <Trash2 size={18} />
-            </button>
-            <button onClick={() => navigate(`/customer-docs/${customer.id}`)} className="btn btn-outline btn-icon" style={{ padding: '0.6rem' }} title="View ID & Certificate">
-              <FileText size={20} className="text-primary" />
-            </button>
-          </div>
+        {/* Beautiful Gradient Header Area */}
+        <div className="bg-gradient-to-br from-indigo-900 via-indigo-800 to-indigo-600 text-white rounded-3xl p-6 md:p-8 mb-8 shadow-xl relative overflow-hidden flex flex-col md:flex-row md:items-center justify-between gap-6">
+           <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 pointer-events-none"></div>
+           
+           <div className="flex items-center gap-5 relative z-10 w-full md:w-auto">
+             <button onClick={() => navigate(-1)} className="p-3 bg-white/10 hover:bg-white/20 rounded-2xl backdrop-blur-md transition-colors text-white shrink-0">
+               <ArrowLeft size={22} className="shrink-0" />
+             </button>
+             <div className="min-w-0 flex-1">
+               <h1 className="text-3xl font-black mb-1 flex items-center gap-3 flex-wrap">
+                 <span className="truncate max-w-full">{customer.name}</span>
+                 {(customer.loyaltyPoints || 0) > 100 && (
+                   <span className="text-[10px] bg-gradient-to-r from-amber-300 to-yellow-500 text-amber-900 px-3 py-1 rounded-full uppercase tracking-widest font-black shadow-sm shrink-0">VIP Member</span>
+                 )}
+               </h1>
+               <div className="flex items-center gap-4 text-sm font-medium opacity-80 flex-wrap">
+                 {customer.phone && (
+                   <span className="flex items-center gap-1.5"><Phone size={14} /> {customer.phone}</span>
+                 )}
+                 {customer.location && (
+                   <span className="flex items-center gap-1.5"><MapPin size={14} /> {customer.location}</span>
+                 )}
+               </div>
+             </div>
+           </div>
+
+           <div className="flex gap-2 relative z-10 self-start md:self-center shrink-0 w-full md:w-auto overflow-x-auto pb-2 md:pb-0 custom-scrollbar">
+             <button onClick={() => setIsEditing(true)} className="flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white px-4 py-2.5 rounded-xl font-bold transition-colors text-xs whitespace-nowrap">
+               <Edit2 size={16} /> Edit Profile
+             </button>
+             <button onClick={() => navigate(`/customer-docs/${customer.id}`)} className="flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white px-4 py-2.5 rounded-xl font-bold transition-colors text-xs whitespace-nowrap">
+               <FileText size={16} /> Documents
+             </button>
+             <button onClick={handleDelete} className="flex items-center gap-2 bg-red-500/20 hover:bg-red-500/40 text-red-100 border border-red-500/30 px-4 py-2.5 rounded-xl font-bold transition-colors text-xs whitespace-nowrap">
+               <Trash2 size={16} /> Delete
+             </button>
+           </div>
         </div>
 
-        <div className="card bg-primary text-white mb-6">
-          <div className="flex items-center gap-3 mb-2 opacity-90 text-sm">
-            <Phone size={16} /> <span>{customer.phone || 'No phone'}</span>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 mb-8 text-black dark:text-white">
+          <div className="bg-surface p-6 rounded-3xl border border-[var(--border-color)] shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
+            <div className="absolute -right-4 -bottom-4 bg-emerald-500/5 group-hover:bg-emerald-500/10 rounded-full w-24 h-24 transition-colors"></div>
+            <div className="text-[10px] uppercase font-black tracking-widest text-secondary mb-1">Lifetime Pipeline</div>
+            <div className="text-3xl font-black text-emerald-600 dark:text-emerald-400">₦{metrics.lifetimeValue.toLocaleString()}</div>
+            <div className="mt-4 text-xs font-semibold text-secondary">Total historic transactions</div>
           </div>
-          <div className="flex items-center gap-3 opacity-90 text-sm">
-            <MapPin size={16} /> <span>{customer.location || 'No location'}</span>
-          </div>
-        </div>
-
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
-          <div className="card" style={{ marginBottom: 0 }}>
-            <div className="text-sm text-secondary">Lifetime Value</div>
-            <div className="text-xl font-bold mt-1 text-primary">₦{metrics.lifetimeValue.toLocaleString()}</div>
-          </div>
-          <div className="card" style={{ marginBottom: 0, borderColor: customer.debtBalance > 0 ? 'var(--danger-color)' : 'var(--border-color)' }}>
-            <div className="text-sm text-secondary">Current Debt</div>
-            <div className="text-xl font-bold mt-1" style={{ color: customer.debtBalance > 0 ? 'var(--danger-color)' : 'var(--success-color)' }}>
+          
+          <div className={`bg-surface p-6 rounded-3xl border shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group ${customer.debtBalance > 0 ? 'border-red-500/30' : 'border-[var(--border-color)]'}`}>
+            <div className={`absolute -right-4 -bottom-4 rounded-full w-24 h-24 transition-colors ${customer.debtBalance > 0 ? 'bg-red-500/5 group-hover:bg-red-500/10' : 'bg-success/5 group-hover:bg-success/10'}`}></div>
+            <div className="text-[10px] uppercase font-black tracking-widest text-secondary mb-1">Current Active Debt</div>
+            <div className={`text-3xl font-black ${customer.debtBalance > 0 ? 'text-red-500' : 'text-success'}`}>
               ₦{customer.debtBalance.toLocaleString()}
             </div>
-            {customer.debtBalance > 0 && (
-              <button className="btn btn-sm btn-primary mt-3 w-full" onClick={() => setShowPaymentForm(true)}>
-                Record Payment
+            {customer.debtBalance > 0 ? (
+              <button className="mt-4 w-full bg-red-500 hover:bg-red-600 text-white text-xs font-bold py-2.5 rounded-xl transition-colors shadow-sm" onClick={() => setShowPaymentForm(true)}>
+                Record Fast Payment
               </button>
+            ) : (
+              <div className="mt-4 text-xs font-bold text-success bg-success/10 px-3 py-2 rounded-xl text-center">In Good Standing</div>
             )}
           </div>
-          <div className="card" style={{ gridColumn: 'span 2', marginBottom: 0, background: 'linear-gradient(135deg, rgba(79, 70, 229, 0.1), rgba(79, 70, 229, 0.02))', borderColor: 'rgba(79, 70, 229, 0.2)' }}>
-            <div className="text-sm text-indigo-800 dark:text-indigo-300 font-semibold mb-1">Loyalty Points Balance</div>
-            <div className="text-2xl font-bold text-indigo-600 dark:text-indigo-400 flex items-center gap-2">
-              ⭐ {customer.loyaltyPoints || 0} pts
-              <span className="text-sm font-normal text-indigo-800/60 dark:text-indigo-300/60">
-                (Value: ₦{((customer.loyaltyPoints || 0) * 10).toLocaleString()})
-              </span>
+
+          <div className="bg-gradient-to-br from-indigo-50 dark:from-indigo-900/40 to-white dark:to-surface p-6 rounded-3xl border border-indigo-200/50 dark:border-indigo-500/30 shadow-sm relative overflow-hidden md:col-span-2 lg:col-span-1">
+            <div className="text-[10px] uppercase font-black tracking-widest text-indigo-600 dark:text-indigo-400 mb-1">Reward Points</div>
+            <div className="flex items-center gap-3">
+               <div className="w-12 h-12 rounded-2xl bg-indigo-500 text-white flex items-center justify-center shadow-lg shadow-indigo-500/30">
+                 <Activity size={24} />
+               </div>
+               <div>
+                 <div className="text-3xl font-black text-indigo-900 dark:text-indigo-100">{customer.loyaltyPoints || 0}</div>
+                 <div className="text-[11px] font-bold text-indigo-500/80 uppercase tracking-wider">Points Evaluated (₦{((customer.loyaltyPoints || 0) * 10).toLocaleString()})</div>
+               </div>
             </div>
           </div>
         </div>
 
         {customer.debtBalance > 0 && customer.phone && (
-          <div className="card mb-6" style={{ background: 'linear-gradient(135deg, rgba(var(--primary-rgb), 0.1), rgba(var(--secondary-rgb), 0.05))' }}>
-            <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
-              <MessageSquare size={16} /> Send Debt Reminder
-            </h3>
-            <div className="flex gap-2">
+          <div className="bg-amber-500/10 border border-amber-500/20 p-5 rounded-3xl mb-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div>
+              <h3 className="text-sm font-black text-amber-900 dark:text-amber-500 uppercase tracking-widest flex items-center gap-2 mb-1">
+                <MessageSquare size={16} /> Immediate Action
+              </h3>
+              <p className="text-xs text-secondary font-medium">Send a fast reminder for the ₦{customer.debtBalance.toLocaleString()} debt.</p>
+            </div>
+            <div className="flex gap-2 w-full sm:w-auto">
               <a 
-                href={`https://wa.me/${customer.phone.replace(/\D/g, '')}?text=${encodeURIComponent(`Hello ${customer.name}, this is a friendly reminder regarding your outstanding balance of ₦${customer.debtBalance.toLocaleString()}. Please let us know when you plan to settle. Thank you!`)}`}
+                href={`https://wa.me/${customer.phone.replace(/\D/g, '')}?text=${encodeURIComponent(`Hello ${customer.name}, this is an automated reminder regarding your outstanding balance of ₦${customer.debtBalance.toLocaleString()}. Please let us know when you plan to settle. Thank you!`)}`}
                 target="_blank" 
                 rel="noopener noreferrer"
-                className="btn text-white flex-1 flex justify-center items-center gap-2"
-                style={{ backgroundColor: '#25D366', border: 'none' }}
+                className="flex-1 sm:flex-none bg-[#25D366] hover:bg-[#20bd5a] text-white px-5 py-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-colors shadow-sm"
               >
-                <MessageCircle size={18} /> WhatsApp
+                <MessageCircle size={16} /> WhatsApp
               </a>
               <a 
-                href={`sms:${customer.phone.replace(/\D/g, '')}?body=${encodeURIComponent(`Hello ${customer.name}, this is a friendly reminder regarding your outstanding balance of ₦${customer.debtBalance.toLocaleString()}. Please let us know when you plan to settle. Thank you!`)}`}
-                className="btn btn-primary flex-1 flex justify-center items-center gap-2"
+                href={`sms:${customer.phone.replace(/\D/g, '')}?body=${encodeURIComponent(`Hello ${customer.name}, this is an automated reminder regarding your outstanding balance of ₦${customer.debtBalance.toLocaleString()}. Please let us know when you plan to settle. Thank you!`)}`}
+                className="flex-1 sm:flex-none bg-surface border border-[var(--border-color)] hover:bg-black/5 dark:hover:bg-white/5 px-5 py-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-colors shadow-sm text-secondary"
               >
-                <MessageSquare size={18} /> SMS
+                <MessageSquare size={16} /> SMS
               </a>
             </div>
           </div>
         )}
 
         {isEditing && !rawUpload && (
-          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-            <div className="card w-full max-w-md bg-white border-2 border-primary max-h-[90vh] overflow-y-auto">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-bold">Edit Customer</h3>
-                <button onClick={() => setIsEditing(false)} className="text-secondary hover:text-danger">
-                  <ArrowLeft size={20} className="rotate-180" />
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="bg-surface w-full max-w-lg rounded-3xl border border-[var(--border-color)] shadow-2xl max-h-[90vh] overflow-y-auto filter drop-shadow-2xl animate-bounce-in-up">
+              <div className="sticky top-0 bg-surface/80 backdrop-blur-md border-b border-[var(--border-color)] px-6 py-4 flex justify-between items-center z-10 rounded-t-3xl">
+                <h3 className="text-xl font-black tracking-tight">Modify Client Data</h3>
+                <button onClick={() => setIsEditing(false)} className="w-8 h-8 flex items-center justify-center rounded-full bg-black/5 hover:bg-black/10 dark:bg-white/5 dark:hover:bg-white/10 transition-colors">
+                  <ArrowLeft size={16} className="rotate-180" />
                 </button>
               </div>
-              <form onSubmit={handleEditSubmit} className="space-y-4">
+              <form onSubmit={handleEditSubmit} className="p-6 space-y-5">
                 
-                <div className="flex flex-col items-center mb-4">
+                <div className="flex flex-col items-center">
                   <label 
-                    className="w-20 h-20 rounded-full bg-[var(--surface-color)] border-2 border-dashed border-primary/50 flex flex-col items-center justify-center cursor-pointer overflow-hidden relative group"
+                    className="w-24 h-24 rounded-full bg-black/5 dark:bg-white/5 border border-dashed border-primary/50 flex flex-col items-center justify-center cursor-pointer overflow-hidden relative group hover:bg-black/10 transition-colors"
                   >
                     {editImage ? (
                       <img src={editImage} alt="Preview" className="w-full h-full object-cover" />
                     ) : (
                       <>
-                        <Camera size={24} className="text-primary/50 group-hover:text-primary transition-colors" />
-                        <span className="text-[10px] text-secondary mt-1">Photo</span>
+                         <div className="text-secondary group-hover:text-primary transition-colors flex flex-col items-center gap-1">
+                           <Camera size={24} />
+                           <span className="text-[9px] uppercase font-bold tracking-widest mt-1">Upload Photo</span>
+                         </div>
                       </>
                     )}
                     <input 
@@ -242,33 +268,36 @@ export const CustomerProfile: React.FC = () => {
                     <button 
                       type="button" 
                       onClick={() => setEditImage('')}
-                      className="text-xs text-danger mt-2 hover:underline"
+                      className="text-xs text-red-500 font-bold mt-3 hover:text-red-600 transition-colors"
                     >
-                      Remove Photo
+                      Remove Photo Reference
                     </button>
                   )}
                 </div>
 
-                <div className="form-group">
-                  <label>Full Name</label>
-                  <input type="text" className="form-input w-full" value={editName} onChange={e => setEditName(e.target.value)} required />
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-xs font-bold opacity-70 uppercase tracking-widest mb-1 block">Legal Name</label>
+                    <input type="text" className="w-full bg-black/5 dark:bg-white/5 border border-[var(--border-color)] rounded-xl py-3 px-4 text-sm font-bold focus:outline-none focus:border-primary transition-colors" value={editName} onChange={e => setEditName(e.target.value)} required />
+                  </div>
+                  <div>
+                    <label className="text-xs font-bold opacity-70 uppercase tracking-widest mb-1 block">Phone Number</label>
+                    <input type="tel" className="w-full bg-black/5 dark:bg-white/5 border border-[var(--border-color)] rounded-xl py-3 px-4 text-sm font-bold focus:outline-none focus:border-primary transition-colors" value={editPhone} onChange={e => setEditPhone(e.target.value)} />
+                  </div>
+                  <div>
+                    <label className="text-xs font-bold opacity-70 uppercase tracking-widest mb-1 block">Geographic Location</label>
+                    <input type="text" className="w-full bg-black/5 dark:bg-white/5 border border-[var(--border-color)] rounded-xl py-3 px-4 text-sm font-bold focus:outline-none focus:border-primary transition-colors" value={editLocation} onChange={e => setEditLocation(e.target.value)} />
+                  </div>
+                  <div>
+                    <label className="text-xs font-bold opacity-70 uppercase tracking-widest mb-1 block">Operational Notes</label>
+                    <textarea className="w-full bg-black/5 dark:bg-white/5 border border-[var(--border-color)] rounded-xl py-3 px-4 text-sm font-bold focus:outline-none focus:border-primary transition-colors" rows={3} value={editNotes} onChange={e => setEditNotes(e.target.value)}></textarea>
+                  </div>
                 </div>
-                <div className="form-group">
-                  <label>Phone Number (Optional)</label>
-                  <input type="tel" className="form-input w-full" value={editPhone} onChange={e => setEditPhone(e.target.value)} />
-                </div>
-                <div className="form-group">
-                  <label>Location/Address (Optional)</label>
-                  <input type="text" className="form-input w-full" value={editLocation} onChange={e => setEditLocation(e.target.value)} />
-                </div>
-                <div className="form-group">
-                  <label>Notes (Optional)</label>
-                  <textarea className="form-input w-full" rows={2} value={editNotes} onChange={e => setEditNotes(e.target.value)}></textarea>
-                </div>
-                <div className="flex gap-3 pt-2">
-                  <button type="button" className="btn btn-outline flex-1" onClick={() => setIsEditing(false)}>Cancel</button>
-                  <button type="submit" className="btn btn-primary flex-1" disabled={isProcessing}>
-                    {isProcessing ? 'Saving...' : 'Save Changes'}
+                
+                <div className="flex gap-3 pt-4 border-t border-[var(--border-color)]">
+                  <button type="button" className="flex-1 bg-surface border border-[var(--border-color)] font-bold text-sm py-3 rounded-xl hover:bg-black/5 transition-colors" onClick={() => setIsEditing(false)}>Cancel Edit</button>
+                  <button type="submit" className="flex-[2] bg-primary text-white font-bold text-sm py-3 rounded-xl shadow-md hover:bg-primary-hover transition-colors" disabled={isProcessing}>
+                    {isProcessing ? 'Saving Pipeline...' : 'Commit Changes to Database'}
                   </button>
                 </div>
               </form>
@@ -287,113 +316,118 @@ export const CustomerProfile: React.FC = () => {
         )}
 
         {showPaymentForm && (
-          <form onSubmit={handleRecordPayment} className="card border-primary mb-6">
-            <h3 className="font-bold mb-3">Record Debt Payment</h3>
-            <div className="flex flex-col gap-3">
-              <div className="flex gap-2">
-                <div className="form-group flex-1">
-                  <label className="text-xs text-secondary mb-1 block">Method</label>
+          <form onSubmit={handleRecordPayment} className="bg-surface p-6 rounded-3xl border-2 border-primary/40 mb-8 shadow-lg shadow-primary/10 animate-bounce-in-up">
+            <h3 className="font-black text-xl tracking-tight mb-5 flex items-center gap-2">
+              Record Financial Offset
+            </h3>
+            <div className="flex flex-col gap-4">
+              <div className="flex flex-col sm:flex-row gap-4">
+                <div className="flex-1">
+                  <label className="text-[10px] uppercase font-black opacity-70 mb-1 block">Deposit Type</label>
                   <select
-                    className="form-select w-full"
-                    style={{ padding: '0.5rem' }}
+                    className="w-full bg-black/5 dark:bg-white/5 border border-[var(--border-color)] rounded-xl py-3 px-4 font-bold text-sm focus:outline-none focus:border-primary transition-colors"
                     value={paymentMethod}
                     onChange={e => setPaymentMethod(e.target.value as 'Cash' | 'Transfer')}
                   >
-                    <option value="Cash">Cash</option>
-                    <option value="Transfer">Transfer</option>
+                    <option value="Cash">Cash Handover</option>
+                    <option value="Transfer">Bank Transfer</option>
                   </select>
                 </div>
-                <div className="form-group flex-[2]">
-                  <label className="text-xs text-secondary mb-1 block">Amount (₦)</label>
+                <div className="flex-[2]">
+                  <label className="text-[10px] uppercase font-black opacity-70 mb-1 block">Amount Offset (₦)</label>
                   <input 
                     type="number" 
-                    className="form-input w-full" 
-                    placeholder="Enter amount" 
+                    className="w-full bg-surface border-2 border-[var(--border-color)] rounded-xl py-3 px-4 font-black text-lg focus:outline-none focus:border-primary transition-colors"
+                    placeholder="E.g 50000" 
                     value={amount}
                     onChange={e => setAmount(e.target.value)}
                     required
-                    style={{ padding: '0.5rem' }}
                   />
                 </div>
               </div>
-              <div className="flex gap-2">
-                <button type="submit" className="btn btn-primary flex-1" disabled={isProcessing}>
-                  {isProcessing ? 'Saving...' : 'Save & Print Receipt'}
+              <div className="flex gap-3 pt-2">
+                <button type="button" className="flex-1 bg-surface border border-[var(--border-color)] font-bold text-sm py-3 rounded-xl hover:bg-black/5 transition-colors" onClick={() => setShowPaymentForm(false)}>
+                  Abort
                 </button>
-                <button type="button" className="btn btn-outline flex-1" onClick={() => setShowPaymentForm(false)}>
-                  Cancel
+                <button type="submit" className="flex-[2] bg-primary text-white font-bold text-sm py-3 rounded-xl shadow-md hover:bg-primary-hover transition-colors flex items-center justify-center gap-2" disabled={isProcessing}>
+                  {isProcessing ? 'Authorizing...' : 'Commit Transaction Ledger'}
                 </button>
               </div>
             </div>
           </form>
         )}
 
-        <h3 className="text-lg font-bold mb-3 flex items-center gap-2">
-          <Activity size={20} className="text-primary" /> Activity History
-        </h3>
-        
-        <div className="flex flex-col gap-3 relative before:absolute before:left-[15px] before:top-0 before:bottom-0 before:w-px before:bg-[var(--border-color)]">
-          {metrics.history.length === 0 ? (
-            <p className="text-center text-secondary py-4 pl-8">No activity recorded yet.</p>
-          ) : (
-            metrics.history.map((item: any) => {
-              const dateStr = item._date.toLocaleDateString();
-              
-              if (item._type === 'sale') {
-                const items = getTransactionItems(item);
-                const qty = items.reduce((s, i) => s + i.quantity, 0);
-                const types = Array.from(new Set(items.map(i => getProductName(i.productId)))).join(', ');
+        <div className="mt-8">
+          <h3 className="text-sm font-black uppercase tracking-widest text-secondary mb-6 flex items-center gap-2">
+            <Activity size={18} /> Operational Ledger
+          </h3>
+          
+          <div className="flex flex-col gap-4 relative before:absolute before:left-[19px] before:top-2 before:bottom-4 before:w-0.5 before:bg-[var(--border-color)]">
+            {metrics.history.length === 0 ? (
+              <div className="text-center py-12 opacity-50 border border-dashed rounded-3xl border-[var(--border-color)] ml-12">
+                 <FileText size={48} className="mx-auto mb-3 opacity-20" />
+                 <p className="font-bold text-sm">No History Established</p>
+                 <p className="text-xs mt-1">This user's ledger is completely blank.</p>
+              </div>
+            ) : (
+              metrics.history.map((item: any) => {
+                const dateStr = item._date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
                 
-                return (
-                  <div key={`sale-${item.id}`} className="card relative ml-10 p-3" style={{ marginBottom: 0 }}>
-                    <div className="absolute w-3 h-3 rounded-full bg-primary" style={{ left: '-30px', top: '1.5rem', background: 'var(--primary-color)', boxShadow: '0 0 0 4px var(--bg-gradient-end)' }} />
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <div className="font-bold text-sm">
-                          Purchased {qty} Items 
-                          <span className="text-secondary text-xs block font-normal">{types}</span>
+                if (item._type === 'sale') {
+                  const items = getTransactionItems(item);
+                  const qty = items.reduce((s, i) => s + i.quantity, 0);
+                  const types = Array.from(new Set(items.map(i => getProductName(i.productId)))).join(', ');
+                  
+                  return (
+                    <div key={`sale-${item.id}`} className="relative pl-14">
+                      <div className="absolute left-3.5 top-5 w-3 h-3 rounded-full bg-primary outline outline-4 outline-[var(--bg-color)] z-10" />
+                      <div className="bg-surface border border-[var(--border-color)] p-4 rounded-3xl shadow-sm hover:shadow-md transition-shadow group flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+                        <div>
+                          <div className="font-black text-sm text-primary mb-0.5">Commercial Invoice Issued</div>
+                          <div className="text-xs font-bold opacity-70 mb-1">Items Dispatched: {qty} ({types})</div>
+                          <div className="text-[10px] font-bold text-secondary uppercase tracking-wider">{dateStr}</div>
                         </div>
-                        <div className="text-xs text-secondary mt-1">{dateStr}</div>
-                      </div>
-                      <div className="text-right">
-                        <div className="font-bold">₦{item.totalPrice.toLocaleString()}</div>
-                        <div className={`text-xs uppercase font-bold mt-1 ${item.type === 'Cash' ? 'text-success' : 'text-danger'}`}>
-                          {item.type}
+                        <div className="text-left sm:text-right bg-black/5 dark:bg-white/5 sm:bg-transparent p-3 sm:p-0 rounded-xl">
+                          <div className="font-black text-lg">₦{item.totalPrice.toLocaleString()}</div>
+                          <div className={`text-[10px] uppercase font-black px-2 py-0.5 rounded-full inline-block mt-1 border ${item.type === 'Cash' || item.type === 'Transfer' ? 'bg-success/10 text-success border-success/20' : 'bg-red-500/10 text-red-500 border-red-500/20'}`}>
+                            {item.type}
+                          </div>
+                          <button 
+                            className="text-[10px] uppercase font-bold text-primary hover:underline mt-2 block w-full text-left sm:text-right"
+                            onClick={(e) => { e.stopPropagation(); navigate(`/receipt/${item.id}`); }}
+                          >
+                            Access e-Receipt
+                          </button>
                         </div>
-                        <button 
-                          className="text-xs text-primary underline mt-1 cursor-pointer block text-right w-full"
-                          onClick={(e) => { e.stopPropagation(); navigate(`/receipt/${item.id}`); }}
-                        >
-                          View Receipt
-                        </button>
                       </div>
                     </div>
-                  </div>
-                );
-              } else {
-                return (
-                  <div key={`pay-${item.id}`} className="card relative ml-10 p-3" style={{ marginBottom: 0, background: 'linear-gradient(to right, rgba(16, 185, 129, 0.05), transparent)' }}>
-                    <div className="absolute w-3 h-3 rounded-full bg-success" style={{ left: '-30px', top: '1.5rem', background: 'var(--success-color)', boxShadow: '0 0 0 4px var(--bg-gradient-end)' }} />
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <div className="font-bold text-sm text-success">Debt Repayment</div>
-                        <div className="text-xs text-secondary mt-1">{dateStr}</div>
-                      </div>
-                      <div className="text-right">
-                        <div className="font-bold text-success">+ ₦{item.amount.toLocaleString()}</div>
-                        <button 
-                          className="text-xs text-primary underline mt-1 cursor-pointer"
-                          onClick={(e) => { e.stopPropagation(); navigate(`/customer-receipt/${item.id}`); }}
-                        >
-                          View Receipt
-                        </button>
+                  );
+                } else {
+                  return (
+                    <div key={`pay-${item.id}`} className="relative pl-14">
+                      <div className="absolute left-3.5 top-5 w-3 h-3 rounded-full bg-success outline outline-4 outline-[var(--bg-color)] z-10" />
+                      <div className="bg-success/5 border border-success/20 p-4 rounded-3xl shadow-sm hover:shadow-md transition-shadow group flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+                        <div>
+                          <div className="font-black text-sm text-success mb-0.5">Debt Obligation Offset</div>
+                          <div className="text-xs font-bold opacity-70 text-success mb-1">Fund Reception Logged</div>
+                          <div className="text-[10px] font-bold text-success/70 uppercase tracking-wider">{dateStr}</div>
+                        </div>
+                        <div className="text-left sm:text-right bg-success/10 sm:bg-transparent p-3 sm:p-0 rounded-xl">
+                          <div className="font-black text-lg text-success">+ ₦{item.amount.toLocaleString()}</div>
+                          <button 
+                            className="text-[10px] uppercase font-bold text-success hover:underline mt-2 block w-full text-left sm:text-right"
+                            onClick={(e) => { e.stopPropagation(); navigate(`/customer-receipt/${item.id}`); }}
+                          >
+                            Access e-Receipt
+                          </button>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                );
-              }
-            })
-          )}
+                  );
+                }
+              })
+            )}
+          </div>
         </div>
 
       </div>
