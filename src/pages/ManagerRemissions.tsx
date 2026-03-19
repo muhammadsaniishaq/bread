@@ -1,12 +1,17 @@
-import React, { useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { AnimatedPage } from '../components/AnimatedPage';
-import { Landmark, ArrowLeft, ArrowDownToLine, Wallet } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { Landmark, ArrowLeft, ArrowDownToLine, Wallet, FileText, Send } from 'lucide-react';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAppContext } from '../store/AppContext';
 
 export const ManagerRemissions: React.FC = () => {
   const navigate = useNavigate();
-  const { bakeryPayments, transactions } = useAppContext();
+  const { bakeryPayments, transactions, recordBakeryPayment } = useAppContext();
+  
+  const [paymentAmount, setPaymentAmount] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState<'Cash' | 'Transfer'>('Cash');
+  const [paymentReceiver, setPaymentReceiver] = useState('');
+  const [isProcessing, setIsProcessing] = useState(false);
 
   const metrics = useMemo(() => {
     let expectedTotalSales = 0;
@@ -31,6 +36,35 @@ export const ManagerRemissions: React.FC = () => {
   }, [bakeryPayments, transactions]);
 
   const sortedPayments = [...bakeryPayments].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+  const handleRecordPayment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const amountStr = parseInt(paymentAmount);
+    if (!amountStr || amountStr <= 0) return;
+    
+    if (amountStr > metrics.outstanding) {
+      alert(`Cannot pay more than the pending unremitted balance (₦${metrics.outstanding.toLocaleString()})`);
+      return;
+    }
+
+    setIsProcessing(true);
+    const paymentId = Date.now().toString();
+    
+    await recordBakeryPayment({
+      id: paymentId,
+      date: new Date().toISOString(),
+      amount: amountStr,
+      method: paymentMethod,
+      receiver: paymentReceiver.trim() || undefined
+    });
+    
+    setPaymentAmount('');
+    setPaymentReceiver('');
+    setPaymentMethod('Cash');
+    setIsProcessing(false);
+    
+    navigate(`/bakery-receipt/${paymentId}`);
+  };
 
   return (
     <AnimatedPage>
@@ -66,6 +100,62 @@ export const ManagerRemissions: React.FC = () => {
           </div>
         </div>
 
+        <div className="card border-t-4 border-purple-500 mb-8" style={{ background: 'var(--surface-color)' }}>
+          <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
+             <Send size={20} className="text-purple-500" /> Record New Remission
+          </h2>
+          <form onSubmit={handleRecordPayment}>
+            <div className="form-group mb-3">
+              <label className="form-label text-xs">Amount Paid (₦) *</label>
+              <input 
+                type="number" 
+                className="form-input bg-background" 
+                placeholder="e.g. 50000" 
+                value={paymentAmount}
+                onChange={e => setPaymentAmount(e.target.value)}
+                max={metrics.outstanding}
+                required 
+              />
+              <div className="text-[10px] text-secondary mt-1">
+                Available to pay: <strong className="text-purple-500">₦{metrics.outstanding.toLocaleString()}</strong>
+              </div>
+            </div>
+            
+            <div className="flex gap-3 mb-4">
+              <div className="form-group flex-1">
+                <label className="form-label text-xs">Method</label>
+                <select 
+                  className="form-select bg-background" 
+                  value={paymentMethod}
+                  onChange={e => setPaymentMethod(e.target.value as 'Cash' | 'Transfer')}
+                >
+                  <option value="Cash">Cash (KudiHannu)</option>
+                  <option value="Transfer">Bank Transfer</option>
+                </select>
+              </div>
+              
+              <div className="form-group flex-1">
+                <label className="form-label text-xs">Receiver Name</label>
+                <input 
+                  type="text" 
+                  className="form-input bg-background" 
+                  placeholder="Who received it?" 
+                  value={paymentReceiver}
+                  onChange={e => setPaymentReceiver(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <button 
+              type="submit" 
+              className="btn bg-purple-500 text-white w-full rounded-2xl shadow-md"
+              disabled={isProcessing}
+            >
+              {isProcessing ? 'Generating Receipt...' : 'Record Payment & Print Receipt'}
+            </button>
+          </form>
+        </div>
+
         <h3 className="text-sm font-bold mb-3 opacity-80 uppercase tracking-wide px-1">Recent Remission Logs</h3>
         <div className="grid gap-3">
           {sortedPayments.map(p => (
@@ -79,8 +169,13 @@ export const ManagerRemissions: React.FC = () => {
                    <div className="text-[11px] opacity-60 font-medium">{new Date(p.date).toLocaleString()}</div>
                  </div>
               </div>
-              <div className="font-black text-purple-600 dark:text-purple-400 text-lg">
-                ₦{p.amount.toLocaleString()}
+              <div className="flex flex-col items-end gap-2">
+                <div className="font-black text-purple-600 dark:text-purple-400 text-lg">
+                  ₦{p.amount.toLocaleString()}
+                </div>
+                <Link to={`/bakery-receipt/${p.id}`} className="btn btn-outline py-1 px-2 text-[10px] flex items-center gap-1 border-purple-500/30 text-purple-600 hover:bg-purple-500/10">
+                  <FileText size={12} /> Receipt
+                </Link>
               </div>
             </div>
           ))}
