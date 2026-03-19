@@ -19,16 +19,40 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    const fetchRoleFromProfile = async (u: User) => {
+      try {
+        const { data } = await supabase.from('profiles').select('role').eq('id', u.id).single();
+        if (data && data.role) {
+          setRole(data.role as UserRole);
+        } else {
+          setRole((u.user_metadata?.role as UserRole) || 'CUSTOMER');
+        }
+      } catch (err) {
+        setRole('CUSTOMER');
+      } finally {
+        setLoading(false);
+      }
+    };
+
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
-      setRole((session?.user?.user_metadata?.role as UserRole) || (session?.user ? 'CUSTOMER' : null));
-      setLoading(false);
+      if (session?.user) {
+        fetchRoleFromProfile(session.user);
+      } else {
+        setRole(null);
+        setLoading(false);
+      }
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
-      setRole((session?.user?.user_metadata?.role as UserRole) || (session?.user ? 'CUSTOMER' : null));
-      setLoading(false);
+      if (session?.user) {
+        setLoading(true);
+        fetchRoleFromProfile(session.user);
+      } else {
+        setRole(null);
+        setLoading(false);
+      }
     });
 
     return () => subscription.unsubscribe();
