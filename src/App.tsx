@@ -15,8 +15,12 @@ import CustomerStorefront from './pages/CustomerStorefront';
 
 import RawMaterialsManager from './components/RawMaterialsManager';
 import UserManagement from './components/UserManagement';
-import StockAssignment from './pages/StockAssignment';
-import FinancialReconciliation from './pages/FinancialReconciliation';
+import { StockAssignment } from './pages/StockAssignment';
+import { FinancialReconciliation } from './pages/FinancialReconciliation';
+import ManagerExpenses from './pages/ManagerExpenses';
+import ManagerReports from './pages/ManagerReports';
+import ManagerSettings from './pages/ManagerSettings';
+import ManagerCustomers from './pages/ManagerCustomers';
 
 import Dashboard from './pages/Dashboard';
 import Settings from './pages/Settings';
@@ -104,6 +108,11 @@ const AppContent: React.FC = () => {
             <Route path="/manager/staff" element={<RoleGuard allowedRoles={['MANAGER']}><UserManagement /></RoleGuard>} />
             <Route path="/manager/stock-assignment" element={<RoleGuard allowedRoles={['MANAGER']}><StockAssignment /></RoleGuard>} />
             <Route path="/manager/reconciliation" element={<RoleGuard allowedRoles={['MANAGER']}><FinancialReconciliation /></RoleGuard>} />
+            <Route path="/manager/expenses" element={<RoleGuard allowedRoles={['MANAGER']}><ManagerExpenses /></RoleGuard>} />
+            <Route path="/manager/reports" element={<RoleGuard allowedRoles={['MANAGER']}><ManagerReports /></RoleGuard>} />
+            <Route path="/manager/customers" element={<RoleGuard allowedRoles={['MANAGER']}><ManagerCustomers /></RoleGuard>} />
+            <Route path="/manager/settings" element={<RoleGuard allowedRoles={['MANAGER']}><ManagerSettings /></RoleGuard>} />
+            
             <Route path="/supplier" element={<RoleGuard allowedRoles={['SUPPLIER']}><SupplierDashboard /></RoleGuard>} />
           </Route>
           <Route path="/store" element={<RoleGuard allowedRoles={['STORE_KEEPER']}><StoreDashboard /></RoleGuard>} />

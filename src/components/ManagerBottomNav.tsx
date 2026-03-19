@@ -13,7 +13,7 @@ const ManagerBottomNav: React.FC = () => {
         <LayoutDashboard size={22} strokeWidth={2.5} />
         <span>Control Panel</span>
       </NavLink>
-      <NavLink to="/reports" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+      <NavLink to="/manager/reports" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
         <FileBarChart size={22} strokeWidth={2.5} />
         <span>Reports</span>
       </NavLink>
@@ -21,7 +21,7 @@ const ManagerBottomNav: React.FC = () => {
         <Scale size={22} strokeWidth={2.5} />
         <span>Reconcile</span>
       </NavLink>
-      <NavLink to="/settings" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+      <NavLink to="/manager/settings" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
         <Settings size={22} strokeWidth={2.5} />
         <span>Settings</span>
       </NavLink>

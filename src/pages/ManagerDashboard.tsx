@@ -37,10 +37,10 @@ export const ManagerDashboard: React.FC = () => {
     { name: 'Staff Roles', icon: <Shield size={24} />, path: '/manager/staff', color: 'text-violet-500', bg: 'bg-violet-500/10' },
     { name: 'Assign Stock', icon: <ArrowRightLeft size={24} />, path: '/manager/stock-assignment', color: 'text-blue-500', bg: 'bg-blue-500/10' },
     { name: 'Reconcile', icon: <Scale size={24} />, path: '/manager/reconciliation', color: 'text-rose-500', bg: 'bg-rose-500/10' },
-    { name: 'Full Reports', icon: <FileBarChart size={24} />, path: '/reports', color: 'text-indigo-500', bg: 'bg-indigo-500/10' },
-    { name: 'Customers Base', icon: <Users size={24} />, path: '/customers', color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
-    { name: 'Mgt Expenses', icon: <Banknote size={24} />, path: '/expenses', color: 'text-red-500', bg: 'bg-red-500/10' },
-    { name: 'App Settings', icon: <Settings size={24} />, path: '/settings', color: 'text-gray-500', bg: 'bg-gray-500/10' },
+    { name: 'Full Reports', icon: <FileBarChart size={24} />, path: '/manager/reports', color: 'text-indigo-500', bg: 'bg-indigo-500/10' },
+    { name: 'Customers Base', icon: <Users size={24} />, path: '/manager/customers', color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
+    { name: 'Mgt Expenses', icon: <Banknote size={24} />, path: '/manager/expenses', color: 'text-red-500', bg: 'bg-red-500/10' },
+    { name: 'App Settings', icon: <Settings size={24} />, path: '/manager/settings', color: 'text-gray-500', bg: 'bg-gray-500/10' },
   ];
 
   return (

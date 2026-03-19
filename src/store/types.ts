@@ -101,5 +101,7 @@ export interface AppSettings {
   logo?: string;
   adminEmail?: string;
   adminPassword?: string;
-  role?: 'Admin' | 'Cashier';
+  role?: 'Admin' | 'Cashier' | 'MANAGER' | 'SUPPLIER' | 'STORE_KEEPER';
+  theme?: 'dark' | 'light';
+  bakeryName?: string;
 }
