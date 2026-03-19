@@ -1,17 +1,30 @@
 import React, { useState } from 'react';
 import { AnimatedPage } from '../components/AnimatedPage';
 import { useAppContext } from '../store/AppContext';
-import { Users, ArrowLeft, Search, UserPlus } from 'lucide-react';
+import { Users, ArrowLeft, Search, UserPlus, Truck } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { supabase } from '../lib/supabase';
+import type { Customer } from '../store/types';
 
 export const ManagerCustomers: React.FC = () => {
-  const { customers, addCustomer } = useAppContext();
+  const { customers, addCustomer, updateCustomer } = useAppContext();
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [isAdding, setIsAdding] = useState(false);
+  const [suppliers, setSuppliers] = useState<{ id: string; full_name: string }[]>([]);
   
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
+  const [selectedSupplierId, setSelectedSupplierId] = useState('');
+
+  React.useEffect(() => {
+    fetchSuppliers();
+  }, []);
+
+  const fetchSuppliers = async () => {
+    const { data } = await supabase.from('profiles').select('id, full_name').eq('role', 'SUPPLIER');
+    if (data) setSuppliers(data);
+  };
 
   const filteredCustomers = customers.filter(c => 
     c.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -19,6 +32,10 @@ export const ManagerCustomers: React.FC = () => {
   );
 
   const totalDebt = customers.reduce((sum, c) => sum + (c.debtBalance || 0), 0);
+
+  const handleAssignSupplier = async (customer: Customer, newSupplierId: string) => {
+    await updateCustomer({ ...customer, assignedSupplierId: newSupplierId });
+  };
 
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,7 +47,8 @@ export const ManagerCustomers: React.FC = () => {
       location: '',
       notes: '',
       debtBalance: 0,
-      loyaltyPoints: 0
+      loyaltyPoints: 0,
+      assignedSupplierId: selectedSupplierId || undefined
     });
     setName('');
     setPhone('');
@@ -88,28 +106,60 @@ export const ManagerCustomers: React.FC = () => {
               <div>
                 <input type="tel" className="w-full bg-black/5 dark:bg-white/5 border-none rounded-lg p-3 text-sm font-medium" placeholder="Phone Number (Optional)" value={phone} onChange={e => setPhone(e.target.value)} />
               </div>
+              <div>
+                <label className="text-xs font-bold opacity-70 mb-1 block">Assign to Supplier Route (Optional)</label>
+                <select className="form-input bg-black/5 dark:bg-white/5 border-none rounded-lg p-3 text-sm font-medium w-full" value={selectedSupplierId} onChange={e => setSelectedSupplierId(e.target.value)}>
+                  <option value="">Unassigned (Open Market)</option>
+                  {suppliers.map(sup => (
+                    <option key={sup.id} value={sup.id}>{sup.full_name || 'Unnamed Supplier'}</option>
+                  ))}
+                </select>
+              </div>
               <button type="submit" className="btn bg-emerald-500 text-white rounded-xl shadow-md mt-1 font-bold text-sm">Save Client</button>
             </div>
           </form>
         )}
 
-        <div className="grid gap-3">
+        <div className="grid gap-4">
           {filteredCustomers.map(c => (
-            <div key={c.id} className="bg-surface p-4 rounded-xl border border-[var(--border-color)] flex justify-between items-center shadow-sm hover:-translate-y-1 transition-transform">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-500 font-bold shadow-sm">
+            <div key={c.id} className="bg-surface p-4 rounded-2xl border border-[var(--border-color)] shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all hover:border-emerald-500/30">
+              <div className="flex items-center gap-3 w-full sm:w-auto">
+                <div className="w-12 h-12 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-600 font-bold shadow-sm text-lg border border-emerald-500/20">
                   {c.name.charAt(0).toUpperCase()}
                 </div>
-                <div>
-                  <div className="font-bold text-[15px] tracking-tight">{c.name}</div>
-                  {c.phone && <div className="text-[11px] opacity-60 font-medium mt-0.5">{c.phone}</div>}
+                <div className="flex-1">
+                  <div className="font-bold text-lg tracking-tight mb-0.5 flex items-center gap-2">
+                    {c.name}
+                    {c.assignedSupplierId && (
+                       <span className="flex items-center gap-1 text-[9px] bg-indigo-500/10 text-indigo-600 px-1.5 py-0.5 rounded-full border border-indigo-500/20">
+                         <Truck size={10} /> Routed
+                       </span>
+                    )}
+                  </div>
+                  <div className="text-[11px] opacity-60 font-medium">{c.phone || 'No phone'}</div>
                 </div>
               </div>
-              <div className="text-right">
-                <div className="text-[10px] uppercase font-bold opacity-60 mb-0.5">Debt Balance</div>
-                <div className={`font-black ${c.debtBalance > 0 ? 'text-danger' : 'text-success'}`}>
-                  ₦{c.debtBalance.toLocaleString()}
-                </div>
+
+              <div className="flex items-center gap-4 w-full sm:w-auto justify-between sm:justify-end bg-black/5 dark:bg-white/5 sm:bg-transparent p-3 sm:p-0 rounded-xl">
+                 <div className="flex flex-col">
+                    <label className="text-[10px] uppercase font-bold opacity-60 mb-1">Route Assignment</label>
+                    <select 
+                      className="form-input py-1.5 text-xs bg-white dark:bg-black border-[var(--border-color)] font-medium shadow-sm w-[160px] cursor-pointer"
+                      value={c.assignedSupplierId || ''}
+                      onChange={(e) => handleAssignSupplier(c, e.target.value)}
+                    >
+                      <option value="">Unassigned (Store)</option>
+                      {suppliers.map(sup => (
+                        <option key={sup.id} value={sup.id}>{sup.full_name || 'Unnamed Supplier'}</option>
+                      ))}
+                    </select>
+                 </div>
+                 <div className="text-right min-w-[80px]">
+                   <div className="text-[10px] uppercase font-bold opacity-60 mb-1">Debt Bal</div>
+                   <div className={`font-black text-sm ${c.debtBalance > 0 ? 'text-danger' : 'text-success'}`}>
+                     ₦{c.debtBalance.toLocaleString()}
+                   </div>
+                 </div>
               </div>
             </div>
           ))}

@@ -17,6 +17,7 @@ export interface Customer {
   debtBalance: number;
   loyaltyPoints?: number;
   image?: string;
+  assignedSupplierId?: string; // Links a customer permanently to a specific supplier
 }
 
 export interface TransactionItem {
