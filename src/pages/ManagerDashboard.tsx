@@ -3,7 +3,7 @@ import { AnimatedPage } from '../components/AnimatedPage';
 import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../store/AppContext';
 import { useAuth } from '../store/AuthContext';
-import { LogOut, TrendingUp, Archive, Users, Package, Banknote, Settings, FileBarChart, Shield, ArrowRightLeft, Scale } from 'lucide-react';
+import { LogOut, TrendingUp, Archive, Users, PackageSearch, Package, Banknote, Settings, FileBarChart, Shield, ArrowRightLeft, Scale } from 'lucide-react';
 
 export const ManagerDashboard: React.FC = () => {
   const { transactions, products, logout } = useAppContext();
@@ -33,6 +33,7 @@ export const ManagerDashboard: React.FC = () => {
   // Wait, I will need to pull products from useAppContext!
 
   const quickLinks = [
+    { name: 'Bread Catalog', icon: <PackageSearch size={24} />, path: '/manager/products', color: 'text-amber-500', bg: 'bg-amber-500/10' },
     { name: 'Raw Materials', icon: <Package size={24} />, path: '/manager/raw-materials', color: 'text-amber-500', bg: 'bg-amber-500/10' },
     { name: 'Staff Roles', icon: <Shield size={24} />, path: '/manager/staff', color: 'text-violet-500', bg: 'bg-violet-500/10' },
     { name: 'Assign Stock', icon: <ArrowRightLeft size={24} />, path: '/manager/stock-assignment', color: 'text-blue-500', bg: 'bg-blue-500/10' },
