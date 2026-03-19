@@ -1,17 +1,18 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { AnimatedPage } from '../components/AnimatedPage';
 import { useAppContext } from '../store/AppContext';
-import { Users, ArrowLeft, Search, UserPlus, Truck, Download, CheckSquare, Square, MessageCircle, Settings2 } from 'lucide-react';
+import { Users, ArrowLeft, Search, UserPlus, Truck, Download, CheckSquare, Square, MessageCircle, Settings2, Clock } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import type { Customer } from '../store/types';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip } from 'recharts';
 
 export const ManagerCustomers: React.FC = () => {
-  const { customers, addCustomer, updateCustomer } = useAppContext();
+  const { customers, transactions, addCustomer, updateCustomer } = useAppContext();
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterType, setFilterType] = useState<'All' | 'Routed' | 'Unassigned' | 'Debtors'>('All');
-  const [sortBy, setSortBy] = useState<'Newest' | 'A-Z' | 'Debt' | 'VIP'>('Newest');
+  const [filterType, setFilterType] = useState<'All' | 'Routed' | 'Unassigned' | 'Debtors' | 'Active' | 'Dormant'>('All');
+  const [sortBy, setSortBy] = useState<'Newest' | 'A-Z' | 'Debt' | 'VIP' | 'Recent'>('Newest');
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isAdding, setIsAdding] = useState(false);
   const [suppliers, setSuppliers] = useState<{ id: string; full_name: string }[]>([]);
@@ -29,13 +30,38 @@ export const ManagerCustomers: React.FC = () => {
     if (data) setSuppliers(data);
   };
 
+  // Pre-calculate last active dates for all customers to avoid O(n*m) during render
+  const customerActivity = useMemo(() => {
+    const activityMap: Record<string, { lastDate: Date | null, daysSince: number }> = {};
+    const now = new Date();
+    
+    customers.forEach(c => {
+      const customerTxs = transactions.filter(t => t.customerId === c.id);
+      if (customerTxs.length > 0) {
+        const latestTx = customerTxs.reduce((latest, current) => 
+          new Date(current.date) > new Date(latest.date) ? current : latest
+        );
+        const lastDate = new Date(latestTx.date);
+        const daysSince = Math.floor((now.getTime() - lastDate.getTime()) / (1000 * 3600 * 24));
+        activityMap[c.id] = { lastDate, daysSince };
+      } else {
+        activityMap[c.id] = { lastDate: null, daysSince: 9999 };
+      }
+    });
+    return activityMap;
+  }, [customers, transactions]);
+
   let filteredCustomers = customers.filter(c => {
     const matchesSearch = c.name.toLowerCase().includes(searchTerm.toLowerCase()) || (c.phone && c.phone.includes(searchTerm));
     if (!matchesSearch) return false;
     
+    const isDormant = customerActivity[c.id].daysSince > 30;
+    
     if (filterType === 'Routed') return !!c.assignedSupplierId;
     if (filterType === 'Unassigned') return !c.assignedSupplierId;
     if (filterType === 'Debtors') return c.debtBalance > 0;
+    if (filterType === 'Active') return !isDormant;
+    if (filterType === 'Dormant') return isDormant;
     return true;
   });
 
@@ -43,12 +69,21 @@ export const ManagerCustomers: React.FC = () => {
     if (sortBy === 'A-Z') return a.name.localeCompare(b.name);
     if (sortBy === 'Debt') return (b.debtBalance || 0) - (a.debtBalance || 0);
     if (sortBy === 'VIP') return (b.loyaltyPoints || 0) - (a.loyaltyPoints || 0);
+    if (sortBy === 'Recent') return customerActivity[a.id].daysSince - customerActivity[b.id].daysSince;
     return Number(b.id) - Number(a.id); // Newest
   });
 
   const totalDebt = customers.reduce((sum, c) => sum + (c.debtBalance || 0), 0);
   const routedCount = customers.filter(c => c.assignedSupplierId).length;
   const unassignedCount = customers.length - routedCount;
+  
+  const activeCount = customers.filter(c => customerActivity[c.id].daysSince <= 30).length;
+  const dormantCount = customers.length - activeCount;
+
+  const pieData = [
+    { name: 'Active (30d)', value: activeCount, color: '#34d399' }, // emerald-400
+    { name: 'Dormant', value: dormantCount, color: '#fbbf24' },   // amber-400
+  ];
 
   const handleAssignSupplier = async (customer: Customer, newSupplierId: string) => {
     await updateCustomer({ ...customer, assignedSupplierId: newSupplierId });
@@ -121,38 +156,80 @@ export const ManagerCustomers: React.FC = () => {
           </h1>
         </div>
 
-        <div className="bg-gradient-to-br from-emerald-600 to-teal-900 text-white p-6 rounded-3xl mb-8 shadow-xl relative overflow-hidden border border-emerald-500/20">
-           <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/10 rounded-full blur-3xl"></div>
-           <Users className="absolute right-4 bottom-4 opacity-[0.05]" size={120} />
+        <div className="bg-gradient-to-br from-emerald-600 via-teal-800 to-indigo-900 text-white p-6 md:p-8 rounded-3xl mb-8 shadow-xl relative overflow-hidden border border-emerald-500/20 flex flex-col lg:flex-row gap-8 lg:items-center">
+           <div className="absolute -top-20 -right-20 w-64 h-64 bg-white/10 rounded-full blur-3xl mix-blend-overlay"></div>
+           <Users className="absolute right-4 bottom-4 opacity-[0.03]" size={160} />
            
-           <div className="flex justify-between items-start relative z-10 mb-6 border-b border-emerald-500/30 pb-4">
-             <div>
-               <h2 className="text-[10px] font-black opacity-70 mb-1 uppercase tracking-widest text-emerald-200">Executive Directory</h2>
-               <div className="text-3xl font-black tracking-tight">{customers.length} Clients</div>
+           <div className="flex-1 relative z-10 w-full">
+             <div className="flex justify-between items-start mb-6 border-b border-emerald-500/30 pb-4">
+               <div>
+                 <h2 className="text-[10px] font-black opacity-70 mb-1 uppercase tracking-widest text-emerald-200">Executive Directory</h2>
+                 <div className="text-4xl font-black tracking-tight">{customers.length} <span className="text-xl font-bold opacity-80">Clients</span></div>
+               </div>
+               <div className="text-right">
+                 <h2 className="text-[10px] font-black opacity-70 mb-1 uppercase tracking-widest text-emerald-200">Global Customer Debt</h2>
+                 <div className="text-2xl font-black text-amber-300">₦{totalDebt.toLocaleString()}</div>
+               </div>
              </div>
-             <div className="text-right">
-               <h2 className="text-[10px] font-black opacity-70 mb-1 uppercase tracking-widest text-emerald-200">Global Customer Debt</h2>
-               <div className="text-xl font-bold text-amber-300">₦{totalDebt.toLocaleString()}</div>
+  
+             <div className="grid grid-cols-2 gap-4">
+                <div className="bg-black/20 p-4 rounded-2xl border border-white/5 backdrop-blur-sm shadow-inner overflow-hidden relative group">
+                   <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/0 to-emerald-500/10 translate-x-[-100%] group-hover:translate-x-[0%] transition-transform duration-500"></div>
+                   <div className="flex justify-between items-center mb-1 relative z-10">
+                     <span className="text-xs font-bold opacity-80 uppercase tracking-widest">Routed</span>
+                     <Truck size={14} className="opacity-50" />
+                   </div>
+                   <div className="text-2xl font-black relative z-10">{routedCount}</div>
+                   <div className="text-[10px] opacity-60 font-medium relative z-10">Assigned to Suppliers</div>
+                </div>
+                <div className="bg-white/5 p-4 rounded-2xl border border-white/5 backdrop-blur-sm shadow-inner overflow-hidden relative group">
+                   <div className="absolute inset-0 bg-gradient-to-r from-blue-500/0 to-blue-500/10 translate-x-[-100%] group-hover:translate-x-[0%] transition-transform duration-500"></div>
+                   <div className="flex justify-between items-center mb-1 relative z-10">
+                     <span className="text-xs font-bold opacity-80 uppercase tracking-widest">Open Market</span>
+                     <Users size={14} className="opacity-50" />
+                   </div>
+                   <div className="text-2xl font-black relative z-10">{unassignedCount}</div>
+                   <div className="text-[10px] opacity-60 font-medium relative z-10">Unassigned / Store</div>
+                </div>
              </div>
            </div>
 
-           <div className="grid grid-cols-2 gap-4 relative z-10">
-              <div className="bg-black/20 p-4 rounded-2xl border border-white/5 backdrop-blur-sm">
-                 <div className="flex justify-between items-center mb-1">
-                   <span className="text-xs font-bold opacity-80 uppercase tracking-widest">Routed</span>
-                   <Truck size={14} className="opacity-50" />
-                 </div>
-                 <div className="text-2xl font-black">{routedCount}</div>
-                 <div className="text-[10px] opacity-60 font-medium">Assigned to Suppliers</div>
-              </div>
-              <div className="bg-emerald-500/20 p-4 rounded-2xl border border-emerald-400/20 backdrop-blur-sm">
-                 <div className="flex justify-between items-center mb-1">
-                   <span className="text-xs font-bold opacity-80 uppercase tracking-widest">Open Market</span>
-                   <Users size={14} className="opacity-50" />
-                 </div>
-                 <div className="text-2xl font-black">{unassignedCount}</div>
-                 <div className="text-[10px] opacity-60 font-medium">Unassigned / Store</div>
-              </div>
+           {/* Analytical Pie Chart for Engagement */}
+           <div className="hidden lg:flex w-64 flex-col items-center justify-center relative z-10 border-l border-white/10 pl-8">
+             <h3 className="text-[10px] font-black uppercase tracking-widest opacity-70 mb-2">30-Day Engagement</h3>
+             <div className="w-full h-32 relative">
+               <ResponsiveContainer width="100%" height="100%">
+                 <PieChart>
+                   <Pie
+                     data={pieData}
+                     innerRadius={40}
+                     outerRadius={60}
+                     paddingAngle={5}
+                     dataKey="value"
+                     stroke="none"
+                   >
+                     {pieData.map((entry, index) => (
+                       <Cell key={`cell-${index}`} fill={entry.color} />
+                     ))}
+                   </Pie>
+                   <RechartsTooltip 
+                     formatter={(value: any) => [`${value} Clients`, 'Count']}
+                     contentStyle={{ backgroundColor: '#18181b', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', fontSize: '12px', fontWeight: 'bold' }}
+                     itemStyle={{ color: '#fff' }}
+                   />
+                 </PieChart>
+               </ResponsiveContainer>
+               {/* Center Metric */}
+               <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                 <span className="text-xl font-black">{Math.round((activeCount / Math.max(1, customers.length)) * 100)}%</span>
+                 <span className="text-[8px] uppercase tracking-widest opacity-60 font-bold">Active</span>
+               </div>
+             </div>
+             
+             <div className="flex justify-center gap-4 text-[10px] font-bold mt-2 w-full">
+                <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full" style={{backgroundColor: pieData[0].color}}></div>Active</div>
+                <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full" style={{backgroundColor: pieData[1].color}}></div>Dormant</div>
+             </div>
            </div>
         </div>
 
@@ -178,11 +255,11 @@ export const ManagerCustomers: React.FC = () => {
         {/* Filters and Controls */}
         <div className="flex flex-col md:flex-row gap-3 items-start md:items-center justify-between mb-2">
           <div className="flex gap-2 overflow-x-auto pb-2 custom-scrollbar w-full md:w-auto">
-            {(['All', 'Routed', 'Unassigned', 'Debtors'] as const).map(f => (
+            {(['All', 'Routed', 'Unassigned', 'Debtors', 'Active', 'Dormant'] as const).map(f => (
               <button 
                 key={f}
                 onClick={() => setFilterType(f)}
-                className={`px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap border transition-all ${filterType === f ? 'bg-emerald-500 text-white border-emerald-500 shadow-md transform -translate-y-0.5' : 'bg-surface text-secondary border-[var(--border-color)] hover:bg-black/5 dark:hover:bg-white/5'}`}
+                className={`px-4 py-2 rounded-xl text-[11px] uppercase tracking-wider font-black whitespace-nowrap border transition-all ${filterType === f ? 'bg-primary text-white border-primary shadow-md transform -translate-y-0.5' : 'bg-surface text-secondary border-[var(--border-color)] hover:bg-black/5 dark:hover:bg-white/5'}`}
               >
                 {f}
               </button>
@@ -195,10 +272,11 @@ export const ManagerCustomers: React.FC = () => {
                <select 
                  value={sortBy} 
                  onChange={e => setSortBy(e.target.value as any)}
-                 className="w-full bg-surface border border-[var(--border-color)] rounded-xl py-2 pl-9 pr-4 text-xs focus:outline-none focus:border-emerald-500 font-bold"
+                 className="w-full bg-surface border border-[var(--border-color)] rounded-xl py-2 pl-9 pr-4 text-xs focus:outline-none focus:border-primary font-bold shadow-sm"
                >
-                 <option value="Newest">Sort: Newest</option>
-                 <option value="A-Z">Sort: A-Z</option>
+                 <option value="Newest">Sort: By Registry</option>
+                 <option value="Recent">Sort: Last Active</option>
+                 <option value="A-Z">Sort: A-Z Name</option>
                  <option value="Debt">Sort: Highest Debt</option>
                  <option value="VIP">Sort: Top VIPs</option>
                </select>
@@ -279,7 +357,8 @@ export const ManagerCustomers: React.FC = () => {
                   <div className="flex-1 min-w-0">
                     <div className="font-black text-xl tracking-tight mb-1 flex items-center gap-2 flex-wrap">
                       <span className="truncate max-w-[200px] sm:max-w-[300px]">{c.name}</span>
-                      {isVIP && <span className="text-[9px] bg-gradient-to-r from-amber-400 to-yellow-600 text-white px-2 py-0.5 rounded-full uppercase tracking-widest font-bold">VIP</span>}
+                      {isVIP && <span className="text-[9px] bg-gradient-to-r from-amber-400 to-yellow-600 text-white px-2 py-0.5 rounded-full uppercase tracking-widest font-bold shadow-sm">VIP</span>}
+                      {customerActivity[c.id].daysSince <= 7 && <span className="text-[9px] bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 px-2 py-0.5 rounded-full uppercase tracking-widest font-black shrink-0">Hot</span>}
                     </div>
                     <div className="flex flex-wrap items-center gap-2 text-xs font-bold">
                       {c.phone ? (
@@ -290,14 +369,26 @@ export const ManagerCustomers: React.FC = () => {
                         <span className="opacity-50">No phone</span>
                       )}
                       {c.assignedSupplierId ? (
-                         <span className="flex items-center gap-1 bg-indigo-500/10 text-indigo-600 px-2 py-0.5 rounded-full border border-indigo-500/20">
+                         <span className="flex items-center gap-1 bg-indigo-500/10 text-indigo-600 px-2 py-0.5 rounded-full border border-indigo-500/20 shrink-0">
                            <Truck size={10} /> {suppliers.find(s => s.id === c.assignedSupplierId)?.full_name || 'Routed'}
                          </span>
                       ) : (
-                         <span className="flex items-center gap-1 bg-zinc-500/10 text-zinc-600 px-2 py-0.5 rounded-full border border-zinc-500/20">
+                         <span className="flex items-center gap-1 bg-zinc-500/10 text-zinc-600 px-2 py-0.5 rounded-full border border-zinc-500/20 shrink-0">
                            <Users size={10} /> Open Market
                          </span>
                       )}
+                      
+                      {/* Activity Indicator based on daysSince */}
+                      <span className={`flex items-center gap-1 px-2 py-0.5 rounded-full border text-[10px] shrink-0 ${
+                        customerActivity[c.id].daysSince === 9999 ? 'bg-zinc-100 dark:bg-zinc-800 text-zinc-500 border-zinc-200 dark:border-zinc-700' :
+                        customerActivity[c.id].daysSince <= 30 ? 'bg-blue-500/10 text-blue-600 border-blue-500/20' : 
+                        'bg-amber-500/10 text-amber-600 border-amber-500/20'
+                      }`}>
+                         <Clock size={10} /> 
+                         {customerActivity[c.id].daysSince === 9999 ? 'No Activity' : 
+                          customerActivity[c.id].daysSince === 0 ? 'Active Today' :
+                          `${customerActivity[c.id].daysSince}d ago`}
+                      </span>
                     </div>
                   </div>
                 </div>
