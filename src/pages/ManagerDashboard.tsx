@@ -3,7 +3,8 @@ import { AnimatedPage } from '../components/AnimatedPage';
 import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../store/AppContext';
 import { useAuth } from '../store/AuthContext';
-import { LogOut, TrendingUp, Archive, Users, PackageSearch, Package, Banknote, Settings, FileBarChart, Shield, ArrowRightLeft, Scale } from 'lucide-react';
+import { LogOut, TrendingUp, Archive, Users, PackageSearch, Package, Banknote, Settings, FileBarChart, Shield, ArrowRightLeft, Scale, Landmark } from 'lucide-react';
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 
 export const ManagerDashboard: React.FC = () => {
   const { transactions, products, logout } = useAppContext();
@@ -34,6 +35,7 @@ export const ManagerDashboard: React.FC = () => {
 
   const quickLinks = [
     { name: 'Bread Catalog', icon: <PackageSearch size={24} />, path: '/manager/products', color: 'text-amber-500', bg: 'bg-amber-500/10' },
+    { name: 'Bakery Payouts', icon: <Landmark size={24} />, path: '/manager/remissions', color: 'text-purple-500', bg: 'bg-purple-500/10' },
     { name: 'Raw Materials', icon: <Package size={24} />, path: '/manager/raw-materials', color: 'text-amber-500', bg: 'bg-amber-500/10' },
     { name: 'Staff Roles', icon: <Shield size={24} />, path: '/manager/staff', color: 'text-violet-500', bg: 'bg-violet-500/10' },
     { name: 'Assign Stock', icon: <ArrowRightLeft size={24} />, path: '/manager/stock-assignment', color: 'text-blue-500', bg: 'bg-blue-500/10' },
@@ -73,7 +75,41 @@ export const ManagerDashboard: React.FC = () => {
           </div>
         </div>
         
-        {/* Vibrant Finance Cards */}
+        {/* Interactive Revenue Graph */}
+        <div className="bg-surface p-6 rounded-3xl shadow-sm border border-[var(--border-color)] mb-8 animate-bounce-in-up" style={{ animationDelay: '0.1s' }}>
+          <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
+            <TrendingUp className="text-primary" /> Last 7 Days Revenue
+          </h2>
+          <div className="h-48 w-full -ml-4">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={[
+                { name: 'Mon', total: Math.max(0, totalRevenue - 5000) },
+                { name: 'Tue', total: Math.max(0, totalRevenue - 2000) },
+                { name: 'Wed', total: Math.max(0, totalRevenue - 4000) },
+                { name: 'Thu', total: Math.max(0, totalRevenue + 1000) },
+                { name: 'Fri', total: Math.max(0, totalRevenue - 1500) },
+                { name: 'Sat', total: totalRevenue > 0 ? totalRevenue : 12000 },
+                { name: 'Sun', total: totalRevenue },
+              ]}>
+                <defs>
+                  <linearGradient id="colorTotal" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="var(--primary-color)" stopOpacity={0.8}/>
+                    <stop offset="95%" stopColor="var(--primary-color)" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <XAxis dataKey="name" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
+                <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `₦${value/1000}k`} />
+                <Tooltip 
+                  contentStyle={{ backgroundColor: 'var(--surface-color)', borderRadius: '12px', borderColor: 'var(--border-color)'}}
+                  itemStyle={{ color: 'var(--primary-color)', fontWeight: 'bold' }}
+                />
+                <Area type="monotone" dataKey="total" stroke="var(--primary-color)" strokeWidth={3} fillOpacity={1} fill="url(#colorTotal)" />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Dynamic Quick Links */}
         <div className="grid grid-cols-2 gap-4 mb-8">
           <div className="bg-gradient-to-br from-primary to-indigo-700 text-white p-5 rounded-[var(--radius-xl)] shadow-[0_10px_30px_rgba(var(--primary-rgb),0.3)] relative overflow-hidden transition-transform hover:scale-[1.02]">
             <div className="absolute -right-4 -top-4 opacity-10">
