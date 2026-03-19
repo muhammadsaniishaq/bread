@@ -12,9 +12,11 @@ export const ManagerExpenses: React.FC = () => {
   const [description, setDescription] = useState('');
   const [amount, setAmount] = useState('');
 
-  const sortedExpenses = [...expenses].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  const managerExpenses = expenses.filter(e => e.type === 'MANAGER');
+  
+  const sortedExpenses = [...managerExpenses].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   const todayStr = new Date().toISOString().split('T')[0];
-  const totalToday = expenses
+  const totalToday = managerExpenses
     .filter(e => e.date.startsWith(todayStr))
     .reduce((sum, e) => sum + e.amount, 0);
 
@@ -25,7 +27,8 @@ export const ManagerExpenses: React.FC = () => {
       id: Date.now().toString(),
       date: new Date().toISOString(),
       description,
-      amount: parseInt(amount)
+      amount: parseInt(amount),
+      type: 'MANAGER'
     };
     await addExpense(exp);
     setDescription('');

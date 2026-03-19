@@ -92,6 +92,7 @@ export interface Expense {
   date: string;
   description: string;
   amount: number;
+  type?: 'MANAGER' | 'SUPPLIER';
 }
 
 export interface AppSettings {
