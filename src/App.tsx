@@ -146,8 +146,8 @@ const AppContent: React.FC = () => {
             <Route path="/bakery-receipt/:id" element={<BakeryReceipt />} />
             <Route path="/settings" element={<RoleGuard allowedRoles={['MANAGER']}><Settings /></RoleGuard>} />
             <Route path="/receipt/:id" element={<Receipt />} />
-            <Route path="/reports" element={<RoleGuard allowedRoles={['MANAGER']}><Reports /></RoleGuard>} />
-            <Route path="/expenses" element={<RoleGuard allowedRoles={['MANAGER']}><Expenses /></RoleGuard>} />
+            <Route path="/reports" element={<RoleGuard allowedRoles={['MANAGER', 'SUPPLIER']}><Reports /></RoleGuard>} />
+            <Route path="/expenses" element={<RoleGuard allowedRoles={['MANAGER', 'SUPPLIER']}><Expenses /></RoleGuard>} />
           </Route>
         </Routes>
       </Router>
