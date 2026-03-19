@@ -1,3 +1,7 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 :root {
   /* V5 Ultra-Premium Minimalist Variables */
   /* Colors - Light Mode */
