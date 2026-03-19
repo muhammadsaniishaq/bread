@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../store/AuthContext';
+import { useAppContext } from '../store/AppContext';
 import { supabase } from '../lib/supabase';
 import { motion } from 'framer-motion';
-import { Lock, Mail, KeyRound, ChevronRight, UserPlus } from 'lucide-react';
+import { Lock, Mail, KeyRound, ChevronRight, UserPlus, Send } from 'lucide-react';
 import './Login.css';
 
 export const Login: React.FC = () => {
   const { user } = useAuth();
+  const { appSettings } = useAppContext();
   const navigate = useNavigate();
 
   const [isLogin, setIsLogin] = useState(true);
@@ -15,6 +17,7 @@ export const Login: React.FC = () => {
   const [password, setPassword] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
   const [loading, setLoading] = useState(false);
+  const [needsConfirmation, setNeedsConfirmation] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -30,7 +33,12 @@ export const Login: React.FC = () => {
     try {
       if (isLogin) {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) throw error;
+        if (error) {
+          if (error.message.toLowerCase().includes('email not confirmed')) {
+            setNeedsConfirmation(true);
+          }
+          throw error;
+        }
       } else {
         // First user signed up should become MANAGER to preserve owner rights
         const { error } = await supabase.auth.signUp({ 
@@ -52,6 +60,21 @@ export const Login: React.FC = () => {
     }
   };
 
+  const handleResend = async () => {
+    setLoading(true);
+    setErrorMsg('');
+    try {
+      const { error } = await supabase.auth.resend({ type: 'signup', email });
+      if (error) throw error;
+      setErrorMsg('Confirmation email resent! Please check your inbox including spam folder.');
+      setNeedsConfirmation(false);
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Failed to resend email.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="login-container flex flex-col items-center justify-center">
       <div className="login-bg-shape shape-top-right"></div>
@@ -68,10 +91,16 @@ export const Login: React.FC = () => {
           transition={{ type: 'spring', bounce: 0.5, delay: 0.1 }}
           className="login-icon-wrapper flex items-center justify-center mb-4 text-primary overflow-hidden bg-surface"
         >
-          <Lock size={20} />
+          {appSettings?.logo ? (
+            <img src={appSettings.logo} alt="Company Logo" className="w-full h-full object-cover" />
+          ) : (
+            <Lock size={20} />
+          )}
         </motion.div>
         
-        <h1 className="text-center mb-2 login-title" style={{color: 'var(--text-primary)'}}>THE BEST SPECIAL BREAD</h1>
+        <h1 className="text-center mb-2 login-title" style={{color: 'var(--text-primary)'}}>
+          {appSettings?.companyName || 'THE BEST SPECIAL BREAD'}
+        </h1>
         <p className="text-center text-secondary mb-8 font-medium">
           {isLogin ? 'Sign in to your account' : 'Create a new account'}
         </p>
@@ -107,13 +136,24 @@ export const Login: React.FC = () => {
           
           {errorMsg && <p className="text-danger text-sm mb-4 text-center font-bold px-4">{errorMsg}</p>}
           
+          {needsConfirmation && (
+            <button 
+              type="button" 
+              onClick={handleResend}
+              disabled={loading} 
+              className="btn btn-outline w-full flex items-center justify-center gap-2 mb-4 border-primary text-primary"
+            >
+              <Send size={18} /> Resend Confirmation Email
+            </button>
+          )}
+
           <button type="submit" disabled={loading} className="btn btn-primary w-full flex items-center justify-center gap-2 login-btn">
             {loading ? 'Processing...' : (isLogin ? 'Sign In' : 'Create Account')} <ChevronRight size={18} />
           </button>
         </form>
 
         <button 
-          onClick={() => { setIsLogin(!isLogin); setErrorMsg(''); }}
+          onClick={() => { setIsLogin(!isLogin); setErrorMsg(''); setNeedsConfirmation(false); }}
           className="mt-6 text-primary text-sm font-bold flex items-center gap-2 hover:underline z-10"
         >
           {isLogin ? <><UserPlus size={16}/> Need an account? Sign Up</> : 'Already have an account? Sign In'}
