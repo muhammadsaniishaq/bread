@@ -46,7 +46,7 @@ export const Login: React.FC = () => {
           password,
           options: {
             data: {
-              role: 'MANAGER' // Default to manager for the business owner during migration
+              role: 'CUSTOMER' 
             }
           }
         });

@@ -2,6 +2,7 @@ import React from 'react';
 import { useTranslation } from '../store/LanguageContext';
 import { AnimatedPage } from '../components/AnimatedPage';
 import { Link } from 'react-router-dom';
+import UserManagement from '../components/UserManagement';
 
 export const ManagerDashboard: React.FC = () => {
   const { t } = useTranslation();
@@ -19,10 +20,13 @@ export const ManagerDashboard: React.FC = () => {
           </div>
           
           <div className="card">
-            <h2 className="font-bold text-lg mb-2">Raw Materials (Coming Soon)</h2>
+            <h2 className="font-bold text-lg mb-2">System Analytics & Raw Materials (Coming Soon)</h2>
             <p className="text-sm opacity-70">Track flour, sugar, and bake output.</p>
           </div>
         </div>
+
+        <UserManagement />
+
       </div>
     </AnimatedPage>
   );
