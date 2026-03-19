@@ -3,44 +3,86 @@ import { AnimatedPage } from '../components/AnimatedPage';
 import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../store/AppContext';
 import { useAuth } from '../store/AuthContext';
-import { LogOut, TrendingUp, Archive, Users, PackageSearch, Package, Banknote, Settings, FileBarChart, Shield, ArrowRightLeft, Scale, Landmark, ShoppingCart, Receipt } from 'lucide-react';
+import { useTranslation } from '../store/LanguageContext';
+import { getTransactionItems } from '../store/types';
+import { LogOut, TrendingUp, Archive, Users, PackageSearch, Package, Banknote, Settings, FileBarChart, Shield, ArrowRightLeft, Scale, Landmark, ShoppingCart, Receipt, Wallet, Zap, Clock, ArrowRight, Activity } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 
 export const ManagerDashboard: React.FC = () => {
-  const { transactions, products, logout } = useAppContext();
+  const { transactions, products, logout, expenses, customers } = useAppContext();
   const { signOut } = useAuth();
   const navigate = useNavigate();
   
-  // Calculate today's basic analytics from legacy local storage mapping
-  const todaySales = transactions.filter(t => new Date(t.date).toDateString() === new Date().toDateString());
-  const totalRevenue = todaySales.reduce((acc, curr) => acc + curr.totalPrice, 0);
-  const salesCount = todaySales.length;
-
-  // Calculate Top Selling Item
-  const itemMap: Record<string, number> = {};
-  todaySales.forEach(tx => {
-    tx.items?.forEach(item => {
-      itemMap[item.productId] = (itemMap[item.productId] || 0) + item.quantity;
+  const { t } = useTranslation();
+  
+  const metrics = React.useMemo(() => {
+    const today = new Date().toISOString().split('T')[0];
+    const todaysTransactions = transactions.filter(t => t.date.startsWith(today));
+    
+    let totalSales = 0;
+    let totalCash = 0;
+    let totalDebtSales = 0;
+    let breadSold = 0;
+    const breadSoldMap: Record<string, number> = {};
+    
+    todaysTransactions.forEach(t => {
+      totalSales += t.totalPrice;
+      const items = getTransactionItems(t);
+      items.forEach(item => {
+        breadSold += item.quantity;
+        breadSoldMap[item.productId] = (breadSoldMap[item.productId] || 0) + item.quantity;
+      });
+      if (t.type === 'Cash') totalCash += t.totalPrice;
+      else totalDebtSales += t.totalPrice;
     });
-  });
-  let bestSellerId = '';
-  let highestQty = 0;
-  Object.entries(itemMap).forEach(([id, qty]) => {
-    if (qty > highestQty) { bestSellerId = id; highestQty = qty; }
-  });
+    
+    const todaysExpenses = expenses.filter(e => e.date.startsWith(today) && e.type === 'MANAGER');
+    const totalExpenses = todaysExpenses.reduce((sum, e) => sum + e.amount, 0);
+    
+    const profit = totalSales * 0.1; // 10% gross profit
+    const netProfit = profit - totalExpenses;
+    
+    const outstandingDebt = customers.reduce((sum, c) => sum + (c.debtBalance || 0), 0);
+    const stockRemaining = products.reduce((sum, p) => sum + p.stock, 0);
+    
+    let topProductId = '';
+    let highestQty = 0;
+    Object.entries(breadSoldMap).forEach(([id, qty]) => {
+      if (qty > highestQty) { highestQty = qty; topProductId = id; }
+    });
+    
+    return {
+      totalSales, totalCash, totalDebtSales, breadSold, profit, netProfit,
+      totalExpenses, outstandingDebt, stockRemaining, breadSoldMap,
+      topProductId, highestQty,
+      lowStockProducts: products.filter(p => p.stock > 0 && p.stock < 20),
+      recentActivity: transactions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 5)
+    };
+  }, [transactions, products, customers, expenses]);
 
-  const { expenses, customers } = useAppContext();
-  
-  // Calculate today's expenses
-  const todayExpenses = expenses.filter(e => new Date(e.date).toDateString() === new Date().toDateString()).reduce((acc, curr) => acc + curr.amount, 0);
+  const aisInsight = React.useMemo(() => {
+    if (metrics.totalSales === 0) return 'Analyzing sales patterns... Waiting for transactions.';
+    
+    let topProduct = '';
+    let maxSold = 0;
+    Object.entries(metrics.breadSoldMap).forEach(([id, count]) => {
+      if (count > maxSold) {
+        maxSold = count;
+        topProduct = products.find(p => p.id === id)?.name || 'Product';
+      }
+    });
 
-  // Calculate global metrics
-  const outstandingDebt = customers.reduce((sum, c) => sum + (c.debtBalance || 0), 0);
-  const stockRetailValue = products.filter(p => p.active).reduce((sum, p) => sum + (p.stock * p.price), 0);
-  
-  // Actually get the product name from appContext
-  // To avoid importing products, we can assume the appContext has it if we pull it in
-  // Wait, I will need to pull products from useAppContext!
+    if (maxSold > 0) {
+      if (metrics.stockRemaining < 50) {
+        return `Supply constraint risk: Available stock is very low (${metrics.stockRemaining}). Fast-moving product today is ${topProduct} (${maxSold} units). Recommend immediate production top-up.`;
+      }
+      return `Positive trajectory: The best-selling bread today is ${topProduct} with ${maxSold} distribution units recorded!`;
+    }
+    
+    return t('dash.insightPlaceholder') || 'All systems normal. Recording active trade workflows.';
+  }, [metrics, products, t]);
+
+  const getCustomerName = (id?: string) => customers.find(c => c.id === id)?.name || 'Walk-in';
 
   const quickLinks = [
     { name: 'Executive POS', icon: <ShoppingCart size={24} />, path: '/manager/sales', color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
@@ -91,26 +133,26 @@ export const ManagerDashboard: React.FC = () => {
           <div className="bg-gradient-to-br from-indigo-500 to-indigo-700 text-white p-5 rounded-[var(--radius-xl)] shadow-lg relative overflow-hidden transition-transform hover:scale-[1.02]">
             <div className="absolute -right-4 -top-4 opacity-10"><TrendingUp size={100} /></div>
             <div className="flex items-center gap-2 mb-2 opacity-90"><TrendingUp size={16} strokeWidth={3} /><h2 className="font-bold text-xs uppercase tracking-wider">Today's Revenue</h2></div>
-            <div className="text-2xl font-black tracking-tight">₦{totalRevenue.toLocaleString()}</div>
-            <div className="text-[10px] mt-2 opacity-80 font-bold bg-black/20 inline-block px-2 py-0.5 rounded-full">{salesCount} Sales Today</div>
+            <div className="text-2xl font-black tracking-tight">₦{metrics.totalSales.toLocaleString()}</div>
+            <div className="text-[10px] mt-2 opacity-80 font-bold bg-black/20 inline-block px-2 py-0.5 rounded-full">{metrics.totalCash > 0 ? `₦${metrics.totalCash.toLocaleString()} Cash` : 'No Cash'}</div>
           </div>
           
-          <div className="bg-gradient-to-br from-rose-500 to-rose-700 text-white p-5 rounded-[var(--radius-xl)] shadow-lg relative overflow-hidden transition-transform hover:scale-[1.02]">
+          <div className="bg-gradient-to-br from-rose-500 to-rose-700 text-white p-5 rounded-[var(--radius-xl)] shadow-lg relative overflow-hidden transition-transform hover:scale-[1.02]" onClick={() => navigate('/manager/expenses')}>
             <div className="absolute -right-4 -top-4 opacity-10"><Banknote size={100} /></div>
             <div className="flex items-center gap-2 mb-2 opacity-90"><Banknote size={16} strokeWidth={3} /><h2 className="font-bold text-xs uppercase tracking-wider">Today's Expenses</h2></div>
-            <div className="text-2xl font-black tracking-tight">₦{todayExpenses.toLocaleString()}</div>
+            <div className="text-2xl font-black tracking-tight">₦{metrics.totalExpenses.toLocaleString()}</div>
           </div>
 
           <div className="bg-gradient-to-br from-amber-500 to-amber-700 text-white p-5 rounded-[var(--radius-xl)] shadow-lg relative overflow-hidden transition-transform hover:scale-[1.02]" onClick={() => navigate('/manager/reports')}>
             <div className="absolute -right-4 -top-4 opacity-10"><Users size={100} /></div>
             <div className="flex items-center gap-2 mb-2 opacity-90"><Users size={16} strokeWidth={3} /><h2 className="font-bold text-xs uppercase tracking-wider">Market Debtors</h2></div>
-            <div className="text-2xl font-black tracking-tight">₦{outstandingDebt.toLocaleString()}</div>
+            <div className="text-2xl font-black tracking-tight">₦{metrics.outstandingDebt.toLocaleString()}</div>
           </div>
 
           <div className="bg-gradient-to-br from-emerald-500 to-emerald-700 text-white p-5 rounded-[var(--radius-xl)] shadow-lg relative overflow-hidden transition-transform hover:scale-[1.02]">
             <div className="absolute -right-4 -top-4 opacity-10"><Package size={100} /></div>
             <div className="flex items-center gap-2 mb-2 opacity-90"><Package size={16} strokeWidth={3} /><h2 className="font-bold text-xs uppercase tracking-wider">Stock Value</h2></div>
-            <div className="text-2xl font-black tracking-tight">₦{stockRetailValue.toLocaleString()}</div>
+            <div className="text-2xl font-black tracking-tight">₦{metrics.stockRemaining.toLocaleString()}</div>
           </div>
         </div>
         
@@ -122,13 +164,13 @@ export const ManagerDashboard: React.FC = () => {
           <div className="h-48 w-full -ml-4">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={[
-                { name: 'Mon', total: Math.max(0, totalRevenue - 5000) },
-                { name: 'Tue', total: Math.max(0, totalRevenue - 2000) },
-                { name: 'Wed', total: Math.max(0, totalRevenue - 4000) },
-                { name: 'Thu', total: Math.max(0, totalRevenue + 1000) },
-                { name: 'Fri', total: Math.max(0, totalRevenue - 1500) },
-                { name: 'Sat', total: totalRevenue > 0 ? totalRevenue : 12000 },
-                { name: 'Sun', total: totalRevenue },
+                { name: 'Mon', total: Math.max(0, metrics.totalSales - 5000) },
+                { name: 'Tue', total: Math.max(0, metrics.totalSales - 2000) },
+                { name: 'Wed', total: Math.max(0, metrics.totalSales - 4000) },
+                { name: 'Thu', total: Math.max(0, metrics.totalSales + 1000) },
+                { name: 'Fri', total: Math.max(0, metrics.totalSales - 1500) },
+                { name: 'Sat', total: metrics.totalSales > 0 ? metrics.totalSales : 12000 },
+                { name: 'Sun', total: metrics.totalSales },
               ]}>
                 <defs>
                   <linearGradient id="colorTotal" x1="0" y1="0" x2="0" y2="1">
@@ -160,11 +202,95 @@ export const ManagerDashboard: React.FC = () => {
                 <h2 className="font-bold text-sm uppercase tracking-wider">Top Performing Product</h2>
               </div>
               <div className="text-2xl sm:text-3xl font-black tracking-tight text-[var(--text-primary)]">
-                {bestSellerId ? products.find(p => p.id === bestSellerId)?.name || 'N/A' : 'No Sales Yet'}
+                {metrics.topProductId ? products.find(p => p.id === metrics.topProductId)?.name || 'N/A' : 'No Sales Yet'}
               </div>
-              <div className="text-xs mt-2 text-success font-bold bg-success/10 inline-block px-3 py-1.5 rounded-full">Best Seller Today ({highestQty} sold)</div>
+              <div className="text-xs mt-2 text-success font-bold bg-success/10 inline-block px-3 py-1.5 rounded-full">Best Seller Today ({metrics.highestQty} sold)</div>
             </div>
             <Archive size={48} className="text-success opacity-20 mr-4" />
+          </div>
+        </div>
+
+        {/* Hero Metric - Profit */}
+        <div className="card mb-6" style={{ 
+          background: metrics.netProfit >= 0 ? 'linear-gradient(135deg, var(--primary-color), #4338ca)' : 'linear-gradient(135deg, var(--danger-color), #be123c)', 
+          color: 'white', border: 'none', padding: '1.5rem', borderRadius: '24px', position: 'relative', overflow: 'hidden',
+          boxShadow: metrics.netProfit >= 0 ? '0 10px 25px -5px rgba(var(--primary-rgb), 0.4)' : '0 10px 25px -5px rgba(var(--danger-rgb), 0.4)'
+        }}>
+          <TrendingUp size={120} style={{ position: 'absolute', right: '-10%', bottom: '-10%', opacity: 0.1, transform: 'rotate(15deg)', pointerEvents: 'none' }} />
+          
+          <div style={{ position: 'relative', zIndex: 10 }}>
+            <div className="flex items-center gap-2" style={{ opacity: 0.8, marginBottom: '0.5rem' }}>
+              <div style={{ background: 'rgba(255,255,255,0.2)', padding: '0.375rem', borderRadius: '8px' }}>
+                <Wallet size={16} />
+              </div>
+              <span style={{ fontSize: '0.875rem', fontWeight: 600, letterSpacing: '0.02em', textTransform: 'uppercase' }}>ESTIMATED NET PROFIT</span>
+            </div>
+            <div style={{ fontSize: '2.5rem', fontWeight: 800, letterSpacing: '-0.02em', marginBottom: '0.5rem' }}>₦{metrics.netProfit.toLocaleString()}</div>
+            
+            {metrics.totalExpenses > 0 && (
+                <div className="flex justify-between" style={{ marginTop: '1.25rem', paddingTop: '1rem', borderTop: '1px solid rgba(255,255,255,0.15)' }}>
+                  <div className="flex flex-col">
+                    <span style={{ fontSize: '0.625rem', textTransform: 'uppercase', opacity: 0.7, fontWeight: 700 }}>Gross Income (10%)</span>
+                    <span style={{ fontSize: '0.875rem', fontWeight: 700 }}>₦{metrics.profit.toLocaleString()}</span>
+                  </div>
+                  <div className="flex flex-col text-right">
+                    <span style={{ fontSize: '0.625rem', textTransform: 'uppercase', opacity: 0.7, fontWeight: 700 }}>Expenses</span>
+                    <span style={{ fontSize: '0.875rem', fontWeight: 700, opacity: 0.9 }}>₦{metrics.totalExpenses.toLocaleString()}</span>
+                  </div>
+                </div>
+            )}
+          </div>
+        </div>
+
+        {/* Smart AI Insight Widget */}
+        <div className="card mb-6" style={{ background: 'linear-gradient(135deg, rgba(var(--primary-rgb), 0.05), rgba(var(--accent-rgb), 0.05))', borderColor: 'rgba(var(--primary-rgb), 0.2)', padding: '1.25rem', borderRadius: '20px' }}>
+            <div className="flex items-center" style={{ gap: '0.625rem', marginBottom: '0.75rem' }}>
+              <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--primary-color)', boxShadow: '0 0 8px var(--primary-color)' }}></div>
+              <span className="text-primary" style={{ fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', background: 'rgba(var(--primary-rgb), 0.1)', padding: '0.125rem 0.375rem', borderRadius: '4px' }}>Smart Insight</span>
+            </div>
+            <p className="font-medium opacity-90" style={{ fontSize: '0.9rem', lineHeight: 1.5, display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}>
+              <Zap size={16} className="text-accent" style={{ flexShrink: 0, marginTop: '0.125rem' }} />
+              {aisInsight}
+            </p>
+        </div>
+
+        {/* Bread Sold & Available Stock Grids */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '2rem' }}>
+          <div className="card" style={{ padding: '1.25rem', borderRadius: '20px' }}>
+            <div className="flex items-center text-secondary" style={{ gap: '0.5rem', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.75rem', marginBottom: '0.75rem' }}>
+              <div style={{ background: 'rgba(249, 115, 22, 0.1)', padding: '0.375rem', borderRadius: '8px', color: '#f97316' }}><Package size={14} /></div>
+              BREAD SOLD
+            </div>
+            <div style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: '0.75rem' }}>{metrics.breadSold} <span className="text-secondary" style={{ fontSize: '0.875rem', fontWeight: 500 }}>units</span></div>
+            <div className="flex flex-col" style={{ gap: '0.5rem' }}>
+              {products.map(p => {
+                const sold = metrics.breadSoldMap[p.id] || 0;
+                if (sold === 0) return null;
+                return (
+                  <div key={p.id} className="flex justify-between items-center" style={{ background: 'rgba(0,0,0,0.02)', padding: '0.5rem', borderRadius: '8px' }}>
+                    <span style={{ fontSize: '0.875rem', fontWeight: 500 }}>{p.name}</span>
+                    <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#f97316', background: 'rgba(249, 115, 22, 0.1)', padding: '0.125rem 0.375rem', borderRadius: '4px' }}>{sold}</span>
+                  </div>
+                );
+              })}
+              {metrics.breadSold === 0 && <span className="text-secondary" style={{ fontSize: '0.875rem', fontStyle: 'italic', textAlign: 'center', padding: '0.5rem' }}>No sales yet</span>}
+            </div>
+          </div>
+          
+          <div className="card" style={{ padding: '1.25rem', borderRadius: '20px' }}>
+            <div className="flex items-center text-secondary" style={{ gap: '0.5rem', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.75rem', marginBottom: '0.75rem' }}>
+              <div style={{ background: 'rgba(59, 130, 246, 0.1)', padding: '0.375rem', borderRadius: '8px', color: '#3b82f6' }}><Package size={14} /></div>
+              STOCK AVAILABLE
+            </div>
+            <div style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: '0.75rem' }}>{metrics.stockRemaining} <span className="text-secondary" style={{ fontSize: '0.875rem', fontWeight: 500 }}>units</span></div>
+            <div className="flex flex-col" style={{ gap: '0.5rem' }}>
+              {products.filter(p => p.active).map(p => (
+                <div key={p.id} className="flex justify-between items-center" style={{ background: 'rgba(0,0,0,0.02)', padding: '0.5rem', borderRadius: '8px' }}>
+                  <span style={{ fontSize: '0.875rem', fontWeight: 500 }}>{p.name}</span>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: p.stock < 20 ? 'white' : 'inherit', background: p.stock < 20 ? 'var(--danger-color)' : 'rgba(0,0,0,0.05)', padding: '0.125rem 0.375rem', borderRadius: '4px' }}>{p.stock}</span>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
 
@@ -187,6 +313,61 @@ export const ManagerDashboard: React.FC = () => {
               </button>
             ))}
           </div>
+        </div>
+
+        {/* Recent Transactions At Bottom */}
+        <div className="flex items-center justify-between" style={{ marginTop: '2.5rem', marginBottom: '1.25rem' }}>
+          <div className="flex items-center" style={{ gap: '0.625rem' }}>
+            <div className="text-primary" style={{ background: 'rgba(var(--primary-rgb), 0.1)', padding: '0.5rem', borderRadius: '10px' }}>
+              <Clock size={18} />
+            </div>
+            <h2 style={{ fontSize: '1.125rem', fontWeight: 800, letterSpacing: '-0.01em' }}>Recent Activity</h2>
+          </div>
+          <button onClick={() => navigate('/manager/transactions')} className="text-primary" style={{ fontSize: '0.875rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.25rem', background: 'transparent', border: 'none', cursor: 'pointer' }}>
+            View All <ArrowRight size={14} />
+          </button>
+        </div>
+        
+        <div className="flex flex-col" style={{ gap: '0.75rem', marginBottom: '2.5rem' }}>
+          {metrics.recentActivity.length === 0 ? (
+            <div className="card text-center text-secondary" style={{ padding: '2rem', borderStyle: 'dashed', background: 'transparent' }}>
+              <Activity size={32} style={{ margin: '0 auto 0.75rem auto', opacity: 0.2 }} />
+              <p style={{ fontSize: '0.875rem', fontWeight: 500 }}>No recent transactions yet today.</p>
+            </div>
+          ) : (
+            metrics.recentActivity.map((tx) => (
+              <div 
+                key={tx.id} 
+                className="card flex justify-between items-center"
+                style={{ padding: '1rem 1.25rem', marginBottom: 0, borderRadius: '16px' }}
+              >
+                <div className="flex items-center" style={{ gap: '1rem' }}>
+                  <div style={{ position: 'relative' }}>
+                    <div className="text-primary" style={{ width: '3rem', height: '3rem', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '1.125rem', background: 'var(--bg-color)', border: '1px solid var(--border-color)' }}>
+                      {getCustomerName(tx.customerId).charAt(0).toUpperCase()}
+                    </div>
+                  </div>
+                  <div>
+                    <div style={{ fontWeight: 700, fontSize: '0.95rem' }}>{getCustomerName(tx.customerId)}</div>
+                    <div className="text-secondary" style={{ fontSize: '0.75rem', fontWeight: 500, marginTop: '0.125rem' }}>
+                      {new Date(tx.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </div>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div style={{ fontWeight: 800, fontSize: '0.95rem' }}>₦{tx.totalPrice.toLocaleString()}</div>
+                  <div style={{ 
+                    fontSize: '0.625rem', textTransform: 'uppercase', fontWeight: 800, marginTop: '0.375rem', 
+                    display: 'inline-block', padding: '0.125rem 0.5rem', borderRadius: '6px', letterSpacing: '0.05em',
+                    background: tx.type === 'Cash' ? 'rgba(var(--success-rgb), 0.1)' : 'rgba(var(--danger-rgb), 0.1)',
+                    color: tx.type === 'Cash' ? 'var(--success-color)' : 'var(--danger-color)'
+                  }}>
+                    {tx.type}
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
         </div>
       </div>
     </AnimatedPage>
