@@ -3,7 +3,7 @@ import { AnimatedPage } from '../components/AnimatedPage';
 import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../store/AppContext';
 import { useAuth } from '../store/AuthContext';
-import { LogOut, TrendingUp, Archive, ShoppingCart, Users, Package, Banknote, LayoutDashboard, Settings, FileBarChart, Shield, ArrowRightLeft, Scale } from 'lucide-react';
+import { LogOut, TrendingUp, Archive, Users, Package, Banknote, LayoutDashboard, Settings, FileBarChart, Shield, ArrowRightLeft, Scale } from 'lucide-react';
 
 export const ManagerDashboard: React.FC = () => {
   const { transactions, logout } = useAppContext();
@@ -20,12 +20,10 @@ export const ManagerDashboard: React.FC = () => {
     { name: 'Staff Roles', icon: <Shield size={24} />, path: '/manager/staff', color: 'text-violet-500', bg: 'bg-violet-500/10' },
     { name: 'Assign Stock', icon: <ArrowRightLeft size={24} />, path: '/manager/stock-assignment', color: 'text-blue-500', bg: 'bg-blue-500/10' },
     { name: 'Reconcile', icon: <Scale size={24} />, path: '/manager/reconciliation', color: 'text-rose-500', bg: 'bg-rose-500/10' },
-    { name: 'Daily Sales', icon: <ShoppingCart size={24} />, path: '/sales', color: 'text-primary', bg: 'bg-primary/10' },
-    { name: 'Customers', icon: <Users size={24} />, path: '/customers', color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
-    { name: 'Legacy Stock', icon: <Archive size={24} />, path: '/inventory', color: 'text-orange-500', bg: 'bg-orange-500/10' },
-    { name: 'Expenses', icon: <Banknote size={24} />, path: '/expenses', color: 'text-red-500', bg: 'bg-red-500/10' },
     { name: 'Full Reports', icon: <FileBarChart size={24} />, path: '/reports', color: 'text-indigo-500', bg: 'bg-indigo-500/10' },
-    { name: 'Settings', icon: <Settings size={24} />, path: '/settings', color: 'text-gray-500', bg: 'bg-gray-500/10' },
+    { name: 'Customers Base', icon: <Users size={24} />, path: '/customers', color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
+    { name: 'Mgt Expenses', icon: <Banknote size={24} />, path: '/expenses', color: 'text-red-500', bg: 'bg-red-500/10' },
+    { name: 'App Settings', icon: <Settings size={24} />, path: '/settings', color: 'text-gray-500', bg: 'bg-gray-500/10' },
   ];
 
   return (
