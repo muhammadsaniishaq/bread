@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { AnimatedPage } from '../components/AnimatedPage';
 import { useAppContext } from '../store/AppContext';
-import { Users, ArrowLeft, Search, UserPlus, Truck } from 'lucide-react';
+import { Users, ArrowLeft, Search, UserPlus, Truck, Download, CheckSquare, Square, MessageCircle, Settings2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import type { Customer } from '../store/types';
@@ -11,6 +11,8 @@ export const ManagerCustomers: React.FC = () => {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<'All' | 'Routed' | 'Unassigned' | 'Debtors'>('All');
+  const [sortBy, setSortBy] = useState<'Newest' | 'A-Z' | 'Debt' | 'VIP'>('Newest');
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isAdding, setIsAdding] = useState(false);
   const [suppliers, setSuppliers] = useState<{ id: string; full_name: string }[]>([]);
   
@@ -27,7 +29,7 @@ export const ManagerCustomers: React.FC = () => {
     if (data) setSuppliers(data);
   };
 
-  const filteredCustomers = customers.filter(c => {
+  let filteredCustomers = customers.filter(c => {
     const matchesSearch = c.name.toLowerCase().includes(searchTerm.toLowerCase()) || (c.phone && c.phone.includes(searchTerm));
     if (!matchesSearch) return false;
     
@@ -37,12 +39,56 @@ export const ManagerCustomers: React.FC = () => {
     return true;
   });
 
+  filteredCustomers = filteredCustomers.sort((a, b) => {
+    if (sortBy === 'A-Z') return a.name.localeCompare(b.name);
+    if (sortBy === 'Debt') return (b.debtBalance || 0) - (a.debtBalance || 0);
+    if (sortBy === 'VIP') return (b.loyaltyPoints || 0) - (a.loyaltyPoints || 0);
+    return Number(b.id) - Number(a.id); // Newest
+  });
+
   const totalDebt = customers.reduce((sum, c) => sum + (c.debtBalance || 0), 0);
   const routedCount = customers.filter(c => c.assignedSupplierId).length;
   const unassignedCount = customers.length - routedCount;
 
   const handleAssignSupplier = async (customer: Customer, newSupplierId: string) => {
     await updateCustomer({ ...customer, assignedSupplierId: newSupplierId });
+  };
+
+  const toggleSelection = (id: string) => {
+    setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  };
+
+  const handleBulkAssign = async (newSupplierId: string) => {
+    for (const customerId of selectedIds) {
+      const customer = customers.find(c => c.id === customerId);
+      if (customer) {
+        await updateCustomer({ ...customer, assignedSupplierId: newSupplierId });
+      }
+    }
+    setSelectedIds([]); // Clear selection after bulk update
+  };
+
+  const exportCSV = () => {
+    const dataToExport = selectedIds.length > 0 ? customers.filter(c => selectedIds.includes(c.id)) : filteredCustomers;
+    const headers = ['Name', 'Phone', 'Debt Balance', 'Loyalty Points', 'Assigned Route'];
+    const rows = dataToExport.map(c => [
+      c.name,
+      c.phone || 'N/A',
+      c.debtBalance,
+      c.loyaltyPoints || 0,
+      suppliers.find(s => s.id === c.assignedSupplierId)?.full_name || 'Open Market'
+    ]);
+    
+    const csvContent = "data:text/csv;charset=utf-8," 
+      + [headers.join(','), ...rows.map(e => e.join(','))].join("\n");
+      
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `customers_export_${new Date().getTime()}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const handleAdd = async (e: React.FormEvent) => {
@@ -129,18 +175,67 @@ export const ManagerCustomers: React.FC = () => {
           </button>
         </div>
 
-        {/* Filter Chips */}
-        <div className="flex gap-2 overflow-x-auto pb-4 mb-2 custom-scrollbar">
-          {(['All', 'Routed', 'Unassigned', 'Debtors'] as const).map(f => (
-            <button 
-              key={f}
-              onClick={() => setFilterType(f)}
-              className={`px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap border transition-all ${filterType === f ? 'bg-emerald-500 text-white border-emerald-500 shadow-md transform -translate-y-0.5' : 'bg-surface text-secondary border-[var(--border-color)] hover:bg-black/5 dark:hover:bg-white/5'}`}
-            >
-              {f}
-            </button>
-          ))}
+        {/* Filters and Controls */}
+        <div className="flex flex-col md:flex-row gap-3 items-start md:items-center justify-between mb-2">
+          <div className="flex gap-2 overflow-x-auto pb-2 custom-scrollbar w-full md:w-auto">
+            {(['All', 'Routed', 'Unassigned', 'Debtors'] as const).map(f => (
+              <button 
+                key={f}
+                onClick={() => setFilterType(f)}
+                className={`px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap border transition-all ${filterType === f ? 'bg-emerald-500 text-white border-emerald-500 shadow-md transform -translate-y-0.5' : 'bg-surface text-secondary border-[var(--border-color)] hover:bg-black/5 dark:hover:bg-white/5'}`}
+              >
+                {f}
+              </button>
+            ))}
+          </div>
+          
+          <div className="flex items-center gap-3 w-full md:w-auto">
+             <div className="relative flex-1 md:w-48">
+               <Settings2 className="absolute left-3 top-1/2 -translate-y-1/2 text-secondary opacity-50" size={16} />
+               <select 
+                 value={sortBy} 
+                 onChange={e => setSortBy(e.target.value as any)}
+                 className="w-full bg-surface border border-[var(--border-color)] rounded-xl py-2 pl-9 pr-4 text-xs focus:outline-none focus:border-emerald-500 font-bold"
+               >
+                 <option value="Newest">Sort: Newest</option>
+                 <option value="A-Z">Sort: A-Z</option>
+                 <option value="Debt">Sort: Highest Debt</option>
+                 <option value="VIP">Sort: Top VIPs</option>
+               </select>
+             </div>
+             <button onClick={exportCSV} className="p-2 border border-[var(--border-color)] text-secondary hover:text-emerald-500 hover:bg-emerald-500/10 rounded-xl transition-colors tooltip-trigger" title="Export CSV">
+               <Download size={18} />
+             </button>
+          </div>
         </div>
+
+        {/* Bulk Actions Banner */}
+        {selectedIds.length > 0 && (
+          <div className="bg-indigo-600 text-white p-3 rounded-2xl mb-4 shadow-lg flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-bounce-in-up sticky top-20 z-50">
+             <div className="font-bold flex items-center gap-2">
+               <CheckSquare size={18} /> {selectedIds.length} Clients Selected
+             </div>
+             <div className="flex items-center gap-2 w-full sm:w-auto">
+                <select 
+                   className="form-input py-1.5 text-xs bg-indigo-800 border-none font-bold rounded-lg text-white w-full sm:w-auto"
+                   onChange={(e) => handleBulkAssign(e.target.value)}
+                   value=""
+                >
+                  <option value="" disabled>Bulk Route Assign...</option>
+                  <option value="">Unassign / Store</option>
+                  {suppliers.map(sup => (
+                    <option key={sup.id} value={sup.id}>{sup.full_name || 'Supplier'}</option>
+                  ))}
+                </select>
+                <button 
+                  onClick={() => setSelectedIds([])}
+                  className="bg-white/20 hover:bg-white/30 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-colors"
+                >
+                  Clear
+                </button>
+             </div>
+          </div>
+        )}
 
         {isAdding && (
           <form onSubmit={handleAdd} className="bg-surface p-5 rounded-2xl border border-[var(--border-color)] mb-6 shadow-sm animate-bounce-in-up">
@@ -170,20 +265,30 @@ export const ManagerCustomers: React.FC = () => {
           {filteredCustomers.map(c => {
             const loyaltyScore = c.loyaltyPoints || 0;
             const isVIP = loyaltyScore > 100;
+            const isSelected = selectedIds.includes(c.id);
             
             return (
-              <div key={c.id} className="bg-surface p-5 rounded-3xl border border-[var(--border-color)] shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-5 transition-all hover:shadow-md hover:border-emerald-500/40 group">
-                <div className="flex items-start gap-4 w-full sm:w-auto overflow-hidden">
+              <div key={c.id} className={`bg-surface p-5 rounded-3xl border shadow-sm flex flex-col xl:flex-row xl:items-center justify-between gap-5 transition-all group ${isSelected ? 'border-indigo-500 ring-2 ring-indigo-500/20 shadow-md' : 'border-[var(--border-color)] hover:border-emerald-500/40 hover:shadow-md'}`}>
+                <div className="flex items-start gap-4 flex-1">
+                  <button onClick={() => toggleSelection(c.id)} className={`mt-3 ${isSelected ? 'text-indigo-500' : 'text-gray-300 dark:text-zinc-600 hover:text-indigo-400'} transition-colors`}>
+                    {isSelected ? <CheckSquare size={22} /> : <Square size={22} />}
+                  </button>
                   <div className={`w-14 h-14 rounded-full flex items-center justify-center font-black shadow-sm text-xl border shrink-0 ${isVIP ? 'bg-gradient-to-br from-amber-200 to-amber-500 text-amber-900 border-amber-300' : 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20'}`}>
                     {c.name.charAt(0).toUpperCase()}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="font-black text-xl tracking-tight mb-1 flex items-center gap-2 truncate">
-                      <span className="truncate">{c.name}</span>
+                    <div className="font-black text-xl tracking-tight mb-1 flex items-center gap-2 flex-wrap">
+                      <span className="truncate max-w-[200px] sm:max-w-[300px]">{c.name}</span>
                       {isVIP && <span className="text-[9px] bg-gradient-to-r from-amber-400 to-yellow-600 text-white px-2 py-0.5 rounded-full uppercase tracking-widest font-bold">VIP</span>}
                     </div>
                     <div className="flex flex-wrap items-center gap-2 text-xs font-bold">
-                      <span className="opacity-60">{c.phone || 'No phone'}</span>
+                      {c.phone ? (
+                        <a href={`https://wa.me/${c.phone.replace(/\D/g,'')}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-emerald-600 bg-emerald-500/10 hover:bg-emerald-500/20 transition-colors px-2 py-0.5 rounded-full">
+                          <MessageCircle size={10} /> {c.phone}
+                        </a>
+                      ) : (
+                        <span className="opacity-50">No phone</span>
+                      )}
                       {c.assignedSupplierId ? (
                          <span className="flex items-center gap-1 bg-indigo-500/10 text-indigo-600 px-2 py-0.5 rounded-full border border-indigo-500/20">
                            <Truck size={10} /> {suppliers.find(s => s.id === c.assignedSupplierId)?.full_name || 'Routed'}
