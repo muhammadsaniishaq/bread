@@ -51,7 +51,7 @@ export const StockAssignment: React.FC = () => {
           </h1>
         </div>
         
-        <div className="card mt-4 p-5 border border-[var(--border-color)]">
+        <div className="bg-surface p-6 rounded-3xl shadow-sm border border-[var(--border-color)] mt-4">
           <div className="flex items-center justify-between mb-4 border-b border-[var(--border-color)] pb-3">
             <h2 className="font-bold text-lg text-primary">Daily Bakery Distribution</h2>
           </div>

@@ -58,7 +58,7 @@ export const UserManagement: React.FC = () => {
           </h1>
         </div>
 
-        <div className="card mt-4">
+        <div className="bg-surface p-5 rounded-3xl shadow-sm border border-[var(--border-color)] mt-4">
           <div className="flex flex-col gap-3">
             {errorMsg && <p className="text-danger mb-4">{errorMsg}</p>}
             {profiles.map(profile => (

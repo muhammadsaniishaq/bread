@@ -3,7 +3,7 @@ import { AnimatedPage } from '../components/AnimatedPage';
 import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../store/AppContext';
 import { useAuth } from '../store/AuthContext';
-import { LogOut, TrendingUp, Archive, Users, Package, Banknote, LayoutDashboard, Settings, FileBarChart, Shield, ArrowRightLeft, Scale } from 'lucide-react';
+import { LogOut, TrendingUp, Archive, Users, Package, Banknote, Settings, FileBarChart, Shield, ArrowRightLeft, Scale } from 'lucide-react';
 
 export const ManagerDashboard: React.FC = () => {
   const { transactions, products, logout } = useAppContext();
@@ -46,21 +46,30 @@ export const ManagerDashboard: React.FC = () => {
   return (
     <AnimatedPage>
       <div className="p-4 pb-24">
-        {/* Header */}
-        <div className="flex justify-between items-center mb-6">
-          <div>
-            <h1 className="text-3xl font-black tracking-tight flex items-center gap-2">
-              <LayoutDashboard className="text-primary" size={28} /> Control Panel
-            </h1>
-            <p className="text-secondary text-sm font-medium mt-1">Welcome back, Manager.</p>
+        {/* Executive Hero Header */}
+        <div className="bg-gradient-to-r from-gray-900 to-indigo-900 dark:from-black dark:to-zinc-900 rounded-3xl p-6 mb-8 text-white shadow-xl relative overflow-hidden border border-white/10">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3"></div>
+          <div className="absolute bottom-0 left-0 w-40 h-40 bg-indigo-500/20 rounded-full blur-2xl translate-y-1/2 -translate-x-1/2"></div>
+          
+          <div className="relative z-10 flex justify-between items-start">
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <Shield size={16} className="text-indigo-400" />
+                <span className="text-xs font-bold uppercase tracking-widest text-indigo-300">Executive Access</span>
+              </div>
+              <h1 className="text-3xl font-black tracking-tight">
+                Control Panel
+              </h1>
+              <p className="text-white/70 text-sm font-medium mt-1">Manage operations, staff, and finances.</p>
+            </div>
+            <button 
+              className="w-10 h-10 rounded-full bg-white/10 text-white backdrop-blur-md flex items-center justify-center hover:bg-danger hover:text-white transition-all shadow-sm border border-white/10"
+              onClick={async () => { logout(); await signOut(); }}
+              title="Secure Logout"
+            >
+              <LogOut size={18} strokeWidth={2.5} />
+            </button>
           </div>
-          <button 
-            className="w-10 h-10 rounded-full bg-danger/10 text-danger flex items-center justify-center hover:bg-danger hover:text-white transition-all shadow-sm"
-            onClick={async () => { logout(); await signOut(); }}
-            title="Secure Logout"
-          >
-            <LogOut size={18} strokeWidth={2.5} />
-          </button>
         </div>
         
         {/* Vibrant Finance Cards */}

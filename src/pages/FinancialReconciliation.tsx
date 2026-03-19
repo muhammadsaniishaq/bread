@@ -51,13 +51,13 @@ export const FinancialReconciliation: React.FC = () => {
           </h1>
         </div>
         
-        <div className="card mt-4 p-5 border border-[var(--border-color)] bg-gradient-to-br from-rose-500/10 to-transparent">
+        <div className="bg-surface p-6 rounded-3xl shadow-sm border border-[var(--border-color)] bg-gradient-to-br from-rose-500/10 to-transparent mt-4">
           <div className="flex items-center justify-between mb-4 border-b border-[var(--border-color)] pb-3">
-            <h2 className="font-bold text-lg">Expected End-of-Day Cash</h2>
+            <h2 className="font-bold text-lg text-rose-500">Expected End-of-Day Cash</h2>
             <div className="text-xs font-bold uppercase tracking-wide bg-rose-500 text-white px-2 py-0.5 rounded-md">Live</div>
           </div>
           
-          <div className="text-center py-6 mb-2 border border-rose-500/20 rounded-2xl bg-white dark:bg-zinc-800 shadow-md">
+          <div className="text-center py-6 mb-2 border border-rose-500/20 rounded-2xl bg-white/50 dark:bg-zinc-800/50 backdrop-blur-md shadow-md">
             <div className="text-sm font-bold text-rose-500 mb-1 tracking-widest uppercase">Vault Balance Target</div>
             <div className="text-4xl sm:text-5xl font-black tracking-tighter text-gray-900 dark:text-white">
               ₦{metrics.vaultStr}

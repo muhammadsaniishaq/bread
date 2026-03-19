@@ -81,7 +81,7 @@ export const RawMaterialsManager: React.FC = () => {
           </h1>
         </div>
 
-        <div className="card mt-4">
+        <div className="bg-surface p-6 rounded-3xl shadow-sm border border-[var(--border-color)] mt-4">
           <div className="flex justify-between items-center mb-4 border-b border-[var(--border-color)] pb-4">
             <h2 className="font-bold text-lg">Inventory Tracking</h2>
             {!isAdding && (
