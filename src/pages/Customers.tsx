@@ -138,77 +138,102 @@ export const Customers: React.FC = () => {
   return (
     <AnimatedPage>
       <div className="container">
-        <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">{t('cust.title')}</h1>
-        <button 
-          className="btn btn-primary" 
-          style={{ width: 'auto', minHeight: '2.5rem', padding: '0.5rem 1rem' }}
-          onClick={() => setIsAdding(!isAdding)}
-        >
-          {isAdding ? t('sales.cancel') : `+ ${t('cust.addCustomer')}`}
-        </button>
-      </div>
+        {/* Modern Header Area */}
+        <div className="bg-gradient-to-br from-primary via-blue-800 to-indigo-900 text-white rounded-3xl p-6 md:p-8 mb-8 shadow-xl relative overflow-hidden flex flex-col md:flex-row md:items-center justify-between gap-6 hover:shadow-2xl transition-shadow">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 pointer-events-none"></div>
+          
+          <div className="flex items-center gap-5 relative z-10">
+            <div>
+              <h1 className="text-3xl font-black mb-1">{t('cust.title')}</h1>
+              <p className="text-white/70 text-sm font-medium">Manage your client routing and debt collection.</p>
+            </div>
+          </div>
+
+          <div className="relative z-10 w-full md:w-auto flex flex-col sm:flex-row gap-3">
+             <button 
+               className="bg-white/10 hover:bg-white/20 text-white border border-white/20 px-6 py-3 rounded-2xl shadow-sm transition-colors flex items-center justify-center gap-2 font-bold text-sm whitespace-nowrap"
+               onClick={() => setIsAdding(!isAdding)}
+             >
+               {isAdding ? <X size={18} /> : <MessageCircle size={18} className="rotate-90 hidden" />}
+               {isAdding ? t('sales.cancel') : `Add New Client`}
+             </button>
+             <button 
+               className="bg-primary hover:bg-primary-hover text-white shadow-md border-2 border-primary-hover px-6 py-3 rounded-2xl transition-colors flex items-center justify-center gap-2 font-bold text-sm whitespace-nowrap"
+               onClick={() => setShowScanner(true)}
+             >
+               <Camera size={18} /> Quick Scan ID
+             </button>
+          </div>
+        </div>
       
       {isAdding && !rawUpload && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <form onSubmit={handleAdd} className="card border-primary w-full max-w-md max-h-[90vh] overflow-y-auto m-0 relative">
-            <button 
-              type="button" 
-              onClick={() => setIsAdding(false)}
-              className="absolute top-4 right-4 text-secondary hover:text-danger z-10"
-            >
-              <X size={24} />
-            </button>
-            <h2 className="text-xl font-bold mb-6">{t('cust.addCustomer')}</h2>
-            
-            <div className="flex flex-col items-center mb-6">
-              <label 
-                className="w-16 h-16 rounded-full bg-[var(--surface-color)] border-2 border-dashed border-primary/50 flex flex-col items-center justify-center cursor-pointer overflow-hidden relative group"
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <form onSubmit={handleAdd} className="bg-surface w-full max-w-lg rounded-3xl border border-[var(--border-color)] shadow-2xl max-h-[90vh] overflow-y-auto filter drop-shadow-2xl animate-bounce-in-up m-0 relative">
+            <div className="sticky top-0 bg-surface/80 backdrop-blur-md border-b border-[var(--border-color)] px-6 py-4 flex justify-between items-center z-10 rounded-t-3xl">
+              <h2 className="text-xl font-black tracking-tight">{t('cust.addCustomer')}</h2>
+              <button 
+                type="button" 
+                onClick={() => setIsAdding(false)}
+                className="w-8 h-8 flex items-center justify-center rounded-full bg-black/5 hover:bg-black/10 dark:bg-white/5 dark:hover:bg-white/10 transition-colors"
               >
-                {image ? (
-                  <img src={image} alt="Preview" className="w-full h-full object-cover" />
-                ) : (
-                  <>
-                    <Camera size={24} className="text-secondary mb-1 group-hover:text-primary transition-colors" />
-                    <span className="text-[10px] text-secondary group-hover:text-primary text-center leading-tight">Add Photo</span>
-                  </>
-                )}
-                <input 
-                  type="file" 
-                  accept="image/*" 
-                  className="hidden" 
-                  onChange={handleImageUpload}
-                />
-              </label>
+                <X size={16} />
+              </button>
             </div>
+            
+            <div className="p-6">
+              <div className="flex flex-col items-center mb-6">
+                <label 
+                  className="w-24 h-24 rounded-full bg-black/5 dark:bg-white/5 border border-dashed border-primary/50 flex flex-col items-center justify-center cursor-pointer overflow-hidden relative group hover:bg-black/10 transition-colors"
+                >
+                  {image ? (
+                    <img src={image} alt="Preview" className="w-full h-full object-cover" />
+                  ) : (
+                    <>
+                      <Camera size={24} className="text-secondary mb-1 group-hover:text-primary transition-colors" />
+                      <span className="text-[10px] uppercase font-bold tracking-widest text-secondary group-hover:text-primary text-center leading-tight">Add Photo</span>
+                    </>
+                  )}
+                  <input 
+                    type="file" 
+                    accept="image/*" 
+                    className="hidden" 
+                    onChange={handleImageUpload}
+                  />
+                </label>
+              </div>
 
-            <div className="form-group">
-              <label className="form-label">{t('cust.name')} *</label>
-              <input type="text" className="form-input" value={name} onChange={e => setName(e.target.value)} required placeholder="Full Name" />
+              <div className="space-y-4">
+                <div>
+                  <label className="text-[10px] uppercase font-bold opacity-70 mb-1 block">Full Market Name *</label>
+                  <input type="text" className="w-full bg-black/5 dark:bg-white/5 border border-[var(--border-color)] rounded-xl py-3 px-4 font-bold text-sm focus:outline-none focus:border-primary transition-colors" value={name} onChange={e => setName(e.target.value)} required placeholder="Business or personal name" />
+                </div>
+                
+                <div>
+                  <label className="text-[10px] uppercase font-bold opacity-70 mb-1 block">Direct Contact (WhatsApp/Phone)</label>
+                  <input type="tel" className="w-full bg-black/5 dark:bg-white/5 border border-[var(--border-color)] rounded-xl py-3 px-4 font-bold text-sm focus:outline-none focus:border-primary transition-colors" value={phone} onChange={e => setPhone(e.target.value)} placeholder="080... or +234..." />
+                </div>
+                
+                <div>
+                  <label className="text-[10px] uppercase font-bold opacity-70 mb-1 block">Geographical Route</label>
+                  <input type="text" className="w-full bg-black/5 dark:bg-white/5 border border-[var(--border-color)] rounded-xl py-3 px-4 font-bold text-sm focus:outline-none focus:border-primary transition-colors" value={location} onChange={e => setLocation(e.target.value)} placeholder="Shop address or specific route location" />
+                </div>
+                
+                <div>
+                  <label className="text-[10px] uppercase font-bold opacity-70 mb-1 block">Operational Notes</label>
+                  <textarea 
+                    className="w-full bg-black/5 dark:bg-white/5 border border-[var(--border-color)] rounded-xl py-3 px-4 font-bold text-sm focus:outline-none focus:border-primary transition-colors" 
+                    value={notes} 
+                    onChange={e => setNotes(e.target.value)} 
+                    rows={2}
+                    placeholder="Details to remember about payment history or delivery quirks..."
+                  />
+                </div>
+              </div>
+              
+              <button type="submit" className="w-full bg-primary hover:bg-primary-hover text-white font-black text-sm py-4 rounded-xl shadow-md mt-6 transition-colors flex items-center justify-center gap-2">
+                Commit & Print Digital ID
+              </button>
             </div>
-            
-            <div className="form-group">
-              <label className="form-label">{t('cust.phone')}</label>
-              <input type="tel" className="form-input" value={phone} onChange={e => setPhone(e.target.value)} placeholder="080... or +234..." />
-            </div>
-            
-            <div className="form-group">
-              <label className="form-label">Location/Address</label>
-              <input type="text" className="form-input" value={location} onChange={e => setLocation(e.target.value)} placeholder="Customer's shop or area" />
-            </div>
-            
-            <div className="form-group">
-              <label className="form-label">Notes</label>
-              <textarea 
-                className="form-input" 
-                value={notes} 
-                onChange={e => setNotes(e.target.value)} 
-                rows={2}
-                placeholder="Any additional details..."
-              />
-            </div>
-            
-            <button type="submit" className="btn btn-primary w-full mt-4 py-3 shadow-md">{t('cust.save')} & Generate ID</button>
           </form>
         </div>
       )}
@@ -221,101 +246,102 @@ export const Customers: React.FC = () => {
         />
       )}
 
-      <div className="flex gap-2 mb-4">
-        <div className="form-group flex-1 mb-0">
+      <div className="flex mb-6">
+        <div className="relative flex-1">
           <input 
             type="text" 
-            className="form-input" 
-            placeholder={t('cust.searchCustomer')}
+            className="w-full bg-surface border border-[var(--border-color)] rounded-2xl py-3 px-4 font-bold text-sm focus:outline-none focus:border-primary transition-colors shadow-sm" 
+            placeholder="Search by name or route location..."
             value={search}
             onChange={e => setSearch(e.target.value)}
           />
         </div>
-        <button 
-          className="btn btn-outline text-primary border-primary flex items-center justify-center shadow-sm flex-shrink-0"
-          style={{ width: '3rem', padding: 0 }}
-          onClick={() => setShowScanner(true)}
-        >
-          <Camera size={20} />
-        </button>
       </div>
 
-      <div className="flex flex-col gap-3">
+      <div className="grid gap-4">
         {filteredCustomers.length === 0 ? (
-          <p className="text-secondary text-center py-8">{t('cust.noCustomers')}</p>
+          <div className="text-center py-12 opacity-50 border border-dashed rounded-3xl border-[var(--border-color)] mt-4">
+             <div className="flex justify-center mb-3 opacity-20"><svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg></div>
+             <p className="font-bold text-sm">No Client Records</p>
+             <p className="text-xs mt-1">Try to refine your search.</p>
+          </div>
         ) : (
           filteredCustomers.map(customer => (
             <div 
               key={customer.id} 
-              className="card" 
-              style={{ marginBottom: 0, paddingBottom: '1rem', cursor: 'pointer' }}
+              className="bg-surface p-5 rounded-3xl border border-[var(--border-color)] shadow-sm hover:shadow-md hover:border-primary/40 transition-all cursor-pointer group"
               onClick={(e) => {
-                // Prevent navigation if clicking inside the pay debt form
                 if ((e.target as HTMLElement).closest('.debt-form')) return;
                 navigate(`/customers/${customer.id}`);
               }}
             >
-              <div className="flex justify-between items-start mb-3">
-                <div>
-                  <div className="flex items-center gap-2 mb-1">
-                    <h3 className="text-lg font-bold">{customer.name}</h3>
-                    {getBadge(customer.loyaltyPoints)}
-                  </div>
-                  {customer.phone && <p className="text-sm">{customer.phone}</p>}
-                  {customer.location && <p className="text-sm text-secondary">{customer.location}</p>}
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div className="flex items-center gap-4 flex-1">
+                   <div className="w-12 h-12 rounded-full flex items-center justify-center font-black shadow-sm text-lg border shrink-0 bg-primary/10 text-primary border-primary/20">
+                     {customer.name.charAt(0).toUpperCase()}
+                   </div>
+                   <div>
+                     <div className="flex items-center gap-2 mb-0.5">
+                       <h3 className="text-lg font-black tracking-tight">{customer.name}</h3>
+                       {getBadge(customer.loyaltyPoints)}
+                     </div>
+                     <div className="flex flex-wrap items-center gap-2 text-[10px] font-bold uppercase tracking-wider opacity-70">
+                       {customer.phone && <span>Ph: {customer.phone}</span>}
+                       {customer.location && <span>Rt: {customer.location}</span>}
+                     </div>
+                   </div>
                 </div>
-                <div className={`text-right ${customer.debtBalance > 0 ? 'text-danger' : 'text-success'}`}>
-                  <div className="text-sm">{t('cust.debt')}</div>
-                  <div className="font-bold">₦{customer.debtBalance.toLocaleString()}</div>
+                
+                <div className={`text-left sm:text-right bg-black/5 dark:bg-white/5 p-3 rounded-xl sm:bg-transparent sm:w-auto w-full sm:p-0 ${customer.debtBalance > 0 ? 'text-danger' : 'text-success'}`}>
+                  <div className="text-[9px] uppercase font-black opacity-50 mb-0.5 ml-1 sm:ml-0">Current Market Debt</div>
+                  <div className="font-black text-xl tracking-tight">₦{customer.debtBalance.toLocaleString()}</div>
                 </div>
               </div>
               
               {customer.debtBalance > 0 && (
-                <div className="mt-4 pt-4 border-t debt-form" style={{ borderColor: 'var(--border-color)' }}>
+                <div className="mt-5 pt-5 border-t border-[var(--border-color)] debt-form">
                   {paymentCustomerId === customer.id ? (
-                    <form onSubmit={handleRecordPayment} className="flex flex-col gap-2">
-                      <div className="flex gap-2">
+                    <form onSubmit={handleRecordPayment} className="flex flex-col gap-3 bg-amber-50 dark:bg-amber-950/20 p-4 rounded-2xl border border-amber-200 dark:border-amber-900/30">
+                      <h4 className="text-xs font-black uppercase tracking-widest text-amber-800 dark:text-amber-500 mb-1">Process Partial/Full Clearing</h4>
+                      <div className="flex flex-col sm:flex-row gap-3">
                         <select
-                          className="form-select flex-1"
-                          style={{ padding: '0.5rem', minWidth: '100px' }}
+                          className="bg-white dark:bg-surface border border-[var(--border-color)] rounded-xl px-4 py-3 font-bold text-sm focus:border-amber-500 transition-colors w-full sm:w-auto"
                           value={paymentMethod}
                           onChange={e => setPaymentMethod(e.target.value as 'Cash' | 'Transfer')}
                         >
-                          <option value="Cash">Cash</option>
-                          <option value="Transfer">Transfer</option>
+                          <option value="Cash">Cash Transfer</option>
+                          <option value="Transfer">Bank Transfer</option>
                         </select>
                         <input 
                           type="number" 
-                          className="form-input flex-[2]" 
-                          placeholder="Amount (₦)" 
+                          className="bg-white dark:bg-surface border border-[var(--border-color)] rounded-xl px-4 py-3 font-bold text-sm focus:border-amber-500 transition-colors flex-[2] w-full" 
+                          placeholder="Amount Settled (₦)" 
                           value={paymentAmount}
                           onChange={e => setPaymentAmount(e.target.value)}
                           required
-                          style={{ padding: '0.5rem' }}
                         />
                       </div>
-                      <div className="flex gap-2">
-                        <button type="submit" className="btn btn-primary flex-1" style={{ minHeight: 'auto', padding: '0.5rem 1rem' }}>{t('cust.save')}</button>
-                        <button type="button" className="btn btn-outline flex-1" style={{ minHeight: 'auto', padding: '0.5rem 1rem' }} onClick={() => setPaymentCustomerId(null)}>{t('sales.cancel')}</button>
+                      <div className="flex gap-2 pt-1">
+                        <button type="submit" className="flex-[2] bg-amber-500 hover:bg-amber-600 text-white font-black text-xs py-3 rounded-xl transition-colors shadow-sm">Commit Clearance</button>
+                        <button type="button" className="flex-1 bg-white dark:bg-surface border border-[var(--border-color)] hover:bg-black/5 font-bold text-xs py-3 rounded-xl transition-colors" onClick={() => setPaymentCustomerId(null)}>Back Out</button>
                       </div>
                     </form>
                   ) : (
-                    <div className="flex gap-2">
+                    <div className="flex flex-col sm:flex-row gap-3">
                       <button 
-                        className="btn btn-outline flex-1 text-sm py-2"
+                        className="flex-[2] bg-red-500/10 hover:bg-red-500/20 text-red-600 border border-red-500/20 font-black text-xs py-3 rounded-xl transition-colors flex items-center justify-center gap-2"
                         onClick={(e) => {
                           e.stopPropagation();
                           setPaymentCustomerId(customer.id);
                         }}
                       >
-                        Record Payment
+                         Apply Collected Debt Cash
                       </button>
                       <button 
-                        className="btn flex-1 text-sm py-2"
-                        style={{ backgroundColor: '#25D366', color: '#fff', border: 'none' }}
+                        className="flex-1 bg-[#25D366] hover:bg-[#20bd5a] text-white font-black text-xs py-3 rounded-xl transition-colors flex items-center justify-center gap-2 shadow-sm"
                         onClick={(e) => handleWhatsAppReminder(customer, e)}
                       >
-                        <MessageCircle size={16} className="mr-1 inline" /> Reminder
+                        <MessageCircle size={16} /> Fast Remind
                       </button>
                     </div>
                   )}
