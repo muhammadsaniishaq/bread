@@ -3,7 +3,7 @@ import { AnimatedPage } from '../components/AnimatedPage';
 import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../store/AppContext';
 import { useAuth } from '../store/AuthContext';
-import { LogOut, TrendingUp, Archive, Users, PackageSearch, Package, Banknote, Settings, FileBarChart, Shield, ArrowRightLeft, Scale, Landmark } from 'lucide-react';
+import { LogOut, TrendingUp, Archive, Users, PackageSearch, Package, Banknote, Settings, FileBarChart, Shield, ArrowRightLeft, Scale, Landmark, ShoppingCart, Receipt } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 
 export const ManagerDashboard: React.FC = () => {
@@ -34,6 +34,8 @@ export const ManagerDashboard: React.FC = () => {
   // Wait, I will need to pull products from useAppContext!
 
   const quickLinks = [
+    { name: 'Executive POS', icon: <ShoppingCart size={24} />, path: '/manager/sales', color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
+    { name: 'Sales Stream', icon: <Receipt size={24} />, path: '/manager/transactions', color: 'text-blue-500', bg: 'bg-blue-500/10' },
     { name: 'Bread Catalog', icon: <PackageSearch size={24} />, path: '/manager/products', color: 'text-amber-500', bg: 'bg-amber-500/10' },
     { name: 'Bakery Payouts', icon: <Landmark size={24} />, path: '/manager/remissions', color: 'text-purple-500', bg: 'bg-purple-500/10' },
     { name: 'Raw Materials', icon: <Package size={24} />, path: '/manager/raw-materials', color: 'text-amber-500', bg: 'bg-amber-500/10' },
