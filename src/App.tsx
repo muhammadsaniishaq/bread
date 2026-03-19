@@ -10,7 +10,6 @@ import RoleRouter from './components/RoleRouter';
 
 import ManagerDashboard from './pages/ManagerDashboard';
 import StoreDashboard from './pages/StoreDashboard';
-import SupplierDashboard from './pages/SupplierDashboard';
 import CustomerStorefront from './pages/CustomerStorefront';
 
 import RawMaterialsManager from './components/RawMaterialsManager';
@@ -123,7 +122,7 @@ const AppContent: React.FC = () => {
             <Route path="/manager/transactions" element={<RoleGuard allowedRoles={['MANAGER']}><ManagerTransactions /></RoleGuard>} />
             <Route path="/manager/audit" element={<RoleGuard allowedRoles={['MANAGER']}><ManagerAudit /></RoleGuard>} />
             
-            <Route path="/supplier" element={<RoleGuard allowedRoles={['SUPPLIER']}><SupplierDashboard /></RoleGuard>} />
+            <Route path="/supplier" element={<RoleGuard allowedRoles={['SUPPLIER']}><Dashboard /></RoleGuard>} />
           </Route>
           <Route path="/store" element={<RoleGuard allowedRoles={['STORE_KEEPER']}><StoreDashboard /></RoleGuard>} />
           <Route path="/customer" element={<RoleGuard allowedRoles={['CUSTOMER']}><CustomerStorefront /></RoleGuard>} />
