@@ -1,62 +1,99 @@
 import React from 'react';
 
 import { AnimatedPage } from '../components/AnimatedPage';
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import UserManagement from '../components/UserManagement';
 import { RawMaterialsManager } from '../components/RawMaterialsManager';
 import { useAppContext } from '../store/AppContext';
 import { useAuth } from '../store/AuthContext';
-import { LogOut, TrendingUp, Archive } from 'lucide-react';
+import { LogOut, TrendingUp, Archive, ShoppingCart, Users, Package, Banknote, LayoutDashboard, Settings, FileBarChart } from 'lucide-react';
 
 export const ManagerDashboard: React.FC = () => {
   const { transactions, logout } = useAppContext();
   const { signOut } = useAuth();
+  const navigate = useNavigate();
   
   // Calculate today's basic analytics from legacy local storage mapping
   const todaySales = transactions.filter(t => new Date(t.date).toDateString() === new Date().toDateString());
   const totalRevenue = todaySales.reduce((acc, curr) => acc + curr.totalPrice, 0);
   const salesCount = todaySales.length;
+
+  const quickLinks = [
+    { name: 'Daily Sales', icon: <ShoppingCart size={24} />, path: '/sales', color: 'text-primary', bg: 'bg-primary/10' },
+    { name: 'Customers', icon: <Users size={24} />, path: '/customers', color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
+    { name: 'Inventory', icon: <Package size={24} />, path: '/inventory', color: 'text-amber-500', bg: 'bg-amber-500/10' },
+    { name: 'Expenses', icon: <Banknote size={24} />, path: '/expenses', color: 'text-rose-500', bg: 'bg-rose-500/10' },
+    { name: 'Full Reports', icon: <FileBarChart size={24} />, path: '/reports', color: 'text-indigo-500', bg: 'bg-indigo-500/10' },
+    { name: 'Settings', icon: <Settings size={24} />, path: '/settings', color: 'text-gray-500', bg: 'bg-gray-500/10' },
+  ];
+
   return (
     <AnimatedPage>
       <div className="p-4 pb-24">
+        {/* Header */}
         <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold">Manager Dashboard</h1>
-          <button className="btn btn-outline btn-icon border-danger text-danger" onClick={async () => { logout(); await signOut(); }} title="Logout">
-            <LogOut size={20} />
+          <div>
+            <h1 className="text-3xl font-black tracking-tight flex items-center gap-2">
+              <LayoutDashboard className="text-primary" size={28} /> Control Panel
+            </h1>
+            <p className="text-secondary text-sm font-medium mt-1">Welcome back, Manager.</p>
+          </div>
+          <button 
+            className="w-10 h-10 rounded-full bg-danger/10 text-danger flex items-center justify-center hover:bg-danger hover:text-white transition-all shadow-sm"
+            onClick={async () => { logout(); await signOut(); }}
+            title="Secure Logout"
+          >
+            <LogOut size={18} strokeWidth={2.5} />
           </button>
         </div>
         
-        <p className="text-secondary mb-6">Welcome to the central control panel. Here you will oversee all operations.</p>
-        
-        {/* Global Analytics Overview */}
-        <div className="grid grid-cols-2 gap-3 mb-6">
-          <div className="card border-primary" style={{ backgroundColor: 'rgba(var(--primary-rgb), 0.05)' }}>
-            <div className="flex items-center gap-2 mb-2 text-primary">
-              <TrendingUp size={16} />
-              <h2 className="font-bold text-sm opacity-80">Today's Revenue</h2>
+        {/* Vibrant Finance Cards */}
+        <div className="grid grid-cols-2 gap-4 mb-8">
+          <div className="bg-gradient-to-br from-primary to-indigo-700 text-white p-5 rounded-[var(--radius-xl)] shadow-[0_10px_30px_rgba(var(--primary-rgb),0.3)] relative overflow-hidden transition-transform hover:scale-[1.02]">
+            <div className="absolute -right-4 -top-4 opacity-10">
+              <TrendingUp size={100} />
             </div>
-            <div className="text-xl md:text-2xl font-black text-primary">₦{totalRevenue.toLocaleString()}</div>
-            <div className="text-xs mt-1 opacity-60 font-medium">{salesCount} Total Orders Today</div>
+            <div className="flex items-center gap-2 mb-2 opacity-90">
+              <TrendingUp size={16} strokeWidth={3} />
+              <h2 className="font-bold text-sm uppercase tracking-wider">Today's Revenue</h2>
+            </div>
+            <div className="text-2xl sm:text-3xl font-black tracking-tight">₦{totalRevenue.toLocaleString()}</div>
+            <div className="text-xs mt-2 opacity-80 font-medium bg-black/20 inline-block px-2 py-1 rounded-full">{salesCount} Sales Today</div>
           </div>
           
-          <div className="card">
-            <div className="flex items-center gap-2 mb-2">
-              <Archive size={16} className="text-secondary" />
-              <h2 className="font-bold text-sm opacity-80">Total Vault</h2>
+          <div className="bg-white dark:bg-zinc-800 p-5 rounded-[var(--radius-xl)] shadow-md border border-[var(--border-color)] relative overflow-hidden transition-transform hover:scale-[1.02]">
+            <div className="absolute -right-4 -top-4 opacity-[0.03] dark:opacity-5 text-black dark:text-white">
+              <Archive size={100} />
             </div>
-            <div className="text-xl md:text-2xl font-black">₦{transactions.reduce((acc, curr) => acc + curr.totalPrice, 0).toLocaleString()}</div>
-            <div className="text-xs mt-1 opacity-60 font-medium">Lifetime Gross Revenue</div>
+            <div className="flex items-center gap-2 mb-2 text-secondary">
+              <Archive size={16} strokeWidth={3} />
+              <h2 className="font-bold text-sm uppercase tracking-wider">Total Vault</h2>
+            </div>
+            <div className="text-2xl sm:text-3xl font-black tracking-tight text-[var(--text-primary)]">
+              ₦{transactions.reduce((acc, curr) => acc + curr.totalPrice, 0).toLocaleString()}
+            </div>
+            <div className="text-xs mt-2 text-success font-medium bg-success/10 inline-block px-2 py-1 rounded-full">Lifetime Gross</div>
           </div>
         </div>
         
-        <div className="grid gap-4 md:grid-cols-2 mb-6">
-          <div className="card">
-            <h2 className="font-bold text-lg mb-2">Legacy System Tools</h2>
-            <p className="text-sm opacity-70 mb-4">Access your existing offline-mapped records.</p>
-            <div className="flex gap-2">
-              <Link to="/settings" className="btn btn-outline flex-1 text-center text-sm py-2">App Settings & Products</Link>
-              <Link to="/reports" className="btn btn-outline flex-1 text-center text-accent border-accent text-sm py-2">Full Reports</Link>
-            </div>
+        {/* Core System App Grid (iOS Style) */}
+        <div className="mb-8">
+          <h2 className="font-black text-lg mb-4 flex items-center gap-2 tracking-tight">
+            System Modules
+          </h2>
+          <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-6 gap-3">
+            {quickLinks.map((link) => (
+              <button 
+                key={link.name}
+                onClick={() => navigate(link.path)}
+                className="flex flex-col items-center justify-center p-3 sm:p-4 bg-[var(--surface-color)] backdrop-blur-md rounded-2xl border border-[var(--border-color)] shadow-sm hover:shadow-md hover:-translate-y-1 transition-all"
+              >
+                <div className={`w-12 h-12 flex items-center justify-center rounded-full ${link.bg} ${link.color} mb-2 shadow-sm`}>
+                  {link.icon}
+                </div>
+                <span className="text-[11px] sm:text-xs font-bold text-center tracking-tight leading-tight opacity-80">{link.name}</span>
+              </button>
+            ))}
           </div>
         </div>
 
