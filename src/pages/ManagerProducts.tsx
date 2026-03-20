@@ -1,44 +1,59 @@
 import React, { useState, useRef, useMemo } from 'react';
 import { AnimatedPage } from '../components/AnimatedPage';
-import { PackageSearch, ArrowLeft, Plus, Edit2, Archive, CheckCircle2, Image as ImageIcon, Search, X, UploadCloud, Layers } from 'lucide-react';
+import {
+  PackageSearch, ArrowLeft, Plus, Edit2, Archive,
+  CheckCircle2, Image as ImageIcon, Search, X, UploadCloud, Layers
+} from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../store/AppContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { Product } from '../store/types';
 
+/* ─────────────────────────────────────────────
+   DESIGN TOKENS  (override via Tailwind if needed)
+───────────────────────────────────────────── */
+const TOKEN = {
+  accent:      '#F59E0B',   // amber-500
+  accentDark:  '#D97706',
+  accentGlow:  'rgba(245,158,11,0.18)',
+  danger:      '#EF4444',
+  success:     '#22C55E',
+  radius:      '1.75rem',
+  radiusSm:    '1rem',
+};
+
 export const ManagerProducts: React.FC = () => {
   const navigate = useNavigate();
   const { products, addProduct, updateProduct } = useAppContext();
-  
-  const [isAdding, setIsAdding] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  
-  const [name, setName] = useState('');
-  const [price, setPrice] = useState('');
-  const [category, setCategory] = useState('Bread');
-  const [newImage, setNewImage] = useState<string | undefined>(undefined);
-  const [searchQuery, setSearchQuery] = useState('');
-  
+
+  const [isAdding,   setIsAdding]   = useState(false);
+  const [editingId,  setEditingId]  = useState<string | null>(null);
+  const [name,       setName]       = useState('');
+  const [price,      setPrice]      = useState('');
+  const [category,   setCategory]   = useState('Bread');
+  const [newImage,   setNewImage]   = useState<string | undefined>(undefined);
+  const [searchQuery,setSearchQuery]= useState('');
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  /* ── Image upload ── */
   const handleProductImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     if (file.size > 1.5 * 1024 * 1024) {
-      alert("Please select an image smaller than 1.5MB to preserve cloud sync speed.");
+      alert('Please select an image smaller than 1.5 MB to preserve cloud sync speed.');
       return;
     }
     const reader = new FileReader();
-    reader.onload = async (event) => {
-      setNewImage(event.target?.result as string);
-    };
+    reader.onload = (event) => setNewImage(event.target?.result as string);
     reader.readAsDataURL(file);
   };
 
+  /* ── Save (add or edit) ── */
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name || !price) return;
-    
+
     if (editingId) {
       const existing = products.find(p => p.id === editingId);
       if (existing) {
@@ -47,18 +62,18 @@ export const ManagerProducts: React.FC = () => {
           name,
           price: parseFloat(price),
           category,
-          image: newImage !== undefined ? newImage : existing.image
+          image: newImage !== undefined ? newImage : existing.image,
         });
       }
     } else {
       await addProduct({
-        id: Date.now().toString(),
+        id:       Date.now().toString(),
         name,
-        price: parseFloat(price),
-        stock: 0,
-        active: true,
+        price:    parseFloat(price),
+        stock:    0,
+        active:   true,
         category,
-        image: newImage
+        image:    newImage,
       });
     }
     resetForm();
@@ -75,345 +90,482 @@ export const ManagerProducts: React.FC = () => {
   };
 
   const resetForm = () => {
-    setName('');
-    setPrice('');
-    setCategory('Bread');
-    setNewImage(undefined);
-    setEditingId(null);
-    setIsAdding(false);
+    setName('');  setPrice('');  setCategory('Bread');
+    setNewImage(undefined);  setEditingId(null);  setIsAdding(false);
   };
 
-  const toggleActive = async (p: Product) => {
+  const toggleActive = async (p: Product) =>
     await updateProduct({ ...p, active: !p.active });
-  };
 
+  /* ── Derived data ── */
   const filteredProducts = useMemo(() => {
     if (!searchQuery) return products;
-    return products.filter(p => 
-      p.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-      (p.category && p.category.toLowerCase().includes(searchQuery.toLowerCase()))
+    const q = searchQuery.toLowerCase();
+    return products.filter(
+      p => p.name.toLowerCase().includes(q) ||
+           (p.category && p.category.toLowerCase().includes(q))
     );
   }, [products, searchQuery]);
 
   const activeProducts = filteredProducts.filter(p => p.active).length;
-  const categories = Array.from(new Set(products.map(p => p.category)));
+  const categories     = Array.from(new Set(products.map(p => p.category)));
 
-  // Animation variants
-  const containerVariants: any = {
+  /* ── Animation variants ── */
+  const stagger = {
     hidden: { opacity: 0 },
-    show: {
-      opacity: 1,
-      transition: { staggerChildren: 0.1 }
-    }
+    show:   { opacity: 1, transition: { staggerChildren: 0.07 } },
+  };
+  const pop = {
+    hidden: { opacity: 0, scale: 0.85, y: 24 },
+    show:   { opacity: 1, scale: 1, y: 0,
+              transition: { type: 'spring' as const, stiffness: 420, damping: 28 } },
   };
 
-  const itemVariants: any = {
-    hidden: { opacity: 0, scale: 0.8, y: 30 },
-    show: { opacity: 1, scale: 1, y: 0, transition: { type: "spring" as any, stiffness: 400, damping: 25 } }
-  };
+  /* ── Metric card data ── */
+  const metrics = [
+    { label: 'Active',    value: activeProducts,    icon: <PackageSearch size={18} />, color: TOKEN.accent,   glow: TOKEN.accentGlow },
+    { label: 'Catalog',   value: products.length,   icon: <Layers        size={18} />, color: '#3B82F6', glow: 'rgba(59,130,246,0.15)' },
+    { label: 'Categories',value: categories.length, icon: <Search        size={18} />, color: '#EC4899', glow: 'rgba(236,72,153,0.15)' },
+  ];
 
   return (
     <AnimatedPage>
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-amber-50/30 dark:from-zinc-950 dark:via-zinc-900 dark:to-zinc-950 pb-24 relative overflow-hidden">
-        
-        {/* Abstract Floating Ambient Orbs */}
-        <div className="absolute top-[-10%] right-[-5%] w-[600px] h-[600px] bg-amber-500/15 rounded-full blur-[120px] mix-blend-multiply dark:mix-blend-screen animate-pulse pointer-events-none"></div>
-        <div className="absolute bottom-[-10%] left-[-10%] w-[500px] h-[500px] bg-rose-500/10 rounded-full blur-[100px] mix-blend-multiply dark:mix-blend-screen pointer-events-none"></div>
+      <div className="min-h-screen bg-[#F7F7F5] dark:bg-zinc-950 pb-28 overflow-hidden relative"
+           style={{ fontFamily: "'DM Sans', 'Nunito', sans-serif" }}>
 
-        <div className="container relative z-10 max-w-7xl mx-auto pt-6">
-          
-          {/* Header */}
-          <div className="flex items-center gap-4 mb-8">
-            <motion.button 
-               whileHover={{ scale: 1.1 }}
-               whileTap={{ scale: 0.9 }}
-               onClick={() => navigate(-1)} 
-               className="w-12 h-12 bg-white/70 dark:bg-zinc-800/70 backdrop-blur-xl border border-white/50 dark:border-white/10 rounded-full shadow-[0_8px_20px_rgba(0,0,0,0.04)] flex items-center justify-center text-primary"
+        {/* ── Background mesh ── */}
+        <div className="pointer-events-none absolute inset-0 overflow-hidden">
+          <div style={{ background: `radial-gradient(ellipse 70% 50% at 80% -10%, ${TOKEN.accentGlow}, transparent)` }}
+               className="absolute inset-0" />
+          <div style={{ background: 'radial-gradient(ellipse 50% 40% at -10% 90%, rgba(236,72,153,0.08), transparent)' }}
+               className="absolute inset-0" />
+          {/* Fine grid overlay */}
+          <svg className="absolute inset-0 w-full h-full opacity-[0.025] dark:opacity-[0.04]"
+               xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <pattern id="grid" width="32" height="32" patternUnits="userSpaceOnUse">
+                <path d="M 32 0 L 0 0 0 32" fill="none" stroke="currentColor" strokeWidth="0.5"/>
+              </pattern>
+            </defs>
+            <rect width="100%" height="100%" fill="url(#grid)" />
+          </svg>
+        </div>
+
+        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 pt-8">
+
+          {/* ─────────── HEADER ─────────── */}
+          <div className="flex items-center gap-4 mb-10">
+            <motion.button
+              whileHover={{ scale: 1.08, x: -2 }}
+              whileTap={{ scale: 0.92 }}
+              onClick={() => navigate(-1)}
+              className="w-11 h-11 rounded-2xl bg-white dark:bg-zinc-900 border border-black/[0.06] dark:border-white/10
+                         shadow-sm flex items-center justify-center text-zinc-600 dark:text-zinc-300
+                         hover:border-amber-400/60 hover:text-amber-500 transition-colors"
             >
-              <ArrowLeft size={20} />
+              <ArrowLeft size={18} />
             </motion.button>
+
             <div>
-              <h1 className="text-3xl font-black text-primary flex items-center gap-2 tracking-tight">
-                Product <span className="text-amber-500">Suite</span>
+              <h1 className="text-[1.75rem] font-black tracking-tight text-zinc-900 dark:text-white leading-none">
+                Product <span style={{ color: TOKEN.accent }}>Suite</span>
               </h1>
-              <p className="text-sm font-bold text-secondary opacity-70 mt-0.5 tracking-wide">Orchestrate your global catalog.</p>
+              <p className="text-xs font-semibold text-zinc-400 dark:text-zinc-500 mt-1 tracking-wide uppercase">
+                Manage your product catalog
+              </p>
             </div>
           </div>
 
-          {/* Ultra Premium Metrics Row */}
-          <div className="grid grid-cols-3 gap-4 sm:gap-6 mb-10">
-             <motion.div 
-               whileHover={{ y: -5 }}
-               className="bg-white/60 dark:bg-zinc-900/60 backdrop-blur-2xl p-5 sm:p-6 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white/50 dark:border-white/5 relative overflow-hidden group"
-             >
-               <div className="absolute -right-6 -top-6 w-24 h-24 bg-amber-500/10 rounded-full blur-2xl group-hover:bg-amber-500/20 transition-colors"></div>
-               <div className="w-10 h-10 rounded-[14px] bg-amber-500/10 flex items-center justify-center mb-3">
-                 <PackageSearch size={20} className="text-amber-500" />
-               </div>
-               <div className="text-[10px] sm:text-[11px] font-black text-secondary uppercase tracking-widest mb-1">Active Assets</div>
-               <div className="text-3xl sm:text-4xl font-black text-primary tracking-tighter">{activeProducts}</div>
-             </motion.div>
-
-             <motion.div 
-               whileHover={{ y: -5 }}
-               className="bg-white/60 dark:bg-zinc-900/60 backdrop-blur-2xl p-5 sm:p-6 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white/50 dark:border-white/5 relative overflow-hidden group"
-             >
-               <div className="absolute -right-6 -top-6 w-24 h-24 bg-blue-500/10 rounded-full blur-2xl group-hover:bg-blue-500/20 transition-colors"></div>
-               <div className="w-10 h-10 rounded-[14px] bg-blue-500/10 flex items-center justify-center mb-3">
-                 <Layers size={20} className="text-blue-500" />
-               </div>
-               <div className="text-[10px] sm:text-[11px] font-black text-secondary uppercase tracking-widest mb-1">Total Catalog</div>
-               <div className="text-3xl sm:text-4xl font-black text-primary tracking-tighter">{products.length}</div>
-             </motion.div>
-
-             <motion.div 
-               whileHover={{ y: -5 }}
-               className="bg-white/60 dark:bg-zinc-900/60 backdrop-blur-2xl p-5 sm:p-6 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white/50 dark:border-white/5 relative overflow-hidden group"
-             >
-               <div className="absolute -right-6 -top-6 w-24 h-24 bg-rose-500/10 rounded-full blur-2xl group-hover:bg-rose-500/20 transition-colors"></div>
-               <div className="w-10 h-10 rounded-[14px] bg-rose-500/10 flex items-center justify-center mb-3">
-                 <Search size={20} className="text-rose-500" />
-               </div>
-               <div className="text-[10px] sm:text-[11px] font-black text-secondary uppercase tracking-widest mb-1">Categories</div>
-               <div className="text-3xl sm:text-4xl font-black text-primary tracking-tighter">{categories.length}</div>
-             </motion.div>
+          {/* ─────────── METRIC CARDS ─────────── */}
+          <div className="grid grid-cols-3 gap-3 sm:gap-5 mb-10">
+            {metrics.map((m, i) => (
+              <motion.div
+                key={i}
+                whileHover={{ y: -4, scale: 1.02 }}
+                transition={{ type: 'spring', stiffness: 400, damping: 20 }}
+                className="relative bg-white dark:bg-zinc-900 rounded-[1.5rem] p-5 overflow-hidden
+                           border border-black/[0.05] dark:border-white/5
+                           shadow-[0_2px_12px_rgba(0,0,0,0.06)]"
+              >
+                {/* Glow blob */}
+                <div className="absolute -top-6 -right-6 w-20 h-20 rounded-full blur-2xl opacity-80"
+                     style={{ background: m.glow }} />
+                {/* Icon pill */}
+                <div className="w-9 h-9 rounded-xl flex items-center justify-center mb-4"
+                     style={{ background: m.glow, color: m.color }}>
+                  {m.icon}
+                </div>
+                <p className="text-[10px] font-black uppercase tracking-widest text-zinc-400 dark:text-zinc-500 mb-1">
+                  {m.label}
+                </p>
+                <p className="text-4xl font-black tracking-tighter text-zinc-900 dark:text-white leading-none">
+                  {m.value}
+                </p>
+              </motion.div>
+            ))}
           </div>
 
+          {/* ─────────── FORM / SEARCH BAR ─────────── */}
           <AnimatePresence mode="wait">
             {isAdding ? (
-              <motion.div 
-                initial={{ opacity: 0, y: 20, filter: "blur(10px)" }}
-                animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-                exit={{ opacity: 0, y: -20, filter: "blur(10px)" }}
-                transition={{ type: "spring", stiffness: 300, damping: 25 }}
-                className="bg-white/80 dark:bg-zinc-900/80 backdrop-blur-3xl p-6 sm:p-8 md:p-10 rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.06)] border border-white/60 dark:border-white/10 mb-10 relative overflow-hidden"
+              /* ── ADD / EDIT FORM ── */
+              <motion.div
+                key="form"
+                initial={{ opacity: 0, y: 16, filter: 'blur(8px)' }}
+                animate={{ opacity: 1, y: 0,  filter: 'blur(0px)' }}
+                exit={{   opacity: 0, y: -16, filter: 'blur(8px)' }}
+                transition={{ type: 'spring', stiffness: 320, damping: 28 }}
+                className="bg-white dark:bg-zinc-900 rounded-[2rem] p-6 sm:p-8
+                           border border-black/[0.05] dark:border-white/5
+                           shadow-[0_8px_40px_rgba(0,0,0,0.07)] mb-10 relative overflow-hidden"
               >
-                {/* Internal Glow */}
-                <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-amber-500/5 rounded-full blur-[80px] pointer-events-none"></div>
+                {/* Subtle top accent line */}
+                <div className="absolute top-0 left-8 right-8 h-[2px] rounded-full"
+                     style={{ background: `linear-gradient(90deg, transparent, ${TOKEN.accent}, transparent)` }} />
 
-                <div className="flex justify-between items-center mb-8 relative z-10 border-b border-black/5 dark:border-white/5 pb-6">
-                   <h2 className="text-2xl font-black flex items-center gap-3 text-primary">
-                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 text-white flex items-center justify-center shadow-lg shadow-amber-500/30">
-                         <Plus size={20} />
-                      </div>
-                      {editingId ? 'Edit Asset Configuration' : 'Create New Asset'}
-                   </h2>
-                   <motion.button 
-                     whileHover={{ scale: 1.1, rotate: 90 }}
-                     whileTap={{ scale: 0.9 }}
-                     onClick={resetForm} 
-                     className="w-10 h-10 rounded-full bg-black/5 dark:bg-white/5 flex items-center justify-center text-primary"
-                   >
-                     <X size={20} />
-                   </motion.button>
+                {/* Form header */}
+                <div className="flex justify-between items-center mb-8">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-[14px] flex items-center justify-center text-white shadow-lg"
+                         style={{ background: `linear-gradient(135deg, ${TOKEN.accent}, ${TOKEN.accentDark})`,
+                                  boxShadow: `0 6px 20px ${TOKEN.accentGlow}` }}>
+                      <Plus size={18} />
+                    </div>
+                    <div>
+                      <h2 className="text-lg font-black text-zinc-900 dark:text-white leading-none">
+                        {editingId ? 'Edit Product' : 'New Product'}
+                      </h2>
+                      <p className="text-xs text-zinc-400 mt-0.5">
+                        {editingId ? 'Update asset details' : 'Add to catalog'}
+                      </p>
+                    </div>
+                  </div>
+                  <motion.button
+                    whileHover={{ scale: 1.1, rotate: 90 }}
+                    whileTap={{ scale: 0.9 }}
+                    onClick={resetForm}
+                    className="w-9 h-9 rounded-full bg-black/5 dark:bg-white/5 flex items-center justify-center
+                               text-zinc-500 hover:text-zinc-800 dark:hover:text-white transition-colors"
+                  >
+                    <X size={16} />
+                  </motion.button>
                 </div>
-                
-                <form onSubmit={handleSave} className="grid md:grid-cols-[200px_1fr] gap-8 md:gap-10 relative z-10">
-                  {/* Photo Studio Area */}
-                  <div className="flex flex-col gap-3">
-                     <label className="text-xs font-black text-secondary uppercase tracking-widest pl-2">Asset Studio</label>
-                     <motion.div 
-                       whileHover={{ scale: 1.02 }}
-                       whileTap={{ scale: 0.98 }}
-                       className="w-full aspect-[4/3] md:aspect-square rounded-[2rem] border-2 border-dashed border-amber-500/30 bg-gradient-to-br from-amber-50 to-orange-50/50 dark:from-zinc-800/50 dark:to-zinc-900/50 flex flex-col items-center justify-center cursor-pointer hover:border-amber-500 hover:shadow-xl transition-all overflow-hidden relative group"
-                       onClick={() => fileInputRef.current?.click()}
-                     >
-                       {newImage ? (
-                         <>
-                            <img src={newImage} alt="Preview" className="w-full h-full object-cover" />
-                            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center transition-all backdrop-blur-sm">
-                               <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center mb-2">
-                                  <UploadCloud className="text-white" size={24} />
-                               </div>
-                               <span className="text-[10px] font-black text-white uppercase tracking-widest">Replace</span>
-                            </div>
-                         </>
-                       ) : (
-                         <div className="flex flex-col items-center text-amber-600 dark:text-amber-500">
-                            <div className="w-14 h-14 bg-amber-500/10 rounded-[1rem] flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
-                              <ImageIcon size={28} />
-                            </div>
-                            <span className="text-[10px] font-black uppercase tracking-widest opacity-80">Upload Photo</span>
-                         </div>
-                       )}
-                       <input type="file" accept="image/*" ref={fileInputRef} className="hidden" onChange={handleProductImageUpload} />
-                     </motion.div>
+
+                <form onSubmit={handleSave}
+                      className="grid md:grid-cols-[180px_1fr] gap-8">
+
+                  {/* Photo upload */}
+                  <div className="flex flex-col gap-2">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 pl-1">
+                      Product Photo
+                    </label>
+                    <motion.div
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => fileInputRef.current?.click()}
+                      className="w-full aspect-square rounded-[1.5rem] border-2 border-dashed cursor-pointer
+                                 overflow-hidden relative group transition-all"
+                      style={{ borderColor: newImage ? 'transparent' : `${TOKEN.accent}50`,
+                               background: newImage ? 'transparent' : `${TOKEN.accentGlow}` }}
+                    >
+                      {newImage ? (
+                        <>
+                          <img src={newImage} alt="Preview" className="w-full h-full object-cover" />
+                          <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100
+                                          flex flex-col items-center justify-center transition-all backdrop-blur-sm">
+                            <UploadCloud className="text-white mb-1" size={22} />
+                            <span className="text-[10px] font-black text-white uppercase tracking-widest">Replace</span>
+                          </div>
+                        </>
+                      ) : (
+                        <div className="w-full h-full flex flex-col items-center justify-center"
+                             style={{ color: TOKEN.accent }}>
+                          <div className="w-12 h-12 rounded-2xl flex items-center justify-center mb-2 group-hover:scale-110 transition-transform"
+                               style={{ background: TOKEN.accentGlow }}>
+                            <ImageIcon size={24} />
+                          </div>
+                          <span className="text-[10px] font-black uppercase tracking-widest opacity-70">Upload Photo</span>
+                        </div>
+                      )}
+                      <input
+                        type="file"
+                        accept="image/*"
+                        ref={fileInputRef}
+                        className="hidden"
+                        onChange={handleProductImageUpload}
+                      />
+                    </motion.div>
                   </div>
 
-                  <div className="flex flex-col justify-center gap-6">
-                     <div className="grid gap-6 sm:grid-cols-2">
-                       <div className="flex flex-col gap-2">
-                          <label className="text-[11px] font-black text-secondary uppercase tracking-widest pl-2">Product Name <span className="text-amber-500">*</span></label>
-                          <input 
-                            type="text" 
-                            className="w-full bg-white/50 dark:bg-zinc-800/50 backdrop-blur-md rounded-[1.5rem] py-4 px-6 font-bold text-lg text-primary placeholder-secondary/40 border-2 border-transparent focus:border-amber-500/50 hover:bg-white dark:hover:bg-zinc-800 outline-none transition-all shadow-sm" 
-                            placeholder="e.g. Premium Butter Loaf" 
-                            value={name}
-                            onChange={e => setName(e.target.value)}
-                            required 
-                          />
-                       </div>
-                       <div className="flex flex-col gap-2">
-                          <label className="text-[11px] font-black text-secondary uppercase tracking-widest pl-2">Retail Price (₦) <span className="text-amber-500">*</span></label>
-                          <div className="relative">
-                            <span className="absolute left-6 top-1/2 -translate-y-1/2 text-secondary font-black">₦</span>
-                            <input 
-                              type="number" 
-                              className="w-full bg-white/50 dark:bg-zinc-800/50 backdrop-blur-md rounded-[1.5rem] py-4 pl-12 pr-6 font-black text-lg text-amber-600 dark:text-amber-400 placeholder-secondary/40 border-2 border-transparent focus:border-amber-500/50 hover:bg-white dark:hover:bg-zinc-800 outline-none transition-all shadow-sm" 
-                              placeholder="1000" 
-                              value={price}
-                              onChange={e => setPrice(e.target.value)}
-                              required 
-                            />
-                          </div>
-                       </div>
-                     </div>
-
-                     <div className="flex flex-col gap-2">
-                        <label className="text-[11px] font-black text-secondary uppercase tracking-widest pl-2">Category Group</label>
-                        <input 
-                          type="text" 
-                          className="w-full bg-white/50 dark:bg-zinc-800/50 backdrop-blur-md rounded-[1.5rem] py-4 px-6 font-bold text-lg text-primary placeholder-secondary/40 border-2 border-transparent focus:border-amber-500/50 hover:bg-white dark:hover:bg-zinc-800 outline-none transition-all shadow-sm" 
-                          placeholder="e.g. Pastries & Snacks" 
-                          value={category}
-                          onChange={e => setCategory(e.target.value)}
+                  {/* Fields */}
+                  <div className="flex flex-col gap-5">
+                    <div className="grid sm:grid-cols-2 gap-5">
+                      {/* Name */}
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 pl-1">
+                          Product Name <span style={{ color: TOKEN.accent }}>*</span>
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="e.g. Premium Butter Loaf"
+                          value={name}
+                          onChange={e => setName(e.target.value)}
+                          required
+                          className="w-full bg-zinc-50 dark:bg-zinc-800 rounded-2xl py-3.5 px-5
+                                     text-[15px] font-semibold text-zinc-900 dark:text-white
+                                     placeholder:text-zinc-300 dark:placeholder:text-zinc-600
+                                     border-2 border-transparent outline-none transition-all
+                                     focus:border-amber-400/60 focus:bg-white dark:focus:bg-zinc-800
+                                     hover:bg-white dark:hover:bg-zinc-800"
                         />
-                     </div>
+                      </div>
+                      {/* Price */}
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 pl-1">
+                          Price (₦) <span style={{ color: TOKEN.accent }}>*</span>
+                        </label>
+                        <div className="relative">
+                          <span className="absolute left-5 top-1/2 -translate-y-1/2 font-black text-zinc-400 text-sm">₦</span>
+                          <input
+                            type="number"
+                            placeholder="1000"
+                            value={price}
+                            onChange={e => setPrice(e.target.value)}
+                            required
+                            className="w-full bg-zinc-50 dark:bg-zinc-800 rounded-2xl py-3.5 pl-10 pr-5
+                                       text-[15px] font-black text-amber-500
+                                       placeholder:text-zinc-300 dark:placeholder:text-zinc-600
+                                       border-2 border-transparent outline-none transition-all
+                                       focus:border-amber-400/60 focus:bg-white dark:focus:bg-zinc-800
+                                       hover:bg-white dark:hover:bg-zinc-800"
+                          />
+                        </div>
+                      </div>
+                    </div>
 
-                     <div className="mt-4 flex gap-4 pt-4 border-t border-black/5 dark:border-white/5">
-                       <motion.button 
-                         whileHover={{ scale: 1.02 }}
-                         whileTap={{ scale: 0.98 }}
-                         type="button" 
-                         onClick={resetForm}
-                         className="flex-1 py-4 bg-black/5 dark:bg-white/5 text-primary rounded-[1.5rem] font-bold text-base flex items-center justify-center hover:bg-black/10 transition-colors"
-                       >
-                         Cancel
-                       </motion.button>
-                       <motion.button 
-                         whileHover={{ scale: 1.02 }}
-                         whileTap={{ scale: 0.98 }}
-                         type="submit" 
-                         className="flex-[2] py-4 bg-gradient-to-r from-amber-400 to-amber-600 text-white rounded-[1.5rem] shadow-[0_15px_30px_-10px_rgba(245,158,11,0.5)] font-black text-base tracking-wide flex items-center justify-center gap-2"
-                       >
-                         <CheckCircle2 size={20} />
-                         {editingId ? 'Update Asset' : 'Deploy Product'}
-                       </motion.button>
-                     </div>
+                    {/* Category */}
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 pl-1">
+                        Category
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Pastries & Snacks"
+                        value={category}
+                        onChange={e => setCategory(e.target.value)}
+                        className="w-full bg-zinc-50 dark:bg-zinc-800 rounded-2xl py-3.5 px-5
+                                   text-[15px] font-semibold text-zinc-900 dark:text-white
+                                   placeholder:text-zinc-300 dark:placeholder:text-zinc-600
+                                   border-2 border-transparent outline-none transition-all
+                                   focus:border-amber-400/60 focus:bg-white dark:focus:bg-zinc-800
+                                   hover:bg-white dark:hover:bg-zinc-800"
+                      />
+                    </div>
+
+                    {/* Action buttons */}
+                    <div className="flex gap-3 pt-2 border-t border-black/[0.04] dark:border-white/5 mt-auto">
+                      <motion.button
+                        whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
+                        type="button"
+                        onClick={resetForm}
+                        className="flex-1 py-3.5 rounded-2xl font-bold text-sm
+                                   bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400
+                                   hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors"
+                      >
+                        Cancel
+                      </motion.button>
+                      <motion.button
+                        whileHover={{ scale: 1.02, boxShadow: `0 12px 28px ${TOKEN.accentGlow}` }}
+                        whileTap={{ scale: 0.97 }}
+                        type="submit"
+                        className="flex-[2] py-3.5 rounded-2xl font-black text-sm text-white
+                                   flex items-center justify-center gap-2 transition-all"
+                        style={{ background: `linear-gradient(135deg, ${TOKEN.accent}, ${TOKEN.accentDark})` }}
+                      >
+                        <CheckCircle2 size={16} />
+                        {editingId ? 'Update Product' : 'Deploy Product'}
+                      </motion.button>
+                    </div>
                   </div>
                 </form>
               </motion.div>
-            ) : (
-              <motion.div 
-                initial={{ opacity: 0 }} 
-                animate={{ opacity: 1 }} 
-                exit={{ opacity: 0 }}
-                className="mb-10 flex flex-col md:flex-row gap-4 justify-between"
-              >
-                 <div className="relative w-full md:max-w-md group">
-                    <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-secondary group-focus-within:text-amber-500 transition-colors" size={20} />
-                    <input 
-                      type="text" 
-                      placeholder="Search inventory..." 
-                      className="w-full bg-white/70 dark:bg-zinc-900/70 backdrop-blur-xl rounded-[1.5rem] py-4 pl-14 pr-6 font-bold text-lg text-primary placeholder-secondary/50 shadow-[0_8px_20px_rgba(0,0,0,0.03)] border border-white/50 dark:border-white/5 focus:ring-4 focus:ring-amber-500/20 outline-none transition-all"
-                      value={searchQuery}
-                      onChange={e => setSearchQuery(e.target.value)}
-                    />
-                 </div>
 
-                 <motion.button 
-                   whileHover={{ scale: 1.05 }}
-                   whileTap={{ scale: 0.95 }}
-                   className="w-full md:w-auto bg-black dark:bg-white text-white dark:text-black px-8 py-4 rounded-[1.5rem] font-black text-base tracking-wide shadow-xl flex items-center justify-center gap-2"
-                   onClick={() => setIsAdding(true)}
-                 >
-                   <Plus size={20} /> Add Product
-                 </motion.button>
+            ) : (
+              /* ── SEARCH + ADD BUTTON ── */
+              <motion.div
+                key="toolbar"
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                className="flex flex-col sm:flex-row gap-3 mb-10"
+              >
+                <div className="relative flex-1 sm:max-w-md group">
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400
+                                     group-focus-within:text-amber-500 transition-colors" size={18} />
+                  <input
+                    type="text"
+                    placeholder="Search products or categories…"
+                    value={searchQuery}
+                    onChange={e => setSearchQuery(e.target.value)}
+                    className="w-full bg-white dark:bg-zinc-900 rounded-2xl py-3.5 pl-12 pr-12
+                               text-[15px] font-semibold text-zinc-900 dark:text-white
+                               placeholder:text-zinc-300 dark:placeholder:text-zinc-600
+                               border border-black/[0.06] dark:border-white/5
+                               shadow-[0_2px_8px_rgba(0,0,0,0.04)]
+                               focus:ring-2 focus:ring-amber-400/30 outline-none transition-all"
+                  />
+                  {searchQuery && (
+                    <button
+                      onClick={() => setSearchQuery('')}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 transition-colors"
+                    >
+                      <X size={16} />
+                    </button>
+                  )}
+                </div>
+
+                <motion.button
+                  whileHover={{ scale: 1.04, boxShadow: `0 8px 24px ${TOKEN.accentGlow}` }}
+                  whileTap={{ scale: 0.96 }}
+                  onClick={() => setIsAdding(true)}
+                  className="flex items-center justify-center gap-2 px-7 py-3.5 rounded-2xl
+                             font-black text-sm text-white transition-all"
+                  style={{ background: `linear-gradient(135deg, ${TOKEN.accent}, ${TOKEN.accentDark})` }}
+                >
+                  <Plus size={18} /> Add Product
+                </motion.button>
               </motion.div>
             )}
           </AnimatePresence>
 
-          {/* Ultra-Premium E-Commerce Grid */}
-          <motion.div 
-              variants={containerVariants}
-              initial="hidden"
-              animate="show"
-              className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-5"
+          {/* ─────────── PRODUCT GRID ─────────── */}
+          <motion.div
+            variants={stagger}
+            initial="hidden"
+            animate="show"
+            className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4"
           >
             {filteredProducts.map(p => (
-              <motion.div 
-                 variants={itemVariants} 
-                 key={p.id} 
-                 className={`group bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl rounded-[2rem] p-2 flex flex-col border border-white/60 dark:border-white/5 ${!p.active ? 'opacity-50 grayscale' : 'shadow-[0_8px_30px_rgba(0,0,0,0.04)] hover:shadow-[0_20px_40px_rgba(0,0,0,0.08)] hover:-translate-y-2 transition-all duration-500'}`}
+              <motion.div
+                key={p.id}
+                variants={pop}
+                className={`group relative bg-white dark:bg-zinc-900 rounded-[1.75rem] overflow-hidden
+                            border border-black/[0.05] dark:border-white/5 flex flex-col
+                            transition-all duration-300
+                            ${p.active
+                              ? 'shadow-[0_4px_20px_rgba(0,0,0,0.06)] hover:shadow-[0_16px_36px_rgba(0,0,0,0.10)] hover:-translate-y-1.5'
+                              : 'opacity-40 grayscale'
+                            }`}
               >
-                 {/* Breathtaking Image Area */}
-                 <div className="relative w-full aspect-square bg-black/5 dark:bg-black/20 rounded-[1.5rem] flex items-center justify-center overflow-hidden mb-3">
-                   {p.image ? (
-                     <img src={p.image} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" alt={p.name} />
-                   ) : (
-                     <div className="font-black text-secondary/20 text-7xl select-none">{p.name.charAt(0)}</div>
-                   )}
-                   
-                   {/* Float Overlay */}
-                   <div className="absolute top-3 left-3 z-10">
-                     <span className={`${p.active ? 'bg-black/80 dark:bg-white/90 text-white dark:text-black' : 'bg-gray-400 dark:bg-zinc-600 text-white'} text-[9px] font-black uppercase tracking-widest px-3 py-1.5 rounded-full backdrop-blur-md shadow-lg`}>
-                       {p.active ? 'Active' : 'Archived'}
-                     </span>
-                   </div>
+                {/* Image */}
+                <div className="relative w-full aspect-square bg-zinc-100 dark:bg-zinc-800 overflow-hidden">
+                  {p.image ? (
+                    <img
+                      src={p.image}
+                      alt={p.name}
+                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center
+                                    text-7xl font-black text-zinc-200 dark:text-zinc-700 select-none">
+                      {p.name.charAt(0)}
+                    </div>
+                  )}
 
-                   {/* Quick Action Overlay on Hover - Frost Effect */}
-                   <div className="absolute inset-0 bg-black/5 opacity-0 group-hover:opacity-100 flex items-center justify-center gap-3 transition-opacity duration-300 backdrop-blur-[2px] z-10 hidden lg:flex">
-                      <motion.button 
-                         whileHover={{ scale: 1.1 }}
-                         whileTap={{ scale: 0.9 }}
-                         onClick={() => startEdit(p)} 
-                         className="w-12 h-12 rounded-full bg-white/95 dark:bg-zinc-800/95 text-primary shadow-xl flex items-center justify-center hover:text-amber-500 transition-colors"
-                         title="Edit Asset"
-                      >
-                         <Edit2 size={16} />
-                      </motion.button>
-                      <motion.button 
-                         whileHover={{ scale: 1.1 }}
-                         whileTap={{ scale: 0.9 }}
-                         onClick={() => toggleActive(p)} 
-                         className={`w-12 h-12 rounded-full shadow-xl flex items-center justify-center transition-colors bg-white/95 dark:bg-zinc-800/95 ${p.active ? 'text-danger hover:text-white hover:bg-danger' : 'text-success hover:text-white hover:bg-success'}`}
-                         title={p.active ? "Archive Asset" : "Restore Asset"}
-                      >
-                         {p.active ? <Archive size={16} /> : <CheckCircle2 size={16} />}
-                      </motion.button>
-                   </div>
-                 </div>
+                  {/* Status pill */}
+                  <div className="absolute top-2.5 left-2.5 z-10">
+                    <span className={`text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full
+                                      backdrop-blur-md shadow-sm
+                                      ${p.active
+                                        ? 'bg-zinc-900/80 text-white dark:bg-white/90 dark:text-zinc-900'
+                                        : 'bg-zinc-400/70 text-white'
+                                      }`}>
+                      {p.active ? 'Live' : 'Archived'}
+                    </span>
+                  </div>
 
-                 {/* Mobile Quick Actions (Visible only on small devices below image) */}
-                 <div className="lg:hidden flex items-center justify-between px-2 mb-2">
-                    <button onClick={() => startEdit(p)} className="w-8 h-8 rounded-full bg-black/5 dark:bg-white/5 text-primary flex items-center justify-center"><Edit2 size={12} /></button>
-                    <button onClick={() => toggleActive(p)} className={`w-8 h-8 rounded-full flex items-center justify-center ${p.active ? 'bg-danger/10 text-danger' : 'bg-success/10 text-success'}`}>
-                      {p.active ? <Archive size={12} /> : <CheckCircle2 size={12} />}
-                    </button>
-                 </div>
+                  {/* Hover action overlay — desktop */}
+                  <div className="absolute inset-0 bg-black/20 backdrop-blur-[3px] opacity-0
+                                  group-hover:opacity-100 transition-opacity duration-200
+                                  hidden lg:flex items-center justify-center gap-2 z-10">
+                    <motion.button
+                      whileHover={{ scale: 1.12 }} whileTap={{ scale: 0.9 }}
+                      onClick={() => startEdit(p)}
+                      className="w-10 h-10 rounded-full bg-white/95 dark:bg-zinc-800/95
+                                 flex items-center justify-center shadow-lg
+                                 text-zinc-600 hover:text-amber-500 transition-colors"
+                      title="Edit"
+                    >
+                      <Edit2 size={14} />
+                    </motion.button>
+                    <motion.button
+                      whileHover={{ scale: 1.12 }} whileTap={{ scale: 0.9 }}
+                      onClick={() => toggleActive(p)}
+                      className={`w-10 h-10 rounded-full shadow-lg flex items-center justify-center transition-colors
+                                  bg-white/95 dark:bg-zinc-800/95
+                                  ${p.active ? 'text-red-400 hover:text-white hover:bg-red-500'
+                                             : 'text-emerald-500 hover:text-white hover:bg-emerald-500'}`}
+                      title={p.active ? 'Archive' : 'Restore'}
+                    >
+                      {p.active ? <Archive size={14} /> : <CheckCircle2 size={14} />}
+                    </motion.button>
+                  </div>
+                </div>
 
-                 {/* Premium Content Typography */}
-                 <div className="px-2 pb-3 flex flex-col flex-grow">
-                   <div className="text-[10px] font-black uppercase tracking-widest text-amber-500 mb-1 truncate">{p.category || 'Bakery'}</div>
-                   <h4 className="font-bold text-[14px] sm:text-[15px] text-primary mb-2 line-clamp-2 leading-snug">{p.name}</h4>
-                   <div className="mt-auto">
-                     <div className="font-black text-xl sm:text-2xl text-primary tracking-tighter">
-                       <span className="text-[12px] sm:text-[14px] font-bold text-secondary mr-0.5 opacity-60">₦</span>
-                       {p.price.toLocaleString()}
-                     </div>
-                   </div>
-                 </div>
+                {/* Mobile quick actions */}
+                <div className="lg:hidden flex items-center justify-between px-3 pt-2.5">
+                  <button
+                    onClick={() => startEdit(p)}
+                    className="w-7 h-7 rounded-full bg-zinc-100 dark:bg-zinc-800
+                               flex items-center justify-center text-zinc-500"
+                  >
+                    <Edit2 size={11} />
+                  </button>
+                  <button
+                    onClick={() => toggleActive(p)}
+                    className={`w-7 h-7 rounded-full flex items-center justify-center
+                                ${p.active
+                                  ? 'bg-red-50 text-red-400 dark:bg-red-900/20'
+                                  : 'bg-emerald-50 text-emerald-500 dark:bg-emerald-900/20'}`}
+                  >
+                    {p.active ? <Archive size={11} /> : <CheckCircle2 size={11} />}
+                  </button>
+                </div>
+
+                {/* Content */}
+                <div className="px-3 pb-4 pt-2 flex flex-col flex-grow">
+                  <p className="text-[10px] font-black uppercase tracking-widest mb-1 truncate"
+                     style={{ color: TOKEN.accent }}>
+                    {p.category || 'Bakery'}
+                  </p>
+                  <h4 className="text-[13px] sm:text-sm font-bold text-zinc-800 dark:text-zinc-100
+                                 line-clamp-2 leading-snug mb-2">
+                    {p.name}
+                  </h4>
+                  <div className="mt-auto flex items-baseline gap-0.5">
+                    <span className="text-xs font-bold text-zinc-400 mr-0.5">₦</span>
+                    <span className="text-xl font-black tracking-tight text-zinc-900 dark:text-white">
+                      {p.price.toLocaleString()}
+                    </span>
+                  </div>
+                </div>
               </motion.div>
             ))}
-            
+
+            {/* Empty state */}
             {filteredProducts.length === 0 && (
-               <motion.div variants={itemVariants} className="col-span-full py-24 text-center">
-                  <div className="w-24 h-24 rounded-full bg-black/5 dark:bg-white/5 mx-auto flex items-center justify-center mb-6 shadow-inner">
-                    <PackageSearch size={40} className="text-secondary opacity-40" />
-                  </div>
-                  <h4 className="font-black text-2xl text-primary mb-2">No Assets Found</h4>
-                  <p className="text-base font-bold text-secondary opacity-70 max-w-sm mx-auto">Your orchestrator array is empty. Setup an asset profile to populate the catalog.</p>
-               </motion.div>
+              <motion.div
+                variants={pop}
+                className="col-span-full py-24 flex flex-col items-center text-center"
+              >
+                <div className="w-20 h-20 rounded-3xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center mb-5">
+                  <PackageSearch size={36} className="text-zinc-300 dark:text-zinc-600" />
+                </div>
+                <h4 className="text-xl font-black text-zinc-800 dark:text-white mb-2">No products found</h4>
+                <p className="text-sm text-zinc-400 max-w-xs leading-relaxed">
+                  {searchQuery
+                    ? `No results for "${searchQuery}". Try a different search.`
+                    : 'Your catalog is empty. Add your first product to get started.'}
+                </p>
+              </motion.div>
             )}
           </motion.div>
         </div>
