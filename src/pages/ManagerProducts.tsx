@@ -1,8 +1,9 @@
 import React, { useState, useRef, useMemo } from 'react';
 import { AnimatedPage } from '../components/AnimatedPage';
-import { PackageSearch, ArrowLeft, Plus, Edit2, Archive, CheckCircle2, Image as ImageIcon, Search, X, UploadCloud, Tag, DollarSign, Layers } from 'lucide-react';
+import { PackageSearch, ArrowLeft, Plus, Edit2, Archive, CheckCircle2, Image as ImageIcon, Search, X, UploadCloud, Tag, DollarSign, Layers, ChevronRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../store/AppContext';
+import { motion, AnimatePresence } from 'framer-motion';
 import type { Product } from '../store/types';
 
 export const ManagerProducts: React.FC = () => {
@@ -94,197 +95,246 @@ export const ManagerProducts: React.FC = () => {
     );
   }, [products, searchQuery]);
 
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    show: {
+      opacity: 1,
+      transition: { staggerChildren: 0.05 }
+    }
+  };
+
+  const itemVariants: any = {
+    hidden: { y: 20, opacity: 0, scale: 0.95 },
+    show: { 
+      y: 0,  
+      opacity: 1, 
+      scale: 1,
+      transition: { type: "spring", stiffness: 300, damping: 24 } 
+    }
+  };
+
   return (
     <AnimatedPage>
-      <div className="container pb-24">
-        <div className="flex items-center gap-3 mb-6 pt-2">
-          <button onClick={() => navigate(-1)} className="p-2 bg-surface rounded-full shadow-sm hover:bg-black/5 transition-colors border border-[var(--border-color)]">
-            <ArrowLeft size={20} className="text-secondary" />
-          </button>
-          <div>
-             <h1 className="text-2xl font-black tracking-tight flex items-center gap-2">
-               <PackageSearch className="text-amber-500" /> Catalog Manager
-             </h1>
-             <p className="text-sm font-medium opacity-60">Manage bakery products, pricing, and visual artwork.</p>
+      <div className="min-h-screen bg-gray-50/50 dark:bg-zinc-950 pb-24 relative overflow-hidden">
+        {/* Background Ambient Glow */}
+        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-amber-500/10 rounded-full blur-[100px] opacity-70 pointer-events-none -translate-y-1/2 translate-x-1/3 z-0"></div>
+        <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-indigo-500/10 rounded-full blur-[100px] opacity-50 pointer-events-none translate-y-1/3 -translate-x-1/3 z-0"></div>
+
+        <div className="container relative z-10 pt-4">
+          
+          {/* Header */}
+          <div className="flex items-center gap-4 mb-8">
+            <button onClick={() => navigate(-1)} className="w-10 h-10 bg-white dark:bg-zinc-900 rounded-full shadow-sm flex items-center justify-center border border-black/5 dark:border-white/5 hover:scale-105 active:scale-95 transition-all text-secondary">
+              <ArrowLeft size={20} />
+            </button>
+            <div>
+               <h1 className="text-3xl font-black tracking-tight flex items-center gap-2 text-primary">
+                 Catalog <span className="text-amber-500">Hub</span>
+               </h1>
+               <p className="text-sm font-medium text-secondary mt-0.5">Define your inventory, set prices, and upload assets.</p>
+            </div>
           </div>
-        </div>
 
-        {/* Floating Add Product / Form Area */}
-        {isAdding ? (
-          <form onSubmit={handleSave} className="bg-surface p-6 rounded-3xl shadow-xl border border-amber-500/30 mb-8 relative overflow-hidden animate-bounce-in-up">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 z-0"></div>
-            
-            <h2 className="text-lg font-black text-amber-600 dark:text-amber-400 mb-5 relative z-10 flex items-center gap-2">
-              <Layers size={20} /> {editingId ? 'Edit Product Configuration' : 'Create New Product'}
-            </h2>
-            
-            <div className="grid md:grid-cols-3 gap-6 relative z-10">
-              {/* Image Uploader */}
-              <div className="md:col-span-1">
-                <div 
-                  className="w-full aspect-square rounded-2xl border-2 border-dashed border-[var(--border-color)] flex flex-col items-center justify-center bg-black/5 dark:bg-white/5 cursor-pointer hover:bg-black/10 transition-colors overflow-hidden relative group"
-                  onClick={() => fileInputRef.current?.click()}
-                >
-                  {newImage ? (
-                    <>
-                      <img src={newImage} alt="Preview" className="w-full h-full object-cover" />
-                      <div className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                         <UploadCloud size={30} className="text-white mb-2" />
-                         <span className="text-white text-xs font-bold">Change Image</span>
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      <div className="w-16 h-16 rounded-full bg-amber-500/10 text-amber-500 flex items-center justify-center mb-3">
-                        <ImageIcon size={30} />
-                      </div>
-                      <span className="text-sm font-bold opacity-70">Upload Artwork</span>
-                      <span className="text-[10px] opacity-50 mt-1">1024x1024 max. (1.5MB)</span>
-                    </>
-                  )}
-                </div>
-                <input 
-                  type="file" 
-                  accept="image/*" 
-                  ref={fileInputRef}
-                  className="hidden"
-                  onChange={handleProductImageUpload}
-                />
-              </div>
-
-              {/* Form Fields */}
-              <div className="md:col-span-2 space-y-4">
-                <div className="form-group">
-                  <label className="text-xs font-bold uppercase tracking-wider opacity-60 mb-1 block">Product Name *</label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-amber-500"><Tag size={16}/></span>
-                    <input type="text" className="form-input bg-background pl-10 py-3 font-bold" placeholder="e.g. Premium Sliced Loaf" value={name} onChange={e => setName(e.target.value)} required />
-                  </div>
+          <AnimatePresence mode="popLayout">
+            {/* Adding Product Form */}
+            {isAdding ? (
+              <motion.form 
+                initial={{ opacity: 0, y: -20, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95, filter: "blur(10px)" }}
+                transition={{ type: "spring", stiffness: 300, damping: 25 }}
+                onSubmit={handleSave} 
+                className="bg-white/70 dark:bg-zinc-900/70 backdrop-blur-2xl p-6 md:p-8 rounded-[32px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white/40 dark:border-white/5 mb-8"
+              >
+                <div className="flex items-center justify-between mb-8">
+                  <h2 className="text-xl font-black text-primary flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-amber-500/20 text-amber-500 flex items-center justify-center">
+                      <Layers size={16} />
+                    </div>
+                    {editingId ? 'Edit Product Configuration' : 'Create New Product'}
+                  </h2>
+                  <button type="button" onClick={resetForm} className="w-8 h-8 rounded-full bg-black/5 dark:bg-white/5 flex items-center justify-center text-secondary hover:bg-black/10 transition-colors">
+                    <X size={16} />
+                  </button>
                 </div>
                 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="form-group">
-                    <label className="text-xs font-bold uppercase tracking-wider opacity-60 mb-1 block">Retail Price (₦) *</label>
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-amber-500"><DollarSign size={16}/></span>
-                      <input type="number" className="form-input bg-background pl-10 py-3 font-bold" placeholder="1000" value={price} onChange={e => setPrice(e.target.value)} required />
+                <div className="grid lg:grid-cols-[1fr_2fr] gap-8">
+                  {/* Premium Image Uploader */}
+                  <div>
+                    <div 
+                      className="w-full aspect-square md:aspect-auto md:h-full min-h-[250px] rounded-[24px] border-2 border-dashed border-black/10 dark:border-white/10 flex flex-col items-center justify-center bg-black/5 dark:bg-zinc-800/50 cursor-pointer hover:bg-amber-500/5 transition-colors overflow-hidden relative group"
+                      onClick={() => fileInputRef.current?.click()}
+                    >
+                      {newImage ? (
+                        <>
+                          <img src={newImage} alt="Preview" className="w-full h-full object-cover" />
+                          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                             <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center mb-3">
+                               <UploadCloud size={24} className="text-white" />
+                             </div>
+                             <span className="text-white text-sm font-bold tracking-wide">Replace Artwork</span>
+                          </div>
+                        </>
+                      ) : (
+                        <div className="flex flex-col items-center justify-center p-6 text-center">
+                          <div className="w-20 h-20 rounded-full bg-amber-500/10 text-amber-500 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-500">
+                            <ImageIcon size={32} />
+                          </div>
+                          <h3 className="text-base font-bold text-primary mb-1">Upload Product Image</h3>
+                          <p className="text-xs font-medium text-secondary">High-res PNG or JPG.<br/>Max 1.5MB recommended.</p>
+                        </div>
+                      )}
+                    </div>
+                    <input type="file" accept="image/*" ref={fileInputRef} className="hidden" onChange={handleProductImageUpload} />
+                  </div>
+
+                  {/* Form Inputs */}
+                  <div className="flex flex-col gap-5">
+                    <div className="bg-black/5 dark:bg-white/5 p-5 rounded-[24px]">
+                      <label className="text-[11px] font-black uppercase tracking-widest text-secondary mb-2 block ml-1">Product Details</label>
+                      <div className="space-y-4">
+                        <div className="relative">
+                          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-secondary"><Tag size={18}/></span>
+                          <input type="text" className="w-full bg-white dark:bg-zinc-900 border border-black/5 dark:border-white/5 rounded-2xl pl-12 pr-4 py-3.5 font-bold text-primary placeholder-secondary focus:ring-2 focus:ring-amber-500/50 outline-none transition-shadow shadow-sm" placeholder="e.g. Premium Sliced Loaf" value={name} onChange={e => setName(e.target.value)} required />
+                        </div>
+                        
+                        <div className="grid sm:grid-cols-2 gap-4">
+                          <div className="relative">
+                            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-secondary"><DollarSign size={18}/></span>
+                            <input type="number" className="w-full bg-white dark:bg-zinc-900 border border-black/5 dark:border-white/5 rounded-2xl pl-12 pr-4 py-3.5 font-bold text-primary placeholder-secondary focus:ring-2 focus:ring-amber-500/50 outline-none transition-shadow shadow-sm" placeholder="Retail Price (e.g. 1000)" value={price} onChange={e => setPrice(e.target.value)} required />
+                          </div>
+                          <div className="relative">
+                            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-secondary"><PackageSearch size={18}/></span>
+                            <input type="text" className="w-full bg-white dark:bg-zinc-900 border border-black/5 dark:border-white/5 rounded-2xl pl-12 pr-4 py-3.5 font-bold text-primary placeholder-secondary focus:ring-2 focus:ring-amber-500/50 outline-none transition-shadow shadow-sm" placeholder="Category (e.g. Pastries)" value={category} onChange={e => setCategory(e.target.value)} />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="mt-auto flex gap-3">
+                      <button type="button" className="flex-1 py-4 bg-white dark:bg-zinc-900 border border-black/5 dark:border-white/5 rounded-[20px] font-bold text-primary flex items-center justify-center hover:bg-black/5 transition-colors" onClick={resetForm}>
+                        Cancel
+                      </button>
+                      <button type="submit" className="flex-[2] py-4 bg-amber-500 text-white rounded-[20px] font-black tracking-wide flex items-center justify-center gap-2 shadow-[0_8px_20px_rgba(245,158,11,0.3)] hover:bg-amber-600 hover:-translate-y-1 transition-all">
+                        <CheckCircle2 size={20} /> {editingId ? 'Save Changes' : 'Publish to Catalog'}
+                      </button>
                     </div>
                   </div>
-                  <div className="form-group">
-                    <label className="text-xs font-bold uppercase tracking-wider opacity-60 mb-1 block">Category</label>
-                    <input type="text" className="form-input bg-background py-3 font-bold" placeholder="e.g. Pastries" value={category} onChange={e => setCategory(e.target.value)} />
-                  </div>
                 </div>
+              </motion.form>
+            ) : (
+              <motion.div 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 mb-8"
+              >
+                <div className="relative flex-1 group">
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-secondary group-focus-within:text-amber-500 transition-colors" size={18} />
+                  <input 
+                    type="text" 
+                    placeholder="Search your inventory..." 
+                    className="w-full bg-white/70 dark:bg-zinc-900/70 backdrop-blur-xl border border-white/40 dark:border-white/5 rounded-[20px] py-4 pl-12 pr-4 font-bold text-primary placeholder-secondary/70 shadow-[0_4px_20px_rgb(0,0,0,0.03)] focus:ring-2 focus:ring-amber-500/50 outline-none transition-all"
+                    value={searchQuery}
+                    onChange={e => setSearchQuery(e.target.value)}
+                  />
+                </div>
+                <button 
+                  className="bg-primary text-white dark:bg-white dark:text-black px-6 py-4 rounded-[20px] font-black tracking-wide shadow-[0_8px_20px_rgb(0,0,0,0.1)] flex items-center justify-center gap-2 hover:-translate-y-1 transition-transform"
+                  onClick={() => setIsAdding(true)}
+                >
+                  <Plus size={20} /> Add Product
+                </button>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
-                <div className="flex gap-3 pt-4 border-t border-[var(--border-color)]">
-                  <button type="button" className="flex-1 py-3 border border-[var(--border-color)] rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-black/5" onClick={resetForm}>
-                    <X size={18} /> Cancel
-                  </button>
-                  <button type="submit" className="flex-[2] py-3 bg-gradient-to-r from-amber-500 to-amber-600 text-white rounded-xl font-bold flex items-center justify-center gap-2 shadow-lg shadow-amber-500/20">
-                    <CheckCircle2 size={18} /> {editingId ? 'Update Product' : 'Publish Product'}
-                  </button>
-                </div>
-              </div>
-            </div>
-          </form>
-        ) : (
-          <div className="flex items-center justify-between gap-4 mb-6">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-secondary" size={18} />
-              <input 
-                type="text" 
-                placeholder="Search catalog..." 
-                className="w-full bg-surface border border-[var(--border-color)] rounded-2xl py-3 pl-10 pr-4 font-medium shadow-sm focus:border-amber-500 outline-none"
-                value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-              />
-            </div>
-            <button 
-              className="bg-amber-500 text-white px-5 py-3 rounded-2xl font-bold shadow-lg shadow-amber-500/20 flex items-center gap-2 hover:-translate-y-1 transition-all flex-shrink-0"
-              onClick={() => setIsAdding(true)}
-            >
-              <Plus size={20} /> <span className="hidden sm:inline">Add Product</span>
-            </button>
-          </div>
-        )}
-
-        {/* Products Grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-          {filteredProducts.map(p => (
-            <div key={p.id} className={`group bg-surface rounded-[24px] border border-[var(--border-color)] overflow-hidden transition-all duration-300 flex flex-col ${!p.active ? 'opacity-60 grayscale' : 'shadow-[0_8px_30px_-12px_rgba(0,0,0,0.12)] hover:-translate-y-1.5 hover:shadow-[0_14px_40px_-10px_rgba(0,0,0,0.15)] ring-1 ring-black/5 dark:ring-white/5'}`}>
-              
-              {/* Top Half: Image */}
-              <div className="relative w-full aspect-square bg-black/5 dark:bg-white/5 flex items-center justify-center overflow-hidden">
-                {p.image ? (
-                  <img src={p.image} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" alt={p.name} />
-                ) : (
-                  <div className="text-amber-500/20 font-black text-6xl select-none">
-                     {p.name.charAt(0)}
-                  </div>
-                )}
-                
-                {/* Overlay Badges */}
-                <div className="absolute top-2 left-2 flex gap-1">
-                  {p.active ? (
-                    <span className="bg-success text-white text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full shadow-lg backdrop-blur-md">Active</span>
-                  ) : (
-                    <span className="bg-secondary text-white text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full shadow-lg backdrop-blur-md">Archived</span>
-                  )}
-                </div>
-
-                {/* Floating Actions on Hover */}
-                <div className="absolute top-2 right-2 flex flex-col gap-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all duration-300 sm:translate-x-4 sm:group-hover:translate-x-0">
-                  <button 
-                    onClick={() => startEdit(p)} 
-                    className="w-8 h-8 rounded-full bg-white/90 dark:bg-zinc-800/90 text-primary shadow-xl flex items-center justify-center hover:bg-amber-500 hover:text-white transition-colors backdrop-blur-md"
-                    title="Edit Product"
-                  >
-                    <Edit2 size={14} />
-                  </button>
-                  <button 
-                    onClick={() => toggleActive(p)} 
-                    className={`w-8 h-8 rounded-full shadow-xl flex items-center justify-center transition-colors backdrop-blur-md ${p.active ? 'bg-white/90 dark:bg-zinc-800/90 text-danger hover:bg-danger hover:text-white' : 'bg-white/90 dark:bg-zinc-800/90 text-success hover:bg-success hover:text-white'}`}
-                    title={p.active ? "Archive Product" : "Restore Product"}
-                  >
-                    {p.active ? <Archive size={14} /> : <CheckCircle2 size={14} />}
-                  </button>
-                </div>
-              </div>
-
-              {/* Bottom Half: Info */}
-              <div className="p-3.5 flex flex-col flex-grow">
-                <div className="flex items-center justify-between mb-1.5">
-                   <div className="text-[10px] font-black uppercase tracking-widest text-amber-500/80 truncate bg-amber-500/10 px-2 py-0.5 rounded-md">{p.category || 'Bakery'}</div>
-                </div>
-                
-                <h3 className="font-bold text-[13px] leading-snug text-primary line-clamp-2 min-h-[36px] mb-3">{p.name}</h3>
-                
-                <div className="mt-auto pt-3 border-t border-[var(--border-color)] flex items-end justify-between">
-                  <div className="text-lg font-black text-amber-500 tracking-tighter leading-none">
-                    <span className="text-[11px] font-bold opacity-70 align-top mr-0.5">₦</span>
-                    {p.price.toLocaleString()}
+          {/* Products Grid */}
+          <motion.div 
+            variants={containerVariants}
+            initial="hidden"
+            animate="show"
+            className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-5"
+          >
+            {filteredProducts.map(p => (
+              <motion.div 
+                variants={itemVariants}
+                key={p.id} 
+                className={`group bg-white/70 dark:bg-zinc-900/70 backdrop-blur-xl rounded-[28px] border border-white/40 dark:border-white/5 overflow-hidden flex flex-col ${!p.active ? 'opacity-50 grayscale' : 'shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:-translate-y-2 hover:shadow-[0_20px_40px_rgb(0,0,0,0.08)] transition-all duration-500'}`}
+              >
+                {/* Top Half: Image */}
+                <div className="relative w-full aspect-square bg-black/5 dark:bg-white/5 flex items-center justify-center overflow-hidden p-1">
+                  <div className="w-full h-full rounded-[20px] overflow-hidden bg-white dark:bg-zinc-800 flex items-center justify-center">
+                    {p.image ? (
+                      <img src={p.image} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" alt={p.name} />
+                    ) : (
+                      <div className="text-amber-500/20 font-black text-6xl select-none">
+                         {p.name.charAt(0)}
+                      </div>
+                    )}
                   </div>
                   
-                  {/* Stock tracking feature */}
-                  <div className="flex items-center gap-1.5 text-[10px] font-bold text-secondary bg-black/5 dark:bg-white/5 px-2 py-1 rounded-lg">
-                    <Layers size={12} className="opacity-70" /> {p.stock || 0} left
+                  {/* Overlay Badges */}
+                  <div className="absolute top-3 left-3 flex gap-1 z-10">
+                    <span className={`${p.active ? 'bg-success' : 'bg-secondary'} text-white text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full shadow-lg backdrop-blur-md`}>
+                      {p.active ? 'Active' : 'Archived'}
+                    </span>
+                  </div>
+
+                  {/* Floating Actions on Hover */}
+                  <div className="absolute top-3 right-3 flex flex-col gap-2 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-all duration-300 transform lg:translate-x-4 lg:group-hover:translate-x-0 z-10">
+                    <button 
+                      onClick={() => startEdit(p)} 
+                      className="w-9 h-9 rounded-full bg-white/90 dark:bg-zinc-800/90 text-primary shadow-[0_4px_15px_rgba(0,0,0,0.1)] flex items-center justify-center hover:bg-amber-500 hover:text-white transition-colors backdrop-blur-md"
+                      title="Edit Product"
+                    >
+                      <Edit2 size={14} />
+                    </button>
+                    <button 
+                      onClick={() => toggleActive(p)} 
+                      className={`w-9 h-9 rounded-full shadow-[0_4px_15px_rgba(0,0,0,0.1)] flex items-center justify-center transition-colors backdrop-blur-md ${p.active ? 'bg-white/90 dark:bg-zinc-800/90 text-danger hover:bg-danger hover:text-white' : 'bg-white/90 dark:bg-zinc-800/90 text-success hover:bg-success hover:text-white'}`}
+                      title={p.active ? "Archive Product" : "Restore Product"}
+                    >
+                      {p.active ? <Archive size={14} /> : <CheckCircle2 size={14} />}
+                    </button>
                   </div>
                 </div>
-              </div>
-            </div>
-          ))}
 
-          {filteredProducts.length === 0 && (
-            <div className="col-span-full py-16 text-center border-2 border-dashed border-[var(--border-color)] rounded-[32px] bg-surface">
-              <PackageSearch size={48} className="mx-auto mb-3 opacity-20 text-amber-500" />
-              <h3 className="font-bold text-lg">No Products Found</h3>
-              <p className="text-xs font-medium opacity-50 mt-1">Try adjusting your search or add a new bread item.</p>
-            </div>
-          )}
+                {/* Bottom Half: Info */}
+                <div className="p-4 flex flex-col flex-grow">
+                  <div className="flex items-center justify-between mb-2">
+                     <div className="text-[10px] font-black uppercase tracking-widest text-amber-500 truncate">{p.category || 'Bakery'}</div>
+                  </div>
+                  
+                  <h3 className="font-bold text-[14px] leading-snug text-primary line-clamp-2 min-h-[40px] mb-3">{p.name}</h3>
+                  
+                  <div className="mt-auto pt-3 flex items-center justify-between">
+                    <div className="text-xl font-black text-primary tracking-tighter leading-none">
+                      <span className="text-[12px] font-bold text-secondary align-top mr-0.5 opacity-50">â‚¦</span>
+                      {p.price.toLocaleString()}
+                    </div>
+                    
+                    <div className="flex items-center justify-center w-8 h-8 rounded-full bg-black/5 dark:bg-white/5 text-secondary group-hover:bg-amber-500/10 group-hover:text-amber-500 transition-colors" title={`${p.stock || 0} left in stock`}>
+                      <ChevronRight size={16} />
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+
+            {filteredProducts.length === 0 && (
+              <motion.div variants={itemVariants} className="col-span-full py-20 text-center border border-dashed border-black/10 dark:border-white/10 rounded-[40px] bg-white/40 dark:bg-zinc-900/40 backdrop-blur-sm">
+                <div className="w-20 h-20 rounded-full bg-black/5 dark:bg-white/5 flex items-center justify-center mx-auto mb-4">
+                  <PackageSearch size={32} className="text-secondary opacity-50" />
+                </div>
+                <h3 className="font-black text-xl text-primary mb-1">Catalog Empty</h3>
+                <p className="text-sm font-medium text-secondary max-w-sm mx-auto">You haven't added any products yet, or your search didn't match anything.</p>
+              </motion.div>
+            )}
+          </motion.div>
         </div>
       </div>
     </AnimatedPage>
   );
 };
-
 export default ManagerProducts;
