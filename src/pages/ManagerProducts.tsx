@@ -209,48 +209,67 @@ export const ManagerProducts: React.FC = () => {
         )}
 
         {/* Products Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
           {filteredProducts.map(p => (
-            <div key={p.id} className={`bg-surface p-4 rounded-[24px] border border-[var(--border-color)] flex items-center gap-4 transition-all ${!p.active ? 'opacity-50 grayscale' : 'shadow-sm hover:-translate-y-1 hover:shadow-md'}`}>
+            <div key={p.id} className={`group bg-surface rounded-[24px] border border-[var(--border-color)] overflow-hidden transition-all duration-300 flex flex-col ${!p.active ? 'opacity-60 grayscale' : 'shadow-[0_8px_30px_-12px_rgba(0,0,0,0.12)] hover:-translate-y-1.5 hover:shadow-[0_14px_40px_-10px_rgba(0,0,0,0.15)] ring-1 ring-black/5 dark:ring-white/5'}`}>
               
-              {/* Image Preview Thumbnail */}
-              <div className="w-20 h-20 rounded-2xl overflow-hidden flex-shrink-0 bg-black/5 dark:bg-white/5 border border-[var(--border-color)] flex items-center justify-center shadow-sm">
+              {/* Top Half: Image */}
+              <div className="relative w-full aspect-square bg-black/5 dark:bg-white/5 flex items-center justify-center overflow-hidden">
                 {p.image ? (
-                  <img src={p.image} className="w-full h-full object-cover" alt={p.name} />
+                  <img src={p.image} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" alt={p.name} />
                 ) : (
-                  <div className="text-amber-500 font-bold text-xl">
+                  <div className="text-amber-500/20 font-black text-6xl select-none">
                      {p.name.charAt(0)}
                   </div>
                 )}
+                
+                {/* Overlay Badges */}
+                <div className="absolute top-2 left-2 flex gap-1">
+                  {p.active ? (
+                    <span className="bg-success text-white text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full shadow-lg backdrop-blur-md">Active</span>
+                  ) : (
+                    <span className="bg-secondary text-white text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full shadow-lg backdrop-blur-md">Archived</span>
+                  )}
+                </div>
+
+                {/* Floating Actions on Hover */}
+                <div className="absolute top-2 right-2 flex flex-col gap-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all duration-300 sm:translate-x-4 sm:group-hover:translate-x-0">
+                  <button 
+                    onClick={() => startEdit(p)} 
+                    className="w-8 h-8 rounded-full bg-white/90 dark:bg-zinc-800/90 text-primary shadow-xl flex items-center justify-center hover:bg-amber-500 hover:text-white transition-colors backdrop-blur-md"
+                    title="Edit Product"
+                  >
+                    <Edit2 size={14} />
+                  </button>
+                  <button 
+                    onClick={() => toggleActive(p)} 
+                    className={`w-8 h-8 rounded-full shadow-xl flex items-center justify-center transition-colors backdrop-blur-md ${p.active ? 'bg-white/90 dark:bg-zinc-800/90 text-danger hover:bg-danger hover:text-white' : 'bg-white/90 dark:bg-zinc-800/90 text-success hover:bg-success hover:text-white'}`}
+                    title={p.active ? "Archive Product" : "Restore Product"}
+                  >
+                    {p.active ? <Archive size={14} /> : <CheckCircle2 size={14} />}
+                  </button>
+                </div>
               </div>
 
-              {/* Info */}
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-1.5 mb-0.5">
-                  <span className={`w-2 h-2 rounded-full ${p.active ? 'bg-success' : 'bg-secondary'}`}></span>
-                  <span className="text-[10px] font-bold uppercase tracking-widest opacity-60 truncate">{p.category || 'Uncategorized'}</span>
+              {/* Bottom Half: Info */}
+              <div className="p-3.5 flex flex-col flex-grow">
+                <div className="flex items-center justify-between mb-1.5">
+                   <div className="text-[10px] font-black uppercase tracking-widest text-amber-500/80 truncate bg-amber-500/10 px-2 py-0.5 rounded-md">{p.category || 'Bakery'}</div>
                 </div>
-                <h3 className="font-bold text-sm tracking-tight truncate pr-2">{p.name}</h3>
-                <div className="text-amber-500 font-bold mt-1 shadow-sm bg-amber-500/10 inline-block px-2 py-0.5 rounded-lg text-xs">
-                  ₦{p.price.toLocaleString()}
+                
+                <h3 className="font-bold text-[13px] leading-snug text-primary line-clamp-2 min-h-[36px] mb-3">{p.name}</h3>
+                
+                <div className="mt-auto pt-3 border-t border-[var(--border-color)] flex items-end justify-between">
+                  <div className="text-lg font-black text-amber-500 tracking-tighter leading-none">
+                    <span className="text-[11px] font-bold opacity-70 align-top mr-0.5">₦</span>
+                    {p.price.toLocaleString()}
+                  </div>
+                  
+                  {/* Stock tracking feature */}
+                  <div className="flex items-center gap-1.5 text-[10px] font-bold text-secondary bg-black/5 dark:bg-white/5 px-2 py-1 rounded-lg">
+                    <Layers size={12} className="opacity-70" /> {p.stock || 0} left
+                  </div>
                 </div>
-              </div>
-
-              {/* Actions */}
-              <div className="flex flex-col gap-2">
-                <button 
-                  onClick={() => startEdit(p)} 
-                  className="w-8 h-8 rounded-full bg-black/5 dark:bg-white/5 flex items-center justify-center hover:bg-amber-500 hover:text-white transition-colors"
-                >
-                  <Edit2 size={14} />
-                </button>
-                <button 
-                  onClick={() => toggleActive(p)} 
-                  className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors ${p.active ? 'bg-black/5 dark:bg-white/5 hover:bg-danger hover:text-white' : 'bg-success/10 text-success hover:bg-success hover:text-white'}`}
-                  title={p.active ? "Archive Product" : "Restore Product"}
-                >
-                  {p.active ? <Archive size={14} /> : <CheckCircle2 size={14} />}
-                </button>
               </div>
             </div>
           ))}
