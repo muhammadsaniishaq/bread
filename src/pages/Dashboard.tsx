@@ -5,7 +5,8 @@ import { AnimatedPage } from '../components/AnimatedPage';
 import { DashboardChart } from '../components/DashboardChart';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from '../store/LanguageContext';
-import { TrendingUp, Wallet, Package, Users, PlusCircle, UserPlus, Activity, AlertTriangle, Clock, Search, X, Zap, ArrowRight, TrendingDown } from 'lucide-react';
+import { useAuth } from '../store/AuthContext';
+import { TrendingUp, Wallet, Package, Users, PlusCircle, UserPlus, Activity, AlertTriangle, Clock, Search, X, Zap, ArrowRight, TrendingDown, LogOut } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const containerVariants = {
@@ -28,6 +29,7 @@ const itemVariants: any = {
 
 export const Dashboard: React.FC = () => {
   const { transactions, products, customers, expenses } = useAppContext();
+  const { signOut } = useAuth();
   const { t } = useTranslation();
   const navigate = useNavigate();
   
@@ -179,6 +181,14 @@ export const Dashboard: React.FC = () => {
               )}
             </AnimatePresence>
           </div>
+
+          <button 
+             className="w-10 h-10 rounded-full bg-[var(--surface-color)] shadow-sm flex items-center justify-center text-secondary border border-[var(--border-color)] hover:bg-danger hover:text-white transition-all flex-shrink-0 ml-1"
+             onClick={signOut}
+             title="Log Out"
+          >
+             <LogOut size={16} />
+          </button>
 
           {/* Search Dropdown */}
           <AnimatePresence>
