@@ -61,7 +61,6 @@ export const ManagerProducts: React.FC = () => {
         image: newImage
       });
     }
-    
     resetForm();
   };
 
@@ -95,272 +94,224 @@ export const ManagerProducts: React.FC = () => {
     );
   }, [products, searchQuery]);
 
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    show: {
-      opacity: 1,
-      transition: { staggerChildren: 0.05 }
-    }
-  };
-
-  const itemVariants: any = {
-    hidden: { y: 20, opacity: 0, scale: 0.95 },
-    show: { 
-      y: 0,  
-      opacity: 1, 
-      scale: 1,
-      transition: { type: "spring", stiffness: 300, damping: 24 } 
-    }
-  };
+  const activeProducts = filteredProducts.filter(p => p.active).length;
+  const categories = new Set(products.map(p => p.category)).size;
 
   return (
     <AnimatedPage>
-      <div className="min-h-screen bg-[#f8f9fa] dark:bg-zinc-950 pb-24 relative overflow-hidden">
-        {/* Background Ambient Glow */}
-        <div className="fixed top-0 right-0 w-[600px] h-[600px] bg-amber-500/10 rounded-full blur-[120px] opacity-70 pointer-events-none -translate-y-1/2 translate-x-1/3 z-0"></div>
-        <div className="fixed bottom-0 left-0 w-[600px] h-[600px] bg-emerald-500/10 rounded-full blur-[120px] opacity-50 pointer-events-none translate-y-1/3 -translate-x-1/3 z-0"></div>
-
-        <div className="container relative z-10 pt-6">
-          
-          {/* Header & Global Add Button */}
-          <div className="flex items-center justify-between mb-10">
-            <div className="flex items-center gap-4">
-              <button onClick={() => navigate(-1)} className="w-12 h-12 bg-white dark:bg-zinc-900 rounded-[1.25rem] shadow-sm flex items-center justify-center outline-none focus:ring-4 focus:ring-black/5 dark:focus:ring-white/5 transition-all text-primary hover:scale-105 active:scale-95">
-                <ArrowLeft size={22} />
-              </button>
-              <div>
-                 <h1 className="text-3xl sm:text-4xl font-black tracking-tight flex items-center gap-2 text-primary">
-                   Catalog
-                 </h1>
-                 <p className="text-sm font-bold text-secondary mt-0.5 opacity-60">Manage your product offerings</p>
-              </div>
-            </div>
-            
-            <button 
-              className="hidden sm:flex bg-black dark:bg-white text-white dark:text-black px-6 py-4 rounded-full font-black tracking-wide shadow-xl flex items-center justify-center gap-2 hover:scale-105 active:scale-95 transition-transform"
-              onClick={() => setIsAdding(true)}
-            >
-              <Plus size={20} /> Add Product
-            </button>
-            <button 
-              className="sm:hidden w-12 h-12 bg-black dark:bg-white text-white dark:text-black rounded-full font-black shadow-xl flex items-center justify-center hover:scale-105 active:scale-95 transition-transform"
-              onClick={() => setIsAdding(true)}
-            >
-              <Plus size={24} />
-            </button>
-          </div>
-
-          {/* Majestic Search Bar */}
-          <div className="mb-10 max-w-2xl">
-            <div className="relative group">
-              <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-secondary group-focus-within:text-amber-500 transition-colors" size={22} />
-              <input 
-                type="text" 
-                placeholder="Search inventory by name or category..." 
-                className="w-full bg-white dark:bg-zinc-900 rounded-full py-5 pl-16 pr-6 font-bold text-lg text-primary placeholder-secondary/50 shadow-[0_8px_30px_rgb(0,0,0,0.06)] focus:ring-4 focus:ring-amber-500/20 outline-none transition-all"
-                value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-              />
-            </div>
-          </div>
-
-          {/* Products Grid Always Visible */}
-          <motion.div 
-            variants={containerVariants}
-            initial="hidden"
-            animate="show"
-            className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-5 md:gap-6"
-          >
-            {filteredProducts.map(p => (
-              <motion.div 
-                variants={itemVariants}
-                key={p.id} 
-                className={`group bg-white dark:bg-zinc-900 rounded-[32px] p-2 flex flex-col ${!p.active ? 'opacity-50 grayscale' : 'shadow-[0_10px_40px_-10px_rgba(0,0,0,0.08)] hover:-translate-y-2 hover:shadow-[0_20px_50px_-10px_rgba(0,0,0,0.12)] transition-all duration-500'}`}
-              >
-                {/* Top Half: Huge Image */}
-                <div className="relative w-full aspect-square bg-[#f4f4f5] dark:bg-zinc-800 rounded-[28px] flex items-center justify-center overflow-hidden mb-3">
-                  {p.image ? (
-                    <img src={p.image} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" alt={p.name} />
-                  ) : (
-                    <div className="text-secondary/30 font-black text-6xl select-none">
-                       {p.name.charAt(0)}
-                    </div>
-                  )}
-                  
-                  {/* Overlay Badges */}
-                  <div className="absolute top-3 left-3 flex gap-1 z-10">
-                    <span className={`${p.active ? 'bg-black dark:bg-white text-white dark:text-black' : 'bg-gray-200 dark:bg-zinc-700 text-secondary'} text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-full shadow-md backdrop-blur-md`}>
-                      {p.active ? 'Active' : 'Archived'}
-                    </span>
-                  </div>
-
-                  {/* Floating Action Menu on Hover */}
-                  <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10 hidden lg:flex items-center justify-center gap-3 backdrop-blur-sm">
-                    <button 
-                      onClick={() => startEdit(p)} 
-                      className="w-12 h-12 bg-white text-black rounded-full flex items-center justify-center hover:scale-110 active:scale-95 transition-all shadow-xl"
-                      title="Edit"
-                    >
-                      <Edit2 size={18} />
-                    </button>
-                    <button 
-                      onClick={() => toggleActive(p)} 
-                      className={`w-12 h-12 bg-white rounded-full flex items-center justify-center hover:scale-110 active:scale-95 transition-all shadow-xl ${p.active ? 'text-red-500' : 'text-green-500'}`}
-                      title={p.active ? "Archive" : "Restore"}
-                    >
-                      {p.active ? <Archive size={18} /> : <CheckCircle2 size={18} />}
-                    </button>
-                  </div>
-                </div>
-
-                {/* Mobile actions (visible on small screens) */}
-                <div className="lg:hidden flex items-center justify-between px-2 mb-2">
-                   <button onClick={() => startEdit(p)} className="w-8 h-8 bg-black/5 dark:bg-white/5 rounded-full flex items-center justify-center text-primary"><Edit2 size={12} /></button>
-                   <button onClick={() => toggleActive(p)} className={`w-8 h-8 bg-black/5 dark:bg-white/5 rounded-full flex items-center justify-center ${p.active ? 'text-red-500' : 'text-green-500'}`}>
-                     {p.active ? <Archive size={12} /> : <CheckCircle2 size={12} />}
-                   </button>
-                </div>
-
-                {/* Bottom Half: Info */}
-                <div className="px-2 pb-3 flex flex-col flex-grow">
-                  <div className="text-[11px] font-black uppercase tracking-widest text-amber-500 mb-1 truncate">{p.category || 'Bakery'}</div>
-                  <h3 className="font-bold text-[15px] leading-snug text-primary line-clamp-2 min-h-[44px] mb-2">{p.name}</h3>
-                  <div className="mt-auto flex items-end justify-between">
-                    <div className="text-2xl font-black text-primary tracking-tighter leading-none">
-                      <span className="text-[14px] font-bold text-secondary align-top mr-0.5">₦</span>
-                      {p.price.toLocaleString()}
-                    </div>
-                  </div>
-                </div>
-              </motion.div>
-            ))}
-
-            {filteredProducts.length === 0 && (
-              <motion.div variants={itemVariants} className="col-span-full py-24 text-center">
-                <div className="w-24 h-24 rounded-full bg-black/5 dark:bg-white/5 flex items-center justify-center mx-auto mb-6 shadow-inner">
-                  <PackageSearch size={40} className="text-secondary opacity-40" />
-                </div>
-                <h3 className="font-black text-2xl text-primary mb-2">Catalog is Empty</h3>
-                <p className="text-base font-medium text-secondary max-w-sm mx-auto">You haven't added any products yet, or your search didn't match anything.</p>
-              </motion.div>
-            )}
-          </motion.div>
+      <div className="container pb-24">
+        <div className="flex items-center gap-3 mb-6 pt-2">
+          <button onClick={() => navigate(-1)} className="p-2 bg-surface rounded-full shadow-sm hover:bg-black/5 transition-colors border border-[var(--border-color)]">
+            <ArrowLeft size={20} className="text-secondary" />
+          </button>
+          <h1 className="text-2xl font-bold flex items-center gap-2 text-primary">
+            <PackageSearch className="text-amber-500" /> Catalog Setup
+          </h1>
         </div>
 
-        {/* Floating Frost Modal for Add/Edit */}
+        {/* Global Catalog Status - Matches Remissions Layout */}
+        <div className="bg-surface p-6 rounded-3xl shadow-sm border border-[var(--border-color)] bg-gradient-to-br from-amber-500/10 to-transparent mt-4 mb-6">
+          <h2 className="text-xs font-bold uppercase tracking-widest text-amber-600 dark:text-amber-400 mb-4 opacity-80">Global Configuration Status</h2>
+          
+          <div className="grid gap-4">
+             <div className="bg-white/50 dark:bg-zinc-800/50 backdrop-blur-md p-4 rounded-2xl border border-amber-500/20">
+                <div className="text-xs font-bold opacity-70 mb-1 flex items-center gap-1"><PackageSearch size={12}/> Total Active Products</div>
+                <div className="text-3xl font-black text-amber-600 dark:text-amber-400">{activeProducts} Items</div>
+             </div>
+
+             <div className="grid grid-cols-2 gap-3">
+               <div className="bg-black/5 dark:bg-white/5 p-3 rounded-xl border border-[var(--border-color)] shadow-inner">
+                 <div className="text-[10px] font-bold opacity-60 uppercase mb-1">Total Catalog</div>
+                 <div className="font-bold text-lg text-primary">{products.length} Items</div>
+               </div>
+               <div className="bg-black/5 dark:bg-white/5 p-3 rounded-xl border border-[var(--border-color)] shadow-inner">
+                 <div className="text-[10px] font-bold opacity-60 uppercase mb-1">Categories</div>
+                 <div className="font-bold text-lg text-primary">{categories} Groups</div>
+               </div>
+             </div>
+          </div>
+        </div>
+
+        {/* Add / Edit Form Card - Matches Remissions Layout precisely */}
         <AnimatePresence>
           {isAdding && (
-            <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-6" style={{ perspective: "1000px" }}>
-              {/* Backdrop */}
-              <motion.div 
-                initial={{ opacity: 0 }} 
-                animate={{ opacity: 1 }} 
-                exit={{ opacity: 0 }} 
-                className="absolute inset-0 bg-black/40 backdrop-blur-sm"
-                onClick={resetForm}
-              />
-              
-              {/* Modal Container */}
-              <motion.div 
-                initial={{ y: "100%", opacity: 0, scale: 0.95 }}
-                animate={{ y: 0, opacity: 1, scale: 1 }}
-                exit={{ y: "100%", opacity: 0, scale: 0.95 }}
-                transition={{ type: "spring", damping: 28, stiffness: 300, mass: 0.8 }}
-                className="w-full sm:max-w-xl bg-white dark:bg-zinc-900 rounded-t-[40px] sm:rounded-[40px] shadow-2xl relative z-10 flex flex-col max-h-[92vh] sm:max-h-[85vh] overflow-hidden"
-              >
-                {/* Header */}
-                <div className="px-6 sm:px-8 py-6 border-b border-black/5 dark:border-white/5 flex items-center justify-between bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md sticky top-0 z-20">
-                  <h2 className="text-2xl font-black text-primary">
-                    {editingId ? 'Edit Asset' : 'New Asset'}
-                  </h2>
-                  <button 
-                    onClick={resetForm} 
-                    className="w-10 h-10 bg-black/5 dark:bg-white/5 hover:bg-black/10 transition-colors rounded-full flex items-center justify-center text-secondary"
-                  >
-                    <X size={20} />
-                  </button>
+            <motion.div 
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              className="overflow-hidden"
+            >
+              <div className="card border-t-4 border-amber-500 mb-8" style={{ background: 'var(--surface-color)' }}>
+                <div className="flex justify-between items-center mb-5">
+                   <h2 className="text-lg font-bold flex items-center gap-2">
+                      <Plus size={20} className="text-amber-500" /> {editingId ? 'Edit Product Setup' : 'Add New Product'}
+                   </h2>
+                   <button onClick={resetForm} className="w-8 h-8 rounded-full bg-black/5 dark:bg-white/5 flex items-center justify-center text-secondary hover:bg-black/10 transition-colors">
+                     <X size={16} />
+                   </button>
                 </div>
-
-                {/* Scrollable Form Body */}
-                <div className="overflow-y-auto p-6 sm:p-8 no-scrollbar">
-                  <form id="productForm" onSubmit={handleSave} className="space-y-8">
-                    
-                    {/* Hero Image Uploader */}
-                    <div className="flex flex-col items-center">
-                      <div 
-                        className="w-32 h-32 sm:w-40 sm:h-40 rounded-full border-[4px] border-white dark:border-zinc-800 shadow-[0_10px_30px_rgba(0,0,0,0.1)] bg-[#f4f4f5] dark:bg-zinc-800 flex items-center justify-center cursor-pointer hover:scale-105 active:scale-95 transition-all overflow-hidden relative group"
-                        onClick={() => fileInputRef.current?.click()}
-                      >
-                        {newImage ? (
-                          <>
+                
+                <form onSubmit={handleSave}>
+                  <div className="flex flex-col sm:flex-row gap-4 mb-4">
+                     {/* Image Uploader Dashboard Style */}
+                     <div 
+                       className="w-full sm:w-32 h-32 rounded-xl flex-shrink-0 border-2 border-dashed border-amber-500/30 bg-background flex flex-col items-center justify-center cursor-pointer hover:bg-amber-500/5 hover:border-amber-500/50 transition-all relative overflow-hidden group shadow-sm"
+                       onClick={() => fileInputRef.current?.click()}
+                     >
+                       {newImage ? (
+                         <>
                             <img src={newImage} alt="Preview" className="w-full h-full object-cover" />
-                            <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-sm">
-                              <UploadCloud className="text-white" size={32} />
+                            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity backdrop-blur-sm">
+                               <UploadCloud className="text-white" size={24} />
                             </div>
-                          </>
-                        ) : (
-                          <div className="flex flex-col items-center text-secondary/60">
-                            <ImageIcon size={40} className="mb-2" />
-                            <span className="text-[10px] font-black uppercase tracking-widest">Upload</span>
-                          </div>
-                        )}
-                      </div>
-                      <input type="file" accept="image/*" ref={fileInputRef} className="hidden" onChange={handleProductImageUpload} />
-                    </div>
+                         </>
+                       ) : (
+                         <div className="flex flex-col items-center">
+                            <ImageIcon className="text-amber-500 mb-1 opacity-80" size={28} />
+                            <span className="text-[10px] font-bold uppercase opacity-60 mt-1">Product Photo</span>
+                         </div>
+                       )}
+                       <input type="file" accept="image/*" ref={fileInputRef} className="hidden" onChange={handleProductImageUpload} />
+                     </div>
 
-                    {/* Plush Inputs */}
-                    <div className="space-y-5">
-                      <div>
+                     <div className="flex-1 form-group flex flex-col justify-center">
+                        <label className="form-label text-xs">Product Name *</label>
                         <input 
                           type="text" 
-                          placeholder="Product Name" 
-                          value={name} 
-                          onChange={e => setName(e.target.value)} 
-                          required
-                          className="w-full bg-[#f4f4f5] dark:bg-zinc-800 rounded-[1.5rem] py-5 px-6 font-bold text-lg text-primary placeholder-secondary/50 focus:ring-4 focus:ring-amber-500/20 focus:bg-white outline-none transition-all shadow-inner"
+                          className="form-input bg-background font-bold" 
+                          placeholder="e.g. Premium Sliced Bread" 
+                          value={name}
+                          onChange={e => setName(e.target.value)}
+                          required 
                         />
-                      </div>
-                      
-                      <div className="grid grid-cols-2 gap-5">
-                        <div className="relative">
-                          <span className="absolute left-6 top-1/2 -translate-y-1/2 text-secondary font-black">₦</span>
-                          <input 
-                            type="number" 
-                            placeholder="Price" 
-                            value={price} 
-                            onChange={e => setPrice(e.target.value)} 
-                            required
-                            className="w-full bg-[#f4f4f5] dark:bg-zinc-800 rounded-[1.5rem] py-5 pl-12 pr-6 font-bold text-lg text-primary placeholder-secondary/50 focus:ring-4 focus:ring-amber-500/20 focus:bg-white outline-none transition-all shadow-inner"
-                          />
-                        </div>
-                        <div>
-                          <input 
-                            type="text" 
-                            placeholder="Category" 
-                            value={category} 
-                            onChange={e => setCategory(e.target.value)}
-                            className="w-full bg-[#f4f4f5] dark:bg-zinc-800 rounded-[1.5rem] py-5 px-6 font-bold text-lg text-primary placeholder-secondary/50 focus:ring-4 focus:ring-amber-500/20 focus:bg-white outline-none transition-all shadow-inner"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  </form>
-                </div>
+                     </div>
+                  </div>
 
-                {/* Footer Action */}
-                <div className="p-6 sm:p-8 pt-2">
+                  <div className="flex flex-col sm:flex-row gap-3 mb-5">
+                    <div className="form-group flex-[2]">
+                      <label className="form-label text-xs">Retail Price (₦) *</label>
+                      <input 
+                        type="number" 
+                        className="form-input bg-background font-bold text-amber-600 dark:text-amber-400" 
+                        placeholder="e.g. 1000" 
+                        value={price}
+                        onChange={e => setPrice(e.target.value)}
+                        required 
+                      />
+                    </div>
+                    
+                    <div className="form-group flex-[3]">
+                      <label className="form-label text-xs">Category</label>
+                      <input 
+                        type="text" 
+                        className="form-input bg-background font-bold" 
+                        placeholder="e.g. Pastries" 
+                        value={category}
+                        onChange={e => setCategory(e.target.value)}
+                      />
+                    </div>
+                  </div>
+
                   <button 
                     type="submit" 
-                    form="productForm"
-                    className="w-full py-5 bg-black dark:bg-white text-white dark:text-black rounded-full font-black text-lg tracking-wide shadow-[0_10px_30px_rgb(0,0,0,0.15)] hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+                    className="btn bg-amber-500 hover:bg-amber-600 text-white w-full rounded-2xl shadow-lg shadow-amber-500/20 py-3.5 text-sm font-bold flex items-center justify-center gap-2 transition-all"
                   >
-                    <CheckCircle2 size={24} /> {editingId ? 'Save Configuration' : 'Publish Asset'}
+                    <CheckCircle2 size={18} />
+                    {editingId ? 'Update Product Details' : 'Save & Publish Product'}
                   </button>
-                </div>
-              </motion.div>
-            </div>
+                </form>
+              </div>
+            </motion.div>
           )}
         </AnimatePresence>
+
+        {!isAdding && (
+          <div className="mb-8">
+            <button 
+              className="btn bg-surface border-2 border-dashed border-amber-500/40 text-amber-600 dark:text-amber-400 w-full rounded-2xl shadow-sm py-4 text-sm font-bold flex justify-center gap-2 hover:bg-amber-500/5 transition-all"
+              onClick={() => setIsAdding(true)}
+            >
+              <Plus size={18} /> Add New Product
+            </button>
+          </div>
+        )}
+
+        {/* Catalog List Header - Matches Remissions Logs Header */}
+        <div className="flex items-center justify-between mb-4 px-2">
+          <h3 className="text-sm font-bold opacity-80 uppercase tracking-wide text-primary">Configured Catalog Logs</h3>
+        </div>
+        
+        {/* Simple Dashboard Search Input */}
+        <div className="mb-5">
+          <div className="relative shadow-sm rounded-xl overflow-hidden">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-secondary opacity-60" size={18} />
+            <input 
+              type="text" 
+              placeholder="Search by product name..." 
+              className="w-full bg-surface border-0 py-3.5 pl-11 pr-4 font-bold text-sm focus:ring-2 focus:ring-amber-500/30 outline-none"
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+            />
+          </div>
+        </div>
+
+        {/* Structured List Layout - Dashboard Log Style */}
+        <div className="grid gap-3">
+          {filteredProducts.map(p => (
+            <div key={p.id} className={`bg-surface p-3.5 sm:p-4 rounded-3xl border border-[var(--border-color)] flex items-center gap-3 sm:gap-4 transition-all shadow-sm ${!p.active ? 'opacity-60 grayscale' : 'hover:-translate-y-0.5 hover:shadow-md'}`}>
+              
+              <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl overflow-hidden bg-[#f4f4f5] dark:bg-zinc-800 flex-shrink-0 flex items-center justify-center shadow-inner">
+                {p.image ? (
+                  <img src={p.image} className="w-full h-full object-cover" alt={p.name} />
+                ) : (
+                  <span className="font-black text-amber-500/40 text-2xl">{p.name.charAt(0)}</span>
+                )}
+              </div>
+
+              <div className="flex-1 min-w-0">
+                 <div className="flex items-center gap-1.5 mb-1">
+                   <div className={`w-2 h-2 rounded-full ${p.active ? 'bg-success shadow-[0_0_8px_rgba(34,197,94,0.6)]' : 'bg-secondary'}`}></div>
+                   <div className="text-[10px] sm:text-[11px] font-black uppercase tracking-widest text-secondary truncate">{p.category || 'Bakery'}</div>
+                 </div>
+                 <h4 className="font-bold text-sm sm:text-base text-primary mb-0.5 truncate">{p.name}</h4>
+                 <div className="font-black text-amber-600 dark:text-amber-400 tracking-tight text-sm sm:text-base">₦{p.price.toLocaleString()}</div>
+              </div>
+
+              <div className="flex flex-col sm:flex-row gap-2">
+                 <button 
+                   onClick={() => startEdit(p)} 
+                   className="w-8 h-8 sm:w-10 sm:h-10 rounded-full sm:rounded-[14px] bg-black/5 dark:bg-white/5 flex items-center justify-center hover:bg-black/10 transition-colors text-primary"
+                   title="Edit"
+                 >
+                   <Edit2 size={16} />
+                 </button>
+                 <button 
+                   onClick={() => toggleActive(p)} 
+                   className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full sm:rounded-[14px] flex items-center justify-center hover:bg-black/10 transition-colors ${p.active ? 'bg-danger/10 text-danger' : 'bg-success/10 text-success'}`}
+                   title={p.active ? "Archive" : "Activate"}
+                 >
+                   {p.active ? <Archive size={16} /> : <CheckCircle2 size={16} />}
+                 </button>
+              </div>
+
+            </div>
+          ))}
+
+          {filteredProducts.length === 0 && (
+             <motion.div 
+               initial={{ opacity: 0 }}
+               animate={{ opacity: 1 }}
+               className="py-12 px-6 text-center border-2 border-dashed border-[var(--border-color)] rounded-3xl bg-surface"
+             >
+               <div className="w-16 h-16 rounded-full bg-black/5 dark:bg-white/5 mx-auto flex items-center justify-center mb-4">
+                 <PackageSearch size={28} className="text-secondary opacity-50" />
+               </div>
+               <h4 className="font-bold text-base text-primary mb-1">No products found</h4>
+               <p className="text-sm text-secondary opacity-80 max-w-xs mx-auto">Your catalog is currently empty. Add products to have them display here.</p>
+             </motion.div>
+          )}
+        </div>
+
       </div>
     </AnimatedPage>
   );
