@@ -103,254 +103,320 @@ export const ManagerProducts: React.FC = () => {
     hidden: { opacity: 0 },
     show: {
       opacity: 1,
-      transition: { staggerChildren: 0.05 }
+      transition: { staggerChildren: 0.1 }
     }
   };
 
   const itemVariants: any = {
-    hidden: { opacity: 0, y: 15, scale: 0.95 },
-    show: { opacity: 1, y: 0, scale: 1, transition: { type: "spring" as any, stiffness: 300, damping: 24 } }
+    hidden: { opacity: 0, scale: 0.8, y: 30 },
+    show: { opacity: 1, scale: 1, y: 0, transition: { type: "spring" as any, stiffness: 400, damping: 25 } }
   };
 
   return (
     <AnimatedPage>
-      <div className="container pb-24 max-w-7xl mx-auto">
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-amber-50/30 dark:from-zinc-950 dark:via-zinc-900 dark:to-zinc-950 pb-24 relative overflow-hidden">
         
-        {/* Modern Compact Header */}
-        <div className="flex items-center gap-3 mb-6 pt-4">
-          <button onClick={() => navigate(-1)} className="w-10 h-10 bg-white dark:bg-zinc-900 rounded-full shadow-sm flex items-center justify-center border border-black/5 dark:border-white/5 text-secondary hover:bg-black/5 transition-colors">
-            <ArrowLeft size={18} />
-          </button>
-          <h1 className="text-xl sm:text-2xl font-black text-primary flex items-center gap-2">
-            Catalog <span className="text-amber-500">Manager</span>
-          </h1>
-        </div>
+        {/* Abstract Floating Ambient Orbs */}
+        <div className="absolute top-[-10%] right-[-5%] w-[600px] h-[600px] bg-amber-500/15 rounded-full blur-[120px] mix-blend-multiply dark:mix-blend-screen animate-pulse pointer-events-none"></div>
+        <div className="absolute bottom-[-10%] left-[-10%] w-[500px] h-[500px] bg-rose-500/10 rounded-full blur-[100px] mix-blend-multiply dark:mix-blend-screen pointer-events-none"></div>
 
-        {/* Compact Top Metrics Row */}
-        <div className="grid grid-cols-3 gap-3 sm:gap-4 mb-6">
-           <div className="bg-white dark:bg-zinc-900 p-4 sm:p-5 rounded-[20px] shadow-sm border border-black/5 dark:border-white/5 flex flex-col justify-center">
-             <div className="text-[10px] sm:text-xs font-bold text-secondary uppercase tracking-widest mb-1 flex items-center gap-1.5">
-               <PackageSearch size={14} className="text-amber-500" /> Active Items
-             </div>
-             <div className="text-2xl sm:text-3xl font-black text-primary tracking-tight">{activeProducts}</div>
-           </div>
-           <div className="bg-white dark:bg-zinc-900 p-4 sm:p-5 rounded-[20px] shadow-sm border border-black/5 dark:border-white/5 flex flex-col justify-center">
-             <div className="text-[10px] sm:text-xs font-bold text-secondary uppercase tracking-widest mb-1 flex items-center gap-1.5">
-               <Layers size={14} className="text-amber-500" /> Total Catalog
-             </div>
-             <div className="text-2xl sm:text-3xl font-black text-primary tracking-tight">{products.length}</div>
-           </div>
-           <div className="bg-white dark:bg-zinc-900 p-4 sm:p-5 rounded-[20px] shadow-sm border border-black/5 dark:border-white/5 flex flex-col justify-center">
-             <div className="text-[10px] sm:text-xs font-bold text-secondary uppercase tracking-widest mb-1 flex items-center gap-1.5">
-               <Search size={14} className="text-amber-500" /> Categories
-             </div>
-             <div className="text-2xl sm:text-3xl font-black text-primary tracking-tight">{categories.length}</div>
-           </div>
-        </div>
-
-        {/* Structured Add/Edit Form Card */}
-        <AnimatePresence mode="wait">
-          {isAdding ? (
-            <motion.div 
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              className="bg-white dark:bg-zinc-900 p-5 sm:p-8 rounded-[24px] shadow-[0_8px_30px_rgb(0,0,0,0.06)] border border-black/5 dark:border-white/5 mb-8"
+        <div className="container relative z-10 max-w-7xl mx-auto pt-6">
+          
+          {/* Header */}
+          <div className="flex items-center gap-4 mb-8">
+            <motion.button 
+               whileHover={{ scale: 1.1 }}
+               whileTap={{ scale: 0.9 }}
+               onClick={() => navigate(-1)} 
+               className="w-12 h-12 bg-white/70 dark:bg-zinc-800/70 backdrop-blur-xl border border-white/50 dark:border-white/10 rounded-full shadow-[0_8px_20px_rgba(0,0,0,0.04)] flex items-center justify-center text-primary"
             >
-              <div className="flex justify-between items-center mb-6 border-b border-black/5 dark:border-white/5 pb-4">
-                 <h2 className="text-lg sm:text-xl font-black flex items-center gap-2 text-primary">
-                    <div className="w-8 h-8 rounded-full bg-amber-500/10 text-amber-500 flex items-center justify-center">
-                       <Plus size={16} />
-                    </div>
-                    {editingId ? 'Edit Product Setup' : 'Add New Product'}
-                 </h2>
-                 <button onClick={resetForm} className="w-8 h-8 rounded-full bg-black/5 dark:bg-white/5 flex items-center justify-center text-secondary hover:bg-black/10 transition-colors">
-                   <X size={16} />
-                 </button>
-              </div>
-              
-              <form onSubmit={handleSave} className="grid sm:grid-cols-[120px_1fr] md:grid-cols-[140px_1fr] gap-6 sm:gap-8">
-                {/* Clean Image Uploader */}
-                <div className="flex flex-col gap-2">
-                   <label className="text-xs font-bold text-secondary uppercase tracking-widest">Image</label>
-                   <div 
-                     className="w-full aspect-square sm:w-full sm:h-auto rounded-[16px] border-2 border-dashed border-black/10 dark:border-white/10 bg-black/5 dark:bg-zinc-800/50 flex flex-col items-center justify-center cursor-pointer hover:border-amber-500/50 hover:bg-amber-500/5 transition-all overflow-hidden relative group"
-                     onClick={() => fileInputRef.current?.click()}
-                   >
-                     {newImage ? (
-                       <>
-                          <img src={newImage} alt="Preview" className="w-full h-full object-cover" />
-                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity backdrop-blur-sm">
-                             <UploadCloud className="text-white" size={24} />
-                          </div>
-                       </>
-                     ) : (
-                       <div className="flex flex-col items-center text-secondary/60">
-                          <ImageIcon size={28} className="mb-1" />
-                          <span className="text-[10px] font-bold uppercase tracking-widest">Upload</span>
-                       </div>
-                     )}
-                     <input type="file" accept="image/*" ref={fileInputRef} className="hidden" onChange={handleProductImageUpload} />
-                   </div>
-                </div>
+              <ArrowLeft size={20} />
+            </motion.button>
+            <div>
+              <h1 className="text-3xl font-black text-primary flex items-center gap-2 tracking-tight">
+                Product <span className="text-amber-500">Suite</span>
+              </h1>
+              <p className="text-sm font-bold text-secondary opacity-70 mt-0.5 tracking-wide">Orchestrate your global catalog.</p>
+            </div>
+          </div>
 
-                <div className="flex flex-col gap-4">
-                   <div className="grid gap-4 sm:grid-cols-2">
-                     <div className="flex flex-col gap-1.5 focus-within:text-amber-500">
-                        <label className="text-xs font-bold text-inherit uppercase tracking-widest transition-colors">Product Name *</label>
+          {/* Ultra Premium Metrics Row */}
+          <div className="grid grid-cols-3 gap-4 sm:gap-6 mb-10">
+             <motion.div 
+               whileHover={{ y: -5 }}
+               className="bg-white/60 dark:bg-zinc-900/60 backdrop-blur-2xl p-5 sm:p-6 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white/50 dark:border-white/5 relative overflow-hidden group"
+             >
+               <div className="absolute -right-6 -top-6 w-24 h-24 bg-amber-500/10 rounded-full blur-2xl group-hover:bg-amber-500/20 transition-colors"></div>
+               <div className="w-10 h-10 rounded-[14px] bg-amber-500/10 flex items-center justify-center mb-3">
+                 <PackageSearch size={20} className="text-amber-500" />
+               </div>
+               <div className="text-[10px] sm:text-[11px] font-black text-secondary uppercase tracking-widest mb-1">Active Assets</div>
+               <div className="text-3xl sm:text-4xl font-black text-primary tracking-tighter">{activeProducts}</div>
+             </motion.div>
+
+             <motion.div 
+               whileHover={{ y: -5 }}
+               className="bg-white/60 dark:bg-zinc-900/60 backdrop-blur-2xl p-5 sm:p-6 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white/50 dark:border-white/5 relative overflow-hidden group"
+             >
+               <div className="absolute -right-6 -top-6 w-24 h-24 bg-blue-500/10 rounded-full blur-2xl group-hover:bg-blue-500/20 transition-colors"></div>
+               <div className="w-10 h-10 rounded-[14px] bg-blue-500/10 flex items-center justify-center mb-3">
+                 <Layers size={20} className="text-blue-500" />
+               </div>
+               <div className="text-[10px] sm:text-[11px] font-black text-secondary uppercase tracking-widest mb-1">Total Catalog</div>
+               <div className="text-3xl sm:text-4xl font-black text-primary tracking-tighter">{products.length}</div>
+             </motion.div>
+
+             <motion.div 
+               whileHover={{ y: -5 }}
+               className="bg-white/60 dark:bg-zinc-900/60 backdrop-blur-2xl p-5 sm:p-6 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white/50 dark:border-white/5 relative overflow-hidden group"
+             >
+               <div className="absolute -right-6 -top-6 w-24 h-24 bg-rose-500/10 rounded-full blur-2xl group-hover:bg-rose-500/20 transition-colors"></div>
+               <div className="w-10 h-10 rounded-[14px] bg-rose-500/10 flex items-center justify-center mb-3">
+                 <Search size={20} className="text-rose-500" />
+               </div>
+               <div className="text-[10px] sm:text-[11px] font-black text-secondary uppercase tracking-widest mb-1">Categories</div>
+               <div className="text-3xl sm:text-4xl font-black text-primary tracking-tighter">{categories.length}</div>
+             </motion.div>
+          </div>
+
+          <AnimatePresence mode="wait">
+            {isAdding ? (
+              <motion.div 
+                initial={{ opacity: 0, y: 20, filter: "blur(10px)" }}
+                animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+                exit={{ opacity: 0, y: -20, filter: "blur(10px)" }}
+                transition={{ type: "spring", stiffness: 300, damping: 25 }}
+                className="bg-white/80 dark:bg-zinc-900/80 backdrop-blur-3xl p-6 sm:p-8 md:p-10 rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.06)] border border-white/60 dark:border-white/10 mb-10 relative overflow-hidden"
+              >
+                {/* Internal Glow */}
+                <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-amber-500/5 rounded-full blur-[80px] pointer-events-none"></div>
+
+                <div className="flex justify-between items-center mb-8 relative z-10 border-b border-black/5 dark:border-white/5 pb-6">
+                   <h2 className="text-2xl font-black flex items-center gap-3 text-primary">
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 text-white flex items-center justify-center shadow-lg shadow-amber-500/30">
+                         <Plus size={20} />
+                      </div>
+                      {editingId ? 'Edit Asset Configuration' : 'Create New Asset'}
+                   </h2>
+                   <motion.button 
+                     whileHover={{ scale: 1.1, rotate: 90 }}
+                     whileTap={{ scale: 0.9 }}
+                     onClick={resetForm} 
+                     className="w-10 h-10 rounded-full bg-black/5 dark:bg-white/5 flex items-center justify-center text-primary"
+                   >
+                     <X size={20} />
+                   </motion.button>
+                </div>
+                
+                <form onSubmit={handleSave} className="grid md:grid-cols-[200px_1fr] gap-8 md:gap-10 relative z-10">
+                  {/* Photo Studio Area */}
+                  <div className="flex flex-col gap-3">
+                     <label className="text-xs font-black text-secondary uppercase tracking-widest pl-2">Asset Studio</label>
+                     <motion.div 
+                       whileHover={{ scale: 1.02 }}
+                       whileTap={{ scale: 0.98 }}
+                       className="w-full aspect-[4/3] md:aspect-square rounded-[2rem] border-2 border-dashed border-amber-500/30 bg-gradient-to-br from-amber-50 to-orange-50/50 dark:from-zinc-800/50 dark:to-zinc-900/50 flex flex-col items-center justify-center cursor-pointer hover:border-amber-500 hover:shadow-xl transition-all overflow-hidden relative group"
+                       onClick={() => fileInputRef.current?.click()}
+                     >
+                       {newImage ? (
+                         <>
+                            <img src={newImage} alt="Preview" className="w-full h-full object-cover" />
+                            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center transition-all backdrop-blur-sm">
+                               <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center mb-2">
+                                  <UploadCloud className="text-white" size={24} />
+                               </div>
+                               <span className="text-[10px] font-black text-white uppercase tracking-widest">Replace</span>
+                            </div>
+                         </>
+                       ) : (
+                         <div className="flex flex-col items-center text-amber-600 dark:text-amber-500">
+                            <div className="w-14 h-14 bg-amber-500/10 rounded-[1rem] flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                              <ImageIcon size={28} />
+                            </div>
+                            <span className="text-[10px] font-black uppercase tracking-widest opacity-80">Upload Photo</span>
+                         </div>
+                       )}
+                       <input type="file" accept="image/*" ref={fileInputRef} className="hidden" onChange={handleProductImageUpload} />
+                     </motion.div>
+                  </div>
+
+                  <div className="flex flex-col justify-center gap-6">
+                     <div className="grid gap-6 sm:grid-cols-2">
+                       <div className="flex flex-col gap-2">
+                          <label className="text-[11px] font-black text-secondary uppercase tracking-widest pl-2">Product Name <span className="text-amber-500">*</span></label>
+                          <input 
+                            type="text" 
+                            className="w-full bg-white/50 dark:bg-zinc-800/50 backdrop-blur-md rounded-[1.5rem] py-4 px-6 font-bold text-lg text-primary placeholder-secondary/40 border-2 border-transparent focus:border-amber-500/50 hover:bg-white dark:hover:bg-zinc-800 outline-none transition-all shadow-sm" 
+                            placeholder="e.g. Premium Butter Loaf" 
+                            value={name}
+                            onChange={e => setName(e.target.value)}
+                            required 
+                          />
+                       </div>
+                       <div className="flex flex-col gap-2">
+                          <label className="text-[11px] font-black text-secondary uppercase tracking-widest pl-2">Retail Price (₦) <span className="text-amber-500">*</span></label>
+                          <div className="relative">
+                            <span className="absolute left-6 top-1/2 -translate-y-1/2 text-secondary font-black">₦</span>
+                            <input 
+                              type="number" 
+                              className="w-full bg-white/50 dark:bg-zinc-800/50 backdrop-blur-md rounded-[1.5rem] py-4 pl-12 pr-6 font-black text-lg text-amber-600 dark:text-amber-400 placeholder-secondary/40 border-2 border-transparent focus:border-amber-500/50 hover:bg-white dark:hover:bg-zinc-800 outline-none transition-all shadow-sm" 
+                              placeholder="1000" 
+                              value={price}
+                              onChange={e => setPrice(e.target.value)}
+                              required 
+                            />
+                          </div>
+                       </div>
+                     </div>
+
+                     <div className="flex flex-col gap-2">
+                        <label className="text-[11px] font-black text-secondary uppercase tracking-widest pl-2">Category Group</label>
                         <input 
                           type="text" 
-                          className="w-full bg-black/5 dark:bg-zinc-800/50 rounded-[14px] py-3 px-4 font-bold text-primary placeholder-secondary/50 border border-transparent focus:border-amber-500/30 focus:bg-white dark:focus:bg-zinc-800 outline-none transition-all shadow-sm" 
-                          placeholder="e.g. Premium Loaf" 
-                          value={name}
-                          onChange={e => setName(e.target.value)}
-                          required 
+                          className="w-full bg-white/50 dark:bg-zinc-800/50 backdrop-blur-md rounded-[1.5rem] py-4 px-6 font-bold text-lg text-primary placeholder-secondary/40 border-2 border-transparent focus:border-amber-500/50 hover:bg-white dark:hover:bg-zinc-800 outline-none transition-all shadow-sm" 
+                          placeholder="e.g. Pastries & Snacks" 
+                          value={category}
+                          onChange={e => setCategory(e.target.value)}
                         />
                      </div>
-                     <div className="flex flex-col gap-1.5 focus-within:text-amber-500">
-                        <label className="text-xs font-bold text-inherit uppercase tracking-widest transition-colors">Retail Price (₦) *</label>
-                        <input 
-                          type="number" 
-                          className="w-full bg-black/5 dark:bg-zinc-800/50 rounded-[14px] py-3 px-4 font-bold text-amber-600 dark:text-amber-400 placeholder-secondary/50 border border-transparent focus:border-amber-500/30 focus:bg-white dark:focus:bg-zinc-800 outline-none transition-all shadow-sm" 
-                          placeholder="e.g. 1000" 
-                          value={price}
-                          onChange={e => setPrice(e.target.value)}
-                          required 
-                        />
+
+                     <div className="mt-4 flex gap-4 pt-4 border-t border-black/5 dark:border-white/5">
+                       <motion.button 
+                         whileHover={{ scale: 1.02 }}
+                         whileTap={{ scale: 0.98 }}
+                         type="button" 
+                         onClick={resetForm}
+                         className="flex-1 py-4 bg-black/5 dark:bg-white/5 text-primary rounded-[1.5rem] font-bold text-base flex items-center justify-center hover:bg-black/10 transition-colors"
+                       >
+                         Cancel
+                       </motion.button>
+                       <motion.button 
+                         whileHover={{ scale: 1.02 }}
+                         whileTap={{ scale: 0.98 }}
+                         type="submit" 
+                         className="flex-[2] py-4 bg-gradient-to-r from-amber-400 to-amber-600 text-white rounded-[1.5rem] shadow-[0_15px_30px_-10px_rgba(245,158,11,0.5)] font-black text-base tracking-wide flex items-center justify-center gap-2"
+                       >
+                         <CheckCircle2 size={20} />
+                         {editingId ? 'Update Asset' : 'Deploy Product'}
+                       </motion.button>
+                     </div>
+                  </div>
+                </form>
+              </motion.div>
+            ) : (
+              <motion.div 
+                initial={{ opacity: 0 }} 
+                animate={{ opacity: 1 }} 
+                exit={{ opacity: 0 }}
+                className="mb-10 flex flex-col md:flex-row gap-4 justify-between"
+              >
+                 <div className="relative w-full md:max-w-md group">
+                    <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-secondary group-focus-within:text-amber-500 transition-colors" size={20} />
+                    <input 
+                      type="text" 
+                      placeholder="Search inventory..." 
+                      className="w-full bg-white/70 dark:bg-zinc-900/70 backdrop-blur-xl rounded-[1.5rem] py-4 pl-14 pr-6 font-bold text-lg text-primary placeholder-secondary/50 shadow-[0_8px_20px_rgba(0,0,0,0.03)] border border-white/50 dark:border-white/5 focus:ring-4 focus:ring-amber-500/20 outline-none transition-all"
+                      value={searchQuery}
+                      onChange={e => setSearchQuery(e.target.value)}
+                    />
+                 </div>
+
+                 <motion.button 
+                   whileHover={{ scale: 1.05 }}
+                   whileTap={{ scale: 0.95 }}
+                   className="w-full md:w-auto bg-black dark:bg-white text-white dark:text-black px-8 py-4 rounded-[1.5rem] font-black text-base tracking-wide shadow-xl flex items-center justify-center gap-2"
+                   onClick={() => setIsAdding(true)}
+                 >
+                   <Plus size={20} /> Add Product
+                 </motion.button>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Ultra-Premium E-Commerce Grid */}
+          <motion.div 
+              variants={containerVariants}
+              initial="hidden"
+              animate="show"
+              className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-5"
+          >
+            {filteredProducts.map(p => (
+              <motion.div 
+                 variants={itemVariants} 
+                 key={p.id} 
+                 className={`group bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl rounded-[2rem] p-2 flex flex-col border border-white/60 dark:border-white/5 ${!p.active ? 'opacity-50 grayscale' : 'shadow-[0_8px_30px_rgba(0,0,0,0.04)] hover:shadow-[0_20px_40px_rgba(0,0,0,0.08)] hover:-translate-y-2 transition-all duration-500'}`}
+              >
+                 {/* Breathtaking Image Area */}
+                 <div className="relative w-full aspect-square bg-black/5 dark:bg-black/20 rounded-[1.5rem] flex items-center justify-center overflow-hidden mb-3">
+                   {p.image ? (
+                     <img src={p.image} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" alt={p.name} />
+                   ) : (
+                     <div className="font-black text-secondary/20 text-7xl select-none">{p.name.charAt(0)}</div>
+                   )}
+                   
+                   {/* Float Overlay */}
+                   <div className="absolute top-3 left-3 z-10">
+                     <span className={`${p.active ? 'bg-black/80 dark:bg-white/90 text-white dark:text-black' : 'bg-gray-400 dark:bg-zinc-600 text-white'} text-[9px] font-black uppercase tracking-widest px-3 py-1.5 rounded-full backdrop-blur-md shadow-lg`}>
+                       {p.active ? 'Active' : 'Archived'}
+                     </span>
+                   </div>
+
+                   {/* Quick Action Overlay on Hover - Frost Effect */}
+                   <div className="absolute inset-0 bg-black/5 opacity-0 group-hover:opacity-100 flex items-center justify-center gap-3 transition-opacity duration-300 backdrop-blur-[2px] z-10 hidden lg:flex">
+                      <motion.button 
+                         whileHover={{ scale: 1.1 }}
+                         whileTap={{ scale: 0.9 }}
+                         onClick={() => startEdit(p)} 
+                         className="w-12 h-12 rounded-full bg-white/95 dark:bg-zinc-800/95 text-primary shadow-xl flex items-center justify-center hover:text-amber-500 transition-colors"
+                         title="Edit Asset"
+                      >
+                         <Edit2 size={16} />
+                      </motion.button>
+                      <motion.button 
+                         whileHover={{ scale: 1.1 }}
+                         whileTap={{ scale: 0.9 }}
+                         onClick={() => toggleActive(p)} 
+                         className={`w-12 h-12 rounded-full shadow-xl flex items-center justify-center transition-colors bg-white/95 dark:bg-zinc-800/95 ${p.active ? 'text-danger hover:text-white hover:bg-danger' : 'text-success hover:text-white hover:bg-success'}`}
+                         title={p.active ? "Archive Asset" : "Restore Asset"}
+                      >
+                         {p.active ? <Archive size={16} /> : <CheckCircle2 size={16} />}
+                      </motion.button>
+                   </div>
+                 </div>
+
+                 {/* Mobile Quick Actions (Visible only on small devices below image) */}
+                 <div className="lg:hidden flex items-center justify-between px-2 mb-2">
+                    <button onClick={() => startEdit(p)} className="w-8 h-8 rounded-full bg-black/5 dark:bg-white/5 text-primary flex items-center justify-center"><Edit2 size={12} /></button>
+                    <button onClick={() => toggleActive(p)} className={`w-8 h-8 rounded-full flex items-center justify-center ${p.active ? 'bg-danger/10 text-danger' : 'bg-success/10 text-success'}`}>
+                      {p.active ? <Archive size={12} /> : <CheckCircle2 size={12} />}
+                    </button>
+                 </div>
+
+                 {/* Premium Content Typography */}
+                 <div className="px-2 pb-3 flex flex-col flex-grow">
+                   <div className="text-[10px] font-black uppercase tracking-widest text-amber-500 mb-1 truncate">{p.category || 'Bakery'}</div>
+                   <h4 className="font-bold text-[14px] sm:text-[15px] text-primary mb-2 line-clamp-2 leading-snug">{p.name}</h4>
+                   <div className="mt-auto">
+                     <div className="font-black text-xl sm:text-2xl text-primary tracking-tighter">
+                       <span className="text-[12px] sm:text-[14px] font-bold text-secondary mr-0.5 opacity-60">₦</span>
+                       {p.price.toLocaleString()}
                      </div>
                    </div>
-
-                   <div className="flex flex-col gap-1.5 focus-within:text-amber-500">
-                      <label className="text-xs font-bold text-inherit uppercase tracking-widest transition-colors">Category</label>
-                      <input 
-                        type="text" 
-                        className="w-full bg-black/5 dark:bg-zinc-800/50 rounded-[14px] py-3 px-4 font-bold text-primary placeholder-secondary/50 border border-transparent focus:border-amber-500/30 focus:bg-white dark:focus:bg-zinc-800 outline-none transition-all shadow-sm" 
-                        placeholder="e.g. Pastries" 
-                        value={category}
-                        onChange={e => setCategory(e.target.value)}
-                      />
-                   </div>
-
-                   <div className="mt-2 flex gap-3">
-                     <button 
-                       type="button" 
-                       onClick={resetForm}
-                       className="flex-1 py-3.5 bg-black/5 dark:bg-white/5 text-primary rounded-[14px] font-bold text-sm flex items-center justify-center hover:bg-black/10 transition-colors"
-                     >
-                       Cancel
-                     </button>
-                     <button 
-                       type="submit" 
-                       className="flex-[2] py-3.5 bg-amber-500 hover:bg-amber-600 text-white rounded-[14px] shadow-lg shadow-amber-500/20 font-black text-sm tracking-wide flex items-center justify-center gap-2 transition-all"
-                     >
-                       <CheckCircle2 size={18} />
-                       {editingId ? 'Save Changes' : 'Publish Product'}
-                     </button>
-                   </div>
-                </div>
-              </form>
-            </motion.div>
-          ) : (
-            <motion.div 
-              initial={{ opacity: 0 }} 
-              animate={{ opacity: 1 }} 
-              exit={{ opacity: 0 }}
-              className="mb-8 flex flex-col sm:flex-row gap-4 justify-between items-center"
-            >
-               {/* Search Box */}
-               <div className="relative w-full sm:max-w-sm group">
-                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-secondary group-focus-within:text-amber-500 transition-colors" size={18} />
-                  <input 
-                    type="text" 
-                    placeholder="Search catalog..." 
-                    className="w-full bg-white dark:bg-zinc-900 rounded-[16px] py-3 pl-11 pr-4 font-bold text-primary placeholder-secondary/50 shadow-sm border border-black/5 dark:border-white/5 focus:ring-2 focus:ring-amber-500/30 outline-none transition-all"
-                    value={searchQuery}
-                    onChange={e => setSearchQuery(e.target.value)}
-                  />
-               </div>
-
-               <button 
-                 className="w-full sm:w-auto bg-amber-500 text-white px-6 py-3 rounded-[16px] font-black tracking-wide shadow-lg shadow-amber-500/20 flex items-center justify-center gap-2 hover:bg-amber-600 hover:-translate-y-0.5 transition-all text-sm"
-                 onClick={() => setIsAdding(true)}
-               >
-                 <Plus size={18} /> Add Product
-               </button>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* Structured Grid Layout for Products (E-Commerce Style) */}
-        <motion.div 
-            variants={containerVariants}
-            initial="hidden"
-            animate="show"
-            className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 md:gap-4"
-        >
-          {filteredProducts.map(p => (
-            <motion.div 
-               variants={itemVariants} 
-               key={p.id} 
-               className={`group bg-white dark:bg-zinc-900 rounded-[20px] p-2 flex flex-col border border-black/5 dark:border-white/5 ${!p.active ? 'opacity-60 grayscale' : 'shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300'}`}
-            >
-               {/* Image Container taking exactly 1:1 aspect ratio to keep cards neat and uniform */}
-               <div className="relative w-full aspect-square bg-[#f4f4f5] dark:bg-zinc-800 rounded-[16px] flex items-center justify-center overflow-hidden mb-2">
-                 {p.image ? (
-                   <img src={p.image} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" alt={p.name} />
-                 ) : (
-                   <div className="font-black text-secondary/30 text-5xl select-none">{p.name.charAt(0)}</div>
-                 )}
-                 
-                 {/* Badges */}
-                 <div className="absolute top-2 left-2 z-10">
-                   <span className={`${p.active ? 'bg-black/80 dark:bg-white/90 text-white dark:text-black' : 'bg-gray-400 dark:bg-zinc-600 text-white'} text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full backdrop-blur-md shadow-sm`}>
-                     {p.active ? 'Active' : 'Archived'}
-                   </span>
                  </div>
-
-                 {/* Quick Action Overlay (Clean) */}
-                 <div className="absolute top-2 right-2 flex flex-col gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity z-10">
-                    <button 
-                       onClick={() => startEdit(p)} 
-                       className="w-8 h-8 rounded-full bg-white dark:bg-zinc-800/90 text-primary shadow-lg flex items-center justify-center hover:text-amber-500 transition-colors backdrop-blur-md border border-black/5"
-                       title="Edit"
-                    >
-                       <Edit2 size={12} />
-                    </button>
-                    <button 
-                       onClick={() => toggleActive(p)} 
-                       className={`w-8 h-8 rounded-full shadow-lg flex items-center justify-center transition-colors backdrop-blur-md border border-black/5 bg-white dark:bg-zinc-800/90 ${p.active ? 'text-danger hover:text-white hover:bg-danger' : 'text-success hover:text-white hover:bg-success'}`}
-                       title={p.active ? "Archive" : "Restore"}
-                    >
-                       {p.active ? <Archive size={12} /> : <CheckCircle2 size={12} />}
-                    </button>
-                 </div>
-               </div>
-
-               {/* Uniform Content Area */}
-               <div className="px-1.5 pb-2 flex flex-col flex-grow">
-                 <div className="text-[9px] font-black uppercase tracking-widest text-amber-500 mb-0.5 truncate">{p.category || 'Bakery'}</div>
-                 <h4 className="font-bold text-xs sm:text-sm text-primary mb-1 line-clamp-2 leading-snug">{p.name}</h4>
-                 <div className="mt-auto pt-1">
-                   <div className="font-black text-sm sm:text-base text-primary tracking-tight">
-                     <span className="text-[10px] font-bold text-secondary mr-0.5 opacity-70">₦</span>
-                     {p.price.toLocaleString()}
-                   </div>
-                 </div>
-               </div>
-            </motion.div>
-          ))}
-          
-          {filteredProducts.length === 0 && (
-             <motion.div variants={itemVariants} className="col-span-full py-20 text-center">
-                <div className="w-20 h-20 rounded-full bg-black/5 dark:bg-white/5 mx-auto flex items-center justify-center mb-4">
-                  <PackageSearch size={32} className="text-secondary opacity-50" />
-                </div>
-                <h4 className="font-black text-lg text-primary mb-1">No products found</h4>
-                <p className="text-sm font-medium text-secondary max-w-sm mx-auto">Your catalog is empty. Setup some items above to get started.</p>
-             </motion.div>
-          )}
-        </motion.div>
-
+              </motion.div>
+            ))}
+            
+            {filteredProducts.length === 0 && (
+               <motion.div variants={itemVariants} className="col-span-full py-24 text-center">
+                  <div className="w-24 h-24 rounded-full bg-black/5 dark:bg-white/5 mx-auto flex items-center justify-center mb-6 shadow-inner">
+                    <PackageSearch size={40} className="text-secondary opacity-40" />
+                  </div>
+                  <h4 className="font-black text-2xl text-primary mb-2">No Assets Found</h4>
+                  <p className="text-base font-bold text-secondary opacity-70 max-w-sm mx-auto">Your orchestrator array is empty. Setup an asset profile to populate the catalog.</p>
+               </motion.div>
+            )}
+          </motion.div>
+        </div>
       </div>
     </AnimatedPage>
   );
