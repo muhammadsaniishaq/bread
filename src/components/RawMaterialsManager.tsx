@@ -88,7 +88,7 @@ export const RawMaterialsManager: React.FC = () => {
   // Batch Receipt Modal
   const [batchOpen, setBatchOpen] = useState(false);
   const [bVenId, setBVenId] = useState('');
-  const [bItems, setBItems] = useState<{id: string, matId: string, qty: string}[]>([]);
+  const [bItems, setBItems] = useState<{id: string, matId: string, qty: string, price: string}[]>([]);
   const [bCost, setBCost] = useState('');
   const [bCash, setBCash] = useState('');
   const [bTransfer, setBTransfer] = useState('');
@@ -157,7 +157,8 @@ export const RawMaterialsManager: React.FC = () => {
   const saveBatchReceipt = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!bVenId || bItems.length === 0) return alert("Select a supplier and add at least one item.");
-    const c = parseFloat(bCost) || 0;
+    const calculatedCost = bItems.reduce((acc, it) => acc + ((parseFloat(it.qty)||0) * (parseFloat(it.price)||0)), 0);
+    const c = parseFloat(bCost) || calculatedCost;
     const cPaid = parseFloat(bCash) || 0;
     const tPaid = parseFloat(bTransfer) || 0;
     const d = c - (cPaid + tPaid);
@@ -173,7 +174,7 @@ export const RawMaterialsManager: React.FC = () => {
     // 2. Insert Log
     const validItems = bItems.map(item => {
       const m = mats.find(x => x.id === item.matId);
-      return { material_id: item.matId, name: m?.name || 'Unknown', quantity: parseFloat(item.qty)||0 };
+      return { material_id: item.matId, name: m?.name || 'Unknown', quantity: parseFloat(item.qty)||0, price: parseFloat(item.price)||0 };
     });
     const { error } = await supabase.from('rm_logs').insert([{
       supplier_id: bVenId, type: 'RESTOCK', cost_total: c, cash_paid: cPaid, transfer_paid: tPaid,
@@ -190,7 +191,7 @@ export const RawMaterialsManager: React.FC = () => {
     resetAll(); fetchAll();
   };
 
-  const addRow = () => setBItems([...bItems, { id: Date.now().toString(), matId: mats[0]?.id || '', qty: '' }]);
+  const addRow = () => setBItems([...bItems, { id: Date.now().toString(), matId: mats[0]?.id || '', qty: '', price: '' }]);
   const updateRow = (id: string, field: string, val: string) => setBItems(bItems.map(i => i.id === id ? { ...i, [field]: val } : i));
   const removeRow = (id: string) => setBItems(bItems.filter(i => i.id !== id));
 
@@ -290,7 +291,7 @@ export const RawMaterialsManager: React.FC = () => {
             </div>
             {tab === 'mats' && (
               <>
-                <motion.button whileTap={{ scale: .95 }} onClick={() => { setBItems([{ id: '1', matId: mats[0]?.id || '', qty: '' }]); setBatchOpen(true); }} className="cta" style={{ padding: '0 16px', borderRadius: 10, background: T.indigo, color: '#FFF', fontWeight: 800, fontSize: 13, boxShadow: `0 3px 12px ${T.indigoBg}`, flexShrink: 0 }}>
+                <motion.button whileTap={{ scale: .95 }} onClick={() => { setBItems([{ id: '1', matId: mats[0]?.id || '', qty: '', price: '' }]); setBatchOpen(true); }} className="cta" style={{ padding: '0 16px', borderRadius: 10, background: T.indigo, color: '#FFF', fontWeight: 800, fontSize: 13, boxShadow: `0 3px 12px ${T.indigoBg}`, flexShrink: 0 }}>
                   <ShoppingCart size={14} /> Add Receipt
                 </motion.button>
                 <motion.button whileTap={{ scale: .95 }} onClick={() => setAddMatOpen(true)} className="cta" style={{ padding: '0 16px', borderRadius: 10, background: T.amber, color: '#FFF', fontWeight: 800, fontSize: 13, boxShadow: `0 3px 12px ${T.amberRing}`, flexShrink: 0 }}>
@@ -345,8 +346,11 @@ export const RawMaterialsManager: React.FC = () => {
                                 {mats.map(m => <option key={m.id} value={m.id}>{m.name} ({m.unit})</option>)}
                               </select>
                             </div>
+                            <div style={{ width: 80 }}>
+                              <input type="number" step="any" required placeholder="Qty" value={item.qty} onChange={e=>updateRow(item.id, 'qty', e.target.value)} className="inp" style={{ ...baseInp, padding: '8px 12px' }} />
+                            </div>
                             <div style={{ width: 100 }}>
-                              <input type="number" required placeholder="Qty" value={item.qty} onChange={e=>updateRow(item.id, 'qty', e.target.value)} className="inp" style={{ ...baseInp, padding: '8px 12px' }} />
+                              <input type="number" step="any" required placeholder="Price ₦" value={item.price} onChange={e=>updateRow(item.id, 'price', e.target.value)} className="inp" style={{ ...baseInp, padding: '8px 12px' }} />
                             </div>
                             <button type="button" onClick={() => bItems.length > 1 && removeRow(item.id)} disabled={bItems.length === 1} style={{ width: 36, height: 36, flexShrink: 0, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'none', border: 'none', color: bItems.length === 1 ? T.border : T.red, cursor: bItems.length === 1 ? 'not-allowed' : 'pointer' }}>
                               <Trash2 size={16}/>
@@ -357,33 +361,42 @@ export const RawMaterialsManager: React.FC = () => {
                     </div>
 
                     {/* Financials */}
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 24, padding: 16, background: T.white, borderRadius: 16, border: `1px solid ${T.border}`, boxShadow: T.shadow }}>
-                      <div style={{ gridColumn: '1 / -1' }}>
-                        <FieldLabel req>Total Receipt Bill ₦</FieldLabel>
-                        <input type="number" required value={bCost} onChange={e=>setBCost(e.target.value)} placeholder="0" className="inp" style={{ ...baseInp, borderColor: bCost ? T.amber : T.border }} />
-                      </div>
+                    {(() => {
+                      const calculatedCost = bItems.reduce((acc, it) => acc + ((parseFloat(it.qty)||0) * (parseFloat(it.price)||0)), 0);
                       
-                      <div style={{ gridColumn: '1 / -1', height: 1, background: T.border, margin: '8px 0' }} />
-
-                      <div>
-                        <FieldLabel>Cash Paid ₦</FieldLabel>
-                        <input type="number" value={bCash} onChange={e=>setBCash(e.target.value)} placeholder="0" className="inp" style={baseInp} />
-                      </div>
-                      <div>
-                        <FieldLabel>Transfer Paid ₦</FieldLabel>
-                        <input type="number" value={bTransfer} onChange={e=>setBTransfer(e.target.value)} placeholder="0" className="inp" style={baseInp} />
-                      </div>
-
-                      {(() => {
-                        const d = (parseFloat(bCost)||0) - (parseFloat(bCash)||0) - (parseFloat(bTransfer)||0);
-                        return d > 0 ? (
-                          <div style={{ gridColumn: '1 / -1', display: 'flex', alignItems: 'center', gap: 8, background: T.redBg, padding: 12, borderRadius: 10, border: `1px solid rgba(185,28,28,0.2)` }}>
-                            <Info size={16} color={T.red} />
-                            <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: T.red }}>₦{d.toLocaleString()} debt will be added to this supplier.</p>
+                      return (
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 24, padding: 16, background: T.white, borderRadius: 16, border: `1px solid ${T.border}`, boxShadow: T.shadow }}>
+                          <div style={{ gridColumn: '1 / -1' }}>
+                            <FieldLabel req>Total Receipt Bill ₦ (Auto-calculated: ₦{calculatedCost.toLocaleString()})</FieldLabel>
+                            <input type="number" value={bCost} onChange={e=>setBCost(e.target.value)} placeholder={calculatedCost.toString() || "0"} className="inp" style={{ ...baseInp, borderColor: bCost ? T.amber : T.border }} />
                           </div>
-                        ) : null;
-                      })()}
-                    </div>
+                          
+                          <div style={{ gridColumn: '1 / -1', height: 1, background: T.border, margin: '8px 0' }} />
+
+                          <div>
+                            <FieldLabel>Cash Paid ₦</FieldLabel>
+                            <input type="number" value={bCash} onChange={e=>setBCash(e.target.value)} placeholder="0" className="inp" style={baseInp} />
+                          </div>
+                          <div>
+                            <FieldLabel>Transfer Paid ₦</FieldLabel>
+                            <input type="number" value={bTransfer} onChange={e=>setBTransfer(e.target.value)} placeholder="0" className="inp" style={baseInp} />
+                          </div>
+
+                          {(() => {
+                            const actualCost = parseFloat(bCost) || calculatedCost || 0;
+                            const d = actualCost - (parseFloat(bCash)||0) - (parseFloat(bTransfer)||0);
+                            return (
+                              <div style={{ gridColumn: '1 / -1', display: 'flex', alignItems: 'center', gap: 8, background: d > 0 ? T.redBg : T.greenBg, padding: 12, borderRadius: 10, border: `1px solid ${d > 0 ? 'rgba(185,28,28,0.2)' : 'rgba(21,128,61,0.2)'}` }}>
+                                <Info size={16} color={d > 0 ? T.red : T.green} />
+                                <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: d > 0 ? T.red : T.green }}>
+                                  {d > 0 ? `Debt (Bashi) to Add: ₦${d.toLocaleString()}` : (actualCost > 0 ? 'Fully Paid (No Debt Added)' : 'Enter costs above')}
+                                </p>
+                              </div>
+                            );
+                          })()}
+                        </div>
+                      );
+                    })()}
 
                     <div style={{ display: 'flex', gap: 10 }}>
                       <button type="button" onClick={resetAll} style={{ flex: 1, padding: 12, borderRadius: 12, background: T.bgDeep, border: `1px solid ${T.borderMid}`, fontWeight: 700, cursor: 'pointer' }}>Cancel</button>
@@ -516,7 +529,7 @@ export const RawMaterialsManager: React.FC = () => {
                           <td style={{ padding: '12px 16px', fontWeight: 600, color: T.text }}>
                             {L.type === 'RESTOCK' && (
                               <div>
-                                {L.items ? L.items.map(i => `<${i.quantity}x ${i.name}>`).join(', ') : 'Unknown Items'}
+                                {L.items ? L.items.map((i: any) => `<${i.quantity}x ${i.name} @ ₦${i.price||0}>`).join(', ') : 'Unknown Items'}
                                 <p style={{ margin: '3px 0 0', fontSize: 11, fontWeight: 500, color: T.textMute }}>From: {ven?.name || 'Unknown'}</p>
                               </div>
                             )}
