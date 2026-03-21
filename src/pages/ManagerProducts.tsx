@@ -243,19 +243,19 @@ export const ManagerProducts: React.FC = () => {
 
           {/* ── STATS ── */}
           <motion.div variants={stagger} initial="hidden" animate="show"
-            style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 10, marginBottom: 18 }}>
+            style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 8, marginBottom: 16 }}>
             {[
-              { v: s.total,    l: 'Products', icon: <Box       size={13}/>, c: T.indigo,  bg: T.indigoBg },
+              { v: s.total,    l: 'Items',    icon: <Box       size={13}/>, c: T.indigo,  bg: T.indigoBg },
               { v: s.live,     l: 'Live',     icon: <TrendingUp size={13}/>, c: T.green,   bg: T.greenBg  },
               { v: s.off,      l: 'Archived', icon: <Archive   size={13}/>, c: T.textMute, bg: 'rgba(156,154,147,.1)' },
               { v: s.cats,     l: 'Categories',icon:<Tag       size={13}/>, c: T.amber,   bg: T.amberBg  },
             ].map((x, i) => (
               <motion.div key={i} variants={up}
-                style={{ background: T.white, border: `1px solid ${T.border}`, borderRadius: 12, padding: '12px 14px', boxShadow: T.shadow, display: 'flex', alignItems: 'center', gap: 10 }}>
-                <div style={{ width: 28, height: 28, borderRadius: 8, background: x.bg, color: x.c, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{x.icon}</div>
+                style={{ background: T.white, border: `1px solid ${T.border}`, borderRadius: 10, padding: '8px 10px', boxShadow: T.shadow, display: 'flex', alignItems: 'center', gap: 8 }}>
+                <div style={{ width: 26, height: 26, borderRadius: 7, background: x.bg, color: x.c, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{x.icon}</div>
                 <div>
-                  <p className="stat-val" style={{ margin: 0, fontSize: 22, fontWeight: 800, color: T.text, letterSpacing: '-0.03em', lineHeight: 1 }}>{x.v}</p>
-                  <p style={{ margin: '2px 0 0', fontSize: 10, fontWeight: 700, color: T.textMute, letterSpacing: '0.05em', textTransform: 'uppercase' }}>{x.l}</p>
+                  <p className="stat-val" style={{ margin: 0, fontSize: 17, fontWeight: 800, color: T.text, letterSpacing: '-0.02em', lineHeight: 1 }}>{x.v}</p>
+                  <p style={{ margin: '1px 0 0', fontSize: 8, fontWeight: 700, color: T.textMute, letterSpacing: '0.05em', textTransform: 'uppercase' }}>{x.l}</p>
                 </div>
               </motion.div>
             ))}
@@ -373,10 +373,10 @@ export const ManagerProducts: React.FC = () => {
           <motion.div variants={stagger} initial="hidden" animate="show" className="pg">
             {filtered.map(p => (
               <motion.div key={p.id} variants={up} className="card"
-                style={{ background: T.white, borderRadius: 16, border: `1px solid ${T.border}`, boxShadow: T.shadow, overflow: 'hidden', display: 'flex', flexDirection: 'column', opacity: p.active ? 1 : .46, filter: p.active ? 'none' : 'grayscale(.55)', cursor: 'default' }}>
+                style={{ background: T.white, borderRadius: 18, border: `1px solid ${T.border}`, padding: 5, paddingBottom: 11, boxShadow: T.shadow, display: 'flex', flexDirection: 'column', opacity: p.active ? 1 : .46, filter: p.active ? 'none' : 'grayscale(.55)', cursor: 'default' }}>
 
                 {/* Image */}
-                <div className="ci" style={{ position: 'relative', aspectRatio: '1 / 1', background: T.bgDeep, overflow: 'hidden', flexShrink: 0 }}>
+                <div className="ci" style={{ position: 'relative', aspectRatio: '1 / 1', background: T.bgDeep, borderRadius: 14, overflow: 'hidden', flexShrink: 0 }}>
                   {p.image
                     ? <img src={p.image} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 46, fontWeight: 800, color: T.border, background: T.bgDeep, userSelect: 'none', letterSpacing: '-0.04em' }}>{p.name.charAt(0)}</div>
@@ -399,15 +399,15 @@ export const ManagerProducts: React.FC = () => {
                 </div>
 
                 {/* Body */}
-                <div style={{ padding: '12px 13px 13px', flex: 1, display: 'flex', flexDirection: 'column', gap: 4 }}>
-                  <p style={{ margin: 0, fontSize: 10, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: T.amber, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <div style={{ padding: '12px 9px 0', flex: 1, display: 'flex', flexDirection: 'column', gap: 3 }}>
+                  <p style={{ margin: 0, fontSize: 9, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: T.amber, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {p.category || 'General'}
                   </p>
                   <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: T.text, lineHeight: 1.35, flex: 1, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as const, overflow: 'hidden' }}>
                     {p.name}
                   </p>
                   {/* Price + mini actions */}
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 8, paddingTop: 9, borderTop: `1px solid ${T.border}` }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 8, paddingTop: 8, borderTop: `1px solid ${T.border}` }}>
                     <div style={{ display: 'flex', alignItems: 'baseline', gap: 1 }}>
                       <span style={{ fontSize: 11, fontWeight: 700, color: T.textMute }}>₦</span>
                       <span style={{ fontSize: 17, fontWeight: 800, color: T.text, letterSpacing: '-0.03em', lineHeight: 1 }}>
@@ -451,7 +451,7 @@ export const ManagerProducts: React.FC = () => {
         </div>
 
         {/* ══════════ BOTTOM PILL ══════════ */}
-        <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 50, padding: '0 16px 18px' }}>
+        <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 50, padding: '0 16px 86px' }}>
           <motion.div
             initial={{ y: 80, opacity: 0 }} animate={{ y: 0, opacity: 1 }}
             transition={{ delay: .28, type: 'spring', stiffness: 300, damping: 28 }}
