@@ -3,7 +3,7 @@ import { AnimatedPage } from '../components/AnimatedPage';
 import {
   PackageSearch, ArrowLeft, Plus, Edit2, Archive,
   CheckCircle2, Image as ImageIcon, Search, X,
-  UploadCloud, Layers, Sparkles, TrendingUp, Box, SlidersHorizontal, Tag
+  UploadCloud, TrendingUp, Box, SlidersHorizontal, Tag
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../store/AppContext';
