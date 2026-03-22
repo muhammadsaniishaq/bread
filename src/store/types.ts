@@ -18,6 +18,7 @@ export interface Customer {
   loyaltyPoints?: number;
   image?: string;
   assignedSupplierId?: string; // Links a customer permanently to a specific supplier
+  pin?: string; // App login PIN
 }
 
 export interface TransactionItem {

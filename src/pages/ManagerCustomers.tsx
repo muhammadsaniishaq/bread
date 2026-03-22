@@ -25,6 +25,14 @@ export const ManagerCustomers: React.FC = () => {
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [selectedSupplierId, setSelectedSupplierId] = useState('');
+  const [pin, setPin] = useState('');
+  
+  // Edit Quick View State
+  const [isEditingQuickView, setIsEditingQuickView] = useState(false);
+  const [editName, setEditName] = useState('');
+  const [editPhone, setEditPhone] = useState('');
+  const [editSupplierId, setEditSupplierId] = useState('');
+  const [editPin, setEditPin] = useState('');
 
   React.useEffect(() => {
     fetchSuppliers();
@@ -142,11 +150,27 @@ export const ManagerCustomers: React.FC = () => {
       notes: '',
       debtBalance: 0,
       loyaltyPoints: 0,
-      assignedSupplierId: selectedSupplierId || undefined
+      assignedSupplierId: selectedSupplierId || undefined,
+      pin: pin || undefined
     });
     setName('');
     setPhone('');
+    setPin('');
     setIsAdding(false);
+  };
+
+  const handleEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editName || !quickViewCustomer) return;
+    
+    await updateCustomer({
+      ...quickViewCustomer,
+      name: editName,
+      phone: editPhone,
+      assignedSupplierId: editSupplierId || undefined,
+      pin: editPin || undefined
+    });
+    setIsEditingQuickView(false);
   };
 
   return (
@@ -358,6 +382,9 @@ export const ManagerCustomers: React.FC = () => {
                 <input type="tel" className="w-full bg-black/5 dark:bg-white/5 border-none rounded-lg p-3 text-sm font-medium" placeholder="Phone Number (Optional)" value={phone} onChange={e => setPhone(e.target.value)} />
               </div>
               <div>
+                <input type="text" maxLength={4} className="w-full bg-black/5 dark:bg-white/5 border-none rounded-lg p-3 text-sm font-medium font-mono tracking-widest" placeholder="Assign Login PIN (Optional 4 Digits)" value={pin} onChange={e => setPin(e.target.value.replace(/\D/g, ''))} />
+              </div>
+              <div>
                 <label className="text-xs font-bold opacity-70 mb-1 block">Assign to Supplier Route (Optional)</label>
                 <select className="form-input bg-black/5 dark:bg-white/5 border-none rounded-lg p-3 text-sm font-medium w-full" value={selectedSupplierId} onChange={e => setSelectedSupplierId(e.target.value)}>
                   <option value="">Unassigned (Open Market)</option>
@@ -397,6 +424,11 @@ export const ManagerCustomers: React.FC = () => {
                   // If clicking on selects or buttons inside, don't open quick view
                   if ((e.target as HTMLElement).tagName === 'SELECT' || (e.target as HTMLElement).closest('button, a')) return;
                   setQuickViewCustomerId(c.id);
+                  setEditName(c.name);
+                  setEditPhone(c.phone || '');
+                  setEditSupplierId(c.assignedSupplierId || '');
+                  setEditPin(c.pin || '');
+                  setIsEditingQuickView(false);
                 }}
               >
                 <div className="flex items-start gap-4 flex-1">
@@ -518,14 +550,68 @@ export const ManagerCustomers: React.FC = () => {
                     {quickViewCustomer.name.charAt(0).toUpperCase()}
                   </div>
                   <h2 className="text-2xl font-black tracking-tight mb-1">{quickViewCustomer.name}</h2>
-                  <div className="flex gap-2 text-xs font-bold opacity-80 uppercase tracking-widest">
+                  <div className="flex gap-2 text-xs font-bold opacity-80 uppercase tracking-widest mb-3">
                     <span>{quickViewCustomer.phone || 'No Phone'}</span>
                     <span>•</span>
                     <span>{quickViewCustomer.location || 'No Loc'}</span>
                   </div>
+                  <div className="flex flex-wrap items-center gap-2 mt-2 group">
+                     {quickViewCustomer.pin ? (
+                        <span className="bg-emerald-500/20 text-emerald-100 text-[10px] px-3 py-1 rounded-full font-black tracking-widest uppercase shadow-sm border border-emerald-400">
+                          Auth: Enabled
+                        </span>
+                     ) : (
+                        <span className="bg-white/5 text-white/80 text-[10px] px-3 py-1 rounded-full font-black tracking-widest uppercase border border-white/20">
+                          Auth: Disabled
+                        </span>
+                     )}
+                     <button 
+                       onClick={() => setIsEditingQuickView(!isEditingQuickView)}
+                       className="text-[10px] uppercase font-black tracking-widest bg-white/10 hover:bg-white/20 transition-colors px-3 py-1 rounded-full border border-white/20"
+                     >
+                       {isEditingQuickView ? 'Cancel Editing' : 'Edit Profile & Security'}
+                     </button>
+                  </div>
                 </div>
                 
                 <div className="p-6 overflow-y-auto flex-1 custom-scrollbar space-y-6">
+                  {isEditingQuickView ? (
+                    <form onSubmit={handleEdit} className="space-y-4 animate-in fade-in">
+                      <div className="bg-gradient-to-br from-indigo-500/10 to-transparent border border-indigo-500/20 rounded-2xl p-5 mb-4">
+                        <h3 className="text-xs font-black uppercase tracking-widest mb-1 flex items-center gap-2 text-indigo-400"><Zap size={14} /> Security & Access</h3>
+                        <p className="text-[10px] font-bold opacity-70 mb-4 leading-tight">Assigning a PIN to this customer will allow them to login to the Customer Web App to manage orders natively.</p>
+                        <label className="text-[10px] font-black uppercase tracking-widest opacity-60 mb-1 block">Login PIN (4 Digits)</label>
+                        <input type="text" maxLength={4} className="w-full bg-surface border border-[var(--border-color)] focus:border-indigo-500 text-primary font-mono tracking-widest rounded-xl p-3 text-sm font-black transition-colors outline-none" placeholder="Set 4-Digit Login PIN" value={editPin} onChange={e => setEditPin(e.target.value.replace(/\D/g, ''))} />
+                      </div>
+                      
+                      <div className="grid gap-3">
+                        <div>
+                          <label className="text-[10px] font-black uppercase tracking-widest opacity-60 mb-1 block">Full Name</label>
+                          <input type="text" className="w-full bg-black/5 dark:bg-white/5 border-none rounded-xl p-3 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all shadow-sm" value={editName} onChange={e => setEditName(e.target.value)} required />
+                        </div>
+                        <div>
+                          <label className="text-[10px] font-black uppercase tracking-widest opacity-60 mb-1 block">Phone Number</label>
+                          <input type="tel" className="w-full bg-black/5 dark:bg-white/5 border-none rounded-xl p-3 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all shadow-sm" value={editPhone} onChange={e => setEditPhone(e.target.value)} />
+                        </div>
+                        <div>
+                          <label className="text-[10px] font-black uppercase tracking-widest opacity-60 mb-1 block">Routed Supplier Override</label>
+                          <select className="w-full bg-black/5 dark:bg-white/5 border-none rounded-xl p-3 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all shadow-sm" value={editSupplierId} onChange={e => setEditSupplierId(e.target.value)}>
+                            <option value="">Unassigned (Walk-in / Open Market)</option>
+                            {suppliers.map(sup => (
+                              <option key={sup.id} value={sup.id}>{sup.full_name || 'Unnamed Supplier'}</option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+                      
+                      <div className="pt-4 mt-2 border-t border-[var(--border-color)]">
+                        <button type="submit" className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3.5 rounded-2xl border-none font-black text-sm shadow-md flex items-center justify-center gap-2 transition-all">
+                          Save & Update Client Profile
+                        </button>
+                      </div>
+                    </form>
+                  ) : (
+                    <>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="bg-black/5 dark:bg-white/5 rounded-2xl p-4 border border-[var(--border-color)]">
                       <div className="text-[10px] uppercase font-black opacity-50 tracking-widest mb-1">Status</div>
@@ -566,6 +652,8 @@ export const ManagerCustomers: React.FC = () => {
                     Open Full Profile & Ledger
                     <ChevronRight size={18} className="group-hover:translate-x-1 transition-transform" />
                   </button>
+                    </>
+                  )}
                 </div>
               </motion.div>
             </>
