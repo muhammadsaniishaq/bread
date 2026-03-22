@@ -37,19 +37,20 @@ export const ManagerExpenses: React.FC = () => {
 
   return (
     <AnimatedPage>
-      <div className="container pb-24">
+      <div style={{ minHeight: '100vh', background: 'var(--bg-color)', paddingBottom: '6rem' }} className="container px-4 pt-6">
         <div className="flex items-center gap-3 mb-6">
-          <button onClick={() => navigate(-1)} className="p-2 bg-surface rounded-full shadow-sm hover:bg-black/5 transition-colors border border-[var(--border-color)]">
-            <ArrowLeft size={20} className="text-secondary" />
+          <button onClick={() => navigate(-1)} style={{ padding: '8px', background: 'var(--surface-color)', borderRadius: '12px', border: '1px solid var(--border-color)', color: 'var(--text-secondary)', cursor: 'pointer' }}>
+            <ArrowLeft size={20} />
           </button>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <Banknote className="text-red-500" /> Mgt Expenses
+          <h1 style={{ fontSize: '22px', fontWeight: 900, margin: 0, display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-color)' }}>
+            <Banknote color="#dc2626" /> Mgt Expenses
           </h1>
         </div>
 
-        <div className="bg-gradient-to-br from-red-500/10 to-transparent p-5 rounded-2xl border border-[var(--border-color)] mb-6 shadow-sm">
-           <h2 className="text-sm font-bold opacity-70 mb-1 uppercase tracking-wide">Today's Expenditures</h2>
-           <div className="text-3xl font-black text-red-500 tracking-tight">₦{totalToday.toLocaleString()}</div>
+        <div style={{ margin: '0 0 24px', borderRadius: '22px', padding: '24px', background: 'linear-gradient(135deg,#dc2626,#991b1b)', color: '#fff', position: 'relative', overflow: 'hidden', display: 'flex', flexDirection: 'column' }} className="shadow-md">
+           <div style={{ position: 'absolute', top: -20, right: -20, width: 90, height: 90, borderRadius: '50%', background: 'rgba(255,255,255,0.07)' }} />
+           <h2 style={{ fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', opacity: 0.8, margin: '0 0 4px' }}>Today's Expenditures</h2>
+           <div style={{ fontSize: '28px', fontWeight: 900, letterSpacing: '-0.02em', margin: 0 }}>₦{totalToday.toLocaleString()}</div>
         </div>
 
         <form onSubmit={handleAddExpense} className="bg-surface p-5 rounded-2xl border border-[var(--border-color)] mb-6 shadow-sm">
@@ -57,13 +58,13 @@ export const ManagerExpenses: React.FC = () => {
           <div className="grid gap-4">
             <div>
               <label className="text-xs font-bold opacity-70 block mb-1">Reason (e.g. Fuel, Logistics)</label>
-              <input type="text" className="form-input bg-black/5 dark:bg-white/5 border-none" value={description} onChange={e => setDescription(e.target.value)} required placeholder="Expense description..." />
+              <input type="text" style={{ width: '100%', background: 'var(--bg-color)', border: '1px solid var(--border-color)', borderRadius: '12px', padding: '12px 14px', fontSize: '15px', color: 'var(--text-color)', outline: 'none' }} value={description} onChange={e => setDescription(e.target.value)} required placeholder="Expense description..." />
             </div>
             <div>
               <label className="text-xs font-bold opacity-70 block mb-1">Amount (₦)</label>
-              <input type="number" className="form-input bg-black/5 dark:bg-white/5 border-none font-bold text-lg" value={amount} onChange={e => setAmount(e.target.value)} required placeholder="0" />
+              <input type="number" style={{ width: '100%', background: 'var(--bg-color)', border: '1px solid var(--border-color)', borderRadius: '12px', padding: '12px 14px', fontSize: '18px', fontWeight: 800, color: '#dc2626', outline: 'none' }} value={amount} onChange={e => setAmount(e.target.value)} required placeholder="0" />
             </div>
-            <button type="submit" className="btn bg-red-500 text-white rounded-xl shadow-md mt-2 flex items-center justify-center gap-2">
+            <button type="submit" style={{ background: '#dc2626', color: '#fff', padding: '14px', borderRadius: '12px', border: 'none', fontWeight: 800, fontSize: '15px', display: 'flex', alignItems: 'center', justifyItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer', marginTop: '8px' }}>
               <Plus size={18} /> Record Expense
             </button>
           </div>

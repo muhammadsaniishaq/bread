@@ -151,19 +151,19 @@ export const ManagerCustomers: React.FC = () => {
 
   return (
     <AnimatedPage>
-      <div className="container pb-24">
+      <div style={{ minHeight: '100vh', background: 'var(--bg-color)', paddingBottom: '6rem' }} className="container px-4 pt-6">
         <div className="flex items-center gap-3 mb-6">
-          <button onClick={() => navigate(-1)} className="p-2 bg-surface rounded-full shadow-sm hover:bg-black/5 transition-colors border border-[var(--border-color)]">
-            <ArrowLeft size={20} className="text-secondary" />
+          <button onClick={() => navigate(-1)} style={{ padding: '8px', background: 'var(--surface-color)', borderRadius: '12px', border: '1px solid var(--border-color)', color: 'var(--text-secondary)', cursor: 'pointer' }}>
+            <ArrowLeft size={20} />
           </button>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <Users className="text-emerald-500" /> Customer Base
+          <h1 style={{ fontSize: '22px', fontWeight: 900, margin: 0, display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-color)' }}>
+            <Users color="#16a34a" /> Customer Base
           </h1>
         </div>
 
-        <div className="bg-gradient-to-br from-emerald-600 via-teal-800 to-indigo-900 text-white p-6 md:p-8 rounded-3xl mb-8 shadow-xl relative overflow-hidden border border-emerald-500/20 flex flex-col lg:flex-row gap-8 lg:items-center">
-           <div className="absolute -top-20 -right-20 w-64 h-64 bg-white/10 rounded-full blur-3xl mix-blend-overlay"></div>
-           <Users className="absolute right-4 bottom-4 opacity-[0.03]" size={160} />
+        <div style={{ margin: '0 0 24px', borderRadius: '22px', padding: '24px', background: 'linear-gradient(135deg,#16a34a,#0f766e)', color: '#fff', position: 'relative', overflow: 'hidden', display: 'flex', flexDirection: 'column', gap: '32px' }} className="lg:flex-row lg:items-center shadow-md">
+           <div style={{ position: 'absolute', top: -20, right: -20, width: 140, height: 140, borderRadius: '50%', background: 'rgba(255,255,255,0.07)' }} />
+           <Users className="absolute right-4 bottom-4 opacity-[0.05]" size={160} />
            
            <div className="flex-1 relative z-10 w-full">
              <div className="flex justify-between items-start mb-6 border-b border-emerald-500/30 pb-4">
@@ -240,27 +240,27 @@ export const ManagerCustomers: React.FC = () => {
         
         {/* AI Action Insights Panel */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-           <div className="bg-surface p-4 rounded-3xl border border-[var(--border-color)] shadow-sm flex items-start gap-3 group hover:border-emerald-500/50 transition-all cursor-pointer">
-             <div className="w-10 h-10 rounded-full bg-emerald-500/10 text-emerald-600 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform"><TrendingUp size={18} /></div>
+           <div style={{ background: 'var(--surface-color)', border: '1px solid var(--border-color)', borderRadius: '18px', padding: '16px', display: 'flex', alignItems: 'flex-start', gap: '12px', cursor: 'pointer' }} className="hover-lift shadow-sm">
+             <div style={{ width: 40, height: 40, borderRadius: '12px', background: 'rgba(22,163,74,0.1)', color: '#16a34a', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><TrendingUp size={18} /></div>
              <div>
-               <h4 className="text-[10px] uppercase font-black tracking-widest opacity-60 mb-0.5">Growth Engine</h4>
-               <p className="text-sm font-bold leading-tight">{activeCount} clients have engaged inside 30 days. Outstanding loyalty.</p>
+               <h4 style={{ fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-secondary)', margin: '0 0 4px' }}>Growth Engine</h4>
+               <p style={{ fontSize: '14px', fontWeight: 700, margin: 0, lineHeight: 1.3, color: 'var(--text-color)' }}>{activeCount} clients have engaged inside 30 days. Outstanding loyalty.</p>
              </div>
            </div>
            
-           <div className="bg-surface p-4 rounded-3xl border border-[var(--border-color)] shadow-sm flex items-start gap-3 group hover:border-amber-500/50 transition-all cursor-pointer" onClick={() => setFilterType('Dormant')}>
-             <div className="w-10 h-10 rounded-full bg-amber-500/10 text-amber-600 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform"><AlertTriangle size={18} /></div>
+           <div onClick={() => setFilterType('Dormant')} style={{ background: 'var(--surface-color)', border: '1px solid var(--border-color)', borderRadius: '18px', padding: '16px', display: 'flex', alignItems: 'flex-start', gap: '12px', cursor: 'pointer' }} className="hover-lift shadow-sm">
+             <div style={{ width: 40, height: 40, borderRadius: '12px', background: 'rgba(217,119,6,0.1)', color: '#d97706', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><AlertTriangle size={18} /></div>
              <div>
-               <h4 className="text-[10px] uppercase font-black tracking-widest opacity-60 mb-0.5">Retention Risk</h4>
-               <p className="text-sm font-bold leading-tight">{dormantCount} clients are dormant. <span className="text-amber-600">Click to filter & follow up.</span></p>
+               <h4 style={{ fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-secondary)', margin: '0 0 4px' }}>Retention Risk</h4>
+               <p style={{ fontSize: '14px', fontWeight: 700, margin: 0, lineHeight: 1.3, color: 'var(--text-color)' }}>{dormantCount} clients are dormant. <span style={{ color: '#d97706' }}>Click to filter & follow up.</span></p>
              </div>
            </div>
            
-           <div className="bg-surface p-4 rounded-3xl border border-[var(--border-color)] shadow-sm flex items-start gap-3 group hover:border-indigo-500/50 transition-all cursor-pointer" onClick={() => setFilterType('Debtors')}>
-             <div className="w-10 h-10 rounded-full bg-indigo-500/10 text-indigo-600 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform"><Zap size={18} /></div>
+           <div onClick={() => setFilterType('Debtors')} style={{ background: 'var(--surface-color)', border: '1px solid var(--border-color)', borderRadius: '18px', padding: '16px', display: 'flex', alignItems: 'flex-start', gap: '12px', cursor: 'pointer' }} className="hover-lift shadow-sm">
+             <div style={{ width: 40, height: 40, borderRadius: '12px', background: 'rgba(79,70,229,0.1)', color: '#4f46e5', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><Zap size={18} /></div>
              <div>
-               <h4 className="text-[10px] uppercase font-black tracking-widest opacity-60 mb-0.5">Liquidity Opportunity</h4>
-               <p className="text-sm font-bold leading-tight">₦{totalDebt.toLocaleString()} total uncollected debt. Prioritize top 10% debtors.</p>
+               <h4 style={{ fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-secondary)', margin: '0 0 4px' }}>Liquidity Opportunity</h4>
+               <p style={{ fontSize: '14px', fontWeight: 700, margin: 0, lineHeight: 1.3, color: 'var(--text-color)' }}>₦{totalDebt.toLocaleString()} total uncollected debt. Prioritize top 10% debtors.</p>
              </div>
            </div>
         </div>
@@ -271,14 +271,14 @@ export const ManagerCustomers: React.FC = () => {
             <input 
               type="text" 
               placeholder="Search clients..." 
-              className="w-full bg-surface border border-[var(--border-color)] rounded-2xl py-3 pl-12 pr-4 text-sm focus:outline-none focus:border-emerald-500 transition-colors shadow-sm font-bold"
+              style={{ width: '100%', background: 'var(--surface-color)', border: '1px solid var(--border-color)', borderRadius: '14px', padding: '12px 16px 12px 42px', fontSize: '14px', fontWeight: 600, color: 'var(--text-color)', outline: 'none' }}
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
             />
           </div>
           <button 
             onClick={() => setIsAdding(!isAdding)}
-            className="bg-emerald-500 text-white px-6 py-3 rounded-2xl shadow-md hover:bg-emerald-600 transition-colors flex items-center justify-center gap-2 font-bold text-sm whitespace-nowrap"
+            style={{ background: '#16a34a', color: '#fff', padding: '12px 24px', borderRadius: '14px', border: 'none', fontWeight: 700, fontSize: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer', whiteSpace: 'nowrap' }}
           >
             <UserPlus size={18} strokeWidth={2.5} /> Add Client
           </button>
