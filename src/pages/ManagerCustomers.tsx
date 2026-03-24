@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { AnimatedPage } from '../components/AnimatedPage';
 import { useAppContext } from '../store/AppContext';
-import { Users, ArrowLeft, Search, UserPlus, Truck, Download, CheckSquare, Square, MessageCircle, Settings2, Clock, Zap, TrendingUp, AlertTriangle, X, ChevronRight } from 'lucide-react';
+import { Users, ArrowLeft, Search, UserPlus, Truck, Download, CheckSquare, Square, MessageCircle, Settings2, Clock, Zap, TrendingUp, AlertTriangle, X, ChevronRight, History, CreditCard, ShieldCheck } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import type { Customer } from '../store/types';
@@ -9,7 +9,7 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip } 
 import { motion, AnimatePresence } from 'framer-motion';
 
 export const ManagerCustomers: React.FC = () => {
-  const { customers, transactions, addCustomer, updateCustomer } = useAppContext();
+  const { customers, transactions, addCustomer, updateCustomer, recordDebtPayment } = useAppContext();
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<'All' | 'Routed' | 'Unassigned' | 'Debtors' | 'Active' | 'Dormant'>('All');
@@ -33,6 +33,11 @@ export const ManagerCustomers: React.FC = () => {
   const [editPhone, setEditPhone] = useState('');
   const [editSupplierId, setEditSupplierId] = useState('');
   const [editPin, setEditPin] = useState('');
+  
+  // Advanced CRM Drawer State
+  const [drawerTab, setDrawerTab] = useState<'profile' | 'ledger' | 'activity'>('profile');
+  const [paymentAmount, setPaymentAmount] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState<'Cash' | 'Transfer'>('Cash');
 
   React.useEffect(() => {
     fetchSuppliers();
@@ -171,6 +176,24 @@ export const ManagerCustomers: React.FC = () => {
       pin: editPin || undefined
     });
     setIsEditingQuickView(false);
+  };
+
+  const handleDebtPaymentSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!paymentAmount || !quickViewCustomerId || !quickViewCustomer) return;
+    
+    const amount = Number(paymentAmount);
+    if (amount <= 0) return;
+
+    await recordDebtPayment({
+      id: Date.now().toString(),
+      date: new Date().toISOString(),
+      customerId: quickViewCustomerId,
+      amount: amount,
+      method: paymentMethod
+    });
+    
+    setPaymentAmount('');
   };
 
   return (
@@ -429,6 +452,7 @@ export const ManagerCustomers: React.FC = () => {
                   setEditSupplierId(c.assignedSupplierId || '');
                   setEditPin(c.pin || '');
                   setIsEditingQuickView(false);
+                  setDrawerTab('profile'); // Reset to profile tab on new open
                 }}
               >
                 <div className="flex items-start gap-4 flex-1">
@@ -574,85 +598,171 @@ export const ManagerCustomers: React.FC = () => {
                   </div>
                 </div>
                 
-                <div className="p-6 overflow-y-auto flex-1 custom-scrollbar space-y-6">
-                  {isEditingQuickView ? (
-                    <form onSubmit={handleEdit} className="space-y-4 animate-in fade-in">
-                      <div className="bg-gradient-to-br from-indigo-500/10 to-transparent border border-indigo-500/20 rounded-2xl p-5 mb-4">
-                        <h3 className="text-xs font-black uppercase tracking-widest mb-1 flex items-center gap-2 text-indigo-400"><Zap size={14} /> Security & Access</h3>
-                        <p className="text-[10px] font-bold opacity-70 mb-4 leading-tight">Assigning a PIN to this customer will allow them to login to the Customer Web App to manage orders natively.</p>
-                        <label className="text-[10px] font-black uppercase tracking-widest opacity-60 mb-1 block">Login PIN (4 Digits)</label>
-                        <input type="text" maxLength={4} className="w-full bg-surface border border-[var(--border-color)] focus:border-indigo-500 text-primary font-mono tracking-widest rounded-xl p-3 text-sm font-black transition-colors outline-none" placeholder="Set 4-Digit Login PIN" value={editPin} onChange={e => setEditPin(e.target.value.replace(/\D/g, ''))} />
-                      </div>
-                      
-                      <div className="grid gap-3">
-                        <div>
-                          <label className="text-[10px] font-black uppercase tracking-widest opacity-60 mb-1 block">Full Name</label>
-                          <input type="text" className="w-full bg-black/5 dark:bg-white/5 border-none rounded-xl p-3 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all shadow-sm" value={editName} onChange={e => setEditName(e.target.value)} required />
+                <div className="flex bg-surface border-b border-[var(--border-color)] overflow-x-auto custom-scrollbar shrink-0">
+                  <button onClick={() => setDrawerTab('profile')} className={`flex-1 py-3.5 text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 border-b-2 transition-colors whitespace-nowrap px-4 ${drawerTab === 'profile' ? 'border-primary text-primary bg-primary/5' : 'border-transparent text-secondary hover:bg-black/5 dark:hover:bg-white/5'}`}>
+                    <ShieldCheck size={14} /> Profile & Route
+                  </button>
+                  <button onClick={() => setDrawerTab('ledger')} className={`flex-1 py-3.5 text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 border-b-2 transition-colors whitespace-nowrap px-4 ${drawerTab === 'ledger' ? 'border-amber-500 text-amber-600 dark:text-amber-400 bg-amber-500/5' : 'border-transparent text-secondary hover:bg-black/5 dark:hover:bg-white/5'}`}>
+                    <CreditCard size={14} /> Ledger & Pay
+                  </button>
+                  <button onClick={() => setDrawerTab('activity')} className={`flex-1 py-3.5 text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 border-b-2 transition-colors whitespace-nowrap px-4 ${drawerTab === 'activity' ? 'border-blue-500 text-blue-600 dark:text-blue-400 bg-blue-500/5' : 'border-transparent text-secondary hover:bg-black/5 dark:hover:bg-white/5'}`}>
+                    <History size={14} /> Activity Log
+                  </button>
+                </div>
+                
+                <div className="p-6 overflow-y-auto flex-1 custom-scrollbar">
+                  {drawerTab === 'profile' && (
+                    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-300">
+                      {isEditingQuickView ? (
+                        <form onSubmit={handleEdit} className="space-y-4">
+                          <div className="bg-gradient-to-br from-indigo-500/10 to-transparent border border-indigo-500/20 rounded-2xl p-5 mb-4">
+                            <h3 className="text-xs font-black uppercase tracking-widest mb-1 flex items-center gap-2 text-indigo-400"><Zap size={14} /> Security & Access</h3>
+                            <p className="text-[10px] font-bold opacity-70 mb-4 leading-tight">Assigning a PIN to this customer will allow them to login to the Customer Web App to manage orders natively.</p>
+                            <label className="text-[10px] font-black uppercase tracking-widest opacity-60 mb-1 block">Login PIN (4 Digits)</label>
+                            <input type="text" maxLength={4} className="w-full bg-surface border border-[var(--border-color)] focus:border-indigo-500 text-primary font-mono tracking-widest rounded-xl p-3 text-sm font-black transition-colors outline-none" placeholder="Set 4-Digit Login PIN" value={editPin} onChange={e => setEditPin(e.target.value.replace(/\D/g, ''))} />
+                          </div>
+                          
+                          <div className="grid gap-3">
+                            <div>
+                              <label className="text-[10px] font-black uppercase tracking-widest opacity-60 mb-1 block">Full Name</label>
+                              <input type="text" className="w-full bg-black/5 dark:bg-white/5 border-none rounded-xl p-3 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all shadow-sm" value={editName} onChange={e => setEditName(e.target.value)} required />
+                            </div>
+                            <div>
+                              <label className="text-[10px] font-black uppercase tracking-widest opacity-60 mb-1 block">Phone Number</label>
+                              <input type="tel" className="w-full bg-black/5 dark:bg-white/5 border-none rounded-xl p-3 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all shadow-sm" value={editPhone} onChange={e => setEditPhone(e.target.value)} />
+                            </div>
+                            <div>
+                              <label className="text-[10px] font-black uppercase tracking-widest opacity-60 mb-1 block">Routed Supplier Override</label>
+                              <select className="w-full bg-black/5 dark:bg-white/5 border-none rounded-xl p-3 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all shadow-sm" value={editSupplierId} onChange={e => setEditSupplierId(e.target.value)}>
+                                <option value="">Unassigned (Walk-in / Open Market)</option>
+                                {suppliers.map(sup => (
+                                  <option key={sup.id} value={sup.id}>{sup.full_name || 'Unnamed Supplier'}</option>
+                                ))}
+                              </select>
+                            </div>
+                          </div>
+                          
+                          <div className="pt-4 mt-2 border-t border-[var(--border-color)]">
+                            <button type="submit" className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3.5 rounded-2xl border-none font-black text-sm shadow-md flex items-center justify-center gap-2 transition-all">
+                              Save & Update Client Profile
+                            </button>
+                          </div>
+                        </form>
+                      ) : (
+                        <div className="space-y-6">
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="bg-black/5 dark:bg-white/5 rounded-2xl p-4 border border-[var(--border-color)]">
+                              <div className="text-[10px] uppercase font-black opacity-50 tracking-widest mb-1">Status</div>
+                              <div className="font-bold text-sm">
+                                {customerActivity[quickViewCustomer.id].daysSince <= 30 ? '🟢 Active' : '🟠 Dormant'}
+                              </div>
+                            </div>
+                            <div className="bg-black/5 dark:bg-white/5 rounded-2xl p-4 border border-[var(--border-color)]">
+                              <div className="text-[10px] uppercase font-black opacity-50 tracking-widest mb-1">Loyalty Points</div>
+                              <div className="font-bold text-sm text-yellow-600 dark:text-yellow-400">
+                                ★ {quickViewCustomer.loyaltyPoints || 0} PTS
+                              </div>
+                            </div>
+                          </div>
+                          
+                          {quickViewCustomer.notes && (
+                            <div>
+                              <h3 className="text-[10px] font-black uppercase tracking-widest opacity-50 mb-2">Operational Notes</h3>
+                              <p className="text-sm font-medium bg-black/5 dark:bg-white/5 p-4 rounded-2xl border border-[var(--border-color)]">{quickViewCustomer.notes}</p>
+                            </div>
+                          )}
+                          
+                          <button 
+                            onClick={() => navigate(`/customers/${quickViewCustomer.id}`)}
+                            className="w-full bg-primary hover:bg-primary-hover text-white py-4 rounded-xl font-black shadow-md flex items-center justify-center gap-2 transition-all group mt-8"
+                          >
+                            Open Full Profile & Reports
+                            <ChevronRight size={18} className="group-hover:translate-x-1 transition-transform" />
+                          </button>
                         </div>
-                        <div>
-                          <label className="text-[10px] font-black uppercase tracking-widest opacity-60 mb-1 block">Phone Number</label>
-                          <input type="tel" className="w-full bg-black/5 dark:bg-white/5 border-none rounded-xl p-3 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all shadow-sm" value={editPhone} onChange={e => setEditPhone(e.target.value)} />
-                        </div>
-                        <div>
-                          <label className="text-[10px] font-black uppercase tracking-widest opacity-60 mb-1 block">Routed Supplier Override</label>
-                          <select className="w-full bg-black/5 dark:bg-white/5 border-none rounded-xl p-3 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all shadow-sm" value={editSupplierId} onChange={e => setEditSupplierId(e.target.value)}>
-                            <option value="">Unassigned (Walk-in / Open Market)</option>
-                            {suppliers.map(sup => (
-                              <option key={sup.id} value={sup.id}>{sup.full_name || 'Unnamed Supplier'}</option>
-                            ))}
-                          </select>
-                        </div>
-                      </div>
-                      
-                      <div className="pt-4 mt-2 border-t border-[var(--border-color)]">
-                        <button type="submit" className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3.5 rounded-2xl border-none font-black text-sm shadow-md flex items-center justify-center gap-2 transition-all">
-                          Save & Update Client Profile
-                        </button>
-                      </div>
-                    </form>
-                  ) : (
-                    <>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="bg-black/5 dark:bg-white/5 rounded-2xl p-4 border border-[var(--border-color)]">
-                      <div className="text-[10px] uppercase font-black opacity-50 tracking-widest mb-1">Status</div>
-                      <div className="font-bold text-sm">
-                        {customerActivity[quickViewCustomer.id].daysSince <= 30 ? '🟢 Active' : '🟠 Dormant'}
-                      </div>
-                    </div>
-                    <div className="bg-black/5 dark:bg-white/5 rounded-2xl p-4 border border-[var(--border-color)]">
-                      <div className="text-[10px] uppercase font-black opacity-50 tracking-widest mb-1">Loyalty Points</div>
-                      <div className="font-bold text-sm text-yellow-600 dark:text-yellow-400">
-                        ★ {quickViewCustomer.loyaltyPoints || 0} PTS
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="bg-danger/10 text-danger-color border border-danger/20 rounded-3xl p-6 relative overflow-hidden">
-                    <Zap className="absolute right-0 bottom-0 opacity-10 -translate-y-1/4 translate-x-1/4" size={100} />
-                    <div className="text-[10px] uppercase font-black tracking-widest opacity-80 mb-1">Current Active Debt</div>
-                    <div className="text-4xl font-black tracking-tight mb-2">₦{quickViewCustomer.debtBalance.toLocaleString()}</div>
-                    {quickViewCustomer.debtBalance > 0 && (
-                       <div className="w-full bg-danger/20 rounded-full h-1.5 mt-4">
-                          <div className="bg-danger h-1.5 rounded-full" style={{width: '75%'}}></div>
-                       </div>
-                    )}
-                  </div>
-                  
-                  {quickViewCustomer.notes && (
-                    <div>
-                      <h3 className="text-[10px] font-black uppercase tracking-widest opacity-50 mb-2">Operational Notes</h3>
-                      <p className="text-sm font-medium bg-black/5 dark:bg-white/5 p-4 rounded-2xl border border-[var(--border-color)]">{quickViewCustomer.notes}</p>
+                      )}
                     </div>
                   )}
-                  
-                  <button 
-                    onClick={() => navigate(`/customers/${quickViewCustomer.id}`)}
-                    className="w-full bg-primary hover:bg-primary-hover text-white py-4 rounded-xl font-black shadow-md flex items-center justify-center gap-2 transition-all group mt-8"
-                  >
-                    Open Full Profile & Ledger
-                    <ChevronRight size={18} className="group-hover:translate-x-1 transition-transform" />
-                  </button>
-                    </>
+
+                  {drawerTab === 'ledger' && (
+                    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-300">
+                      <div className={`text-white border rounded-3xl p-6 relative overflow-hidden ${quickViewCustomer.debtBalance > 0 ? 'bg-danger/90 border-danger shadow-danger/20' : 'bg-emerald-500 border-emerald-400 shadow-emerald-500/20'} shadow-xl`}>
+                        <Zap className="absolute right-0 bottom-0 opacity-10 -translate-y-1/4 translate-x-1/4" size={120} />
+                        <div className="text-[10px] uppercase font-black tracking-widest opacity-80 mb-1">Current Active Debt</div>
+                        <div className="text-4xl font-black tracking-tight mb-2 flex items-center gap-2">
+                           ₦{quickViewCustomer.debtBalance.toLocaleString()}
+                           {quickViewCustomer.debtBalance === 0 && <ShieldCheck size={28} className="text-white opacity-80" />}
+                        </div>
+                        {quickViewCustomer.debtBalance > 0 ? (
+                           <div className="w-full bg-black/20 rounded-full h-1.5 mt-4 overflow-hidden">
+                              <div className="bg-white h-full rounded-full w-[75%]"></div>
+                           </div>
+                        ) : (
+                           <div className="text-xs font-bold bg-black/20 inline-block px-3 py-1 rounded-full mt-2">Zero Balance • Fully Cleared</div>
+                        )}
+                      </div>
+
+                      {quickViewCustomer.debtBalance > 0 && (
+                        <div className="bg-surface rounded-3xl border border-[var(--border-color)] shadow-sm p-5 mt-6">
+                           <h3 className="text-sm font-black mb-4 flex items-center gap-2"><CreditCard size={18} className="text-emerald-500" /> Settle Debt Payment</h3>
+                           <form onSubmit={handleDebtPaymentSubmit} className="space-y-4">
+                             <div>
+                               <label className="text-[10px] font-black uppercase tracking-widest opacity-60 mb-1 block">Amount Received (₦)</label>
+                               <div className="relative">
+                                 <span className="absolute left-4 top-1/2 -translate-y-1/2 font-black opacity-50">₦</span>
+                                 <input type="number" max={quickViewCustomer.debtBalance} className="w-full bg-black/5 dark:bg-white/5 border-none rounded-xl p-3 pl-8 text-lg font-black focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition-all text-emerald-600 dark:text-emerald-400" placeholder="0" value={paymentAmount} onChange={e => setPaymentAmount(e.target.value)} required />
+                               </div>
+                             </div>
+                             
+                             <div>
+                               <label className="text-[10px] font-black uppercase tracking-widest opacity-60 mb-1 block">Payment Method</label>
+                               <div className="grid grid-cols-2 gap-3">
+                                  <button type="button" onClick={() => setPaymentMethod('Cash')} className={`py-3 rounded-xl border-2 text-sm font-black transition-all ${paymentMethod === 'Cash' ? 'border-emerald-500 bg-emerald-500/10 text-emerald-600' : 'border-[var(--border-color)] bg-transparent text-secondary hover:bg-black/5'}`}>Cash</button>
+                                  <button type="button" onClick={() => setPaymentMethod('Transfer')} className={`py-3 rounded-xl border-2 text-sm font-black transition-all ${paymentMethod === 'Transfer' ? 'border-emerald-500 bg-emerald-500/10 text-emerald-600' : 'border-[var(--border-color)] bg-transparent text-secondary hover:bg-black/5'}`}>Transfer</button>
+                               </div>
+                             </div>
+
+                             <button type="submit" className="w-full bg-emerald-500 hover:bg-emerald-600 text-white py-4 rounded-xl font-black text-sm shadow-md shadow-emerald-500/20 transition-all flex items-center justify-center gap-2 mt-2">
+                               <ShieldCheck size={18} /> Confirm Payment
+                             </button>
+                           </form>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {drawerTab === 'activity' && (
+                    <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-300">
+                      <h3 className="text-xs font-black uppercase tracking-widest opacity-50 mb-2 px-1">Recent Transactions</h3>
+                      {transactions.filter(t => t.customerId === quickViewCustomer.id).length === 0 ? (
+                        <div className="text-center py-10 opacity-50 border border-dashed rounded-3xl border-[var(--border-color)]">
+                          <History size={32} className="mx-auto mb-2 opacity-20" />
+                          <p className="font-bold text-sm">No History</p>
+                        </div>
+                      ) : (
+                        transactions
+                          .filter(t => t.customerId === quickViewCustomer.id)
+                          .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                          .slice(0, 10)
+                          .map(tx => (
+                            <div key={tx.id} className="bg-black/5 dark:bg-white/5 p-4 rounded-2xl border border-[var(--border-color)] flex items-center justify-between group hover:border-emerald-500/30 transition-colors">
+                              <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-full bg-emerald-500/10 text-emerald-600 flex items-center justify-center font-black">
+                                  {tx.items?.reduce((acc, p) => acc + p.quantity, 0) || tx.quantity || 1}
+                                </div>
+                                <div>
+                                  <p className="font-bold text-sm">Order Checkout</p>
+                                  <p className="text-[10px] font-bold opacity-50 uppercase tracking-widest">{new Date(tx.date).toLocaleDateString()} • {new Date(tx.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
+                                </div>
+                              </div>
+                              <div className="text-right">
+                                <p className="font-black text-sm">₦{(tx.totalPrice || 0).toLocaleString()}</p>
+                                <p className={`text-[10px] font-black uppercase tracking-widest ${tx.type === 'Cash' ? 'text-emerald-500' : 'text-danger'}`}>{tx.type}</p>
+                              </div>
+                            </div>
+                          ))
+                      )}
+                    </div>
                   )}
                 </div>
               </motion.div>
