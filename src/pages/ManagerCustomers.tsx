@@ -208,9 +208,10 @@ export const ManagerCustomers: React.FC = () => {
           </h1>
         </div>
 
-        <div className="bg-gradient-to-br from-emerald-600 via-teal-800 to-indigo-900 text-white p-6 md:p-8 rounded-3xl mb-8 shadow-xl relative overflow-hidden border border-emerald-500/20 flex flex-col lg:flex-row gap-8 lg:items-center">
-           <div className="absolute -top-20 -right-20 w-64 h-64 bg-white/10 rounded-full blur-3xl mix-blend-overlay"></div>
-           <Users className="absolute right-4 bottom-4 opacity-[0.03]" size={160} />
+        <div className="bg-gradient-to-br from-emerald-600 via-teal-800 to-slate-900 text-white p-6 md:p-8 rounded-[2rem] mb-8 shadow-2xl relative overflow-hidden border border-white/10 flex flex-col lg:flex-row gap-8 lg:items-center backdrop-blur-xl">
+           <div className="absolute inset-0 bg-white/5 bg-[radial-gradient(circle_at_50%_0%,rgba(255,255,255,0.1),transparent_50%)]"></div>
+           <div className="absolute -top-32 -right-32 w-96 h-96 bg-emerald-400/20 rounded-full blur-[80px] mix-blend-screen pointer-events-none"></div>
+           <Users className="absolute right-4 bottom-4 opacity-[0.02]" size={180} />
            
            <div className="flex-1 relative z-10 w-full">
              <div className="flex justify-between items-start mb-6 border-b border-emerald-500/30 pb-4">
@@ -286,25 +287,25 @@ export const ManagerCustomers: React.FC = () => {
         </div>
         
         {/* AI Action Insights Panel */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-           <div className="bg-surface p-4 rounded-3xl border border-[var(--border-color)] shadow-sm flex items-start gap-3 group hover:border-emerald-500/50 transition-all cursor-pointer">
-             <div className="w-10 h-10 rounded-full bg-emerald-500/10 text-emerald-600 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform"><TrendingUp size={18} /></div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-8">
+           <div className="bg-surface p-5 rounded-3xl border border-[var(--border-color)] shadow-sm hover:shadow-xl hover:shadow-emerald-500/5 flex items-start gap-4 group hover:border-emerald-500/50 transition-all cursor-pointer hover:-translate-y-1">
+             <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform shadow-inner border border-emerald-500/20"><TrendingUp size={22} /></div>
              <div>
                <h4 className="text-[10px] uppercase font-black tracking-widest opacity-60 mb-0.5">Growth Engine</h4>
                <p className="text-sm font-bold leading-tight">{activeCount} clients have engaged inside 30 days. Outstanding loyalty.</p>
              </div>
            </div>
            
-           <div className="bg-surface p-4 rounded-3xl border border-[var(--border-color)] shadow-sm flex items-start gap-3 group hover:border-amber-500/50 transition-all cursor-pointer" onClick={() => setFilterType('Dormant')}>
-             <div className="w-10 h-10 rounded-full bg-amber-500/10 text-amber-600 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform"><AlertTriangle size={18} /></div>
+           <div className="bg-surface p-5 rounded-3xl border border-[var(--border-color)] shadow-sm hover:shadow-xl hover:shadow-amber-500/5 flex items-start gap-4 group hover:border-amber-500/50 transition-all cursor-pointer hover:-translate-y-1" onClick={() => setFilterType('Dormant')}>
+             <div className="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-600 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform shadow-inner border border-amber-500/20"><AlertTriangle size={22} /></div>
              <div>
                <h4 className="text-[10px] uppercase font-black tracking-widest opacity-60 mb-0.5">Retention Risk</h4>
                <p className="text-sm font-bold leading-tight">{dormantCount} clients are dormant. <span className="text-amber-600">Click to filter & follow up.</span></p>
              </div>
            </div>
            
-           <div className="bg-surface p-4 rounded-3xl border border-[var(--border-color)] shadow-sm flex items-start gap-3 group hover:border-indigo-500/50 transition-all cursor-pointer" onClick={() => setFilterType('Debtors')}>
-             <div className="w-10 h-10 rounded-full bg-indigo-500/10 text-indigo-600 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform"><Zap size={18} /></div>
+           <div className="bg-surface p-5 rounded-3xl border border-[var(--border-color)] shadow-sm hover:shadow-xl hover:shadow-indigo-500/5 flex items-start gap-4 group hover:border-indigo-500/50 transition-all cursor-pointer hover:-translate-y-1" onClick={() => setFilterType('Debtors')}>
+             <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 text-indigo-600 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform shadow-inner border border-indigo-500/20"><Zap size={22} /></div>
              <div>
                <h4 className="text-[10px] uppercase font-black tracking-widest opacity-60 mb-0.5">Liquidity Opportunity</h4>
                <p className="text-sm font-bold leading-tight">₦{totalDebt.toLocaleString()} total uncollected debt. Prioritize top 10% debtors.</p>
@@ -318,14 +319,14 @@ export const ManagerCustomers: React.FC = () => {
             <input 
               type="text" 
               placeholder="Search clients..." 
-              className="w-full bg-surface border border-[var(--border-color)] rounded-2xl py-3 pl-12 pr-4 text-sm focus:outline-none focus:border-emerald-500 transition-colors shadow-sm font-bold"
+              className="w-full bg-surface border border-[var(--border-color)] rounded-2xl py-3 pl-12 pr-4 text-sm focus:outline-none focus:border-emerald-500 transition-all shadow-sm focus:shadow-emerald-500/20 focus:ring-4 focus:ring-emerald-500/10 font-bold"
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
             />
           </div>
           <button 
             onClick={() => setIsAdding(!isAdding)}
-            className="bg-emerald-500 text-white px-6 py-3 rounded-2xl shadow-md hover:bg-emerald-600 transition-colors flex items-center justify-center gap-2 font-bold text-sm whitespace-nowrap"
+            className="bg-emerald-500 text-white px-6 py-3 rounded-2xl shadow-lg shadow-emerald-500/30 hover:shadow-emerald-500/40 hover:-translate-y-0.5 hover:bg-emerald-400 transition-all flex items-center justify-center gap-2 font-bold text-sm whitespace-nowrap border border-emerald-400/50"
           >
             <UserPlus size={18} strokeWidth={2.5} /> Add Client
           </button>
@@ -442,7 +443,7 @@ export const ManagerCustomers: React.FC = () => {
                   visible: { opacity: 1, y: 0 }
                 }}
                 key={c.id} 
-                className={`bg-surface p-5 rounded-3xl border shadow-sm flex flex-col xl:flex-row xl:items-center justify-between gap-5 transition-all group cursor-pointer ${isSelected ? 'border-primary ring-2 ring-primary/20 shadow-md' : 'border-[var(--border-color)] hover:border-emerald-500/40 hover:shadow-md'}`}
+                className={`bg-surface/80 p-5 rounded-[1.5rem] border shadow-sm backdrop-blur-md flex flex-col xl:flex-row xl:items-center justify-between gap-5 transition-all group cursor-pointer hover:shadow-xl hover:-translate-y-1 ${isSelected ? 'border-primary ring-2 ring-primary/20 shadow-primary/10' : 'border-[var(--border-color)] hover:border-emerald-500/50'}`}
                 onClick={(e) => {
                   // If clicking on selects or buttons inside, don't open quick view
                   if ((e.target as HTMLElement).tagName === 'SELECT' || (e.target as HTMLElement).closest('button, a')) return;
@@ -559,7 +560,7 @@ export const ManagerCustomers: React.FC = () => {
                 animate={{ x: 0, opacity: 1 }}
                 exit={{ x: '100%', opacity: 0 }}
                 transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-                className="fixed top-0 right-0 bottom-0 w-full max-w-md bg-surface border-l border-[var(--border-color)] shadow-2xl z-[100] flex flex-col overflow-hidden"
+                className="fixed top-0 right-0 bottom-0 w-full max-w-md bg-surface/95 backdrop-blur-2xl border-l border-white/10 shadow-[0_0_50px_rgba(0,0,0,0.3)] z-[100] flex flex-col overflow-hidden"
               >
                 <div className="bg-gradient-to-br from-primary via-blue-800 to-indigo-900 p-8 rounded-bl-[40px] text-white relative shadow-lg shrink-0">
                   <div className="absolute top-0 right-0 w-48 h-48 bg-white/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/3"></div>
