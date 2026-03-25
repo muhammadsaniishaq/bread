@@ -3,14 +3,140 @@ import { AnimatedPage } from '../components/AnimatedPage';
 import { useAppContext } from '../store/AppContext';
 import {
   Users, ArrowLeft, Search, UserPlus, Truck, Download,
-  CheckSquare, Square, MessageCircle, Settings2, Zap,
-  X, ChevronRight, History, CreditCard, ShieldCheck
+  CheckSquare, Square, Settings2, Zap,
+  X, ChevronRight, History, CreditCard, ShieldCheck, Star,
+  TrendingUp, Phone
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import type { Customer } from '../store/types';
 import { motion, AnimatePresence } from 'framer-motion';
 
+/* ─────────────────────────────────────────────
+   INLINE STYLES  (premium design tokens)
+───────────────────────────────────────────── */
+const css = {
+  page: {
+    background: '#0f0f13',
+    minHeight: '100vh',
+    fontFamily: "'Inter', 'SF Pro Display', system-ui, sans-serif",
+  } as React.CSSProperties,
+
+  hero: {
+    background: 'linear-gradient(145deg, #1a1025 0%, #160e2a 50%, #0f0f1a 100%)',
+    borderRadius: '28px',
+    border: '1px solid rgba(139,92,246,0.15)',
+    boxShadow: '0 8px 48px rgba(139,92,246,0.12), inset 0 1px 0 rgba(255,255,255,0.05)',
+    padding: '28px 24px',
+    position: 'relative' as const,
+    overflow: 'hidden',
+    marginBottom: '24px',
+  },
+
+  statPill: {
+    background: 'rgba(139,92,246,0.08)',
+    border: '1px solid rgba(139,92,246,0.15)',
+    borderRadius: '16px',
+    padding: '14px 16px',
+    backdropFilter: 'blur(12px)',
+    flex: 1,
+  },
+
+  card: (selected: boolean): React.CSSProperties => ({
+    background: selected ? 'rgba(139,92,246,0.06)' : '#18181f',
+    border: selected ? '1px solid rgba(139,92,246,0.4)' : '1px solid rgba(255,255,255,0.06)',
+    borderRadius: '20px',
+    padding: '18px',
+    cursor: 'pointer',
+    transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+    boxShadow: selected ? '0 0 0 3px rgba(139,92,246,0.12)' : '0 2px 8px rgba(0,0,0,0.3)',
+  }),
+
+  searchBox: {
+    background: '#18181f',
+    border: '1px solid rgba(255,255,255,0.08)',
+    borderRadius: '16px',
+    padding: '14px 16px 14px 48px',
+    color: '#fff',
+    fontSize: '14px',
+    fontWeight: 500,
+    outline: 'none',
+    width: '100%',
+    transition: 'all 0.2s',
+  } as React.CSSProperties,
+
+  btn: {
+    primary: {
+      background: 'linear-gradient(135deg, #7c3aed, #6d28d9)',
+      color: '#fff',
+      border: 'none',
+      borderRadius: '14px',
+      padding: '14px 20px',
+      fontWeight: 700,
+      fontSize: '13px',
+      cursor: 'pointer',
+      display: 'flex',
+      alignItems: 'center',
+      gap: '8px',
+      whiteSpace: 'nowrap' as const,
+      boxShadow: '0 4px 20px rgba(124,58,237,0.35)',
+      transition: 'all 0.2s',
+    } as React.CSSProperties,
+    ghost: {
+      background: 'rgba(255,255,255,0.05)',
+      color: 'rgba(255,255,255,0.7)',
+      border: '1px solid rgba(255,255,255,0.08)',
+      borderRadius: '14px',
+      padding: '14px 16px',
+      fontWeight: 600,
+      fontSize: '13px',
+      cursor: 'pointer',
+      display: 'flex',
+      alignItems: 'center',
+      gap: '6px',
+      transition: 'all 0.2s',
+    } as React.CSSProperties,
+  },
+
+  pill: (active: boolean): React.CSSProperties => ({
+    background: active ? 'linear-gradient(135deg, #7c3aed, #6d28d9)' : 'rgba(255,255,255,0.04)',
+    color: active ? '#fff' : 'rgba(255,255,255,0.5)',
+    border: active ? 'none' : '1px solid rgba(255,255,255,0.08)',
+    borderRadius: '10px',
+    padding: '8px 16px',
+    fontSize: '12px',
+    fontWeight: 700,
+    cursor: 'pointer',
+    whiteSpace: 'nowrap' as const,
+    transition: 'all 0.2s',
+    boxShadow: active ? '0 4px 16px rgba(124,58,237,0.3)' : 'none',
+    letterSpacing: '0.02em',
+  }),
+
+  input: {
+    background: 'rgba(255,255,255,0.04)',
+    border: '1px solid rgba(255,255,255,0.08)',
+    borderRadius: '14px',
+    padding: '14px 16px',
+    color: '#fff',
+    fontSize: '14px',
+    fontWeight: 500,
+    outline: 'none',
+    width: '100%',
+    boxSizing: 'border-box' as const,
+    transition: 'all 0.2s',
+  } as React.CSSProperties,
+
+  drawer: {
+    background: '#141419',
+    borderLeft: '1px solid rgba(255,255,255,0.06)',
+    boxShadow: '-20px 0 60px rgba(0,0,0,0.5)',
+  } as React.CSSProperties,
+};
+
+/* ─────────────────────────────────────────────
+     COMPONENT
+───────────────────────────────────────────── */
 export const ManagerCustomers: React.FC = () => {
   const { customers, transactions, addCustomer, updateCustomer, recordDebtPayment } = useAppContext();
   const navigate = useNavigate();
@@ -22,25 +148,19 @@ export const ManagerCustomers: React.FC = () => {
   const [isAdding, setIsAdding] = useState(false);
   const [suppliers, setSuppliers] = useState<{ id: string; full_name: string }[]>([]);
 
-  // Add Client Form
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [selectedSupplierId, setSelectedSupplierId] = useState('');
   const [pin, setPin] = useState('');
 
-  // CRM Drawer
   const [quickViewId, setQuickViewId] = useState<string | null>(null);
   const quickViewCustomer = useMemo(() => customers.find(c => c.id === quickViewId), [customers, quickViewId]);
   const [drawerTab, setDrawerTab] = useState<'profile' | 'ledger' | 'activity'>('profile');
-
-  // Drawer Edit
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState('');
   const [editPhone, setEditPhone] = useState('');
   const [editSupplierId, setEditSupplierId] = useState('');
   const [editPin, setEditPin] = useState('');
-
-  // Ledger
   const [payAmount, setPayAmount] = useState('');
   const [payMethod, setPayMethod] = useState<'Cash' | 'Transfer'>('Cash');
 
@@ -49,7 +169,6 @@ export const ManagerCustomers: React.FC = () => {
       .then(({ data }) => { if (data) setSuppliers(data); });
   }, []);
 
-  // ── Activity Map ──
   const activityMap = useMemo(() => {
     const map: Record<string, number> = {};
     const now = Date.now();
@@ -65,7 +184,6 @@ export const ManagerCustomers: React.FC = () => {
     return map;
   }, [customers, transactions]);
 
-  // ── Filter & Sort ──
   const filteredCustomers = useMemo(() => {
     let list = customers.filter(c => {
       const q = searchTerm.toLowerCase();
@@ -78,30 +196,24 @@ export const ManagerCustomers: React.FC = () => {
       if (filterType === 'Dormant') return activityMap[c.id] > 30;
       return true;
     });
-
-    list = [...list].sort((a, b) => {
+    return [...list].sort((a, b) => {
       if (sortBy === 'A-Z') return a.name.localeCompare(b.name);
       if (sortBy === 'Debt') return (b.debtBalance || 0) - (a.debtBalance || 0);
       if (sortBy === 'VIP') return (b.loyaltyPoints || 0) - (a.loyaltyPoints || 0);
       return Number(b.id) - Number(a.id);
     });
-
-    return list;
   }, [customers, searchTerm, filterType, sortBy, activityMap]);
 
-  // ── Stats ──
   const totalDebt = customers.reduce((s, c) => s + (c.debtBalance || 0), 0);
   const routedCount = customers.filter(c => c.assignedSupplierId).length;
   const debtorCount = customers.filter(c => c.debtBalance > 0).length;
+  const activeCount = customers.filter(c => activityMap[c.id] <= 30).length;
 
-  // ── Actions ──
-  const toggleSelection = (id: string) => {
+  const toggleSelection = (id: string) =>
     setSelectedIds(p => p.includes(id) ? p.filter(x => x !== id) : [...p, id]);
-  };
 
-  const handleAssign = async (c: Customer, sid: string) => {
+  const handleAssign = async (c: Customer, sid: string) =>
     await updateCustomer({ ...c, assignedSupplierId: sid || undefined });
-  };
 
   const bulkAssign = async (sid: string) => {
     for (const id of selectedIds) {
@@ -112,48 +224,35 @@ export const ManagerCustomers: React.FC = () => {
   };
 
   const exportCSV = () => {
-    const rows = (selectedIds.length > 0 ? customers.filter(c => selectedIds.includes(c.id)) : filteredCustomers);
+    const rows = selectedIds.length > 0 ? customers.filter(c => selectedIds.includes(c.id)) : filteredCustomers;
     const csv = "data:text/csv;charset=utf-8,"
       + ["Name,Phone,Debt,Loyalty,Route"]
         .concat(rows.map(c => `${c.name},${c.phone || ''},${c.debtBalance},${c.loyaltyPoints || 0},${suppliers.find(s => s.id === c.assignedSupplierId)?.full_name || 'Store'}`))
         .join("\n");
     const a = document.createElement("a");
-    a.href = encodeURI(csv);
-    a.download = `customers_${Date.now()}.csv`;
+    a.href = encodeURI(csv); a.download = `customers_${Date.now()}.csv`;
     document.body.appendChild(a); a.click(); document.body.removeChild(a);
   };
 
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name) return;
-    await addCustomer({
-      id: Date.now().toString(), name, phone, location: '', notes: '',
-      debtBalance: 0, loyaltyPoints: 0,
-      assignedSupplierId: selectedSupplierId || undefined,
-      pin: pin || undefined
-    });
+    await addCustomer({ id: Date.now().toString(), name, phone, location: '', notes: '', debtBalance: 0, loyaltyPoints: 0, assignedSupplierId: selectedSupplierId || undefined, pin: pin || undefined });
     setName(''); setPhone(''); setPin(''); setSelectedSupplierId(''); setIsAdding(false);
   };
 
   const handleEditSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editName || !quickViewCustomer) return;
-    await updateCustomer({
-      ...quickViewCustomer, name: editName, phone: editPhone,
-      assignedSupplierId: editSupplierId || undefined, pin: editPin || undefined
-    });
+    await updateCustomer({ ...quickViewCustomer, name: editName, phone: editPhone, assignedSupplierId: editSupplierId || undefined, pin: editPin || undefined });
     setIsEditing(false);
   };
 
   const handleDebtPay = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!payAmount || !quickViewId) return;
     const amt = Number(payAmount);
-    if (amt <= 0) return;
-    await recordDebtPayment({
-      id: Date.now().toString(), date: new Date().toISOString(),
-      customerId: quickViewId, amount: amt, method: payMethod
-    });
+    if (!amt || !quickViewId) return;
+    await recordDebtPayment({ id: Date.now().toString(), date: new Date().toISOString(), customerId: quickViewId, amount: amt, method: payMethod });
     setPayAmount('');
   };
 
@@ -164,139 +263,153 @@ export const ManagerCustomers: React.FC = () => {
     setIsEditing(false); setDrawerTab('profile');
   };
 
-  // ── Activity badge helper ──
   const actBadge = (days: number) => {
-    if (days === 9999) return { text: 'No Activity', cls: 'bg-gray-100 text-gray-500' };
-    if (days === 0)    return { text: 'Active Today', cls: 'bg-emerald-50 text-emerald-600' };
-    if (days <= 7)     return { text: 'Hot 🔥', cls: 'bg-orange-50 text-orange-600' };
-    if (days <= 30)    return { text: `${days}d ago`, cls: 'bg-blue-50 text-blue-600' };
-    return { text: 'Dormant', cls: 'bg-amber-50 text-amber-600' };
+    if (days === 9999) return { text: 'No Activity', bg: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.3)' };
+    if (days === 0)    return { text: 'Today', bg: 'rgba(52,211,153,0.1)', color: '#34d399' };
+    if (days <= 7)     return { text: `${days}d ago 🔥`, bg: 'rgba(251,146,60,0.1)', color: '#fb923c' };
+    if (days <= 30)    return { text: `${days}d ago`, bg: 'rgba(96,165,250,0.1)', color: '#60a5fa' };
+    return { text: 'Dormant', bg: 'rgba(251,191,36,0.08)', color: '#fbbf24' };
+  };
+
+  const avatarColor = (name: string) => {
+    const colors = [
+      ['#7c3aed','#6d28d9'], ['#2563eb','#1d4ed8'], ['#059669','#047857'],
+      ['#dc2626','#b91c1c'], ['#d97706','#b45309'], ['#0891b2','#0e7490'],
+    ];
+    return colors[name.charCodeAt(0) % colors.length];
   };
 
   return (
     <AnimatedPage>
-      <div className="px-4 pb-28 min-h-screen" style={{ background: 'linear-gradient(180deg, #f0f4ff 0%, #fafbff 40%, #ffffff 100%)' }}>
+      <div style={css.page} className="px-4 pb-28">
 
-        {/* ═══ HEADER ═══ */}
-        <div className="flex items-center justify-between mb-8 pt-4">
-          <div className="flex items-center gap-4">
-            <button onClick={() => navigate(-1)}
-              className="w-11 h-11 rounded-2xl bg-white shadow-[0_2px_12px_rgba(99,102,241,0.12)] border border-indigo-100/50 flex items-center justify-center hover:shadow-[0_4px_20px_rgba(99,102,241,0.2)] hover:-translate-y-0.5 transition-all duration-300">
-              <ArrowLeft size={18} className="text-indigo-600" />
+        {/* ── HEADER ── */}
+        <div style={{ paddingTop: '20px', marginBottom: '28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+            <button onClick={() => navigate(-1)} style={{
+              width: '44px', height: '44px', borderRadius: '14px',
+              background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+              transition: 'all 0.2s'
+            }}>
+              <ArrowLeft size={18} color="rgba(255,255,255,0.8)" />
             </button>
             <div>
-              <h1 className="text-2xl font-black tracking-tight bg-gradient-to-r from-gray-900 via-indigo-900 to-indigo-600 bg-clip-text text-transparent">
+              <h1 style={{ fontSize: '22px', fontWeight: 900, color: '#fff', margin: 0, letterSpacing: '-0.03em' }}>
                 Customer Base
               </h1>
-              <p className="text-[11px] font-semibold text-gray-400 tracking-wide mt-0.5">Manage & track your clients</p>
+              <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.35)', margin: 0, marginTop: '2px', fontWeight: 500 }}>
+                {customers.length} clients · ₦{totalDebt.toLocaleString()} total debt
+              </p>
             </div>
           </div>
-          <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-indigo-500 to-indigo-700 flex items-center justify-center shadow-lg shadow-indigo-500/25">
-            <Users size={18} className="text-white" />
-          </div>
-        </div>
-
-        {/* ═══ HERO STATS ═══ */}
-        <div className="relative rounded-[32px] p-7 mb-8 text-white shadow-[0_8px_40px_rgba(79,70,229,0.35)] overflow-hidden" style={{ background: 'linear-gradient(135deg, #4f46e5 0%, #4338ca 40%, #312e81 100%)' }}>
-          <div className="absolute -top-24 -right-24 w-72 h-72 bg-white/8 rounded-full blur-[60px]"></div>
-          <div className="absolute bottom-0 left-0 w-48 h-48 bg-indigo-300/10 rounded-full blur-[50px]"></div>
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-indigo-400/5 rounded-full blur-[80px]"></div>
-
-          <div className="flex justify-between items-start mb-7 relative z-10">
-            <div>
-              <p className="text-[10px] opacity-60 font-bold uppercase tracking-[0.2em] mb-1">Total Clients</p>
-              <h2 className="text-5xl font-black tracking-tighter leading-none">{customers.length}</h2>
-            </div>
-            <div className="text-right bg-white/10 backdrop-blur-md rounded-2xl px-5 py-3 border border-white/10">
-              <p className="text-[10px] opacity-60 font-bold uppercase tracking-[0.2em] mb-0.5">Outstanding Debt</p>
-              <h2 className="text-xl font-black text-amber-300">₦{totalDebt.toLocaleString()}</h2>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-3 gap-3 relative z-10">
-            <div className="bg-white/8 backdrop-blur-md p-4 rounded-2xl border border-white/10 hover:bg-white/12 transition-colors cursor-pointer">
-              <p className="text-[10px] opacity-50 font-bold uppercase tracking-[0.15em]">Routed</p>
-              <p className="text-2xl font-black mt-1">{routedCount}</p>
-            </div>
-            <div className="bg-white/8 backdrop-blur-md p-4 rounded-2xl border border-white/10 hover:bg-white/12 transition-colors cursor-pointer">
-              <p className="text-[10px] opacity-50 font-bold uppercase tracking-[0.15em]">Open Market</p>
-              <p className="text-2xl font-black mt-1">{customers.length - routedCount}</p>
-            </div>
-            <div className="bg-white/8 backdrop-blur-md p-4 rounded-2xl border border-white/10 hover:bg-white/12 transition-colors cursor-pointer">
-              <p className="text-[10px] opacity-50 font-bold uppercase tracking-[0.15em]">Debtors</p>
-              <p className="text-2xl font-black mt-1 text-amber-300">{debtorCount}</p>
-            </div>
+          <div style={{
+            width: '44px', height: '44px', borderRadius: '14px',
+            background: 'linear-gradient(135deg, #7c3aed, #6d28d9)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            boxShadow: '0 4px 20px rgba(124,58,237,0.4)'
+          }}>
+            <Users size={20} color="#fff" />
           </div>
         </div>
 
-        {/* ═══ SEARCH + ADD ═══ */}
-        <div className="flex gap-3 mb-6">
-          <div className="relative flex-1">
-            <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-indigo-300" />
+        {/* ── HERO STATS CARD ── */}
+        <div style={css.hero}>
+          {/* Glow orbs */}
+          <div style={{ position: 'absolute', top: '-60px', right: '-60px', width: '200px', height: '200px', background: 'radial-gradient(circle, rgba(139,92,246,0.15), transparent 70%)', pointerEvents: 'none' }} />
+          <div style={{ position: 'absolute', bottom: '-40px', left: '-40px', width: '160px', height: '160px', background: 'radial-gradient(circle, rgba(99,102,241,0.1), transparent 70%)', pointerEvents: 'none' }} />
+
+          {/* Big number */}
+          <div style={{ position: 'relative', zIndex: 1 }}>
+            <p style={{ fontSize: '11px', fontWeight: 700, color: 'rgba(255,255,255,0.35)', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '4px' }}>Total Clients</p>
+            <div style={{ display: 'flex', alignItems: 'flex-end', gap: '12px', marginBottom: '8px' }}>
+              <span style={{ fontSize: '56px', fontWeight: 900, color: '#fff', lineHeight: 1, letterSpacing: '-0.04em' }}>{customers.length}</span>
+              <div style={{ marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(52,211,153,0.1)', border: '1px solid rgba(52,211,153,0.2)', borderRadius: '8px', padding: '4px 10px' }}>
+                <TrendingUp size={12} color="#34d399" />
+                <span style={{ fontSize: '11px', fontWeight: 700, color: '#34d399' }}>{activeCount} active</span>
+              </div>
+            </div>
+
+            {/* Stat pills */}
+            <div style={{ display: 'flex', gap: '10px', marginTop: '16px' }}>
+              <div style={css.statPill}>
+                <p style={{ fontSize: '10px', color: 'rgba(255,255,255,0.35)', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '6px' }}>Routed</p>
+                <p style={{ fontSize: '22px', fontWeight: 900, color: '#fff', margin: 0 }}>{routedCount}</p>
+              </div>
+              <div style={css.statPill}>
+                <p style={{ fontSize: '10px', color: 'rgba(255,255,255,0.35)', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '6px' }}>Open Market</p>
+                <p style={{ fontSize: '22px', fontWeight: 900, color: '#fff', margin: 0 }}>{customers.length - routedCount}</p>
+              </div>
+              <div style={{ ...css.statPill, background: 'rgba(251,191,36,0.07)', borderColor: 'rgba(251,191,36,0.15)' }}>
+                <p style={{ fontSize: '10px', color: 'rgba(251,191,36,0.6)', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '6px' }}>Debtors</p>
+                <p style={{ fontSize: '22px', fontWeight: 900, color: '#fbbf24', margin: 0 }}>{debtorCount}</p>
+              </div>
+            </div>
+
+            {/* Total debt bar */}
+            <div style={{ marginTop: '18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(251,191,36,0.05)', border: '1px solid rgba(251,191,36,0.1)', borderRadius: '12px', padding: '12px 16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Zap size={14} color="#fbbf24" />
+                <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)', fontWeight: 600 }}>Outstanding Debt</span>
+              </div>
+              <span style={{ fontSize: '16px', fontWeight: 900, color: '#fbbf24' }}>₦{totalDebt.toLocaleString()}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* ── SEARCH + ACTIONS ── */}
+        <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
+          <div style={{ position: 'relative', flex: 1 }}>
+            <Search size={16} color="rgba(255,255,255,0.25)" style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
             <input
-              className="w-full bg-white rounded-2xl py-3.5 pl-12 pr-4 border border-indigo-100/50 shadow-[0_2px_12px_rgba(99,102,241,0.06)] focus:shadow-[0_4px_24px_rgba(99,102,241,0.15)] focus:border-indigo-300 outline-none text-sm font-semibold transition-all duration-300 placeholder:text-gray-400"
-              placeholder="Search clients by name or phone..."
+              style={css.searchBox}
+              placeholder="Search by name or phone..."
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
+              onFocus={e => { e.target.style.borderColor = 'rgba(139,92,246,0.4)'; e.target.style.boxShadow = '0 0 0 3px rgba(139,92,246,0.1)'; }}
+              onBlur={e => { e.target.style.borderColor = 'rgba(255,255,255,0.08)'; e.target.style.boxShadow = 'none'; }}
             />
           </div>
-          <button onClick={() => setIsAdding(!isAdding)}
-            className="bg-gradient-to-r from-indigo-600 to-indigo-700 text-white px-5 py-3 rounded-2xl shadow-lg shadow-indigo-500/25 hover:shadow-indigo-500/40 hover:-translate-y-0.5 transition-all duration-300 flex items-center gap-2 font-bold text-sm whitespace-nowrap">
-            <UserPlus size={18} /> Add
-          </button>
-          <button onClick={exportCSV}
-            className="bg-white border border-indigo-100/50 text-indigo-600 px-4 py-3 rounded-2xl shadow-[0_2px_8px_rgba(99,102,241,0.08)] hover:shadow-[0_4px_16px_rgba(99,102,241,0.15)] hover:-translate-y-0.5 transition-all duration-300 flex items-center gap-1 font-bold text-xs whitespace-nowrap">
-            <Download size={16} />
-          </button>
+          <button onClick={() => setIsAdding(!isAdding)} style={css.btn.primary}><UserPlus size={16} /> Add</button>
+          <button onClick={exportCSV} style={css.btn.ghost}><Download size={16} /></button>
         </div>
 
-        {/* ═══ ADD CLIENT FORM ═══ */}
+        {/* ── ADD CLIENT FORM ── */}
         <AnimatePresence>
           {isAdding && (
-            <motion.form
-              initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }} transition={{ duration: 0.25 }}
-              onSubmit={handleAdd}
-              className="bg-white rounded-3xl border border-indigo-100/30 shadow-[0_4px_24px_rgba(99,102,241,0.1)] p-6 mb-7 overflow-hidden"
-            >
-              <h3 className="text-sm font-black mb-5 flex items-center gap-2 text-gray-800"><div className="w-8 h-8 rounded-xl bg-indigo-100 flex items-center justify-center"><UserPlus size={16} className="text-indigo-600" /></div> Register New Client</h3>
-              <div className="grid gap-4">
-                <input type="text" placeholder="Full Name" value={name} onChange={e => setName(e.target.value)} required
-                  className="w-full bg-gray-50/80 rounded-2xl p-3.5 text-sm font-semibold outline-none focus:bg-white focus:shadow-[0_0_0_3px_rgba(99,102,241,0.15)] border border-gray-100 focus:border-indigo-300 transition-all duration-300" />
-                <input type="tel" placeholder="Phone Number (Optional)" value={phone} onChange={e => setPhone(e.target.value)}
-                  className="w-full bg-gray-50/80 rounded-2xl p-3.5 text-sm font-semibold outline-none focus:bg-white focus:shadow-[0_0_0_3px_rgba(99,102,241,0.15)] border border-gray-100 focus:border-indigo-300 transition-all duration-300" />
-                <input type="text" maxLength={4} placeholder="Login PIN (4 Digits)" value={pin}
-                  onChange={e => setPin(e.target.value.replace(/\D/g, ''))}
-                  className="w-full bg-gray-50/80 rounded-2xl p-3.5 text-sm font-semibold font-mono tracking-[0.3em] outline-none focus:bg-white focus:shadow-[0_0_0_3px_rgba(99,102,241,0.15)] border border-gray-100 focus:border-indigo-300 transition-all duration-300" />
-                <select value={selectedSupplierId} onChange={e => setSelectedSupplierId(e.target.value)}
-                  className="w-full bg-gray-50/80 rounded-2xl p-3.5 text-sm font-semibold outline-none focus:bg-white focus:shadow-[0_0_0_3px_rgba(99,102,241,0.15)] border border-gray-100 focus:border-indigo-300 transition-all duration-300">
+            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
+              style={{ background: '#1a1024', borderRadius: '20px', border: '1px solid rgba(139,92,246,0.2)', padding: '24px', marginBottom: '20px', overflow: 'hidden',boxShadow: '0 8px 32px rgba(139,92,246,0.12)' }}>
+              <h3 style={{ color: '#fff', fontWeight: 800, fontSize: '15px', marginBottom: '18px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{ width: '32px', height: '32px', borderRadius: '10px', background: 'linear-gradient(135deg,#7c3aed,#6d28d9)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <UserPlus size={16} color="#fff" />
+                </div>
+                Register New Client
+              </h3>
+              <form onSubmit={handleAdd} style={{ display: 'grid', gap: '12px' }}>
+                <input style={css.input} placeholder="Full Name *" value={name} onChange={e => setName(e.target.value)} required />
+                <input style={css.input} placeholder="Phone Number" type="tel" value={phone} onChange={e => setPhone(e.target.value)} />
+                <input style={{ ...css.input, fontFamily: 'monospace', letterSpacing: '0.3em' }} maxLength={4} placeholder="Login PIN (4 digits)" value={pin} onChange={e => setPin(e.target.value.replace(/\D/g, ''))} />
+                <select style={{ ...css.input, cursor: 'pointer' }} value={selectedSupplierId} onChange={e => setSelectedSupplierId(e.target.value)}>
                   <option value="">Unassigned (Store)</option>
                   {suppliers.map(s => <option key={s.id} value={s.id}>{s.full_name}</option>)}
                 </select>
-                <button type="submit" className="bg-gradient-to-r from-indigo-600 to-indigo-700 text-white py-3.5 rounded-2xl font-bold text-sm shadow-lg shadow-indigo-500/25 hover:shadow-indigo-500/40 hover:-translate-y-0.5 transition-all duration-300">Save Client</button>
-              </div>
-            </motion.form>
+                <button type="submit" style={{ ...css.btn.primary, justifyContent: 'center', width: '100%' }}>Save Client</button>
+              </form>
+            </motion.div>
           )}
         </AnimatePresence>
 
-        {/* ═══ FILTERS + SORT ═══ */}
-        <div className="flex items-center justify-between mb-6 gap-3">
-          <div className="flex gap-2 overflow-x-auto flex-1 pb-1 scrollbar-hide">
-            {(['All','Routed','Unassigned','Debtors','Active','Dormant'] as const).map(f => (
-              <button key={f} onClick={() => setFilterType(f)}
-                className={`px-5 py-2.5 rounded-2xl text-xs font-bold transition-all duration-300 whitespace-nowrap ${
-                  filterType === f
-                    ? 'bg-gradient-to-r from-indigo-600 to-indigo-700 text-white shadow-lg shadow-indigo-500/25 scale-[1.02]'
-                    : 'bg-white text-gray-500 border border-gray-100 hover:border-indigo-200 hover:text-indigo-600 hover:shadow-sm'
-                }`}>
-                {f}
-              </button>
+        {/* ── FILTERS + SORT ── */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
+          <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', flex: 1, paddingBottom: '4px' }}>
+            {(['All', 'Routed', 'Unassigned', 'Debtors', 'Active', 'Dormant'] as const).map(f => (
+              <button key={f} onClick={() => setFilterType(f)} style={css.pill(filterType === f)}>{f}</button>
             ))}
           </div>
-          <div className="relative shrink-0">
-            <Settings2 size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-indigo-400" />
+          <div style={{ position: 'relative', shrink: 0 } as any}>
+            <Settings2 size={13} color="rgba(139,92,246,0.7)" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
             <select value={sortBy} onChange={e => setSortBy(e.target.value as any)}
-              className="bg-white border border-indigo-100/50 rounded-2xl py-2.5 pl-9 pr-4 text-xs font-bold shadow-[0_2px_8px_rgba(99,102,241,0.06)] outline-none focus:shadow-[0_0_0_3px_rgba(99,102,241,0.12)] focus:border-indigo-300 transition-all duration-300 appearance-none cursor-pointer">
+              style={{ background: '#18181f', color: 'rgba(255,255,255,0.7)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '12px', padding: '10px 12px 10px 34px', fontSize: '12px', fontWeight: 700, outline: 'none', cursor: 'pointer' }}>
               <option value="Newest">Newest</option>
               <option value="A-Z">A → Z</option>
               <option value="Debt">Highest Debt</option>
@@ -305,99 +418,107 @@ export const ManagerCustomers: React.FC = () => {
           </div>
         </div>
 
-        {/* ═══ BULK ACTIONS BANNER ═══ */}
+        {/* ── BULK BANNER ── */}
         <AnimatePresence>
           {selectedIds.length > 0 && (
-            <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
-              className="bg-gradient-to-r from-indigo-600 to-indigo-700 text-white p-4 rounded-2xl mb-6 shadow-xl shadow-indigo-500/25 flex flex-wrap items-center justify-between gap-3 sticky top-4 z-50 border border-indigo-500/30">
-              <span className="font-bold text-sm flex items-center gap-2"><CheckSquare size={16} /> {selectedIds.length} Selected</span>
-              <div className="flex items-center gap-2">
+            <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
+              style={{ background: 'linear-gradient(135deg,#7c3aed,#6d28d9)', borderRadius: '16px', padding: '14px 18px', marginBottom: '18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap', position: 'sticky', top: '16px', zIndex: 50, boxShadow: '0 8px 32px rgba(124,58,237,0.35)' }}>
+              <span style={{ color: '#fff', fontWeight: 700, fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <CheckSquare size={16} /> {selectedIds.length} selected
+              </span>
+              <div style={{ display: 'flex', gap: '8px' }}>
                 <select onChange={e => bulkAssign(e.target.value)} value=""
-                  className="bg-white/15 backdrop-blur-md text-white rounded-xl px-3 py-2 text-xs font-bold border border-white/20 outline-none">
+                  style={{ background: 'rgba(0,0,0,0.25)', color: '#fff', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '10px', padding: '8px 12px', fontSize: '12px', fontWeight: 700, outline: 'none', cursor: 'pointer' }}>
                   <option value="" disabled>Bulk Route...</option>
                   <option value="">Unassign</option>
                   {suppliers.map(s => <option key={s.id} value={s.id}>{s.full_name}</option>)}
                 </select>
-                <button onClick={() => setSelectedIds([])} className="bg-white/15 hover:bg-white/25 backdrop-blur-md px-4 py-2 rounded-xl text-xs font-bold transition-all duration-300 border border-white/20">Clear</button>
+                <button onClick={() => setSelectedIds([])}
+                  style={{ background: 'rgba(255,255,255,0.15)', color: '#fff', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '10px', padding: '8px 14px', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}>
+                  Clear
+                </button>
               </div>
             </motion.div>
           )}
         </AnimatePresence>
 
-        {/* ═══ CUSTOMER LIST ═══ */}
-        <motion.div className="space-y-4"
+        {/* ── CUSTOMER LIST ── */}
+        <motion.div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}
           initial="hidden" animate="visible"
           variants={{ hidden: { opacity: 0 }, visible: { opacity: 1, transition: { staggerChildren: 0.04 } } }}>
 
           {filteredCustomers.map(c => {
-            const isSelected = selectedIds.includes(c.id);
+            const selected = selectedIds.includes(c.id);
             const isVIP = (c.loyaltyPoints || 0) > 100;
             const badge = actBadge(activityMap[c.id]);
+            const [from, to] = avatarColor(c.name);
 
             return (
               <motion.div key={c.id}
-                variants={{ hidden: { opacity: 0, y: 16 }, visible: { opacity: 1, y: 0 } }}
-                className={`bg-white p-5 rounded-[20px] border transition-all duration-300 cursor-pointer hover:shadow-[0_8px_30px_rgba(99,102,241,0.12)] hover:-translate-y-1 ${
-                  isSelected ? 'border-indigo-400 shadow-[0_0_0_3px_rgba(99,102,241,0.12)]' : 'border-gray-100/80 shadow-[0_2px_12px_rgba(0,0,0,0.04)]'
-                }`}
+                variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }}
+                whileHover={{ y: -2, boxShadow: '0 8px 32px rgba(0,0,0,0.5)' }}
+                style={css.card(selected)}
                 onClick={e => {
                   if ((e.target as HTMLElement).tagName === 'SELECT' || (e.target as HTMLElement).closest('button, a, select')) return;
                   openDrawer(c);
-                }}
-              >
-                {/* Row 1: Avatar + Info */}
-                <div className="flex items-center gap-3.5 mb-4">
-                  <button onClick={e => { e.stopPropagation(); toggleSelection(c.id); }} className="transition-transform duration-200 hover:scale-110">
-                    {isSelected ? <CheckSquare size={20} className="text-indigo-600" /> : <Square size={20} className="text-gray-300" />}
+                }}>
+
+                {/* Row 1 */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '14px' }}>
+                  <button onClick={e => { e.stopPropagation(); toggleSelection(c.id); }}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', flexShrink: 0 }}>
+                    {selected ? <CheckSquare size={20} color="#a78bfa" /> : <Square size={20} color="rgba(255,255,255,0.15)" />}
                   </button>
 
-                  <div className={`w-13 h-13 rounded-2xl flex items-center justify-center font-black text-lg text-white shrink-0 ${
-                    isVIP ? 'bg-gradient-to-br from-amber-400 via-yellow-500 to-orange-500 shadow-lg shadow-amber-500/25' : 'bg-gradient-to-br from-indigo-500 to-indigo-700 shadow-lg shadow-indigo-500/20'
-                  }`} style={{ width: '52px', height: '52px' }}>
+                  <div style={{ width: '48px', height: '48px', borderRadius: '14px', background: `linear-gradient(135deg,${from},${to})`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', fontWeight: 900, color: '#fff', flexShrink: 0, boxShadow: `0 4px 16px ${from}40` }}>
                     {c.name.charAt(0)}
                   </div>
 
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <p className="font-black text-gray-900 truncate text-[15px]">{c.name}</p>
-                      {isVIP && <span className="text-[8px] bg-gradient-to-r from-amber-400 to-orange-500 text-white px-2.5 py-0.5 rounded-full font-black uppercase tracking-widest shadow-sm">VIP</span>}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                      <span style={{ color: '#fff', fontWeight: 800, fontSize: '15px', letterSpacing: '-0.01em' }}>{c.name}</span>
+                      {isVIP && (
+                        <span style={{ background: 'linear-gradient(135deg,#f59e0b,#d97706)', color: '#fff', fontSize: '9px', fontWeight: 900, padding: '2px 8px', borderRadius: '6px', letterSpacing: '0.08em', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '3px' }}>
+                          <Star size={8} fill="#fff" /> VIP
+                        </span>
+                      )}
                     </div>
-                    <div className="flex items-center gap-2 flex-wrap mt-1">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginTop: '5px' }}>
                       {c.phone ? (
                         <a href={`https://wa.me/${c.phone.replace(/\D/g,'')}`} target="_blank" rel="noopener noreferrer"
                           onClick={e => e.stopPropagation()}
-                          className="text-xs text-emerald-600 font-semibold flex items-center gap-1 hover:text-emerald-700 transition-colors bg-emerald-50 px-2 py-0.5 rounded-lg">
-                          <MessageCircle size={10} /> {c.phone}
+                          style={{ color: '#34d399', fontSize: '12px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px', textDecoration: 'none', background: 'rgba(52,211,153,0.08)', padding: '3px 8px', borderRadius: '7px' }}>
+                          <Phone size={10} /> {c.phone}
                         </a>
                       ) : (
-                        <span className="text-xs text-gray-400 font-medium">No phone</span>
+                        <span style={{ color: 'rgba(255,255,255,0.2)', fontSize: '12px', fontWeight: 500 }}>No phone</span>
                       )}
-                      <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-lg ${badge.cls}`}>{badge.text}</span>
+                      <span style={{ fontSize: '11px', fontWeight: 700, padding: '3px 8px', borderRadius: '7px', background: badge.bg, color: badge.color }}>{badge.text}</span>
                     </div>
                   </div>
 
                   {c.debtBalance > 0 && (
-                    <div className="text-right shrink-0">
-                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Debt</p>
-                      <p className="text-sm font-black text-red-500">₦{c.debtBalance.toLocaleString()}</p>
+                    <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                      <p style={{ fontSize: '10px', color: 'rgba(255,255,255,0.3)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '2px' }}>Debt</p>
+                      <p style={{ color: '#f87171', fontWeight: 900, fontSize: '14px', margin: 0 }}>₦{c.debtBalance.toLocaleString()}</p>
                     </div>
                   )}
                 </div>
 
-                {/* Row 2: Route + View */}
-                <div className="flex justify-between items-center pt-3 border-t border-gray-50">
-                  <div className="flex items-center gap-2">
-                    <Truck size={12} className="text-indigo-300" />
+                {/* Row 2 */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '12px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Truck size={13} color="rgba(139,92,246,0.5)" />
                     <select onClick={e => e.stopPropagation()}
-                      className="text-xs bg-gray-50/80 rounded-xl px-3 py-2 font-semibold border border-gray-100 outline-none focus:shadow-[0_0_0_3px_rgba(99,102,241,0.12)] focus:border-indigo-300 transition-all duration-300 cursor-pointer"
-                      value={c.assignedSupplierId || ''} onChange={e => handleAssign(c, e.target.value)}>
+                      value={c.assignedSupplierId || ''} onChange={e => handleAssign(c, e.target.value)}
+                      style={{ background: 'rgba(255,255,255,0.04)', color: 'rgba(255,255,255,0.7)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '10px', padding: '7px 12px', fontSize: '12px', fontWeight: 600, outline: 'none', cursor: 'pointer' }}>
                       <option value="">Store</option>
                       {suppliers.map(s => <option key={s.id} value={s.id}>{s.full_name}</option>)}
                     </select>
                   </div>
                   <button onClick={e => { e.stopPropagation(); navigate(`/customers/${c.id}`); }}
-                    className="text-xs font-bold text-indigo-600 hover:text-indigo-800 transition-all duration-300 flex items-center gap-1 bg-indigo-50 px-3 py-1.5 rounded-lg hover:bg-indigo-100">
-                    View <ChevronRight size={14} />
+                    style={{ background: 'rgba(139,92,246,0.1)', color: '#a78bfa', border: '1px solid rgba(139,92,246,0.2)', borderRadius: '10px', padding: '7px 14px', fontSize: '12px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    View <ChevronRight size={13} />
                   </button>
                 </div>
               </motion.div>
@@ -405,121 +526,109 @@ export const ManagerCustomers: React.FC = () => {
           })}
 
           {filteredCustomers.length === 0 && (
-            <div className="text-center py-16 opacity-50">
-              <Users size={48} className="mx-auto mb-3 opacity-20" />
-              <p className="font-bold text-sm">No Clients Found</p>
-              <p className="text-xs mt-1">Adjust your search or filters.</p>
+            <div style={{ textAlign: 'center', padding: '64px 0', color: 'rgba(255,255,255,0.2)' }}>
+              <Users size={48} style={{ margin: '0 auto 12px', opacity: 0.15 }} />
+              <p style={{ fontWeight: 700, fontSize: '14px' }}>No Clients Found</p>
+              <p style={{ fontSize: '12px', marginTop: '4px' }}>Try adjusting your search or filters.</p>
             </div>
           )}
         </motion.div>
 
-        {/* ═══ CRM QUICK VIEW DRAWER ═══ */}
+        {/* ── CRM DRAWER ── */}
         <AnimatePresence>
           {quickViewCustomer && (
             <>
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[90]"
+                style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)', zIndex: 90 }}
                 onClick={() => setQuickViewId(null)} />
 
-              <motion.div
-                initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
+              <motion.div initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
                 transition={{ type: 'spring', damping: 28, stiffness: 220 }}
-                className="fixed top-0 right-0 bottom-0 w-full max-w-md bg-white z-[100] flex flex-col overflow-hidden shadow-[0_0_60px_rgba(0,0,0,0.15)]"
-              >
-                {/* Drawer Header */}
-                <div className="p-6 pb-8 rounded-bl-[36px] text-white relative shrink-0 overflow-hidden" style={{ background: 'linear-gradient(135deg, #4f46e5 0%, #4338ca 50%, #312e81 100%)' }}>
-                  <div className="absolute -top-20 -right-20 w-56 h-56 bg-white/5 rounded-full blur-[40px]"></div>
-                  <div className="absolute bottom-0 left-0 w-32 h-32 bg-indigo-300/10 rounded-full blur-[30px]"></div>
-                  <button onClick={() => setQuickViewId(null)}
-                    className="absolute top-5 right-5 w-9 h-9 rounded-xl bg-white/10 hover:bg-white/20 flex items-center justify-center transition-all duration-300 backdrop-blur-md border border-white/10">
-                    <X size={16} />
+                style={{ position: 'fixed', top: 0, right: 0, bottom: 0, width: '100%', maxWidth: '420px', zIndex: 100, display: 'flex', flexDirection: 'column', overflow: 'hidden', ...css.drawer }}>
+
+                {/* Drawer header */}
+                <div style={{ padding: '28px 24px 24px', background: 'linear-gradient(145deg,#1a1025,#160e2a)', borderBottom: '1px solid rgba(255,255,255,0.06)', position: 'relative', overflow: 'hidden', flexShrink: 0 }}>
+                  <div style={{ position: 'absolute', top: '-50px', right: '-50px', width: '160px', height: '160px', background: 'radial-gradient(circle, rgba(139,92,246,0.2), transparent 70%)', pointerEvents: 'none' }} />
+
+                  <button onClick={() => setQuickViewId(null)} style={{ position: 'absolute', top: '20px', right: '20px', width: '36px', height: '36px', borderRadius: '10px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                    <X size={16} color="rgba(255,255,255,0.7)" />
                   </button>
 
-                  <div className="w-16 h-16 bg-white/10 border border-white/15 rounded-2xl flex items-center justify-center text-2xl font-black mb-3 backdrop-blur-md shadow-inner">
+                  <div style={{ width: '60px', height: '60px', borderRadius: '18px', background: `linear-gradient(135deg,${avatarColor(quickViewCustomer.name)[0]},${avatarColor(quickViewCustomer.name)[1]})`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', fontWeight: 900, color: '#fff', marginBottom: '14px', boxShadow: `0 8px 24px ${avatarColor(quickViewCustomer.name)[0]}50` }}>
                     {quickViewCustomer.name.charAt(0)}
                   </div>
-                  <h2 className="text-xl font-black tracking-tight">{quickViewCustomer.name}</h2>
-                  <p className="text-[11px] opacity-60 font-semibold uppercase tracking-[0.15em] mt-1">
-                    {quickViewCustomer.phone || 'No Phone'} • {quickViewCustomer.location || 'No Location'}
+
+                  <h2 style={{ color: '#fff', fontWeight: 900, fontSize: '20px', margin: 0, letterSpacing: '-0.02em' }}>{quickViewCustomer.name}</h2>
+                  <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '12px', fontWeight: 500, margin: '4px 0 14px', letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+                    {quickViewCustomer.phone || 'No Phone'} · {quickViewCustomer.location || 'No Location'}
                   </p>
-                  <div className="flex gap-2 mt-4 flex-wrap">
+
+                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                     {quickViewCustomer.pin ? (
-                      <span className="bg-emerald-500/20 text-emerald-100 text-[10px] px-3 py-1.5 rounded-xl font-black uppercase tracking-widest border border-emerald-400/20 backdrop-blur-md">🔐 Auth: ON</span>
+                      <span style={{ background: 'rgba(52,211,153,0.1)', color: '#34d399', border: '1px solid rgba(52,211,153,0.2)', borderRadius: '8px', padding: '5px 12px', fontSize: '11px', fontWeight: 800, letterSpacing: '0.06em', textTransform: 'uppercase' }}>🔐 Auth On</span>
                     ) : (
-                      <span className="bg-white/5 text-white/60 text-[10px] px-3 py-1.5 rounded-xl font-black uppercase tracking-widest border border-white/10 backdrop-blur-md">Auth: OFF</span>
+                      <span style={{ background: 'rgba(255,255,255,0.04)', color: 'rgba(255,255,255,0.3)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '8px', padding: '5px 12px', fontSize: '11px', fontWeight: 800, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Auth Off</span>
                     )}
                     <button onClick={() => setIsEditing(!isEditing)}
-                      className="text-[10px] uppercase font-black tracking-widest bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-xl border border-white/10 transition-all duration-300 backdrop-blur-md">
+                      style={{ background: 'rgba(139,92,246,0.1)', color: '#a78bfa', border: '1px solid rgba(139,92,246,0.2)', borderRadius: '8px', padding: '5px 12px', fontSize: '11px', fontWeight: 800, letterSpacing: '0.06em', textTransform: 'uppercase', cursor: 'pointer' }}>
                       {isEditing ? '✕ Cancel' : '✏️ Edit'}
                     </button>
                   </div>
                 </div>
 
-                {/* Drawer Tabs */}
-                <div className="flex border-b border-gray-100 shrink-0 bg-gray-50/50">
+                {/* Drawer tabs */}
+                <div style={{ display: 'flex', background: '#141419', borderBottom: '1px solid rgba(255,255,255,0.06)', flexShrink: 0 }}>
                   {([
-                    { key: 'profile' as const, label: 'Profile', icon: ShieldCheck, activeClr: 'border-indigo-500 text-indigo-600 bg-white shadow-sm' },
-                    { key: 'ledger' as const, label: 'Ledger', icon: CreditCard, activeClr: 'border-emerald-500 text-emerald-600 bg-white shadow-sm' },
-                    { key: 'activity' as const, label: 'Activity', icon: History, activeClr: 'border-blue-500 text-blue-600 bg-white shadow-sm' },
+                    { key: 'profile' as const, label: 'Profile', icon: ShieldCheck, activeColor: '#a78bfa' },
+                    { key: 'ledger' as const, label: 'Ledger', icon: CreditCard, activeColor: '#34d399' },
+                    { key: 'activity' as const, label: 'Activity', icon: History, activeColor: '#60a5fa' },
                   ]).map(tab => (
                     <button key={tab.key} onClick={() => setDrawerTab(tab.key)}
-                      className={`flex-1 py-3.5 text-[10px] font-black uppercase tracking-[0.12em] flex items-center justify-center gap-1.5 border-b-2 transition-all duration-300 ${
-                        drawerTab === tab.key
-                          ? tab.activeClr
-                          : 'border-transparent text-gray-400 hover:text-gray-600 hover:bg-gray-50'
-                      }`}>
+                      style={{ flex: 1, padding: '14px 0', fontSize: '11px', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', cursor: 'pointer', border: 'none', borderBottom: drawerTab === tab.key ? `2px solid ${tab.activeColor}` : '2px solid transparent', color: drawerTab === tab.key ? tab.activeColor : 'rgba(255,255,255,0.3)', background: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', transition: 'all 0.2s' }}>
                       <tab.icon size={13} /> {tab.label}
                     </button>
                   ))}
                 </div>
 
-                {/* Drawer Body */}
-                <div className="p-5 overflow-y-auto flex-1">
+                {/* Drawer body */}
+                <div style={{ flex: 1, overflowY: 'auto', padding: '24px' }}>
 
-                  {/* ── PROFILE TAB ── */}
+                  {/* Profile Tab */}
                   {drawerTab === 'profile' && (
-                    <div className="space-y-5">
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                       {isEditing ? (
-                        <form onSubmit={handleEditSave} className="space-y-4">
-                          <div className="bg-indigo-50 rounded-2xl p-4 border border-indigo-100">
-                            <h3 className="text-xs font-black uppercase tracking-widest mb-2 text-indigo-600 flex items-center gap-1"><Zap size={12} /> Security</h3>
-                            <input type="text" maxLength={4} placeholder="4-Digit Login PIN"
-                              value={editPin} onChange={e => setEditPin(e.target.value.replace(/\D/g, ''))}
-                              className="w-full bg-white rounded-xl p-3 text-sm font-mono tracking-widest font-bold outline-none border border-indigo-100 focus:ring-2 focus:ring-indigo-500" />
+                        <form onSubmit={handleEditSave} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                          <div style={{ background: 'rgba(139,92,246,0.08)', border: '1px solid rgba(139,92,246,0.15)', borderRadius: '16px', padding: '18px' }}>
+                            <p style={{ color: '#a78bfa', fontSize: '11px', fontWeight: 800, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}><Zap size={12} /> Security PIN</p>
+                            <input style={{ ...css.input, fontFamily: 'monospace', letterSpacing: '0.3em' }} maxLength={4} placeholder="4-Digit Login PIN" value={editPin} onChange={e => setEditPin(e.target.value.replace(/\D/g, ''))} />
                           </div>
-                          <input type="text" placeholder="Full Name" value={editName} onChange={e => setEditName(e.target.value)} required
-                            className="w-full bg-gray-50 rounded-xl p-3 text-sm font-bold outline-none border border-gray-100 focus:ring-2 focus:ring-indigo-500" />
-                          <input type="tel" placeholder="Phone" value={editPhone} onChange={e => setEditPhone(e.target.value)}
-                            className="w-full bg-gray-50 rounded-xl p-3 text-sm font-bold outline-none border border-gray-100 focus:ring-2 focus:ring-indigo-500" />
-                          <select value={editSupplierId} onChange={e => setEditSupplierId(e.target.value)}
-                            className="w-full bg-gray-50 rounded-xl p-3 text-sm font-bold outline-none border border-gray-100 focus:ring-2 focus:ring-indigo-500">
+                          <input style={css.input} placeholder="Full Name" value={editName} onChange={e => setEditName(e.target.value)} required />
+                          <input style={css.input} placeholder="Phone" type="tel" value={editPhone} onChange={e => setEditPhone(e.target.value)} />
+                          <select style={{ ...css.input, cursor: 'pointer' }} value={editSupplierId} onChange={e => setEditSupplierId(e.target.value)}>
                             <option value="">Unassigned</option>
                             {suppliers.map(s => <option key={s.id} value={s.id}>{s.full_name}</option>)}
                           </select>
-                          <button type="submit" className="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold text-sm shadow-md hover:bg-indigo-500 transition-colors">
-                            Save Changes
-                          </button>
+                          <button type="submit" style={{ ...css.btn.primary, justifyContent: 'center', width: '100%', padding: '16px' }}>Save Changes</button>
                         </form>
                       ) : (
                         <>
-                          <div className="grid grid-cols-2 gap-3">
-                            <div className="bg-gray-50 rounded-2xl p-4 border border-gray-100">
-                              <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1">Status</p>
-                              <p className="font-bold text-sm">{activityMap[quickViewCustomer.id] <= 30 ? '🟢 Active' : '🟠 Dormant'}</p>
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                            <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '14px', padding: '16px' }}>
+                              <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '6px' }}>Status</p>
+                              <p style={{ color: '#fff', fontWeight: 800, fontSize: '14px', margin: 0 }}>{activityMap[quickViewCustomer.id] <= 30 ? '🟢 Active' : '🟡 Dormant'}</p>
                             </div>
-                            <div className="bg-gray-50 rounded-2xl p-4 border border-gray-100">
-                              <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1">Loyalty</p>
-                              <p className="font-bold text-sm text-amber-600">★ {quickViewCustomer.loyaltyPoints || 0} PTS</p>
+                            <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '14px', padding: '16px' }}>
+                              <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '6px' }}>Loyalty</p>
+                              <p style={{ color: '#fbbf24', fontWeight: 800, fontSize: '14px', margin: 0 }}>★ {quickViewCustomer.loyaltyPoints || 0} pts</p>
                             </div>
                           </div>
                           {quickViewCustomer.notes && (
-                            <div className="bg-gray-50 rounded-2xl p-4 border border-gray-100">
-                              <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1">Notes</p>
-                              <p className="text-sm font-medium">{quickViewCustomer.notes}</p>
+                            <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '14px', padding: '16px' }}>
+                              <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '6px' }}>Notes</p>
+                              <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '14px', margin: 0, fontWeight: 500 }}>{quickViewCustomer.notes}</p>
                             </div>
                           )}
-                          <button onClick={() => navigate(`/customers/${quickViewCustomer.id}`)}
-                            className="w-full bg-indigo-600 text-white py-3.5 rounded-xl font-bold shadow-md flex items-center justify-center gap-2 hover:bg-indigo-500 transition-colors">
+                          <button onClick={() => navigate(`/customers/${quickViewCustomer.id}`)} style={{ ...css.btn.primary, justifyContent: 'center', width: '100%', padding: '16px', marginTop: '8px' }}>
                             Open Full Profile <ChevronRight size={16} />
                           </button>
                         </>
@@ -527,36 +636,33 @@ export const ManagerCustomers: React.FC = () => {
                     </div>
                   )}
 
-                  {/* ── LEDGER TAB ── */}
+                  {/* Ledger Tab */}
                   {drawerTab === 'ledger' && (
-                    <div className="space-y-5">
-                      <div className={`text-white rounded-3xl p-5 relative overflow-hidden shadow-lg ${
-                        quickViewCustomer.debtBalance > 0 ? 'bg-gradient-to-br from-red-500 to-red-700' : 'bg-gradient-to-br from-emerald-500 to-emerald-700'
-                      }`}>
-                        <Zap className="absolute right-0 bottom-0 opacity-10" size={100} />
-                        <p className="text-[10px] uppercase font-black tracking-widest opacity-80 mb-1">Active Debt</p>
-                        <p className="text-3xl font-black">₦{quickViewCustomer.debtBalance.toLocaleString()}</p>
-                        {quickViewCustomer.debtBalance === 0 && (
-                          <p className="text-xs font-bold bg-black/20 inline-block px-3 py-1 rounded-full mt-2">Fully Cleared ✓</p>
-                        )}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                      <div style={{ background: quickViewCustomer.debtBalance > 0 ? 'linear-gradient(135deg,#7f1d1d,#991b1b)' : 'linear-gradient(135deg,#064e3b,#065f46)', borderRadius: '20px', padding: '24px', position: 'relative', overflow: 'hidden', border: `1px solid ${quickViewCustomer.debtBalance > 0 ? 'rgba(239,68,68,0.3)' : 'rgba(52,211,153,0.3)'}` }}>
+                        <Zap style={{ position: 'absolute', right: '-10px', bottom: '-10px', opacity: 0.08 }} size={100} color="#fff" />
+                        <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '8px' }}>Active Debt</p>
+                        <p style={{ color: '#fff', fontWeight: 900, fontSize: '36px', margin: 0, letterSpacing: '-0.03em' }}>₦{quickViewCustomer.debtBalance.toLocaleString()}</p>
+                        {quickViewCustomer.debtBalance === 0 && <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '12px', fontWeight: 700, marginTop: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>✓ Fully Settled</p>}
                       </div>
 
                       {quickViewCustomer.debtBalance > 0 && (
-                        <form onSubmit={handleDebtPay} className="bg-gray-50 rounded-3xl p-5 border border-gray-100 space-y-4">
-                          <h3 className="text-sm font-black flex items-center gap-2"><CreditCard size={16} className="text-emerald-500" /> Settle Payment</h3>
-                          <div className="relative">
-                            <span className="absolute left-4 top-1/2 -translate-y-1/2 font-black text-gray-400">₦</span>
-                            <input type="number" max={quickViewCustomer.debtBalance} placeholder="0"
-                              value={payAmount} onChange={e => setPayAmount(e.target.value)} required
-                              className="w-full bg-white rounded-xl p-3 pl-8 text-lg font-black text-emerald-600 outline-none border border-gray-100 focus:ring-2 focus:ring-emerald-500" />
+                        <form onSubmit={handleDebtPay} style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '20px', padding: '20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                          <p style={{ color: '#fff', fontWeight: 800, fontSize: '14px', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}><CreditCard size={16} color="#34d399" /> Settle Payment</p>
+                          <div style={{ position: 'relative' }}>
+                            <span style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: 'rgba(255,255,255,0.3)', fontWeight: 700 }}>₦</span>
+                            <input type="number" max={quickViewCustomer.debtBalance} placeholder="0" value={payAmount} onChange={e => setPayAmount(e.target.value)} required
+                              style={{ ...css.input, paddingLeft: '32px', fontSize: '20px', fontWeight: 900, color: '#34d399' }} />
                           </div>
-                          <div className="grid grid-cols-2 gap-3">
-                            <button type="button" onClick={() => setPayMethod('Cash')}
-                              className={`py-2.5 rounded-xl text-sm font-bold border-2 transition-all ${payMethod === 'Cash' ? 'border-emerald-500 bg-emerald-50 text-emerald-600' : 'border-gray-200 text-gray-500'}`}>Cash</button>
-                            <button type="button" onClick={() => setPayMethod('Transfer')}
-                              className={`py-2.5 rounded-xl text-sm font-bold border-2 transition-all ${payMethod === 'Transfer' ? 'border-emerald-500 bg-emerald-50 text-emerald-600' : 'border-gray-200 text-gray-500'}`}>Transfer</button>
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                            {(['Cash', 'Transfer'] as const).map(m => (
+                              <button key={m} type="button" onClick={() => setPayMethod(m)}
+                                style={{ padding: '12px', borderRadius: '12px', fontSize: '13px', fontWeight: 700, cursor: 'pointer', border: `2px solid ${payMethod === m ? 'rgba(52,211,153,0.5)' : 'rgba(255,255,255,0.06)'}`, background: payMethod === m ? 'rgba(52,211,153,0.08)' : 'transparent', color: payMethod === m ? '#34d399' : 'rgba(255,255,255,0.4)', transition: 'all 0.2s' }}>
+                                {m}
+                              </button>
+                            ))}
                           </div>
-                          <button type="submit" className="w-full bg-emerald-500 text-white py-3 rounded-xl font-bold shadow-md hover:bg-emerald-400 transition-colors flex items-center justify-center gap-2">
+                          <button type="submit" style={{ background: 'linear-gradient(135deg,#059669,#047857)', color: '#fff', border: 'none', borderRadius: '14px', padding: '15px', fontWeight: 700, fontSize: '14px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', boxShadow: '0 4px 20px rgba(5,150,105,0.35)' }}>
                             <ShieldCheck size={16} /> Confirm Payment
                           </button>
                         </form>
@@ -564,43 +670,44 @@ export const ManagerCustomers: React.FC = () => {
                     </div>
                   )}
 
-                  {/* ── ACTIVITY TAB ── */}
+                  {/* Activity Tab */}
                   {drawerTab === 'activity' && (
-                    <div className="space-y-3">
-                      <h3 className="text-xs font-black uppercase tracking-widest text-gray-400 mb-2">Recent Transactions</h3>
+                    <div>
+                      <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '16px' }}>Recent Transactions</p>
                       {transactions.filter(t => t.customerId === quickViewCustomer.id).length === 0 ? (
-                        <div className="text-center py-12 opacity-50">
-                          <History size={32} className="mx-auto mb-2 opacity-20" />
-                          <p className="font-bold text-sm">No History</p>
+                        <div style={{ textAlign: 'center', padding: '48px 0', color: 'rgba(255,255,255,0.2)' }}>
+                          <History size={36} style={{ margin: '0 auto 10px', opacity: 0.2 }} />
+                          <p style={{ fontWeight: 700, fontSize: '13px' }}>No History Yet</p>
                         </div>
                       ) : (
-                        transactions
-                          .filter(t => t.customerId === quickViewCustomer.id)
-                          .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-                          .slice(0, 10)
-                          .map(tx => (
-                            <div key={tx.id} className="bg-gray-50 p-4 rounded-2xl border border-gray-100 flex items-center justify-between hover:bg-gray-100/50 transition-colors">
-                              <div className="flex items-center gap-3">
-                                <div className="w-9 h-9 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center font-black text-xs">
-                                  {tx.items?.reduce((a, p) => a + p.quantity, 0) || tx.quantity || 1}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                          {transactions.filter(t => t.customerId === quickViewCustomer.id)
+                            .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                            .slice(0, 10)
+                            .map(tx => (
+                              <div key={tx.id} style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '14px', padding: '14px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                  <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'rgba(139,92,246,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#a78bfa', fontWeight: 900, fontSize: '13px' }}>
+                                    {tx.items?.reduce((a, p) => a + p.quantity, 0) || tx.quantity || 1}
+                                  </div>
+                                  <div>
+                                    <p style={{ color: '#fff', fontWeight: 700, fontSize: '13px', margin: 0 }}>Order</p>
+                                    <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: '11px', fontWeight: 500, margin: '2px 0 0' }}>
+                                      {new Date(tx.date).toLocaleDateString()} · {new Date(tx.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                    </p>
+                                  </div>
                                 </div>
-                                <div>
-                                  <p className="font-bold text-sm">Order</p>
-                                  <p className="text-[10px] font-bold text-gray-400">
-                                    {new Date(tx.date).toLocaleDateString()} • {new Date(tx.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                  </p>
+                                <div style={{ textAlign: 'right' }}>
+                                  <p style={{ color: '#fff', fontWeight: 900, fontSize: '14px', margin: 0 }}>₦{(tx.totalPrice || 0).toLocaleString()}</p>
+                                  <p style={{ color: tx.type === 'Cash' ? '#34d399' : '#f87171', fontSize: '10px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em', margin: '2px 0 0' }}>{tx.type}</p>
                                 </div>
                               </div>
-                              <div className="text-right">
-                                <p className="font-black text-sm">₦{(tx.totalPrice || 0).toLocaleString()}</p>
-                                <p className={`text-[10px] font-black uppercase ${tx.type === 'Cash' ? 'text-emerald-500' : 'text-red-500'}`}>{tx.type}</p>
-                              </div>
-                            </div>
-                          ))
+                            ))
+                          }
+                        </div>
                       )}
                     </div>
                   )}
-
                 </div>
               </motion.div>
             </>
