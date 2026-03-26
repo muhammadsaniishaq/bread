@@ -1,0 +1,5 @@
+﻿bf320e4 feat: add Framer Motion CRM Quick-View drawer and AI Business insight panels to ManagerCustomers
+7790be4 feat: enhance ManagerCustomers with deep engagement analytics, active/dormant segmented pie charts, and hot badges
+3ea851e feat: implement advanced manager features: bulk routing assignment, csv export, multi-sort, and whatsapp quick-chat
+3f10b13 feat: complete overhaul of Manager Customers Base with hero analytics, routing states, filters and VIP tracking
+982483d feat: add sticky supplier routing and assignment controls exclusively to Manager Customers Base

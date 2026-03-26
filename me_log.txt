@@ -1,0 +1,2 @@
+﻿0237317 feat: separate internal manager expenses from supplier expenses
+4976e90 feat: design exclusive ultra-premium dashboard modules for manager representing reports, expenses, customers, and settings

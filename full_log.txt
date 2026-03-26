@@ -1,0 +1,15 @@
+﻿71cd9d6 feat(manager): redesign ManagerProducts with warm parchment theme + bottom-sheet + premium cards
+cb1708c feat(manager): warm parchment theme + decorative blobs + premium card decorations
+3c619a1 feat(manager): luxury dark mobile-first redesign of Raw Materials Manager
+b21310c feat(manager): add unit cost per rm item and explicit debt readout
+ab2bdc5 feat(manager): build multi-item purchase batch receipt with split payments and debt log
+7318d7f feat(manager): completely redesign raw materials tracking with vendor debt and usage logs
+e010b29 feat(manager): compact stats, float bottom pill higher, modernize product cards with inset frames
+99e99ff fix(manager): remove unused icons causing typescript build failure
+7cd925d feat(manager): apply ultra-modern Plus Jakarta Sans design and refined tokens
+66e56bc feat(manager): refine layout with lighter crisp design and serif typography
+b188959 fix(manager): remove unused pop animation from Manager Products to fix build
+1c7fe4c feat(manager): apply ultra-premium refined styling and sticky headers to Manager Products
+70d1f34 feat(manager): user customized Manager Products UI and layout
+64190ac feat(manager): elevate Manager Products UI to ultra-premium Dribbble aesthetic with massive glassmorphism and ambient styling
+f1a6e47 fix(manager): refine dashboard layout to compact e-commerce grid and tight structured forms based on user feedback

@@ -1,0 +1,15 @@
+﻿e95a5bc Records: Clean up leftover TS unused icon warnings
+baa4ac2 Records: Exclude debt calculation from Bakery Balance as demanded by user
+8cc1c5c Records: Add diagnostic tap dialog for remaining balance
+5073206 Records: Fix NaN math logic and add Diagnostics payload
+34b12f5 Records: Clean up TS warnings for date variables
+dd48cb5 Records: Fix TS error with filterByPeriod scope
+e2df045 Records: Fix date filtering bug for Company Paid and Debt Collected
+c4d1109 Records: Fix Context export for Bakery Payments
+bd7da1f Records: Implement full 4-Step Company Balance Flow visualization
+bf7fe3f Records: Fix Debt Deduction logic to Subtract Issued and Add Collected
+2e88264 Records page: full i18n with t(), debt deduction shown under bakery owed card, English default
+e7a80d7 Correct profit model: 10% ours + 90% bakery owed, visual split card, clean print
+3d59ff4 Fix: accurate per-product COGS calculation, fix Naira sign in ESC/POS print, add hourly chart for Today view
+a0d4c89 Enhance Records page: restore print+share, add Expenses tab, Debts tab, cash flow card, premium UI
+cea30ca Complete modernization of Records/Reports page: 3-tab UI, accurate P&L calculations, search, product performance, mini charts

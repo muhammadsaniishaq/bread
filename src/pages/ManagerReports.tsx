@@ -1,5 +1,6 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useAppContext } from '../store/AppContext';
+import { supabase } from '../lib/supabase';
 import { getTransactionItems } from '../store/types';
 import { useNavigate } from 'react-router-dom';
 import { AnimatedPage } from '../components/AnimatedPage';
@@ -71,8 +72,16 @@ const MiniBar = ({ data, color = T.accent }: { data: { label: string; value: num
 };
 
 export const ManagerReports: React.FC = () => {
-  const { transactions, expenses, products, customers, debtPayments } = useAppContext();
+  const { transactions, expenses, products, customers, debtPayments, inventoryLogs } = useAppContext();
   const navigate = useNavigate();
+
+  const [rmLogs, setRmLogs] = useState<any[]>([]);
+  
+  useEffect(() => {
+    supabase.from('rm_logs').select('*').then(({ data }) => {
+      if (data) setRmLogs(data);
+    });
+  }, []);
 
   const [period, setPeriod] = useState<Period>('Today');
   const [activeTab, setActiveTab] = useState<Tab>('overview');
@@ -83,8 +92,8 @@ export const ManagerReports: React.FC = () => {
   const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
   const [showCustomRange, setShowCustomRange] = useState(false);
 
-  const { filteredTxs, filteredExps, filteredDebtPayments } = useMemo(() => {
-    let txs = transactions, exps = expenses, dps = debtPayments;
+  const { filteredTxs, filteredExps, filteredDebtPayments, filteredInventory, filteredRmLogs } = useMemo(() => {
+    let txs = transactions, exps = expenses, dps = debtPayments, invs = inventoryLogs, rmls = rmLogs;
     const now = new Date();
     
     if (period === 'Today') {
@@ -92,27 +101,66 @@ export const ManagerReports: React.FC = () => {
       txs = txs.filter(t => t.date.startsWith(todayStr));
       exps = exps.filter(e => e.date.startsWith(todayStr));
       dps = dps.filter(d => d.date.startsWith(todayStr));
+      invs = invs.filter(i => i.date.startsWith(todayStr));
+      rmls = rmls.filter(r => r.created_at?.startsWith(todayStr));
     } else if (period === 'Week') {
       const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
       txs = txs.filter(t => new Date(t.date) >= weekAgo);
       exps = exps.filter(e => new Date(e.date) >= weekAgo);
       dps = dps.filter(d => new Date(d.date) >= weekAgo);
+      invs = invs.filter(i => new Date(i.date) >= weekAgo);
+      rmls = rmls.filter(r => new Date(r.created_at) >= weekAgo);
     } else if (period === 'Month') {
       const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
       txs = txs.filter(t => new Date(t.date) >= monthAgo);
       exps = exps.filter(e => new Date(e.date) >= monthAgo);
       dps = dps.filter(d => new Date(d.date) >= monthAgo);
+      invs = invs.filter(i => new Date(i.date) >= monthAgo);
+      rmls = rmls.filter(r => new Date(r.created_at) >= monthAgo);
     } else if (period === 'Custom') {
       const start = new Date(startDate); start.setHours(0,0,0,0);
       const end = new Date(endDate); end.setHours(23,59,59,999);
       txs = txs.filter(t => { const d = new Date(t.date); return d >= start && d <= end; });
       exps = exps.filter(e => { const d = new Date(e.date); return d >= start && d <= end; });
       dps = dps.filter(d => { const dt = new Date(d.date); return dt >= start && dt <= end; });
+      invs = invs.filter(i => { const d = new Date(i.date); return d >= start && d <= end; });
+      rmls = rmls.filter(r => { const d = new Date(r.created_at); return d >= start && d <= end; });
     }
-    return { filteredTxs: txs, filteredExps: exps, filteredDebtPayments: dps };
-  }, [period, startDate, endDate, transactions, expenses, debtPayments]);
+    return { filteredTxs: txs, filteredExps: exps, filteredDebtPayments: dps, filteredInventory: invs, filteredRmLogs: rmls };
+  }, [period, startDate, endDate, transactions, expenses, debtPayments, inventoryLogs, rmLogs]);
 
   const metrics = useMemo(() => {
+    // 1. Bread Sent to Store
+    const receivedBread = filteredInventory.filter(l => l.type === 'Receive');
+    const totalBreadValue = receivedBread.reduce((s, l) => s + (l.quantityReceived * l.costPrice), 0);
+    const bakeryIncome = totalBreadValue * 0.90; // The Bakery takes 90% of the total value
+    
+    // 2. Raw Materials Cost
+    // We average the RESTOCK price across all time (or just rely on the ones we see)
+    // Actually, calculating average cost from all rmLogs is better to be safe.
+    const unitCosts: Record<string, { cost: number; qty: number }> = {};
+    rmLogs.forEach(log => {
+      if (log.type === 'RESTOCK' && log.items) {
+         log.items.forEach((item: any) => {
+            if (!unitCosts[item.material_id]) unitCosts[item.material_id] = { cost: 0, qty: 0 };
+            unitCosts[item.material_id].cost += parseFloat(item.price || 0) * parseFloat(item.quantity || 0);
+            unitCosts[item.material_id].qty += parseFloat(item.quantity || 0);
+         });
+      }
+    });
+    
+    // Now calc usage cost for the filtered period
+    let rawMaterialsUsedCost = 0;
+    filteredRmLogs.filter(l => l.type === 'USAGE').forEach(usage => {
+       const matId = usage.material_id;
+       const qty = parseFloat(usage.quantity || 0);
+       let avgPrice = 0;
+       if (unitCosts[matId] && unitCosts[matId].qty > 0) {
+          avgPrice = unitCosts[matId].cost / unitCosts[matId].qty;
+       }
+       rawMaterialsUsedCost += (qty * avgPrice);
+    });
+
     const totalSales = filteredTxs.reduce((s, t) => s + t.totalPrice, 0);
     const cashSales = filteredTxs.filter(t => t.type === 'Cash').reduce((s, t) => s + t.totalPrice, 0);
     const debtSales = filteredTxs.filter(t => t.type === 'Debt').reduce((s, t) => s + t.totalPrice, 0);
@@ -124,8 +172,8 @@ export const ManagerReports: React.FC = () => {
     const breadSold = filteredTxs.reduce((s, t) => s + getTransactionItems(t).reduce((ss, i) => ss + i.quantity, 0), 0);
     
     // MASTER COMPANY Profit Calculation
-    const netProfit = totalSales - totalExpenses;
-    const grossMargin = totalSales > 0 ? (netProfit / totalSales) * 100 : 0;
+    const netProfit = bakeryIncome - rawMaterialsUsedCost - totalExpenses;
+    const grossMargin = bakeryIncome > 0 ? (netProfit / bakeryIncome) * 100 : 0;
     const avgOrderValue = filteredTxs.length > 0 ? totalSales / filteredTxs.length : 0;
     
     // Cash Drawer / Till Expectation
@@ -138,9 +186,10 @@ export const ManagerReports: React.FC = () => {
     return {
       totalSales, cashSales, debtSales, totalExpenses, breadSold,
       netProfit, grossMargin, avgOrderValue, txCount: filteredTxs.length,
-      outstandingDebt, stockRetailValue, debtCollected, expectedCashInHand
+      outstandingDebt, stockRetailValue, debtCollected, expectedCashInHand,
+      bakeryIncome, rawMaterialsUsedCost, totalBreadValue
     };
-  }, [filteredTxs, filteredExps, filteredDebtPayments, customers, products]);
+  }, [filteredTxs, filteredExps, filteredDebtPayments, filteredInventory, filteredRmLogs, rmLogs, customers, products]);
 
   // Product Analysis
   const productStats = useMemo(() => {
@@ -267,12 +316,13 @@ export const ManagerReports: React.FC = () => {
             {/* Master Metrics Split */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px', background: 'rgba(0,0,0,0.2)', padding: '16px', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.05)' }}>
               <div>
-                 <span style={{ fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', color: '#6ee7b7', display: 'block', marginBottom: '4px' }}>Gross Revenue</span>
-                 <span style={{ fontSize: '14px', fontWeight: 800 }}>{fmt(metrics.totalSales)}</span>
+                 <span style={{ fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', color: '#6ee7b7', display: 'block', marginBottom: '4px' }}>Bakery Revenue (90%)</span>
+                 <span style={{ fontSize: '14px', fontWeight: 800 }}>{fmt(metrics.bakeryIncome)}</span>
+                 <div style={{ fontSize: '9px', fontWeight: 500, opacity: 0.6, marginTop: '2px' }}>from {fmt(metrics.totalBreadValue)} bread</div>
               </div>
               <div style={{ borderLeft: '1px solid rgba(255,255,255,0.1)', paddingLeft: '12px' }}>
-                 <span style={{ fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', color: '#fca5a5', display: 'block', marginBottom: '4px' }}>Total Expenses</span>
-                 <span style={{ fontSize: '14px', fontWeight: 800 }}>{fmt(metrics.totalExpenses)}</span>
+                 <span style={{ fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', color: '#fca5a5', display: 'block', marginBottom: '4px' }}>Raw Materials & Exp.</span>
+                 <span style={{ fontSize: '14px', fontWeight: 800 }}>{fmt(metrics.rawMaterialsUsedCost + metrics.totalExpenses)}</span>
               </div>
               <div style={{ borderLeft: '1px solid rgba(255,255,255,0.1)', paddingLeft: '12px' }}>
                  <span style={{ fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', color: '#93c5fd', display: 'block', marginBottom: '4px' }}>Profit Margin</span>

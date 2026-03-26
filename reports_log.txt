@@ -1,0 +1,5 @@
+﻿e95a5bc Records: Clean up leftover TS unused icon warnings
+baa4ac2 Records: Exclude debt calculation from Bakery Balance as demanded by user
+8cc1c5c Records: Add diagnostic tap dialog for remaining balance
+5073206 Records: Fix NaN math logic and add Diagnostics payload
+34b12f5 Records: Clean up TS warnings for date variables
