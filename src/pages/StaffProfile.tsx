@@ -1,18 +1,16 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import type { UserRole } from '../store/AuthContext';
 import { 
-  ArrowLeft, Phone, MapPin, MessageSquare, 
-  Clock, Activity, Award, QrCode, 
-  Shield, Edit2, Trash2, Check, X,
+  ArrowLeft, Phone, MessageSquare, 
+  Edit2, X,
   TrendingUp, Zap, ChevronRight,
   Database, User
 } from 'lucide-react';
 import { AnimatedPage } from '../components/AnimatedPage';
 import { motion, AnimatePresence } from 'framer-motion';
-import { AreaChart, Area, ResponsiveContainer, XAxis, YAxis, Tooltip } from 'recharts';
-import QRCode from 'react-qr-code';
+import { AreaChart, Area, ResponsiveContainer, XAxis, Tooltip } from 'recharts';
 
 /* ─────────────────────────────────────────
    TOKENS & STYLES (Match UserManagement)
