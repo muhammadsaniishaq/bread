@@ -130,32 +130,36 @@ export const ManagerReports: React.FC = () => {
   }, [period, startDate, endDate, transactions, expenses, debtPayments, inventoryLogs, rmLogs]);
 
   const metrics = useMemo(() => {
-    // 1. Bread Sent to Store
-    const receivedBread = filteredInventory.filter(l => l.type === 'Receive');
-    const totalBreadValue = receivedBread.reduce((s, l) => s + (l.quantityReceived * l.costPrice), 0);
-    const bakeryIncome = totalBreadValue * 0.90; // The Bakery takes 90% of the total value
+    // 1. Bread Produced (Net) = Received - Returned
+    const invLogs = filteredInventory;
+    const receivedValue = invLogs.filter(l => l.type === 'Receive').reduce((s, l) => s + (l.quantityReceived * l.costPrice), 0);
+    const returnedValue = invLogs.filter(l => l.type === 'Return').reduce((s, l) => s + (l.quantityReceived * l.costPrice), 0);
+    const totalBreadValue = Math.max(0, receivedValue - returnedValue);
+    const bakeryIncome = totalBreadValue * 0.90; // The Bakery takes 90% of the value sent to store
     
     // 2. Raw Materials Cost
-    // We average the RESTOCK price across all time (or just rely on the ones we see)
-    // Actually, calculating average cost from all rmLogs is better to be safe.
+    // We average the RESTOCK price across all time to get a stable unit cost
     const unitCosts: Record<string, { cost: number; qty: number }> = {};
     rmLogs.forEach(log => {
       if (log.type === 'RESTOCK' && log.items) {
          log.items.forEach((item: any) => {
-            if (!unitCosts[item.material_id]) unitCosts[item.material_id] = { cost: 0, qty: 0 };
-            unitCosts[item.material_id].cost += parseFloat(item.price || 0) * parseFloat(item.quantity || 0);
-            unitCosts[item.material_id].qty += parseFloat(item.quantity || 0);
+            const mId = item.material_id;
+            if (!unitCosts[mId]) unitCosts[mId] = { cost: 0, qty: 0 };
+            unitCosts[mId].cost += parseFloat(item.price || 0) * parseFloat(item.quantity || 0);
+            unitCosts[mId].qty += parseFloat(item.quantity || 0);
          });
       }
     });
     
-    // Now calc usage cost for the filtered period
+    // Fallback: If no restock logs found, check raw_materials table if they were seeded with a cost (legacy)
+    // For now we rely on RESTOCK logs as that's the current system's source of truth
+    
     let rawMaterialsUsedCost = 0;
     filteredRmLogs.filter(l => l.type === 'USAGE').forEach(usage => {
        const matId = usage.material_id;
        const qty = parseFloat(usage.quantity || 0);
        let avgPrice = 0;
-       if (unitCosts[matId] && unitCosts[matId].qty > 0) {
+       if (matId && unitCosts[matId] && unitCosts[matId].qty > 0) {
           avgPrice = unitCosts[matId].cost / unitCosts[matId].qty;
        }
        rawMaterialsUsedCost += (qty * avgPrice);
@@ -165,13 +169,13 @@ export const ManagerReports: React.FC = () => {
     const cashSales = filteredTxs.filter(t => t.type === 'Cash').reduce((s, t) => s + t.totalPrice, 0);
     const debtSales = filteredTxs.filter(t => t.type === 'Debt').reduce((s, t) => s + t.totalPrice, 0);
     
-    // Expenses (Only MANAGER expenses for business profit calculation)
+    // 3. Expenses (Staff, Fuel, etc.)
     const mgtExps = filteredExps.filter(e => e.type === 'MANAGER');
     const totalExpenses = mgtExps.reduce((s, e) => s + e.amount, 0);
     
     const breadSold = filteredTxs.reduce((s, t) => s + getTransactionItems(t).reduce((ss, i) => ss + i.quantity, 0), 0);
     
-    // MASTER COMPANY Profit Calculation
+    // FINAL BAKERY PROFIT
     const netProfit = bakeryIncome - rawMaterialsUsedCost - totalExpenses;
     const grossMargin = bakeryIncome > 0 ? (netProfit / bakeryIncome) * 100 : 0;
     const avgOrderValue = filteredTxs.length > 0 ? totalSales / filteredTxs.length : 0;
@@ -187,7 +191,7 @@ export const ManagerReports: React.FC = () => {
       totalSales, cashSales, debtSales, totalExpenses, breadSold,
       netProfit, grossMargin, avgOrderValue, txCount: filteredTxs.length,
       outstandingDebt, stockRetailValue, debtCollected, expectedCashInHand,
-      bakeryIncome, rawMaterialsUsedCost, totalBreadValue
+      bakeryIncome, rawMaterialsUsedCost, totalBreadValue, receivedValue, returnedValue
     };
   }, [filteredTxs, filteredExps, filteredDebtPayments, filteredInventory, filteredRmLogs, rmLogs, customers, products]);
 
@@ -318,14 +322,14 @@ export const ManagerReports: React.FC = () => {
               <div>
                  <span style={{ fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', color: '#6ee7b7', display: 'block', marginBottom: '4px' }}>Bakery Revenue (90%)</span>
                  <span style={{ fontSize: '14px', fontWeight: 800 }}>{fmt(metrics.bakeryIncome)}</span>
-                 <div style={{ fontSize: '9px', fontWeight: 500, opacity: 0.6, marginTop: '2px' }}>from {fmt(metrics.totalBreadValue)} bread</div>
+                 <div style={{ fontSize: '9px', fontWeight: 500, opacity: 0.6, marginTop: '2px' }}>Net Prod: {fmt(metrics.totalBreadValue)}</div>
               </div>
               <div style={{ borderLeft: '1px solid rgba(255,255,255,0.1)', paddingLeft: '12px' }}>
-                 <span style={{ fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', color: '#fca5a5', display: 'block', marginBottom: '4px' }}>Raw Materials & Exp.</span>
+                 <span style={{ fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', color: '#fca5a5', display: 'block', marginBottom: '4px' }}>Bakery RM & Exp.</span>
                  <span style={{ fontSize: '14px', fontWeight: 800 }}>{fmt(metrics.rawMaterialsUsedCost + metrics.totalExpenses)}</span>
               </div>
               <div style={{ borderLeft: '1px solid rgba(255,255,255,0.1)', paddingLeft: '12px' }}>
-                 <span style={{ fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', color: '#93c5fd', display: 'block', marginBottom: '4px' }}>Profit Margin</span>
+                 <span style={{ fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', color: '#93c5fd', display: 'block', marginBottom: '4px' }}>Net Profit %</span>
                  <span style={{ fontSize: '14px', fontWeight: 800 }}>{metrics.grossMargin.toFixed(1)}%</span>
               </div>
             </div>
@@ -363,13 +367,60 @@ export const ManagerReports: React.FC = () => {
                 </div>
               </div>
 
-              {/* 4 Block Stats + 2 New Master Metrics */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                 <StatCard label="Gross Sales" value={fmt(metrics.totalSales)} icon={TrendingUp} color={T.accent} sub={`${metrics.breadSold} units sold.`} />
-                 <StatCard label="Cash Revenue" value={fmt(metrics.cashSales)} icon={DollarSign} color={T.success} sub={`+ ${fmt(metrics.debtCollected)} debts collected`} />
-                 <StatCard label="Average Order" value={fmt(metrics.avgOrderValue)} icon={Activity} color={'#8b5cf6'} sub={`${metrics.txCount} total transactions`} />
-                 <StatCard label="Debts Issued" value={fmt(metrics.debtSales)} icon={CreditCard} color={T.warn} sub={`${Math.round((metrics.debtSales/metrics.totalSales)*100 || 0)}% of total sales`} />
-              </div>
+               {/* 4 Block Stats + 2 New Master Metrics */}
+               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <StatCard label="Gross Sales" value={fmt(metrics.totalSales)} icon={TrendingUp} color={T.accent} sub={`${metrics.breadSold} units sold.`} />
+                  <StatCard label="Cash Revenue" value={fmt(metrics.cashSales)} icon={DollarSign} color={T.success} sub={`+ ${fmt(metrics.debtCollected)} debts collected`} />
+                  <StatCard label="Average Order" value={fmt(metrics.avgOrderValue)} icon={Activity} color={'#8b5cf6'} sub={`${metrics.txCount} total transactions`} />
+                  <StatCard label="Debts Issued" value={fmt(metrics.debtSales)} icon={CreditCard} color={T.warn} sub={`${Math.round((metrics.debtSales/metrics.totalSales)*100 || 0)}% of total sales`} />
+               </div>
+
+               {/* BAKERY ECONOMICS TRANSPARENCY Drilldown - NEW */}
+               <div style={{ background: T.accentLt, padding: '20px', borderRadius: T.radiusLg, border: `1.5px solid ${T.accent}30` }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+                     <PieChart size={18} color={T.accent} />
+                     <span style={{ fontSize: '11px', fontWeight: 800, color: T.txt, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Bakery Profit Math (Based on Dispatch)</span>
+                  </div>
+                  
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                     <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: `1px dashed ${T.accent}20`, paddingBottom: '8px' }}>
+                        <span style={{ fontSize: '11px', color: T.txt2 }}>Gross Dispatch (Production)</span>
+                        <span style={{ fontSize: '11px', fontWeight: 700 }}>{fmt(metrics.receivedValue)}</span>
+                     </div>
+                     <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: `1px dashed ${T.accent}20`, paddingBottom: '8px' }}>
+                        <span style={{ fontSize: '11px', color: T.txt2 }}>Less Returns (Unsold)</span>
+                        <span style={{ fontSize: '11px', fontWeight: 700, color: T.danger }}>- {fmt(metrics.returnedValue)}</span>
+                     </div>
+                     <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: `1px solid ${T.accent}30`, paddingBottom: '8px', marginBottom: '4px' }}>
+                        <span style={{ fontSize: '11px', fontWeight: 700, color: T.txt }}>Net Production Value</span>
+                        <span style={{ fontSize: '11px', fontWeight: 900 }}>{fmt(metrics.totalBreadValue)}</span>
+                     </div>
+                     
+                     <div style={{ display: 'flex', justifyContent: 'space-between', paddingLeft: '12px', borderLeft: `2px solid ${T.success}50` }}>
+                        <span style={{ fontSize: '11px', color: T.txt2 }}>Bakery Gross Income (90% Share)</span>
+                        <span style={{ fontSize: '11px', fontWeight: 800, color: T.success }}>{fmt(metrics.bakeryIncome)}</span>
+                     </div>
+                     
+                     <div style={{ display: 'flex', justifyContent: 'space-between', paddingLeft: '12px', borderLeft: `2px solid ${T.danger}50` }}>
+                        <span style={{ fontSize: '11px', color: T.txt2 }}>Less RM Cost (Usage)</span>
+                        <span style={{ fontSize: '11px', fontWeight: 700, color: T.danger }}>- {fmt(metrics.rawMaterialsUsedCost)}</span>
+                     </div>
+                     <div style={{ display: 'flex', justifyContent: 'space-between', paddingLeft: '12px', borderLeft: `2px solid ${T.danger}50` }}>
+                        <span style={{ fontSize: '11px', color: T.txt2 }}>Less Manager Expenses</span>
+                        <span style={{ fontSize: '11px', fontWeight: 700, color: T.danger }}>- {fmt(metrics.totalExpenses)}</span>
+                     </div>
+                     
+                     <div style={{ marginTop: '8px', padding: '12px', background: T.surface, borderRadius: '12px', border: `1px solid ${T.accent}20`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div>
+                           <span style={{ fontSize: '10px', color: T.txt3, fontWeight: 700, display: 'block', textTransform: 'uppercase' }}>Net Bakery Profit</span>
+                           <span style={{ fontSize: '18px', fontWeight: 900, color: T.txt }}>{fmt(metrics.netProfit)}</span>
+                        </div>
+                        <div style={{ height: '32px', padding: '0 10px', borderRadius: '8px', background: T.successLt, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                           <span style={{ fontSize: '12px', fontWeight: 900, color: T.success }}>{metrics.grossMargin.toFixed(1)}%</span>
+                        </div>
+                     </div>
+                  </div>
+               </div>
 
               {/* Sales Distribution Bar */}
               <div style={{ background: T.surface, border: `1.5px solid ${T.border}`, borderRadius: T.radiusLg, padding: '20px', boxShadow: T.shadow }}>
