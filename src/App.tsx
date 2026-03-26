@@ -40,6 +40,7 @@ import CustomerReceipt from './pages/CustomerReceipt';
 import CustomerIDAndCert from './pages/CustomerIDAndCert';
 import { InventoryReceipt } from './pages/InventoryReceipt';
 import BakeryReceipt from './pages/BakeryReceipt';
+import StaffProfile from './pages/StaffProfile';
 
 import { SplashScreen } from './components/SplashScreen';
 
@@ -121,6 +122,7 @@ const AppContent: React.FC = () => {
             <Route path="/manager/sales" element={<RoleGuard allowedRoles={['MANAGER']}><ManagerPOS /></RoleGuard>} />
             <Route path="/manager/transactions" element={<RoleGuard allowedRoles={['MANAGER']}><ManagerTransactions /></RoleGuard>} />
             <Route path="/manager/audit" element={<RoleGuard allowedRoles={['MANAGER']}><ManagerAudit /></RoleGuard>} />
+            <Route path="/manager/staff/:id" element={<RoleGuard allowedRoles={['MANAGER']}><StaffProfile /></RoleGuard>} />
             
             <Route path="/supplier" element={<RoleGuard allowedRoles={['SUPPLIER']}><Dashboard /></RoleGuard>} />
           </Route>

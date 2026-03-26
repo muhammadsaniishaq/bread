@@ -257,7 +257,8 @@ export const UserManagement: React.FC = () => {
              
              return (
                <motion.div layout key={p.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95 }}
-                  style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: '28px', padding: '20px', boxShadow: T.shadow }}>
+                  onClick={() => navigate(`/manager/staff/${p.id}`)}
+                  style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: '28px', padding: '20px', boxShadow: T.shadow, cursor: 'pointer' }}>
                   
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
                      <div style={{ display: 'flex', gap: '14px', alignItems: 'center' }}>
@@ -272,7 +273,7 @@ export const UserManagement: React.FC = () => {
                            </div>
                         </div>
                      </div>
-                     <button onClick={() => setIdCardUser(p)} style={{ padding: '8px', borderRadius: '12px', background: T.primaryLt, color: T.primary, border: 'none' }}>
+                     <button onClick={(e) => { e.stopPropagation(); setIdCardUser(p); }} style={{ padding: '8px', borderRadius: '12px', background: T.primaryLt, color: T.primary, border: 'none' }}>
                         <QrCode size={18} />
                      </button>
                   </div>
@@ -293,14 +294,14 @@ export const UserManagement: React.FC = () => {
                   </div>
 
                   <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
-                     <a href={`tel:${p.phone || ''}`} style={{ flex: 1, height: '36px', borderRadius: '12px', background: T.glass, border: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontSize: '11px', fontWeight: 800, textDecoration: 'none', color: 'inherit' }}><Phone size={14} /> Call</a>
-                     <a href={`https://wa.me/${p.phone?.replace(/[^0-9]/g, '') || ''}`} target="_blank" rel="noreferrer" style={{ flex: 1, height: '36px', borderRadius: '12px', background: T.glass, border: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontSize: '11px', fontWeight: 800, textDecoration: 'none', color: 'inherit' }}><MessageSquare size={14} /> Chat</a>
-                     <button onClick={() => setEditRoleUser(p)} style={{ width: '36px', height: '36px', borderRadius: '12px', background: T.glass, border: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                     <a href={`tel:${p.phone || ''}`} onClick={e => e.stopPropagation()} style={{ flex: 1, height: '36px', borderRadius: '12px', background: T.glass, border: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontSize: '11px', fontWeight: 800, textDecoration: 'none', color: 'inherit' }}><Phone size={14} /> Call</a>
+                     <a href={`https://wa.me/${p.phone?.replace(/[^0-9]/g, '') || ''}`} onClick={e => e.stopPropagation()} target="_blank" rel="noreferrer" style={{ flex: 1, height: '36px', borderRadius: '12px', background: T.glass, border: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontSize: '11px', fontWeight: 800, textDecoration: 'none', color: 'inherit' }}><MessageSquare size={14} /> Chat</a>
+                     <button onClick={(e) => { e.stopPropagation(); navigate(`/manager/staff/${p.id}`); }} style={{ width: '36px', height: '36px', borderRadius: '12px', background: T.glass, border: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         <Shield size={14} />
                      </button>
                   </div>
 
-                  <button onClick={() => setPayStaffUser(p)} 
+                  <button onClick={(e) => { e.stopPropagation(); setPayStaffUser(p); }} 
                      style={{ width: '100%', padding: '12px', borderRadius: '16px', background: T.txt, color: '#fff', border: 'none', fontSize: '12px', fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
                      <Banknote size={16} /> Process Wages
                   </button>
