@@ -6,16 +6,13 @@ import {
   Banknote, 
   Phone, MessageSquare, 
   Award, QrCode, Share2,
-  Zap, Clock, Activity
+  Zap, Clock
 } from 'lucide-react';
 import { AnimatedPage } from './AnimatedPage';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AreaChart, Area, ResponsiveContainer } from 'recharts';
 import QRCode from 'react-qr-code';
-
-// VERCEL_CACHE_BUST: 1.0.1
-
 
 /* ─────────────────────────────────────────
    TYPES
@@ -288,7 +285,7 @@ export const UserManagement: React.FC = () => {
                       </div>
                       <div style={{ flex: 1.5, height: '40px' }}>
                          <ResponsiveContainer width="100%" height="100%">
-                            <AreaChart data={(perf?.dailyTrend && perf.dailyTrend.length > 0) ? perf.dailyTrend : [{ volume: 0 }, { volume: 0 }, { volume: 0 }]}>
+                            <AreaChart data={(perf?.dailyTrend && perf.dailyTrend.length > 0) ? perf.dailyTrend : [{ date: '', volume: 0 }, { date: '', volume: 0 }, { date: '', volume: 0 }]}>
                                <Area type="monotone" dataKey="volume" stroke={T.primary} strokeWidth={2} fill={T.primary} fillOpacity={0.1} />
                             </AreaChart>
                          </ResponsiveContainer>
