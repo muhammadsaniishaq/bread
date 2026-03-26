@@ -1,50 +1,68 @@
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useAppContext } from '../store/AppContext';
 import { getTransactionItems } from '../store/types';
 import { useNavigate } from 'react-router-dom';
-import { useTranslation } from '../store/LanguageContext';
 import { AnimatedPage } from '../components/AnimatedPage';
 import {
-  BarChart2, TrendingUp, TrendingDown, ShoppingBag, CreditCard,
-  Package, Receipt, Search, ChevronRight,
-  Wallet, AlertTriangle, Printer, Share2,
-  ArrowDownRight, DollarSign, ArrowLeft
+  BarChart2, TrendingUp, CreditCard,
+  Package, Receipt, Search, Download,
+  Wallet, AlertTriangle, Printer,
+  ArrowDownRight, DollarSign, ArrowLeft, PieChart, Activity
 } from 'lucide-react';
 
-type Period = 'Today' | 'Week' | 'Month' | 'All';
+/* ── Design Tokens ── */
+const T = {
+  bg: '#f2f3f7',
+  surface: '#ffffff',
+  surface2: '#f8f9fc',
+  border: '#e8eaef',
+  accent: '#4f46e5',
+  accentLt: '#eef2ff',
+  success: '#10b981',
+  successLt: '#ecfdf5',
+  danger: '#ef4444',
+  dangerLt: '#fef2f2',
+  warn: '#f59e0b',
+  warnLt: '#fffbeb',
+  txt: '#0f172a',
+  txt2: '#475569',
+  txt3: '#94a3b8',
+  shadow: '0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04)',
+  radius: '16px',
+  radiusLg: '24px',
+};
+
+type Period = 'Today' | 'Week' | 'Month' | 'All' | 'Custom';
 type Tab = 'overview' | 'transactions' | 'products' | 'expenses' | 'debts';
 
 const fmt = (n: number) => `₦${Math.round(n).toLocaleString()}`;
-const fmtDate = (iso: string) => {
-  const d = new Date(iso);
-  return d.toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-};
+const fmtDate = (iso: string) => new Date(iso).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 
-const StatCard = ({ label, value, sub, color = 'var(--primary-color)', icon: Icon, onClick }: any) => (
-  <div onClick={onClick} className={`bg-surface border border-[var(--border-color)] rounded-2xl p-4 shadow-sm relative overflow-hidden transition-all ${onClick ? 'cursor-pointer hover:-translate-y-1 hover:shadow-md' : ''}`}>
-    <div className="absolute -top-3 -right-3 w-16 h-16 rounded-full opacity-10" style={{ backgroundColor: color }} />
-    <div className="flex items-center gap-2 mb-2">
-      <div className="w-9 h-9 rounded-xl flex items-center justify-center opacity-80" style={{ backgroundColor: `${color}20` }}>
-        <Icon size={18} color={color} />
+const StatCard = ({ label, value, sub, color = T.accent, icon: Icon, onClick }: any) => (
+  <div onClick={onClick} style={{ background: T.surface, border: `1.5px solid ${T.border}`, borderRadius: T.radiusLg, padding: '16px', boxShadow: T.shadow, cursor: onClick ? 'pointer' : 'default', transition: 'all 0.2s', position: 'relative', overflow: 'hidden' }}>
+    <div style={{ position: 'absolute', top: '-18px', right: '-18px', width: '64px', height: '64px', borderRadius: '50%', background: color, opacity: 0.05 }} />
+    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+      <div style={{ width: '32px', height: '32px', borderRadius: '10px', background: `${color}15`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <Icon size={16} color={color} />
       </div>
-      <span className="text-[11px] text-secondary font-bold uppercase tracking-wider">{label}</span>
+      <span style={{ fontSize: '10px', color: T.txt3, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em' }}>{label}</span>
     </div>
-    <div className="text-[21px] font-black text-[var(--text-color)] leading-tight">{value}</div>
-    {sub && <div className="text-[11px] text-secondary mt-1">{sub}</div>}
+    <div style={{ fontSize: '20px', fontWeight: 900, color: T.txt, letterSpacing: '-0.02em', margin: 0 }}>{value}</div>
+    {sub && <div style={{ fontSize: '10px', color: T.txt3, fontWeight: 600, marginTop: '4px' }}>{sub}</div>}
   </div>
 );
 
-const MiniBar = ({ data, color = '#4f46e5' }: { data: { label: string; value: number }[]; color?: string }) => {
+const MiniBar = ({ data, color = T.accent }: { data: { label: string; value: number }[]; color?: string }) => {
   const max = Math.max(...data.map(d => d.value), 1);
   return (
-    <div className="flex items-end gap-1 h-[68px]">
+    <div style={{ display: 'flex', alignItems: 'flex-end', gap: '4px', height: '70px', width: '100%' }}>
       {data.map((d, i) => {
         const isLast = i === data.length - 1;
+        const h = Math.max((d.value / max) * 56, d.value > 0 ? 4 : 0);
         return (
-          <div key={i} className="flex-1 flex flex-col items-center gap-1">
-            <div className="w-full rounded-t-md transition-all duration-300" 
-                 style={{ height: `${(d.value / max) * 52}px`, background: isLast ? color : `${color}55`, minHeight: d.value > 0 ? '4px' : '0' }} />
-            <div className={`text-[8px] ${isLast ? 'font-bold' : 'font-medium opacity-70'}`} style={{ color: isLast ? color : 'var(--text-secondary)' }}>{d.label}</div>
+          <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+            <div style={{ width: '100%', height: `${h}px`, background: isLast ? color : `${color}40`, borderRadius: '4px 4px 0 0', transition: 'height 0.3s' }} />
+            <div style={{ fontSize: '9px', fontWeight: isLast ? 800 : 600, color: isLast ? color : T.txt3 }}>{d.label}</div>
           </div>
         );
       })}
@@ -53,406 +71,409 @@ const MiniBar = ({ data, color = '#4f46e5' }: { data: { label: string; value: nu
 };
 
 export const ManagerReports: React.FC = () => {
-  const { transactions, expenses, products, customers, inventoryLogs, debtPayments, appSettings, bakeryPayments } = useAppContext();
-  const { t } = useTranslation();
+  const { transactions, expenses, products, customers, debtPayments, bakeryPayments } = useAppContext();
   const navigate = useNavigate();
-  const reportRef = useRef<HTMLDivElement>(null);
 
   const [period, setPeriod] = useState<Period>('Today');
   const [activeTab, setActiveTab] = useState<Tab>('overview');
   const [txSearch, setTxSearch] = useState('');
-  const [txTypeFilter] = useState<'All' | 'Cash' | 'Debt'>('All');
+  
+  // Custom Date Range State
+  const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
+  const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
+  const [showCustomRange, setShowCustomRange] = useState(false);
 
-  const periodLabel: Record<Period, string> = {
-    Today: t('rep.period.today') || 'Today',
-    Week: t('rep.period.week') || 'Week',
-    Month: t('rep.period.month') || 'Month',
-    All: t('rep.period.all') || 'All Time',
-  };
-
-  const { todayStr, weekAgo, monthAgo } = useMemo(() => {
+  const { filteredTxs, filteredExps, filteredDebtPayments, filteredBakeryPayments } = useMemo(() => {
+    let txs = transactions, exps = expenses, dps = debtPayments, bps = bakeryPayments;
     const now = new Date();
-    return {
-      todayStr: now.toISOString().split('T')[0],
-      weekAgo: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000),
-      monthAgo: new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
-    };
-  }, []);
-
-  const filterByPeriod = <T extends { date: string }>(arr: T[]): T[] => {
-    if (period === 'Today') return arr.filter(x => x.date.startsWith(todayStr));
-    if (period === 'Week') return arr.filter(x => new Date(x.date) >= weekAgo);
-    if (period === 'Month') return arr.filter(x => new Date(x.date) >= monthAgo);
-    return arr;
-  };
-
-  const { filteredTxs, filteredExps, filteredLogs } = useMemo(() => {
-    return { filteredTxs: filterByPeriod(transactions), filteredExps: filterByPeriod(expenses), filteredLogs: filterByPeriod(inventoryLogs) };
-  }, [period, transactions, expenses, inventoryLogs, todayStr, weekAgo, monthAgo]);
+    
+    if (period === 'Today') {
+      const todayStr = now.toISOString().split('T')[0];
+      txs = txs.filter(t => t.date.startsWith(todayStr));
+      exps = exps.filter(e => e.date.startsWith(todayStr));
+      dps = dps.filter(d => d.date.startsWith(todayStr));
+      bps = bps.filter(b => b.date.startsWith(todayStr));
+    } else if (period === 'Week') {
+      const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      txs = txs.filter(t => new Date(t.date) >= weekAgo);
+      exps = exps.filter(e => new Date(e.date) >= weekAgo);
+      dps = dps.filter(d => new Date(d.date) >= weekAgo);
+      bps = bps.filter(b => new Date(b.date) >= weekAgo);
+    } else if (period === 'Month') {
+      const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+      txs = txs.filter(t => new Date(t.date) >= monthAgo);
+      exps = exps.filter(e => new Date(e.date) >= monthAgo);
+      dps = dps.filter(d => new Date(d.date) >= monthAgo);
+      bps = bps.filter(b => new Date(b.date) >= monthAgo);
+    } else if (period === 'Custom') {
+      const start = new Date(startDate); start.setHours(0,0,0,0);
+      const end = new Date(endDate); end.setHours(23,59,59,999);
+      txs = txs.filter(t => { const d = new Date(t.date); return d >= start && d <= end; });
+      exps = exps.filter(e => { const d = new Date(e.date); return d >= start && d <= end; });
+      dps = dps.filter(d => { const dt = new Date(d.date); return dt >= start && dt <= end; });
+      bps = bps.filter(b => { const dt = new Date(b.date); return dt >= start && dt <= end; });
+    }
+    return { filteredTxs: txs, filteredExps: exps, filteredDebtPayments: dps, filteredBakeryPayments: bps };
+  }, [period, startDate, endDate, transactions, expenses, debtPayments, bakeryPayments]);
 
   const metrics = useMemo(() => {
     const totalSales = filteredTxs.reduce((s, t) => s + t.totalPrice, 0);
     const cashSales = filteredTxs.filter(t => t.type === 'Cash').reduce((s, t) => s + t.totalPrice, 0);
     const debtSales = filteredTxs.filter(t => t.type === 'Debt').reduce((s, t) => s + t.totalPrice, 0);
-    const totalExpenses = filteredExps.reduce((s, e) => s + e.amount, 0);
+    
+    // Expenses (Only MANAGER expenses for business profit calculation)
+    const mgtExps = filteredExps.filter(e => e.type === 'MANAGER');
+    const totalExpenses = mgtExps.reduce((s, e) => s + e.amount, 0);
+    
     const breadSold = filteredTxs.reduce((s, t) => s + getTransactionItems(t).reduce((ss, i) => ss + i.quantity, 0), 0);
-    const returnLogs = filteredLogs.filter(l => l.type === 'Return');
-    const totalReturnsValue = returnLogs.reduce((s, l) => s + l.quantityReceived * l.costPrice, 0);
-
+    
+    // Profit Calculation
     const ourShare = totalSales * 0.10;
     const bakeryOwed = totalSales * 0.90;
     const netProfit = ourShare - totalExpenses;
+    
+    // Cash Drawer / Till Expectation
+    const debtCollected = filteredDebtPayments.reduce((s, dp) => s + Number(dp.amount || 0), 0);
+    const expectedCashInHand = cashSales + debtCollected - totalExpenses; // Note: Bakery payouts reduce this further.
 
     const outstandingDebt = customers.reduce((s, c) => s + (c.debtBalance || 0), 0);
     const stockRetailValue = products.filter(p => p.active).reduce((s, p) => s + p.stock * p.price, 0);
-    const txCount = filteredTxs.length;
-    const avgSaleValue = txCount > 0 ? Math.round(totalSales / txCount) : 0;
-
-    const debtCollected = filterByPeriod(debtPayments).reduce((s, dp) => s + Number(dp.amount || 0), 0);
-    const companyPaid = filterByPeriod(bakeryPayments).reduce((s, bp) => s + Number(bp.amount || 0), 0);
+    
+    const companyPaid = filteredBakeryPayments.reduce((s, bp) => s + Number(bp.amount || 0), 0);
     const netBakeryOwed = Math.max(0, bakeryOwed - companyPaid);
 
     return {
       totalSales, cashSales, debtSales, totalExpenses, breadSold,
       ourShare, bakeryOwed, companyPaid, netBakeryOwed, netProfit,
-      outstandingDebt, stockRetailValue, txCount, avgSaleValue,
-      debtCollected, totalReturnsValue,
+      outstandingDebt, stockRetailValue, debtCollected, expectedCashInHand
     };
-  }, [filteredTxs, filteredExps, filteredLogs, customers, products, debtPayments, bakeryPayments, period]);
+  }, [filteredTxs, filteredExps, filteredDebtPayments, filteredBakeryPayments, customers, products]);
 
+  // Product Analysis
   const productStats = useMemo(() => {
     const map: Record<string, { qty: number; revenue: number }> = {};
-    filteredTxs.forEach(tx => {
-      getTransactionItems(tx).forEach(item => {
-        if (!map[item.productId]) map[item.productId] = { qty: 0, revenue: 0 };
-        map[item.productId].qty += item.quantity;
-        map[item.productId].revenue += item.quantity * item.unitPrice;
-      });
-    });
-    return Object.entries(map)
-      .map(([id, data]) => ({ id, name: products.find(p => p.id === id)?.name || 'Unknown', ...data, stock: products.find(p => p.id === id)?.stock || 0, price: products.find(p => p.id === id)?.price || 0 }))
-      .sort((a, b) => b.revenue - a.revenue);
+    filteredTxs.forEach(tx => getTransactionItems(tx).forEach(item => {
+      if (!map[item.productId]) map[item.productId] = { qty: 0, revenue: 0 };
+      map[item.productId].qty += item.quantity;
+      map[item.productId].revenue += item.quantity * item.unitPrice;
+    }));
+    return Object.entries(map).map(([id, data]) => ({ 
+      id, name: products.find(p => p.id === id)?.name || 'Unknown', 
+      price: products.find(p => p.id === id)?.price || 0,
+      ...data 
+    })).sort((a, b) => b.revenue - a.revenue);
   }, [filteredTxs, products]);
 
-  const weekTrend = useMemo(() => Array.from({ length: 7 }, (_, i) => {
-    const d = new Date(); d.setDate(d.getDate() - (6 - i));
-    const ds = d.toISOString().split('T')[0];
-    return { label: d.toLocaleDateString([], { weekday: 'short' }).charAt(0), value: transactions.filter(tx => tx.date.startsWith(ds)).reduce((s, tx) => s + tx.totalPrice, 0) };
-  }), [transactions]);
-
-  const hourlyTrend = useMemo(() => {
-    const todayTxs = transactions.filter(tx => tx.date.startsWith(todayStr));
-    return Array.from({ length: 12 }, (_, i) => {
-      const hour = i * 2;
-      const label = hour === 0 ? '12a' : hour < 12 ? `${hour}a` : hour === 12 ? '12p' : `${hour - 12}p`;
-      return { label, value: todayTxs.filter(tx => { const h = new Date(tx.date).getHours(); return h >= hour && h < hour + 2; }).reduce((s, tx) => s + tx.totalPrice, 0) };
-    });
-  }, [transactions, todayStr]);
+  // Trends
+  const hourlyTrend = useMemo(() => Array.from({length: 12}, (_, i) => {
+    const h = i * 2;
+    const label = `${h===0?12:h>12?h-12:h}${h<12?'a':'p'}`;
+    return { label, value: filteredTxs.filter(tx => { const th = new Date(tx.date).getHours(); return th >= h && th < h + 2; }).reduce((s, tx) => s + tx.totalPrice, 0)};
+  }), [filteredTxs]);
 
   const displayedTxs = useMemo(() => {
     const q = txSearch.toLowerCase();
     return [...filteredTxs].filter(tx => {
-      const matchType = txTypeFilter === 'All' || tx.type === txTypeFilter;
-      const customer = customers.find(c => c.id === tx.customerId);
-      const matchSearch = !q || customer?.name.toLowerCase().includes(q) ||
-        getTransactionItems(tx).some(item => products.find(p => p.id === item.productId)?.name.toLowerCase().includes(q));
-      return matchType && matchSearch;
+      const cust = customers.find(c => c.id === tx.customerId);
+      return !q || cust?.name.toLowerCase().includes(q);
     }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  }, [filteredTxs, txSearch, txTypeFilter, customers, products]);
+  }, [filteredTxs, txSearch, customers]);
 
-  const getCustomerName = (id?: string) => id ? (customers.find(c => c.id === id)?.name || 'Unknown') : 'Walk-in';
-  const debtors = useMemo(() => customers.filter(c => c.debtBalance > 0).sort((a, b) => b.debtBalance - a.debtBalance), [customers]);
-
-  const handlePrint = async () => {
-    const p = (n: number) => `N${Math.round(n).toLocaleString()}`;
+  // EXPORT TO CSV FEATURE
+  const handleExportCSV = () => {
     try {
-      if (!(navigator as any).bluetooth) throw new Error('No Bluetooth');
-      const device = await (navigator as any).bluetooth.requestDevice({
-        filters: [{ services: ['000018f0-0000-1000-8000-00805f9b34fb'] }, { namePrefix: 'MTP' }, { namePrefix: 'PT' }, { namePrefix: 'RP' }, { namePrefix: 'Printer' }],
-        optionalServices: ['000018f0-0000-1000-8000-00805f9b34fb', '49535343-fe7d-4ae5-8fa9-9fafd205e455', 'e7810a71-73ae-499d-8c15-faa9aef0c3f2']
+      let csv = 'Date,Time,Customer,Type,Items,TotalAmount,Discount\n';
+      displayedTxs.forEach(tx => {
+        const d = new Date(tx.date);
+        const dateStr = `${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()}`;
+        const timeStr = `${d.getHours()}:${d.getMinutes()}`;
+        const custName = customers.find(c => c.id === tx.customerId)?.name || 'Walk-in';
+        const itemsCount = getTransactionItems(tx).length;
+        csv += `${dateStr},${timeStr},"${custName}",${tx.type},${itemsCount},${tx.totalPrice},${tx.discount || 0}\n`;
       });
-      if (!device.gatt) throw new Error('No GATT');
-      const server = await device.gatt.connect();
-      const services = await server.getPrimaryServices();
-      const chars = await services[0].getCharacteristics();
-      const char = chars.find((c: any) => c.properties.write || c.properties.writeWithoutResponse);
-      if (!char) throw new Error('No char');
-      const co = (appSettings.companyName || 'BREAD APP').replace(/[^\x00-\x7F]/g, '');
-      const sep = '--------------------------------\n';
-      const lines = [
-        `\x1Ba\x01`, `\x1BE\x01${co.toUpperCase()}\x1BE\x00\n`,
-        `EXECUTIVE REPORT - ${period.toUpperCase()}\n`,
-        `Date: ${new Date().toLocaleDateString()}\n`, sep,
-        `\x1Ba\x00`,
-        `Total Sales:     ${p(metrics.totalSales)}\n`,
-        `Cash Sales:      ${p(metrics.cashSales)}\n`,
-        `Bread Sold:      ${metrics.breadSold} units\n`, sep,
-        `Our Share(10%):  ${p(metrics.ourShare)}\n`,
-        `Bakery Owed(90%):${p(metrics.bakeryOwed)}\n`,
-        `Company Paid:    -${p(metrics.companyPaid)}\n`,
-        `Remaining Bal:   ${p(metrics.netBakeryOwed)}\n`,
-        `Our Expenses:    ${p(metrics.totalExpenses)}\n`, sep,
-        `\x1BE\x01NET PROFIT: ${p(metrics.netProfit)}\x1BE\x00\n`, sep,
-        `Outstanding Debt:${p(metrics.outstandingDebt)}\n`,
-        `Stock Value:     ${p(metrics.stockRetailValue)}\n`, sep,
-        `\x1Ba\x01`, `End of Report\n`, `\x1Ba\x00\n\n\n`,
-      ];
-      const encoder = new TextEncoder();
-      for (const line of lines) {
-        const data = encoder.encode(line.replace(/[^\x00-\x7F]/g, '?'));
-        for (let i = 0; i < data.length; i += 512) {
-          await char.writeValue(data.slice(i, i + 512));
-          await new Promise(r => setTimeout(r, 30));
-        }
-      }
-      await new Promise(r => setTimeout(r, 600));
-      device.gatt.disconnect();
-    } catch { window.print(); }
-  };
-
-  const handleShare = () => {
-    const text = `📊 *${appSettings.companyName || 'Bread App'} - Manager Report (${period})*\n\n💰 Total Sales: ${fmt(metrics.totalSales)}\n✅ Cash: ${fmt(metrics.cashSales)} | 💳 Debt: ${fmt(metrics.debtSales)}\n🍞 Bread Sold: ${metrics.breadSold} units\n\n📈 *Our 10% Share: ${fmt(metrics.ourShare)}*\n💸 Our Expenses: ${fmt(metrics.totalExpenses)}\n*💵 Net Profit: ${fmt(metrics.netProfit)}*\n\n🏭 Bakery Share (90%): ${fmt(metrics.bakeryOwed)}\n💸 Paid to Company: -${fmt(metrics.companyPaid)}\n*⚠️ Remaining Balance: ${fmt(metrics.netBakeryOwed)}*\n\n⚠️ Customer Debt: ${fmt(metrics.outstandingDebt)}\n📦 Stock Value: ${fmt(metrics.stockRetailValue)}\n🕐 ${new Date().toLocaleString()}`;
-    if (navigator.share) navigator.share({ title: 'Sales Report', text }).catch(() => {});
-    else window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.setAttribute('hidden', '');
+      a.setAttribute('href', url);
+      a.setAttribute('download', `BreadApp_Sales_${period}_${Date.now()}.csv`);
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    } catch (e) { alert('Export failed'); }
   };
 
   return (
     <AnimatedPage>
-      <div ref={reportRef} className="container pb-24">
-        <style>{`
-          @media print {
-            @page { margin: 0; size: 58mm auto; }
-            html, body { margin: 0 !important; width: 58mm !important; background: #fff !important; }
-            .no-print { display: none !important; }
-            * { font-family: monospace !important; color: #000 !important; }
-          }
-        `}</style>
-        
-        {/* Header */}
-        <div className="no-print flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <button onClick={() => navigate(-1)} className="p-2 bg-surface rounded-full shadow-sm hover:bg-black/5 transition-colors border border-[var(--border-color)]">
-              <ArrowLeft size={20} className="text-secondary" />
-            </button>
-            <div>
-              <h1 className="text-2xl font-bold">📊 Executive Report</h1>
-              <p className="text-xs text-secondary">{appSettings.companyName}</p>
-            </div>
-          </div>
-          <div className="flex gap-2">
-            <button onClick={handleShare} className="flex items-center gap-1 px-3 py-2 bg-green-600 text-white rounded-xl font-bold text-xs shadow-sm shadow-green-600/20"><Share2 size={14}/> Share</button>
-            <button onClick={handlePrint} className="flex items-center gap-1 px-3 py-2 bg-indigo-600 text-white rounded-xl font-bold text-xs shadow-sm shadow-indigo-600/20"><Printer size={14}/> Print</button>
-          </div>
-        </div>
-
-        {/* Period Filter */}
-        <div className="no-print flex gap-2 overflow-x-auto pb-4 mb-4 custom-scrollbar">
-          {(['Today', 'Week', 'Month', 'All'] as Period[]).map(p => (
-            <button 
-              key={p} 
-              className={`px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap border transition-colors ${period === p ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-surface text-secondary border-[var(--border-color)]'}`} 
-              onClick={() => setPeriod(p)}
-            >
-              {periodLabel[p]}
-            </button>
-          ))}
-        </div>
-
-        {/* Hero Net Profit */}
-        <div className={`rounded-3xl p-6 text-white relative flex flex-col items-start justify-center overflow-hidden mb-6 shadow-xl border border-white/10 ${metrics.netProfit >= 0 ? 'bg-gradient-to-br from-indigo-600 to-purple-800' : 'bg-gradient-to-br from-red-600 to-rose-800'}`}>
-           <div className="absolute -top-10 -right-10 w-40 h-40 rounded-full bg-white/10 blur-3xl"></div>
-           <DollarSign className="absolute right-4 top-1/2 -translate-y-1/2 opacity-10" size={100} />
-           
-           <div className="flex items-center gap-2 mb-1 opacity-90 text-sm font-bold tracking-wide uppercase">
-             {metrics.netProfit >= 0 ? <TrendingUp size={16} /> : <TrendingDown size={16} />} 
-             Net Profit • {periodLabel[period]}
-           </div>
-           <div className="text-4xl font-black mb-2 tracking-tight">
-             {fmt(metrics.netProfit)}
-           </div>
-           <div className="text-xs opacity-80 mb-4 font-medium">
-             Our 10% Share: {fmt(metrics.ourShare)} — Expenses: {fmt(metrics.totalExpenses)}
-           </div>
-           
-           <div className="grid grid-cols-3 gap-4 w-full border-t border-white/20 pt-4 mt-2">
-             <div><div className="text-[10px] uppercase opacity-70 font-bold">Total Sales</div><div className="text-lg font-bold">{fmt(metrics.totalSales)}</div></div>
-             <div><div className="text-[10px] uppercase opacity-70 font-bold">10% Ours</div><div className="text-lg font-bold">{fmt(metrics.ourShare)}</div></div>
-             <div><div className="text-[10px] uppercase opacity-70 font-bold">Bakery 90%</div><div className="text-lg font-bold">{fmt(metrics.bakeryOwed)}</div></div>
-           </div>
-        </div>
-
-        {/* Tabs */}
-        <div className="no-print flex overflow-x-auto border-b border-[var(--border-color)] mb-6 custom-scrollbar pb-1">
-          {([
-            { id: 'overview', icon: BarChart2, label: 'Overview' },
-            { id: 'transactions', icon: Receipt, label: 'Sales Feed' },
-            { id: 'products', icon: Package, label: 'Products' },
-            { id: 'expenses', icon: ArrowDownRight, label: 'Expenses' },
-            { id: 'debts', icon: CreditCard, label: 'Debtors' },
-          ] as const).map(tab => (
-            <button 
-              key={tab.id} 
-              onClick={() => setActiveTab(tab.id as Tab)}
-              className={`flex-1 flex items-center justify-center gap-1 pb-2 pt-1 font-bold text-xs whitespace-nowrap transition-colors border-b-2 px-4 ${activeTab === tab.id ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-secondary'}`}
-            >
-              <tab.icon size={14} /> {tab.label}
-            </button>
-          ))}
-        </div>
-
-        {/* Overview Tab */}
-        {activeTab === 'overview' && (
-          <div className="grid gap-4">
-             <div className="grid grid-cols-2 gap-4">
-               <StatCard label="Cash In" value={fmt(metrics.cashSales + metrics.debtCollected)} icon={Wallet} color="#16a34a" sub="Physical funds received" />
-               <StatCard label="Cash Out" value={fmt(metrics.totalExpenses)} icon={ArrowDownRight} color="#dc2626" sub="Operational expenses" />
-               <StatCard label="Debt Issued" value={fmt(metrics.debtSales)} icon={CreditCard} color="#dc2626" sub={`${filteredTxs.filter(tx => tx.type === 'Debt').length} credit instances`} />
-               <StatCard label="Bread Sold" value={`${metrics.breadSold} units`} icon={ShoppingBag} color="#7c3aed" sub={`Avg: ${fmt(metrics.avgSaleValue)}/sale`} />
-             </div>
-
-             <div className="bg-surface p-6 rounded-3xl border border-[var(--border-color)] mt-2">
-                <div className="flex justify-between items-center mb-6">
-                  <div>
-                    <h3 className="font-bold text-sm tracking-wide">Revenue Trend</h3>
-                    <p className="text-[10px] text-secondary">Hourly / Weekly performance metric</p>
-                  </div>
-                  <div className="font-black text-indigo-600 dark:text-indigo-400">
-                    {fmt(period === 'Today' ? metrics.totalSales : weekTrend.reduce((s,d) => s + d.value, 0))}
-                  </div>
-                </div>
-                <MiniBar data={period === 'Today' ? hourlyTrend : weekTrend} color={period === 'Today' ? '#7c3aed' : '#4f46e5'} />
-             </div>
-             
-             <div className="grid grid-cols-2 gap-4">
-               <StatCard label="Customer Debt" value={fmt(metrics.outstandingDebt)} icon={AlertTriangle} color="#d97706" onClick={() => setActiveTab('debts')} />
-               <StatCard label="Stock Value" value={fmt(metrics.stockRetailValue)} icon={Package} color="#2563eb" sub={`${products.filter(p => p.active).reduce((s,p) => s + p.stock, 0)} units total`} />
-             </div>
-          </div>
-        )}
-
-        {/* Transactions Tab */}
-        {activeTab === 'transactions' && (
-          <div>
-            <div className="relative mb-4">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-secondary opacity-50" size={16} />
-              <input value={txSearch} onChange={e => setTxSearch(e.target.value)} placeholder="Search transactions..." className="form-input bg-surface pl-10 py-3 w-full font-bold text-sm shadow-sm" />
-            </div>
-            <div className="grid gap-3">
-              {displayedTxs.map(tx => (
-                <div key={tx.id} onClick={() => navigate(`/receipt/${tx.id}`)} className="bg-surface p-4 rounded-2xl border border-[var(--border-color)] flex justify-between items-center cursor-pointer shadow-sm hover:border-indigo-500/50 transition-colors">
-                  <div>
-                     <div className="font-bold text-sm">{getCustomerName(tx.customerId)}</div>
-                     <div className="text-[10px] opacity-60 font-medium my-1">{getTransactionItems(tx).map(i => `${i.quantity}×`).join(', ')} Items</div>
-                     <div className="text-[10px] text-secondary">{fmtDate(tx.date)}</div>
-                  </div>
-                  <div className="text-right">
-                    <div className="font-black text-lg">{fmt(tx.totalPrice)}</div>
-                    <div className={`text-[10px] font-bold uppercase ${tx.type === 'Debt' ? 'text-danger' : 'text-success'}`}>{tx.type}</div>
-                  </div>
-                  <ChevronRight size={16} className="text-secondary ml-2 opacity-30" />
-                </div>
-              ))}
-              {displayedTxs.length === 0 && <div className="text-center p-8 opacity-50 font-medium text-sm">No transactions found.</div>}
-            </div>
-          </div>
-        )}
-
-        {/* Products Tab */}
-        {activeTab === 'products' && (
-          <div className="grid gap-3">
-            {productStats.map((ps, idx) => {
-              const totalRev = productStats.reduce((s, p) => s + p.revenue, 1);
-              const pct = Math.round((ps.revenue / totalRev) * 100);
-              return (
-                <div key={ps.id} className="bg-surface p-4 rounded-2xl border border-[var(--border-color)] shadow-sm">
-                  <div className="flex justify-between items-center mb-3">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-indigo-500/10 flex items-center justify-center font-black text-indigo-600 text-lg">
-                        {idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : `#${idx+1}`}
-                      </div>
-                      <div>
-                        <div className="font-bold text-[15px]">{ps.name}</div>
-                        <div className="text-[11px] text-secondary font-medium">{ps.qty} units @ ₦{ps.price}/ea</div>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className="font-black text-[15px]">{fmt(ps.revenue)}</div>
-                      <div className="text-[10px] text-secondary font-bold">{pct}% share</div>
-                    </div>
-                  </div>
-                  <div className="h-2 w-full bg-black/5 dark:bg-white/5 rounded-full overflow-hidden">
-                    <div className="h-full bg-indigo-500" style={{ width: `${pct}%`}}></div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-
-        {/* Expenses Tab */}
-        {activeTab === 'expenses' && (
-          <div>
-            <div className="bg-red-500/10 p-6 rounded-3xl border border-red-500/20 mb-6 flex justify-between items-center">
-              <div>
-                <div className="text-red-500 font-bold text-[11px] uppercase tracking-wider mb-1">Total Expenses • {periodLabel[period]}</div>
-                <div className="text-3xl font-black text-red-500">{fmt(metrics.totalExpenses)}</div>
-              </div>
-              <ArrowDownRight size={48} className="text-red-500 opacity-20" />
-            </div>
-            <div className="grid gap-3">
-              {filteredExps.map(exp => (
-                <div key={exp.id} className="bg-surface p-4 rounded-2xl border border-[var(--border-color)] shadow-sm flex justify-between items-center">
-                  <div>
-                    <div className="font-bold text-[15px]">{exp.description}</div>
-                    <div className="text-[10px] text-secondary font-medium">{fmtDate(exp.date)}</div>
-                  </div>
-                  <div className="font-black text-red-500 text-lg">{fmt(exp.amount)}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Debts Tab */}
-        {activeTab === 'debts' && (
-          <div>
-            <div className="bg-amber-500/10 p-6 rounded-3xl border border-amber-500/20 mb-6 flex justify-between items-center">
+      <div style={{ background: T.bg, minHeight: '100vh', fontFamily: "'Inter',system-ui,sans-serif", paddingBottom: '96px' }}>
+        <div style={{ padding: '20px 16px 0' }}>
+          
+          {/* Header */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+               <button onClick={() => navigate(-1)} style={{ width: '40px', height: '40px', borderRadius: '12px', background: T.surface, border: `1.5px solid ${T.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: T.shadow }}>
+                 <ArrowLeft size={18} color={T.txt} />
+               </button>
                <div>
-                 <div className="text-amber-600 font-bold text-[11px] uppercase tracking-wider mb-1">Total Market Debt</div>
-                 <div className="text-3xl font-black text-amber-600">{fmt(metrics.outstandingDebt)}</div>
-                 <div className="text-xs text-amber-600/70 mt-1 font-bold">{debtors.length} Debtors Profiled</div>
+                 <h1 style={{ color: T.txt, fontWeight: 900, fontSize: '20px', margin: 0 }}>Executive Report</h1>
+                 <p style={{ color: T.txt3, fontSize: '11px', fontWeight: 600, margin: '2px 0 0' }}>Advanced Metrics & Print</p>
                </div>
-               <AlertTriangle size={48} className="text-amber-500 opacity-20" />
+             </div>
+             <div style={{ display: 'flex', gap: '8px' }}>
+               <button onClick={handleExportCSV} style={{ padding: '8px 12px', background: T.surface, border: `1.5px solid ${T.border}`, borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', boxShadow: T.shadow, color: T.txt2, fontWeight: 700, fontSize: '11px' }}>
+                  <Download size={14} /> CSV
+               </button>
+               <button onClick={() => window.print()} style={{ padding: '8px 12px', background: T.accent, border: 'none', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', boxShadow: `0 4px 12px ${T.accent}40`, color: '#fff', fontWeight: 700, fontSize: '11px' }}>
+                  <Printer size={14} /> Print
+               </button>
+             </div>
+          </div>
+
+          {/* Premium Date Selector */}
+          <div style={{ background: T.surface, borderRadius: T.radius, padding: '6px', display: 'flex', gap: '4px', overflowX: 'auto', marginBottom: showCustomRange ? '12px' : '24px', boxShadow: T.shadow, border: `1.5px solid ${T.border}` }}>
+            {(['Today', 'Week', 'Month', 'All', 'Custom'] as Period[]).map(p => (
+              <button key={p} onClick={() => { setPeriod(p); if (p !== 'Custom') setShowCustomRange(false); else setShowCustomRange(true); }}
+                style={{ flex: 1, minWidth: '70px', background: period === p ? T.surface2 : 'transparent', color: period === p ? T.txt : T.txt3, border: `1.5px solid ${period === p ? T.border : 'transparent'}`, borderRadius: '10px', padding: '8px 12px', fontSize: '11px', fontWeight: 800, cursor: 'pointer', transition: 'all 0.2s', whiteSpace: 'nowrap' }}>
+                {p}
+              </button>
+            ))}
+          </div>
+          
+          {showCustomRange && (
+            <div style={{ display: 'flex', gap: '12px', marginBottom: '24px', background: T.surface, padding: '12px', borderRadius: T.radius, border: `1.5px solid ${T.border}` }}>
+              <div style={{ flex: 1 }}>
+                <span style={{ fontSize: '9px', fontWeight: 800, color: T.txt3, textTransform: 'uppercase', marginBottom: '4px', display: 'block' }}>From</span>
+                <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} style={{ width: '100%', padding: '10px', borderRadius: '8px', border: `1.5px solid ${T.border}`, background: T.surface2, color: T.txt, fontWeight: 600, fontSize: '12px', outline: 'none' }} />
+              </div>
+              <div style={{ flex: 1 }}>
+                <span style={{ fontSize: '9px', fontWeight: 800, color: T.txt3, textTransform: 'uppercase', marginBottom: '4px', display: 'block' }}>To</span>
+                <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} style={{ width: '100%', padding: '10px', borderRadius: '8px', border: `1.5px solid ${T.border}`, background: T.surface2, color: T.txt, fontWeight: 600, fontSize: '12px', outline: 'none' }} />
+              </div>
             </div>
-            <div className="grid gap-3">
-              {debtors.map(c => {
-                const pct = Math.min(100, Math.round((c.debtBalance / metrics.outstandingDebt) * 100));
-                return (
-                  <div key={c.id} onClick={() => navigate(`/customers/${c.id}`)} className="bg-surface p-4 rounded-2xl border border-[var(--border-color)] shadow-sm cursor-pointer hover:border-amber-500/40 transition-colors">
-                     <div className="flex justify-between items-center mb-3">
-                        <div className="flex items-center gap-3">
-                           <div className="w-10 h-10 rounded-full bg-amber-500/20 flex items-center justify-center font-black text-amber-600 text-lg">
-                             {c.name.charAt(0).toUpperCase()}
-                           </div>
-                           <div>
-                             <div className="font-bold text-[15px]">{c.name}</div>
-                             <div className="text-[11px] text-secondary">{c.phone || 'No phone'}</div>
-                           </div>
-                        </div>
-                        <div className="text-right">
-                          <div className="font-black text-xl text-danger">{fmt(c.debtBalance)}</div>
-                          <div className="text-[10px] font-bold text-secondary">{pct}% of total</div>
-                        </div>
-                     </div>
-                     <div className="h-1.5 w-full bg-black/5 dark:bg-white/5 rounded-full overflow-hidden">
-                       <div className="h-full bg-amber-500" style={{ width: `${pct}%` }}></div>
-                     </div>
+          )}
+
+          {/* Net Profit Hero Header (Modern Glass/Gradient) */}
+          <div style={{ position: 'relative', background: `linear-gradient(135deg, ${T.txt} 0%, #1e293b 100%)`, borderRadius: '28px', padding: '24px', marginBottom: '24px', color: '#fff', overflow: 'hidden', boxShadow: '0 12px 32px rgba(15,23,42,0.2)' }}>
+            <div style={{ position: 'absolute', top: '-50px', right: '-20px', width: '150px', height: '150px', background: 'rgba(255,255,255,0.05)', borderRadius: '50%', pointerEvents: 'none' }} />
+            
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+              <div style={{ width: '32px', height: '32px', borderRadius: '10px', background: 'rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                 <BarChart2 size={16} color="#fff" />
+              </div>
+              <div>
+                <span style={{ fontSize: '10px', fontWeight: 800, letterSpacing: '0.1em', textTransform: 'uppercase', opacity: 0.8, display: 'block' }}>Estimated Net Profit</span>
+                <span style={{ fontSize: '9px', fontWeight: 600, opacity: 0.6, display: 'block' }}>Based on 10% gross margin</span>
+              </div>
+            </div>
+            
+            <div style={{ fontSize: '38px', fontWeight: 900, letterSpacing: '-0.03em', lineHeight: 1, marginBottom: '20px' }}>
+              {fmt(metrics.netProfit)}
+            </div>
+            
+            {/* Split breakdown */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px', background: 'rgba(0,0,0,0.2)', padding: '16px', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.05)' }}>
+              <div>
+                 <span style={{ fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', opacity: 0.6, display: 'block', marginBottom: '4px' }}>Our Share (10%)</span>
+                 <span style={{ fontSize: '14px', fontWeight: 800 }}>{fmt(metrics.ourShare)}</span>
+              </div>
+              <div style={{ borderLeft: '1px solid rgba(255,255,255,0.1)', paddingLeft: '12px' }}>
+                 <span style={{ fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', color: '#fca5a5', display: 'block', marginBottom: '4px' }}>Expenses</span>
+                 <span style={{ fontSize: '14px', fontWeight: 800 }}>{fmt(metrics.totalExpenses)}</span>
+              </div>
+              <div style={{ borderLeft: '1px solid rgba(255,255,255,0.1)', paddingLeft: '12px' }}>
+                 <span style={{ fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', color: '#6ee7b7', display: 'block', marginBottom: '4px' }}>Bakery (90%)</span>
+                 <span style={{ fontSize: '14px', fontWeight: 800 }}>{fmt(metrics.bakeryOwed)}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Premium Tabs */}
+          <div style={{ display: 'flex', background: 'transparent', paddingBottom: '16px', gap: '8px', overflowX: 'auto', WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+            {([
+              { id: 'overview', icon: Activity, label: 'Analytics' },
+              { id: 'transactions', icon: Receipt, label: 'Feed' },
+              { id: 'products', icon: Package, label: 'Products' },
+              { id: 'expenses', icon: ArrowDownRight, label: 'Expenses' },
+              { id: 'debts', icon: AlertTriangle, label: 'Debtors' }
+            ] as const).map(t => (
+              <button key={t.id} onClick={() => setActiveTab(t.id as Tab)}
+                style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '10px 16px', borderRadius: '100px', background: activeTab === t.id ? T.txt : T.surface, color: activeTab === t.id ? '#fff' : T.txt2, border: `1.5px solid ${activeTab === t.id ? T.txt : T.border}`, fontWeight: 800, fontSize: '12px', cursor: 'pointer', whiteSpace: 'nowrap', transition: 'all 0.2s', boxShadow: activeTab === t.id ? '0 4px 12px rgba(15,23,42,0.2)' : T.shadow }}>
+                <t.icon size={14} /> {t.label}
+              </button>
+            ))}
+          </div>
+
+          {/* ────── OVERVIEW TAB ────── */}
+          {activeTab === 'overview' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              
+              {/* Expected Till Balance - NEW FEATURE */}
+              <div style={{ background: T.successLt, border: `1.5px solid #a7f3d0`, borderRadius: T.radiusLg, padding: '20px', display: 'flex', alignItems: 'center', gap: '16px', boxShadow: T.shadow }}>
+                <div style={{ width: '48px', height: '48px', borderRadius: '14px', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 12px rgba(16,185,129,0.15)' }}>
+                  <Wallet size={24} color={T.success} />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: '10px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#047857', marginBottom: '4px' }}>Expected Cash In Till</div>
+                  <div style={{ fontSize: '24px', fontWeight: 900, color: '#064e3b', margin: 0 }}>{fmt(metrics.expectedCashInHand)}</div>
+                  <div style={{ fontSize: '10px', color: '#047857', fontWeight: 600, marginTop: '2px' }}>Cash Sales + Debt Collected - Expenses</div>
+                </div>
+              </div>
+
+              {/* 4 Block Stats */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                 <StatCard label="Gross Sales" value={fmt(metrics.totalSales)} icon={TrendingUp} color={T.accent} sub={`${metrics.breadSold} units sold.`} />
+                 <StatCard label="Cash Revenue" value={fmt(metrics.cashSales)} icon={DollarSign} color={T.success} sub={`+ ${fmt(metrics.debtCollected)} debts collected`} />
+                 <StatCard label="Debts Issued" value={fmt(metrics.debtSales)} icon={CreditCard} color={T.warn} sub={`${Math.round((metrics.debtSales/metrics.totalSales)*100 || 0)}% of total sales`} />
+                 <StatCard label="Outstanding" value={fmt(metrics.outstandingDebt)} icon={AlertTriangle} color={T.danger} sub="Total market debt." />
+              </div>
+
+              {/* Sales Distribution Bar */}
+              <div style={{ background: T.surface, border: `1.5px solid ${T.border}`, borderRadius: T.radiusLg, padding: '20px', boxShadow: T.shadow }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                  <span style={{ fontSize: '12px', fontWeight: 800, color: T.txt }}>Revenue Structure</span>
+                  <PieChart size={16} color={T.txt3} />
+                </div>
+                <div style={{ width: '100%', height: '12px', borderRadius: '10px', overflow: 'hidden', display: 'flex', marginBottom: '12px' }}>
+                  <div style={{ width: `${(metrics.cashSales / metrics.totalSales)*100 || 0}%`, background: T.success, height: '100%' }} />
+                  <div style={{ width: `${(metrics.debtSales / metrics.totalSales)*100 || 0}%`, background: T.warn, height: '100%' }} />
+                </div>
+                <div style={{ display: 'flex', gap: '16px' }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '10px', color: T.txt3, fontWeight: 700, textTransform: 'uppercase' }}><div style={{width:'8px',height:'8px',borderRadius:'50%',background:T.success}}/> Cash</div>
+                    <div style={{ fontSize: '14px', fontWeight: 900, color: T.txt }}>{Math.round((metrics.cashSales/metrics.totalSales)*100 || 0)}%</div>
                   </div>
-                );
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '10px', color: T.txt3, fontWeight: 700, textTransform: 'uppercase' }}><div style={{width:'8px',height:'8px',borderRadius:'50%',background:T.warn}}/> Debt</div>
+                    <div style={{ fontSize: '14px', fontWeight: 900, color: T.txt }}>{Math.round((metrics.debtSales/metrics.totalSales)*100 || 0)}%</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Trend Chart */}
+              <div style={{ background: T.surface, border: `1.5px solid ${T.border}`, borderRadius: T.radiusLg, padding: '20px', boxShadow: T.shadow, marginBottom: '20px' }}>
+                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+                    <span style={{ fontSize: '12px', fontWeight: 800, color: T.txt }}>Activity Velocity</span>
+                    <span style={{ fontSize: '10px', fontWeight: 700, color: T.accent, background: T.accentLt, padding: '4px 8px', borderRadius: '8px' }}>Active Period</span>
+                 </div>
+                 <MiniBar data={hourlyTrend} color={T.accent} />
+              </div>
+            </div>
+          )}
+
+          {/* ────── TRANSACTIONS TAB ────── */}
+          {activeTab === 'transactions' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div style={{ position: 'relative', marginBottom: '8px' }}>
+                <Search size={16} color={T.txt3} style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)' }} />
+                <input type="text" placeholder="Search invoices..." value={txSearch} onChange={e => setTxSearch(e.target.value)}
+                  style={{ width: '100%', padding: '14px 14px 14px 40px', background: T.surface, border: `1.5px solid ${T.border}`, borderRadius: '16px', fontSize: '13px', fontWeight: 600, color: T.txt, outline: 'none', boxShadow: T.shadow }} />
+              </div>
+              
+              {displayedTxs.map(tx => (
+                <div key={tx.id} onClick={() => navigate(`/receipt/${tx.id}`)}
+                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: T.surface, border: `1.5px solid ${T.border}`, borderRadius: '16px', padding: '16px', cursor: 'pointer', boxShadow: T.shadow }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: tx.type === 'Debt' ? T.dangerLt : T.successLt, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <Receipt size={16} color={tx.type === 'Debt' ? T.danger : T.success} />
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '14px', fontWeight: 800, color: T.txt, marginBottom: '2px' }}>{customers.find(c => c.id === tx.customerId)?.name || 'Walk-in'}</div>
+                      <div style={{ fontSize: '11px', fontWeight: 600, color: T.txt3 }}>{fmtDate(tx.date)}</div>
+                    </div>
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontSize: '16px', fontWeight: 900, color: T.txt, marginBottom: '2px' }}>{fmt(tx.totalPrice)}</div>
+                    <div style={{ fontSize: '9px', fontWeight: 800, color: tx.type === 'Debt' ? T.danger : T.success, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{tx.type}</div>
+                  </div>
+                </div>
+              ))}
+              {displayedTxs.length === 0 && <div style={{ textAlign: 'center', padding: '40px 0', color: T.txt3, fontSize: '12px', fontWeight: 600 }}>No matching transactions found in this period.</div>}
+            </div>
+          )}
+
+          {/* ────── PRODUCTS TAB ────── */}
+          {activeTab === 'products' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {productStats.map((ps, idx) => {
+                 const totalRev = productStats.reduce((s, p) => s + p.revenue, 1) || 1;
+                 const pct = (ps.revenue / totalRev) * 100;
+                 return (
+                   <div key={ps.id} style={{ background: T.surface, border: `1.5px solid ${T.border}`, borderRadius: '16px', padding: '16px', boxShadow: T.shadow }}>
+                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
+                       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                         <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: T.surface2, border: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: 900, color: T.accent }}>
+                           #{idx + 1}
+                         </div>
+                         <div>
+                           <div style={{ fontSize: '14px', fontWeight: 800, color: T.txt, marginBottom: '2px' }}>{ps.name}</div>
+                           <div style={{ fontSize: '11px', fontWeight: 600, color: T.txt3 }}>{ps.qty} sold @ ₦{ps.price}</div>
+                         </div>
+                       </div>
+                       <div style={{ textAlign: 'right' }}>
+                         <div style={{ fontSize: '16px', fontWeight: 900, color: T.txt, marginBottom: '2px' }}>{fmt(ps.revenue)}</div>
+                         <div style={{ fontSize: '10px', fontWeight: 700, color: T.accent }}>{pct.toFixed(1)}% Share</div>
+                       </div>
+                     </div>
+                     <div style={{ height: '6px', width: '100%', background: T.surface2, borderRadius: '4px', overflow: 'hidden' }}>
+                       <div style={{ height: '100%', width: `${pct}%`, background: T.accent, borderRadius: '4px' }} />
+                     </div>
+                   </div>
+                 );
               })}
             </div>
-          </div>
-        )}
+          )}
+
+          {/* ────── EXPENSES TAB ────── */}
+          {activeTab === 'expenses' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div style={{ background: T.dangerLt, border: `1.5px solid #fecaca`, borderRadius: '20px', padding: '24px', textAlign: 'center', marginBottom: '8px' }}>
+                <div style={{ fontSize: '10px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', color: T.danger, marginBottom: '8px' }}>Total Manager Expenses</div>
+                <div style={{ fontSize: '36px', fontWeight: 900, color: '#991b1b', margin: 0 }}>{fmt(metrics.totalExpenses)}</div>
+              </div>
+              {filteredExps.map(e => (
+                <div key={e.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: T.surface, border: `1.5px solid ${T.border}`, borderRadius: '16px', padding: '16px', boxShadow: T.shadow }}>
+                  <div>
+                    <div style={{ fontSize: '14px', fontWeight: 800, color: T.txt, marginBottom: '4px' }}>{e.description}</div>
+                    <div style={{ fontSize: '10px', fontWeight: 600, color: T.txt3, textTransform: 'uppercase' }}>{fmtDate(e.date)}</div>
+                  </div>
+                  <div style={{ fontSize: '16px', fontWeight: 900, color: T.danger }}>{fmt(e.amount)}</div>
+                </div>
+              ))}
+              {filteredExps.length === 0 && <div style={{ textAlign: 'center', padding: '40px 0', color: T.txt3, fontSize: '12px', fontWeight: 600 }}>No expenses recorded in this period.</div>}
+            </div>
+          )}
+
+          {/* ────── DEBTS TAB ────── */}
+          {activeTab === 'debts' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div style={{ background: T.warnLt, border: `1.5px solid #fde68a`, borderRadius: '20px', padding: '24px', textAlign: 'center', marginBottom: '8px' }}>
+                <div style={{ fontSize: '10px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#92400e', marginBottom: '8px' }}>Total Outstanding Market Debt</div>
+                <div style={{ fontSize: '36px', fontWeight: 900, color: '#78350f', margin: 0 }}>{fmt(metrics.outstandingDebt)}</div>
+              </div>
+              {customers.filter(c => c.debtBalance > 0).sort((a,b) => b.debtBalance - a.debtBalance).map(c => {
+                 const pct = (c.debtBalance / metrics.outstandingDebt) * 100;
+                 return (
+                   <div key={c.id} onClick={() => navigate(`/customers/${c.id}`)} style={{ background: T.surface, border: `1.5px solid ${T.border}`, borderRadius: '16px', padding: '16px', boxShadow: T.shadow, cursor: 'pointer' }}>
+                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+                       <div>
+                         <div style={{ fontSize: '15px', fontWeight: 800, color: T.txt, marginBottom: '4px' }}>{c.name}</div>
+                         <div style={{ fontSize: '11px', fontWeight: 600, color: T.txt3 }}>{c.phone || 'No phone'}</div>
+                       </div>
+                       <div style={{ textAlign: 'right' }}>
+                         <div style={{ fontSize: '18px', fontWeight: 900, color: T.danger, marginBottom: '4px' }}>{fmt(c.debtBalance)}</div>
+                         <div style={{ fontSize: '9px', fontWeight: 800, color: T.txt3, textTransform: 'uppercase' }}>{pct.toFixed(1)}% of total</div>
+                       </div>
+                     </div>
+                     <div style={{ height: '6px', width: '100%', background: T.dangerLt, borderRadius: '4px', overflow: 'hidden' }}>
+                       <div style={{ height: '100%', width: `${pct}%`, background: T.danger, borderRadius: '4px' }} />
+                     </div>
+                   </div>
+                 );
+              })}
+            </div>
+          )}
+
+        </div>
       </div>
     </AnimatedPage>
   );
