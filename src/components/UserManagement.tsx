@@ -151,10 +151,10 @@ export const UserManagement: React.FC = () => {
   const topPerformer = useMemo(() => {
     let best: Profile | null = null;
     let max = 0;
-    profiles.forEach(p => {
+    for (const p of profiles) {
       const vol = metrics[p.id]?.totalVolume || 0;
       if (vol > max) { max = vol; best = p; }
-    });
+    }
     return best;
   }, [profiles, metrics]);
 
@@ -215,11 +215,11 @@ export const UserManagement: React.FC = () => {
              <div style={{ position: 'relative', zIndex: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
                    <div style={{ background: T.gold, color: '#000', padding: '3px 8px', borderRadius: '6px', fontSize: '9px', fontWeight: 900, textTransform: 'uppercase', marginBottom: '8px', width: 'fit-content' }}>Weekly Hall of Fame</div>
-                   <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 900 }}>{topPerformer.full_name || topPerformer.email.split('@')[0]}</h3>
-                   <div style={{ fontSize: '12px', opacity: 0.7, marginTop: '2px' }}>Leading production with {(metrics[topPerformer.id] as any)?.actionCount || 0} actions</div>
+                   <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 900 }}>{(topPerformer as any).full_name || (topPerformer as any).email.split('@')[0]}</h3>
+                   <div style={{ fontSize: '12px', opacity: 0.7, marginTop: '2px' }}>Leading production with {(metrics[(topPerformer as any).id] as any)?.actionCount || 0} actions</div>
                 </div>
                 <div style={{ textAlign: 'right' }}>
-                   <div style={{ fontSize: '24px', fontWeight: 900 }}>{topPerformer.role === 'SUPPLIER' ? fmtRaw((metrics[topPerformer.id] as any)?.totalVolume || 0) : `${(metrics[topPerformer.id] as any)?.totalVolume || 0} Units`}</div>
+                   <div style={{ fontSize: '24px', fontWeight: 900 }}>{(topPerformer as any).role === 'SUPPLIER' ? fmtRaw((metrics[(topPerformer as any).id] as any)?.totalVolume || 0) : `${(metrics[(topPerformer as any).id] as any)?.totalVolume || 0} Units`}</div>
                    <div style={{ fontSize: '10px', opacity: 0.7, textTransform: 'uppercase', fontWeight: 700 }}>Total Throughput</div>
                 </div>
              </div>
@@ -285,7 +285,7 @@ export const UserManagement: React.FC = () => {
                       </div>
                       <div style={{ flex: 1.5, height: '40px' }}>
                          <ResponsiveContainer width="100%" height="100%">
-                            <AreaChart data={(perf?.dailyTrend && perf.dailyTrend.length > 0) ? perf.dailyTrend : [{ date: '', volume: 0 }, { date: '', volume: 0 }, { date: '', volume: 0 }]}>
+                            <AreaChart data={(perf?.dailyTrend && perf.dailyTrend.length > 0) ? (perf.dailyTrend as any) : ([{ date: '', volume: 0 }, { date: '', volume: 0 }, { date: '', volume: 0 }] as any)}>
                                <Area type="monotone" dataKey="volume" stroke={T.primary} strokeWidth={2} fill={T.primary} fillOpacity={0.1} />
                             </AreaChart>
                          </ResponsiveContainer>
@@ -293,8 +293,8 @@ export const UserManagement: React.FC = () => {
                   </div>
 
                   <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
-                     <button style={{ flex: 1, height: '36px', borderRadius: '12px', background: T.glass, border: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontSize: '11px', fontWeight: 800 }}><Phone size={14} /> Call</button>
-                     <button style={{ flex: 1, height: '36px', borderRadius: '12px', background: T.glass, border: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontSize: '11px', fontWeight: 800 }}><MessageSquare size={14} /> Chat</button>
+                     <a href={`tel:${p.phone || ''}`} style={{ flex: 1, height: '36px', borderRadius: '12px', background: T.glass, border: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontSize: '11px', fontWeight: 800, textDecoration: 'none', color: 'inherit' }}><Phone size={14} /> Call</a>
+                     <a href={`https://wa.me/${p.phone?.replace(/[^0-9]/g, '') || ''}`} target="_blank" rel="noreferrer" style={{ flex: 1, height: '36px', borderRadius: '12px', background: T.glass, border: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontSize: '11px', fontWeight: 800, textDecoration: 'none', color: 'inherit' }}><MessageSquare size={14} /> Chat</a>
                      <button onClick={() => setEditRoleUser(p)} style={{ width: '36px', height: '36px', borderRadius: '12px', background: T.glass, border: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         <Shield size={14} />
                      </button>
@@ -351,8 +351,8 @@ export const UserManagement: React.FC = () => {
                    <h3 style={{ margin: '0 0 16px', fontSize: '18px', fontWeight: 900 }}>Update Permissions</h3>
                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                       {(['MANAGER', 'STORE_KEEPER', 'SUPPLIER', 'CUSTOMER'] as UserRole[]).map(rr => (
-                        <button key={rr} onClick={() => handleRoleChange(editRoleUser.id, rr)} 
-                          style={{ padding: '14px', borderRadius: '16px', border: editRoleUser.role === rr ? `2px solid ${T.primary}` : `1px solid ${T.border}`, background: editRoleUser.role === rr ? T.primaryLt : 'none', fontWeight: 700, textAlign: 'left', cursor: 'pointer' }}>
+                        <button key={rr} onClick={() => handleRoleChange((editRoleUser as any).id, rr)} 
+                          style={{ padding: '14px', borderRadius: '16px', border: (editRoleUser as any).role === rr ? `2px solid ${T.primary}` : `1px solid ${T.border}`, background: (editRoleUser as any).role === rr ? T.primaryLt : 'none', fontWeight: 700, textAlign: 'left', cursor: 'pointer' }}>
                           {rr.replace('_', ' ')}
                         </button>
                       ))}
@@ -367,7 +367,7 @@ export const UserManagement: React.FC = () => {
                 <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 20, opacity: 0 }}
                   style={{ position: 'relative', background: T.surface, width: '100%', maxWidth: '380px', borderRadius: '28px', padding: '28px' }}>
                    <h3 style={{ margin: '0 0 4px', fontSize: '20px', fontWeight: 900 }}>Disburse Wages</h3>
-                   <p style={{ margin: '0 0 20px', fontSize: '12px', color: T.txt3 }}>Settling payment for {payStaffUser.full_name || payStaffUser.email}</p>
+                   <p style={{ margin: '0 0 20px', fontSize: '12px', color: T.txt3 }}>Settling payment for {(payStaffUser as any).full_name || (payStaffUser as any).email}</p>
                    <form onSubmit={handleProcessPayment}>
                       <input type="number" required autoFocus value={payAmount} onChange={e => setPayAmount(e.target.value)} placeholder="₦ 0.00" 
                         style={{ width: '100%', padding: '16px', borderRadius: '18px', border: `2px solid ${T.primary}`, background: T.bg, fontSize: '24px', fontWeight: 900, outline: 'none', marginBottom: '16px' }} />
