@@ -3,9 +3,10 @@ import { supabase } from '../lib/supabase';
 import type { UserRole } from '../store/AuthContext';
 import { 
   Shield, ArrowLeft, Search, 
-  Banknote, Mail, 
+  Banknote, 
   Phone, MessageSquare, 
-  Award, QrCode, Share2
+  Award, QrCode, Share2,
+  Zap, Clock, Activity, UserCog
 } from 'lucide-react';
 import { AnimatedPage } from './AnimatedPage';
 import { useNavigate } from 'react-router-dom';
@@ -104,12 +105,10 @@ export const UserManagement: React.FC = () => {
 
       const newMetrics: Record<string, StaffMetric> = {};
 
-      // Helper to initialize metric
       const initM = (id: string) => {
         if (!newMetrics[id]) newMetrics[id] = { userId: id, totalVolume: 0, actionCount: 0, lastActive: null, dailyTrend: [] };
       };
 
-      // Process Transactions
       txRes.data?.forEach(tx => {
         if (!tx.supplierId) return;
         initM(tx.supplierId);
@@ -124,7 +123,6 @@ export const UserManagement: React.FC = () => {
         else dayTrend.push({ date, volume: tx.totalPrice });
       });
 
-      // Process Inventory Logs
       invRes.data?.forEach(log => {
         if (!log.createdBy) return;
         initM(log.createdBy);
@@ -142,7 +140,9 @@ export const UserManagement: React.FC = () => {
       });
 
       setMetrics(newMetrics);
-    } catch (e) { console.error(e); }
+    } catch (e) {
+      console.error(e);
+    }
     setLoading(false);
   };
 
@@ -159,6 +159,7 @@ export const UserManagement: React.FC = () => {
   }, [profiles, metrics]);
 
   const handleRoleChange = async (userId: string, newRole: UserRole) => {
+    if (!userId) return;
     const { error } = await supabase.from('profiles').update({ role: newRole }).eq('id', userId);
     if (!error) { setEditRoleUser(null); fetchStaffData(); }
   };
@@ -196,10 +197,14 @@ export const UserManagement: React.FC = () => {
         {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '28px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <button onClick={() => navigate(-1)} style={{ background: T.surface, border: `1px solid ${T.border}`, padding: '10px', borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><ArrowLeft size={18} /></button>
+            <button onClick={() => navigate(-1)} style={{ background: T.surface, border: `1px solid ${T.border}`, padding: '10px', borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <ArrowLeft size={18} />
+            </button>
             <h1 style={{ fontSize: '20px', fontWeight: 900, margin: 0, letterSpacing: '-0.02em' }}>Organization Roles</h1>
           </div>
-          <button style={{ width: '42px', height: '42px', borderRadius: '12px', background: T.primary, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none' }}><Zap size={18} /></button>
+          <button style={{ width: '42px', height: '42px', borderRadius: '12px', background: T.primary, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none' }}>
+            <Zap size={18} />
+          </button>
         </div>
 
         {/* Top Performer Ribbon */}
@@ -226,21 +231,21 @@ export const UserManagement: React.FC = () => {
            <StatBox label="Active Roles" value={profiles.filter(p => p.role !== 'CUSTOMER').length} color={T.primary} />
         </div>
 
+        {/* Search */}
+        <div style={{ position: 'relative', marginBottom: '24px' }}>
+           <Search size={16} color={T.txt3} style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)' }} />
+           <input type="text" placeholder="Search organization..." value={query} onChange={e => setQuery(e.target.value)}
+              style={{ width: '100%', padding: '14px 14px 14px 44px', background: T.surface, border: `1px solid ${T.border}`, borderRadius: '18px', fontSize: '13px', fontWeight: 600, outline: 'none' }} />
+        </div>
+
         {/* Tab Filter */}
-        <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', marginBottom: '20px', paddingBottom: '4px' }}>
+        <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', marginBottom: '24px', paddingBottom: '4px' }}>
            {(['ALL', 'SUPPLIER', 'STORE_KEEPER', 'MANAGER'] as const).map(r => (
              <button key={r} onClick={() => setRoleFilter(r)} 
                 style={{ whiteSpace: 'nowrap', padding: '10px 16px', borderRadius: '14px', border: 'none', background: roleFilter === r ? T.primary : 'rgba(0,0,0,0.05)', color: roleFilter === r ? '#fff' : T.txt2, fontSize: '11px', fontWeight: 800 }}>
                 {r === 'ALL' ? 'Total Graph' : r.replace('_', ' ')}
              </button>
            ))}
-        </div>
-
-        {/* Search */}
-        <div style={{ position: 'relative', marginBottom: '24px' }}>
-           <Search size={16} color={T.txt3} style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)' }} />
-           <input type="text" placeholder="Search organization..." value={query} onChange={e => setQuery(e.target.value)}
-              style={{ width: '100%', padding: '14px 14px 14px 44px', background: T.surface, border: `1px solid ${T.border}`, borderRadius: '18px', fontSize: '13px', fontWeight: 600, outline: 'none' }} />
         </div>
 
         {/* Staff Feed */}
@@ -257,7 +262,7 @@ export const UserManagement: React.FC = () => {
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
                      <div style={{ display: 'flex', gap: '14px', alignItems: 'center' }}>
                         <div style={{ width: '56px', height: '56px', borderRadius: '20px', background: T.primaryLt, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
-                           <span style={{ fontSize: '20px', fontWeight: 900, color: T.primary }}>{p.full_name?.charAt(0) || 'U'}</span>
+                           <span style={{ fontSize: '20px', fontWeight: 900, color: T.primary }}>{p.full_name?.charAt(0) || p.email.charAt(0).toUpperCase()}</span>
                            {status.live && <div style={{ position: 'absolute', bottom: -2, right: -2, width: '14px', height: '14px', background: T.success, borderRadius: '50%', border: `3px solid ${T.surface}`, boxShadow: `0 0 10px ${T.success}80` }} />}
                         </div>
                         <div>
@@ -267,7 +272,9 @@ export const UserManagement: React.FC = () => {
                            </div>
                         </div>
                      </div>
-                     <button onClick={() => setIdCardUser(p)} style={{ padding: '8px', borderRadius: '12px', background: T.primaryLt, color: T.primary, border: 'none' }}><QrCode size={18} /></button>
+                     <button onClick={() => setIdCardUser(p)} style={{ padding: '8px', borderRadius: '12px', background: T.primaryLt, color: T.primary, border: 'none' }}>
+                        <QrCode size={18} />
+                     </button>
                   </div>
 
                   {/* Sparkline & Metrics */}
@@ -278,18 +285,19 @@ export const UserManagement: React.FC = () => {
                       </div>
                       <div style={{ flex: 1.5, height: '40px' }}>
                          <ResponsiveContainer width="100%" height="100%">
-                            <AreaChart data={perf?.dailyTrend || [{volume:0}, {volume:0}, {volume:0}]}>
+                            <AreaChart data={(perf?.dailyTrend && perf.dailyTrend.length > 0) ? perf.dailyTrend : [{ volume: 0 }, { volume: 0 }, { volume: 0 }]}>
                                <Area type="monotone" dataKey="volume" stroke={T.primary} strokeWidth={2} fill={T.primary} fillOpacity={0.1} />
                             </AreaChart>
                          </ResponsiveContainer>
                       </div>
                   </div>
 
-                  {/* Quick-Connect Toolbar */}
                   <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
                      <button style={{ flex: 1, height: '36px', borderRadius: '12px', background: T.glass, border: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontSize: '11px', fontWeight: 800 }}><Phone size={14} /> Call</button>
                      <button style={{ flex: 1, height: '36px', borderRadius: '12px', background: T.glass, border: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontSize: '11px', fontWeight: 800 }}><MessageSquare size={14} /> Chat</button>
-                     <button onClick={() => setEditRoleUser(p)} style={{ width: '36px', height: '36px', borderRadius: '12px', background: T.glass, border: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Shield size={14} /></button>
+                     <button onClick={() => setEditRoleUser(p)} style={{ width: '36px', height: '36px', borderRadius: '12px', background: T.glass, border: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <Shield size={14} />
+                     </button>
                   </div>
 
                   <button onClick={() => setPayStaffUser(p)} 
@@ -304,13 +312,11 @@ export const UserManagement: React.FC = () => {
 
         {/* MODALS */}
         <AnimatePresence>
-          {/* DIGITAL ID CARD */}
           {idCardUser && (
             <div style={{ position: 'fixed', inset: 0, zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIdCardUser(null)} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(10px)' }} />
                <motion.div initial={{ scale: 0.8, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.8, opacity: 0, y: 20 }}
                  style={{ position: 'relative', background: '#fff', width: '100%', maxWidth: '340px', borderRadius: '32px', padding: '32px', textAlign: 'center', color: '#000', overflow: 'hidden' }}>
-                  {/* Card Background Branding */}
                   <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '100px', background: `linear-gradient(45deg, #1e293b, #4f46e5)` }} />
                   <div style={{ position: 'relative', marginTop: '30px' }}>
                      <div style={{ width: '100px', height: '100px', margin: '0 auto', borderRadius: '50%', border: '4px solid #fff', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '32px', fontWeight: 900, color: '#4f46e5' }}>
@@ -337,7 +343,6 @@ export const UserManagement: React.FC = () => {
             </div>
           )}
 
-          {/* Roles / Wages / Payment Modals - reusing logic from previous version with updated styles... */}
           {editRoleUser && (
              <div style={{ position: 'fixed', inset: 0, zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setEditRoleUser(null)} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)' }} />
@@ -347,7 +352,7 @@ export const UserManagement: React.FC = () => {
                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                       {(['MANAGER', 'STORE_KEEPER', 'SUPPLIER', 'CUSTOMER'] as UserRole[]).map(rr => (
                         <button key={rr} onClick={() => handleRoleChange(editRoleUser.id, rr)} 
-                          style={{ padding: '14px', borderRadius: '16px', border: editRoleUser.role === rr ? `2px solid ${T.primary}` : `1px solid ${T.border}`, background: editRoleUser.role === rr ? T.primaryLt : 'none', fontWeight: 700, textAlign: 'left' }}>
+                          style={{ padding: '14px', borderRadius: '16px', border: editRoleUser.role === rr ? `2px solid ${T.primary}` : `1px solid ${T.border}`, background: editRoleUser.role === rr ? T.primaryLt : 'none', fontWeight: 700, textAlign: 'left', cursor: 'pointer' }}>
                           {rr.replace('_', ' ')}
                         </button>
                       ))}
@@ -369,8 +374,8 @@ export const UserManagement: React.FC = () => {
                       <textarea value={payNotes} onChange={e => setPayNotes(e.target.value)} placeholder="Salary notes..." 
                         style={{ width: '100%', padding: '16px', borderRadius: '18px', border: `1px solid ${T.border}`, fontSize: '13px', minHeight: '80px', marginBottom: '24px', fontFamily: 'inherit' }} />
                       <div style={{ display: 'flex', gap: '8px' }}>
-                         <button type="button" onClick={() => setPayStaffUser(null)} style={{ flex: 1, padding: '14px', borderRadius: '16px', border: `1px solid ${T.border}`, background: 'none', fontWeight: 800 }}>Cancel</button>
-                         <button type="submit" style={{ flex: 1, padding: '14px', borderRadius: '16px', background: T.success, color: '#fff', border: 'none', fontWeight: 900 }}>Send Payment</button>
+                         <button type="button" onClick={() => setPayStaffUser(null)} style={{ flex: 1, padding: '14px', borderRadius: '16px', border: `1px solid ${T.border}`, background: 'none', fontWeight: 800, cursor: 'pointer' }}>Cancel</button>
+                         <button type="submit" style={{ flex: 1, padding: '14px', borderRadius: '16px', background: T.success, color: '#fff', border: 'none', fontWeight: 900, cursor: 'pointer' }}>Send Payment</button>
                       </div>
                    </form>
                 </motion.div>
