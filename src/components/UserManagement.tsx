@@ -14,6 +14,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { AreaChart, Area, ResponsiveContainer } from 'recharts';
 import QRCode from 'react-qr-code';
 
+// VERCEL_CACHE_BUST: 1.0.1
+
+
 /* ─────────────────────────────────────────
    TYPES
 ───────────────────────────────────────── */
@@ -216,10 +219,10 @@ export const UserManagement: React.FC = () => {
                 <div>
                    <div style={{ background: T.gold, color: '#000', padding: '3px 8px', borderRadius: '6px', fontSize: '9px', fontWeight: 900, textTransform: 'uppercase', marginBottom: '8px', width: 'fit-content' }}>Weekly Hall of Fame</div>
                    <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 900 }}>{topPerformer.full_name || topPerformer.email.split('@')[0]}</h3>
-                   <div style={{ fontSize: '12px', opacity: 0.7, marginTop: '2px' }}>Leading production with {metrics[topPerformer.id]?.actionCount || 0} actions</div>
+                   <div style={{ fontSize: '12px', opacity: 0.7, marginTop: '2px' }}>Leading production with {(metrics[topPerformer.id] as any)?.actionCount || 0} actions</div>
                 </div>
                 <div style={{ textAlign: 'right' }}>
-                   <div style={{ fontSize: '24px', fontWeight: 900 }}>{topPerformer.role === 'SUPPLIER' ? fmtRaw(metrics[topPerformer.id]?.totalVolume || 0) : `${metrics[topPerformer.id]?.totalVolume || 0} Units`}</div>
+                   <div style={{ fontSize: '24px', fontWeight: 900 }}>{topPerformer.role === 'SUPPLIER' ? fmtRaw((metrics[topPerformer.id] as any)?.totalVolume || 0) : `${(metrics[topPerformer.id] as any)?.totalVolume || 0} Units`}</div>
                    <div style={{ fontSize: '10px', opacity: 0.7, textTransform: 'uppercase', fontWeight: 700 }}>Total Throughput</div>
                 </div>
              </div>
