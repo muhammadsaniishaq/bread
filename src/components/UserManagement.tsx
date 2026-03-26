@@ -6,7 +6,7 @@ import {
   Banknote, 
   Phone, MessageSquare, 
   Award, QrCode, Share2,
-  Zap, Clock, Activity, UserCog
+  Zap, Clock, Activity
 } from 'lucide-react';
 import { AnimatedPage } from './AnimatedPage';
 import { useNavigate } from 'react-router-dom';
