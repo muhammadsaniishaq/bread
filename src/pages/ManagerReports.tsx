@@ -71,7 +71,7 @@ const MiniBar = ({ data, color = T.accent }: { data: { label: string; value: num
 };
 
 export const ManagerReports: React.FC = () => {
-  const { transactions, expenses, products, customers, debtPayments, bakeryPayments } = useAppContext();
+  const { transactions, expenses, products, customers, debtPayments } = useAppContext();
   const navigate = useNavigate();
 
   const [period, setPeriod] = useState<Period>('Today');
@@ -83,8 +83,8 @@ export const ManagerReports: React.FC = () => {
   const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
   const [showCustomRange, setShowCustomRange] = useState(false);
 
-  const { filteredTxs, filteredExps, filteredDebtPayments, filteredBakeryPayments } = useMemo(() => {
-    let txs = transactions, exps = expenses, dps = debtPayments, bps = bakeryPayments;
+  const { filteredTxs, filteredExps, filteredDebtPayments } = useMemo(() => {
+    let txs = transactions, exps = expenses, dps = debtPayments;
     const now = new Date();
     
     if (period === 'Today') {
@@ -92,29 +92,25 @@ export const ManagerReports: React.FC = () => {
       txs = txs.filter(t => t.date.startsWith(todayStr));
       exps = exps.filter(e => e.date.startsWith(todayStr));
       dps = dps.filter(d => d.date.startsWith(todayStr));
-      bps = bps.filter(b => b.date.startsWith(todayStr));
     } else if (period === 'Week') {
       const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
       txs = txs.filter(t => new Date(t.date) >= weekAgo);
       exps = exps.filter(e => new Date(e.date) >= weekAgo);
       dps = dps.filter(d => new Date(d.date) >= weekAgo);
-      bps = bps.filter(b => new Date(b.date) >= weekAgo);
     } else if (period === 'Month') {
       const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
       txs = txs.filter(t => new Date(t.date) >= monthAgo);
       exps = exps.filter(e => new Date(e.date) >= monthAgo);
       dps = dps.filter(d => new Date(d.date) >= monthAgo);
-      bps = bps.filter(b => new Date(b.date) >= monthAgo);
     } else if (period === 'Custom') {
       const start = new Date(startDate); start.setHours(0,0,0,0);
       const end = new Date(endDate); end.setHours(23,59,59,999);
       txs = txs.filter(t => { const d = new Date(t.date); return d >= start && d <= end; });
       exps = exps.filter(e => { const d = new Date(e.date); return d >= start && d <= end; });
       dps = dps.filter(d => { const dt = new Date(d.date); return dt >= start && dt <= end; });
-      bps = bps.filter(b => { const dt = new Date(b.date); return dt >= start && dt <= end; });
     }
-    return { filteredTxs: txs, filteredExps: exps, filteredDebtPayments: dps, filteredBakeryPayments: bps };
-  }, [period, startDate, endDate, transactions, expenses, debtPayments, bakeryPayments]);
+    return { filteredTxs: txs, filteredExps: exps, filteredDebtPayments: dps };
+  }, [period, startDate, endDate, transactions, expenses, debtPayments]);
 
   const metrics = useMemo(() => {
     const totalSales = filteredTxs.reduce((s, t) => s + t.totalPrice, 0);
@@ -127,27 +123,24 @@ export const ManagerReports: React.FC = () => {
     
     const breadSold = filteredTxs.reduce((s, t) => s + getTransactionItems(t).reduce((ss, i) => ss + i.quantity, 0), 0);
     
-    // Profit Calculation
-    const ourShare = totalSales * 0.10;
-    const bakeryOwed = totalSales * 0.90;
-    const netProfit = ourShare - totalExpenses;
+    // MASTER COMPANY Profit Calculation
+    const netProfit = totalSales - totalExpenses;
+    const grossMargin = totalSales > 0 ? (netProfit / totalSales) * 100 : 0;
+    const avgOrderValue = filteredTxs.length > 0 ? totalSales / filteredTxs.length : 0;
     
     // Cash Drawer / Till Expectation
     const debtCollected = filteredDebtPayments.reduce((s, dp) => s + Number(dp.amount || 0), 0);
-    const expectedCashInHand = cashSales + debtCollected - totalExpenses; // Note: Bakery payouts reduce this further.
+    const expectedCashInHand = cashSales + debtCollected - totalExpenses;
 
     const outstandingDebt = customers.reduce((s, c) => s + (c.debtBalance || 0), 0);
     const stockRetailValue = products.filter(p => p.active).reduce((s, p) => s + p.stock * p.price, 0);
-    
-    const companyPaid = filteredBakeryPayments.reduce((s, bp) => s + Number(bp.amount || 0), 0);
-    const netBakeryOwed = Math.max(0, bakeryOwed - companyPaid);
 
     return {
       totalSales, cashSales, debtSales, totalExpenses, breadSold,
-      ourShare, bakeryOwed, companyPaid, netBakeryOwed, netProfit,
+      netProfit, grossMargin, avgOrderValue, txCount: filteredTxs.length,
       outstandingDebt, stockRetailValue, debtCollected, expectedCashInHand
     };
-  }, [filteredTxs, filteredExps, filteredDebtPayments, filteredBakeryPayments, customers, products]);
+  }, [filteredTxs, filteredExps, filteredDebtPayments, customers, products]);
 
   // Product Analysis
   const productStats = useMemo(() => {
@@ -252,17 +245,18 @@ export const ManagerReports: React.FC = () => {
             </div>
           )}
 
-          {/* Net Profit Hero Header (Modern Glass/Gradient) */}
+          {/* Master Profit Hero Header */}
           <div style={{ position: 'relative', background: `linear-gradient(135deg, ${T.txt} 0%, #1e293b 100%)`, borderRadius: '28px', padding: '24px', marginBottom: '24px', color: '#fff', overflow: 'hidden', boxShadow: '0 12px 32px rgba(15,23,42,0.2)' }}>
             <div style={{ position: 'absolute', top: '-50px', right: '-20px', width: '150px', height: '150px', background: 'rgba(255,255,255,0.05)', borderRadius: '50%', pointerEvents: 'none' }} />
+            <div style={{ position: 'absolute', bottom: '-40px', left: '-20px', width: '200px', height: '200px', background: 'rgba(16,185,129,0.05)', borderRadius: '50%', pointerEvents: 'none' }} />
             
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
               <div style={{ width: '32px', height: '32px', borderRadius: '10px', background: 'rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                  <BarChart2 size={16} color="#fff" />
               </div>
               <div>
-                <span style={{ fontSize: '10px', fontWeight: 800, letterSpacing: '0.1em', textTransform: 'uppercase', opacity: 0.8, display: 'block' }}>Estimated Net Profit</span>
-                <span style={{ fontSize: '9px', fontWeight: 600, opacity: 0.6, display: 'block' }}>Based on 10% gross margin</span>
+                <span style={{ fontSize: '10px', fontWeight: 800, letterSpacing: '0.1em', textTransform: 'uppercase', opacity: 0.8, display: 'block' }}>Company Net Profit</span>
+                <span style={{ fontSize: '9px', fontWeight: 600, opacity: 0.6, display: 'block' }}>Total Gross Revenue minus Operating Expenses</span>
               </div>
             </div>
             
@@ -270,19 +264,19 @@ export const ManagerReports: React.FC = () => {
               {fmt(metrics.netProfit)}
             </div>
             
-            {/* Split breakdown */}
+            {/* Master Metrics Split */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px', background: 'rgba(0,0,0,0.2)', padding: '16px', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.05)' }}>
               <div>
-                 <span style={{ fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', opacity: 0.6, display: 'block', marginBottom: '4px' }}>Our Share (10%)</span>
-                 <span style={{ fontSize: '14px', fontWeight: 800 }}>{fmt(metrics.ourShare)}</span>
+                 <span style={{ fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', color: '#6ee7b7', display: 'block', marginBottom: '4px' }}>Gross Revenue</span>
+                 <span style={{ fontSize: '14px', fontWeight: 800 }}>{fmt(metrics.totalSales)}</span>
               </div>
               <div style={{ borderLeft: '1px solid rgba(255,255,255,0.1)', paddingLeft: '12px' }}>
-                 <span style={{ fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', color: '#fca5a5', display: 'block', marginBottom: '4px' }}>Expenses</span>
+                 <span style={{ fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', color: '#fca5a5', display: 'block', marginBottom: '4px' }}>Total Expenses</span>
                  <span style={{ fontSize: '14px', fontWeight: 800 }}>{fmt(metrics.totalExpenses)}</span>
               </div>
               <div style={{ borderLeft: '1px solid rgba(255,255,255,0.1)', paddingLeft: '12px' }}>
-                 <span style={{ fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', color: '#6ee7b7', display: 'block', marginBottom: '4px' }}>Bakery (90%)</span>
-                 <span style={{ fontSize: '14px', fontWeight: 800 }}>{fmt(metrics.bakeryOwed)}</span>
+                 <span style={{ fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', color: '#93c5fd', display: 'block', marginBottom: '4px' }}>Profit Margin</span>
+                 <span style={{ fontSize: '14px', fontWeight: 800 }}>{metrics.grossMargin.toFixed(1)}%</span>
               </div>
             </div>
           </div>
@@ -319,12 +313,12 @@ export const ManagerReports: React.FC = () => {
                 </div>
               </div>
 
-              {/* 4 Block Stats */}
+              {/* 4 Block Stats + 2 New Master Metrics */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                  <StatCard label="Gross Sales" value={fmt(metrics.totalSales)} icon={TrendingUp} color={T.accent} sub={`${metrics.breadSold} units sold.`} />
                  <StatCard label="Cash Revenue" value={fmt(metrics.cashSales)} icon={DollarSign} color={T.success} sub={`+ ${fmt(metrics.debtCollected)} debts collected`} />
+                 <StatCard label="Average Order" value={fmt(metrics.avgOrderValue)} icon={Activity} color={'#8b5cf6'} sub={`${metrics.txCount} total transactions`} />
                  <StatCard label="Debts Issued" value={fmt(metrics.debtSales)} icon={CreditCard} color={T.warn} sub={`${Math.round((metrics.debtSales/metrics.totalSales)*100 || 0)}% of total sales`} />
-                 <StatCard label="Outstanding" value={fmt(metrics.outstandingDebt)} icon={AlertTriangle} color={T.danger} sub="Total market debt." />
               </div>
 
               {/* Sales Distribution Bar */}
