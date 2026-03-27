@@ -10,7 +10,8 @@ import RoleRouter from './components/RoleRouter';
 
 import ManagerDashboard from './pages/ManagerDashboard';
 import StoreDashboard from './pages/StoreDashboard';
-import CustomerStorefront from './pages/CustomerStorefront';
+import CustomerDashboard from './pages/CustomerDashboard';
+import CustomerStore from './pages/CustomerStore';
 
 import RawMaterialsManager from './components/RawMaterialsManager';
 import UserManagement from './components/UserManagement';
@@ -127,7 +128,9 @@ const AppContent: React.FC = () => {
             <Route path="/supplier" element={<RoleGuard allowedRoles={['SUPPLIER']}><Dashboard /></RoleGuard>} />
           </Route>
           <Route path="/store" element={<RoleGuard allowedRoles={['STORE_KEEPER']}><StoreDashboard /></RoleGuard>} />
-          <Route path="/customer" element={<RoleGuard allowedRoles={['CUSTOMER']}><CustomerStorefront /></RoleGuard>} />
+           <Route path="/customer/dashboard" element={<CustomerDashboard />} />
+           <Route path="/customer/store" element={<CustomerStore />} />
+           <Route path="/customer" element={<CustomerDashboard />} />
 
           {/* Legacy App Routes - Protected and shared across Managers/Suppliers until fully migrated */}
           <Route element={
