@@ -75,6 +75,18 @@ const CustomerDashboard: React.FC = () => {
         setCustomer(cust);
         const { data: ords } = await supabase.from('orders').select('*').eq('customer_id', cust.id).order('created_at', { ascending: false }).limit(5);
         if (ords) setOrders(ords);
+      } else {
+        // 3. AUTO-LINK: Create a new customer ledger if none exists
+        const { data: newCust, error: createErr } = await supabase.from('customers').insert({
+           name: prof?.full_name || user?.email?.split('@')[0] || 'Member',
+           email: user?.email,
+           profile_id: id,
+           debt_balance: 0
+        }).select().single();
+        
+        if (newCust && !createErr) {
+           setCustomer(newCust);
+        }
       }
     } catch (e) { console.error(e); }
     setLoading(false);
