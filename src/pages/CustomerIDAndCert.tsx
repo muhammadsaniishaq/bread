@@ -1,6 +1,8 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAppContext } from '../store/AppContext';
+import { supabase } from '../lib/supabase';
+import { useAuth } from '../store/AuthContext';
 import { ArrowLeft, Share2, Award } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import QRCodeImport from 'react-qr-code';
@@ -10,12 +12,31 @@ const QRCode = (QRCodeImport as any).default || QRCodeImport;
 export const CustomerIDAndCert: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { customers, appSettings } = useAppContext();
+  const { customers: contextCustomers, appSettings } = useAppContext();
+  const [customer, setCustomer] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
   
-  const customerIndex = customers.findIndex(c => c.id === id);
-  const customer = customerIndex !== -1 ? customers[customerIndex] : undefined;
-  // Calculate sequential serial number (1-based index)
-  const serialNumber = customerIndex !== -1 ? (customerIndex + 1).toString().padStart(6, '0') : '000000';
+  // Find index in context for serial number calculation, or fallback
+  const customerIndex = contextCustomers.findIndex(c => c.id === id);
+  const serialNumber = customerIndex !== -1 ? (customerIndex + 1).toString().padStart(6, '0') : id?.slice(-6).toUpperCase() || '000000';
+
+  useEffect(() => {
+    const fetchCustomer = async () => {
+      if (!id) return;
+      setLoading(true);
+      // Try context first
+      const found = contextCustomers.find(c => c.id === id);
+      if (found) {
+        setCustomer(found);
+      } else {
+        // Fetch from Supabase directly (handles RLS for CUSTOMER role)
+        const { data, error } = await supabase.from('customers').select('*').eq('id', id).single();
+        if (!error && data) setCustomer(data);
+      }
+      setLoading(false);
+    };
+    fetchCustomer();
+  }, [id, contextCustomers]);
 
   const idCardRef = useRef<HTMLDivElement>(null);
   const certRef = useRef<HTMLDivElement>(null);
@@ -40,11 +61,13 @@ export const CustomerIDAndCert: React.FC = () => {
     return () => window.removeEventListener('resize', updateScale);
   }, []);
 
+  if (loading) return <div className="p-20 text-center font-black">VALIDATING IDENTITY...</div>;
+
   if (!customer) {
     return (
       <div className="container p-6 text-center">
-        <h2 className="text-xl font-bold mb-4">Customer Not Found</h2>
-        <button className="btn btn-primary" onClick={() => navigate('/customers')}>Back to Customers</button>
+        <h2 className="text-xl font-bold mb-4">Identity Not Found</h2>
+        <button className="btn btn-primary" onClick={() => navigate(-1)}>Back</button>
       </div>
     );
   }
@@ -88,10 +111,12 @@ export const CustomerIDAndCert: React.FC = () => {
     }
   };
 
+  const { role } = useAuth();
+
   return (
     <div className="container pb-20">
       <div className="flex justify-between items-center mb-6 no-print">
-        <button className="btn btn-outline flex items-center gap-2" onClick={() => navigate('/customers')}>
+        <button className="btn btn-outline flex items-center gap-2" onClick={() => role === 'CUSTOMER' ? navigate('/customer/dashboard') : navigate('/customers')}>
           <ArrowLeft size={18} /> Back
         </button>
       </div>

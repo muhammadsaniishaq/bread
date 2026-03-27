@@ -4,7 +4,7 @@ import {
   ArrowLeft,
   Search, Plus, Minus,
   Zap, Star,
-  CheckCircle2
+  CheckCircle2, ArrowRight
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AnimatedPage } from '../components/AnimatedPage';
@@ -34,22 +34,35 @@ const fmtRaw = (v: number) => `₦${v.toLocaleString()}`;
 /* ─────────────────────────────────────────
    MAIN COMPONENT
 ───────────────────────────────────────── */
+import { useAuth } from '../store/AuthContext';
+
 const CustomerStore: React.FC = () => {
+  const { user } = useAuth();
   const navigate = useNavigate();
   const [products, setProducts] = useState<any[]>([]);
+  const [customer, setCustomer] = useState<any>(null);
   const [cart, setCart] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [isOrdering, setIsOrdering] = useState(false);
+  const [showReview, setShowReview] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
 
   useEffect(() => {
-    fetchProducts();
-  }, []);
+    fetchInitialData();
+  }, [user]);
 
-  const fetchProducts = async () => {
+  const fetchInitialData = async () => {
+    if (!user) return;
     setLoading(true);
-    const { data } = await supabase.from('products').select('*').eq('active', true);
-    if (data) setProducts(data);
+    try {
+      // 1. Fetch Products
+      const { data: pData } = await supabase.from('products').select('*').eq('active', true);
+      if (pData) setProducts(pData);
+
+      // 2. Fetch Customer Record (Linkage)
+      const { data: cData } = await supabase.from('customers').select('*').eq('profile_id', user.id).maybeSingle();
+      if (cData) setCustomer(cData);
+    } catch (e) { console.error(e); }
     setLoading(false);
   };
 
@@ -72,35 +85,37 @@ const CustomerStore: React.FC = () => {
   }, 0);
 
   const handlePlaceOrder = async () => {
-    if (totalItems === 0) return;
+    if (totalItems === 0 || !customer) return;
     setIsOrdering(true);
-    const auth = localStorage.getItem('customer_auth');
-    const customer = auth ? JSON.parse(auth) : null;
-
+    
     try {
        // Logic: Create a PENDING order in 'orders' table
        const { error } = await supabase.from('orders').insert({
-          customer_id: customer?.id,
+          customer_id: customer.id,
           total_price: totalPrice,
           items: cart,
-          status: 'PENDING'
+          status: 'PENDING',
+          created_at: new Date().toISOString()
        });
 
        if (!error) {
+          setShowReview(false);
           setShowSuccess(true);
           setCart({});
           setTimeout(() => {
              setShowSuccess(false);
              navigate('/customer/dashboard');
           }, 2500);
+       } else {
+         throw error;
        }
     } catch (e) {
-       alert("Order failed. Please try again.");
+       alert("Order failed. Please ensure your ledger is linked.");
     }
     setIsOrdering(false);
   };
 
-  if (loading) return <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: T.bg, fontWeight: 900, color: T.primary }}>FETCHING FRESH BREAD...</div>;
+  if (loading) return <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: T.bg, fontWeight: 900, color: T.primary }}>CURATING FRESH MENU...</div>;
 
   return (
     <AnimatedPage>
@@ -160,7 +175,7 @@ const CustomerStore: React.FC = () => {
 
         {/* V3 CHECKOUT FLOAT */}
         <AnimatePresence>
-           {totalItems > 0 && (
+           {totalItems > 0 && !showReview && (
              <motion.div initial={{ y: 100, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 100, opacity: 0 }}
                 style={{ position: 'fixed', bottom: '32px', left: '16px', right: '16px', zIndex: 100 }}>
                 <div style={{ background: T.ink, borderRadius: '24px', padding: '16px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', boxShadow: '0 20px 50px rgba(0,0,0,0.2)' }}>
@@ -168,12 +183,62 @@ const CustomerStore: React.FC = () => {
                       <div style={{ fontSize: '11px', fontWeight: 800, color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase' }}>{totalItems} Items selected</div>
                       <div style={{ fontSize: '20px', fontWeight: 900, color: '#fff' }}>{fmtRaw(totalPrice)}</div>
                    </div>
-                   <button onClick={handlePlaceOrder} disabled={isOrdering}
+                   <button onClick={() => setShowReview(true)}
                       style={{ background: T.primary, color: '#fff', border: 'none', padding: '16px 28px', borderRadius: '18px', fontSize: '15px', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      {isOrdering ? 'Ordering...' : 'Place Order'} <CheckCircle2 size={18} />
+                      Review Order <ArrowRight size={18} />
                    </button>
                 </div>
              </motion.div>
+           )}
+        </AnimatePresence>
+
+        {/* ORDER REVIEW SLIDE-UP */}
+        <AnimatePresence>
+           {showReview && (
+             <div style={{ position: 'fixed', inset: 0, zIndex: 1000, display: 'flex', alignItems: 'flex-end' }}>
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowReview(false)}
+                   style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(10px)' }} />
+                <motion.div initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }} transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+                   style={{ position: 'relative', width: '100%', background: '#fff', borderTopLeftRadius: '32px', borderTopRightRadius: '32px', padding: '32px 24px 60px', boxShadow: '0 -20px 50px rgba(0,0,0,0.1)' }}>
+                   
+                   <div style={{ width: '40px', height: '4px', background: T.border, borderRadius: '2px', margin: '-16px auto 24px' }}></div>
+                   
+                   <h2 style={{ fontSize: '20px', fontWeight: 900, marginBottom: '24px' }}>Review Your Order</h2>
+                   
+                   <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '32px', maxHeight: '300px', overflowY: 'auto' }}>
+                      {Object.entries(cart).map(([id, qty]) => {
+                         const p = products.find(x => x.id === id);
+                         return (
+                           <div key={id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                              <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                                 <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+                                    {p?.image ? <img src={p.image} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <Star size={16} />}
+                                 </div>
+                                 <div>
+                                    <div style={{ fontSize: '14px', fontWeight: 800 }}>{p?.name}</div>
+                                    <div style={{ fontSize: '11px', color: T.txt3, fontWeight: 700 }}>{qty} x {fmtRaw(p?.price || 0)}</div>
+                                 </div>
+                              </div>
+                              <div style={{ fontSize: '14px', fontWeight: 900 }}>{fmtRaw((p?.price || 0) * qty)}</div>
+                           </div>
+                         );
+                      })}
+                   </div>
+
+                   <div style={{ borderTop: `1px solid ${T.border}`, paddingTop: '24px', marginBottom: '32px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+                      <span style={{ fontSize: '14px', fontWeight: 700, color: T.txt2 }}>Total Price</span>
+                      <span style={{ fontSize: '28px', fontWeight: 900, color: T.ink }}>{fmtRaw(totalPrice)}</span>
+                   </div>
+
+                   <div style={{ display: 'flex', gap: '12px' }}>
+                      <button onClick={() => setShowReview(false)} style={{ flex: 1, padding: '20px', borderRadius: '20px', background: '#f1f5f9', color: T.ink, border: 'none', fontWeight: 900 }}>Edit Cart</button>
+                      <button onClick={handlePlaceOrder} disabled={isOrdering}
+                         style={{ flex: 2, padding: '20px', borderRadius: '20px', background: T.primary, color: '#fff', border: 'none', fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                         {isOrdering ? 'Confirming...' : 'Confirm Order'} <CheckCircle2 size={18} />
+                      </button>
+                   </div>
+                </motion.div>
+             </div>
            )}
         </AnimatePresence>
 

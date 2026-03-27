@@ -135,7 +135,7 @@ const AppContent: React.FC = () => {
           {/* Legacy App Routes - Protected and shared across Managers/Suppliers until fully migrated */}
           <Route element={
             <ProtectedRoute>
-              <RoleGuard allowedRoles={['MANAGER', 'SUPPLIER', 'STORE_KEEPER']}>
+              <RoleGuard allowedRoles={['MANAGER', 'SUPPLIER', 'STORE_KEEPER', 'CUSTOMER']}>
                 <Layout />
               </RoleGuard>
             </ProtectedRoute>

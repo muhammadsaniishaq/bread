@@ -4,8 +4,8 @@ import { useAuth } from '../store/AuthContext';
 import { 
   ShoppingBag, Wallet, History,
   LogOut, ArrowRight, Star,
-  Calendar, ShoppingCart, User,
-  Zap, ChevronRight
+  Calendar, ShoppingCart, 
+  Zap, ChevronRight, CheckCircle2
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { AnimatedPage } from '../components/AnimatedPage';
@@ -161,42 +161,48 @@ const CustomerDashboard: React.FC = () => {
            {/* History Timeline Brick (Wide) */}
            <div style={{ gridColumn: 'span 2', background: '#fff', padding: '28px', borderRadius: T.radius, border: `1px solid ${T.border}`, boxShadow: T.shadow }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-                 <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 900, color: T.ink }}>Recent Activity</h3>
+                 <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 900, color: T.ink }}>Purchase Ledger</h3>
                  <History size={18} color={T.txt3} />
               </div>
               
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                  {orders.map((o, i) => (
-                   <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '16px', paddingBottom: '16px', borderBottom: i < orders.length - 1 ? `1px solid ${T.border}` : 'none' }}>
+                   <div key={i} onClick={() => navigate(`/customer-receipt/${o.id}`)} 
+                     style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '16px', paddingBottom: '16px', borderBottom: i < orders.length - 1 ? `1px solid ${T.border}` : 'none' }}>
                       <div style={{ width: '44px', height: '44px', borderRadius: '14px', background: T.primaryGlow, color: T.primary, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                          <ShoppingBag size={20} />
                       </div>
                       <div style={{ flex: 1 }}>
-                         <div style={{ fontSize: '14px', fontWeight: 800, color: T.ink }}>Bulk Order</div>
+                         <div style={{ fontSize: '14px', fontWeight: 800, color: T.ink }}>Bakery Shipment</div>
                          <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginTop: '2px' }}>
                             <div style={{ fontSize: '11px', fontWeight: 700, color: T.txt3, display: 'flex', alignItems: 'center', gap: '4px' }}><Calendar size={12} /> {new Date(o.created_at).toLocaleDateString()}</div>
                             <span style={{ fontSize: '10px', color: T.txt3 }}>•</span>
                             <div style={{ fontSize: '11px', fontWeight: 800, color: T.success }}>{o.status}</div>
                          </div>
                       </div>
-                      <div style={{ fontSize: '15px', fontWeight: 900 }}>{fmtRaw(o.total_price)}</div>
+                      <div style={{ textAlign: 'right' }}>
+                         <div style={{ fontSize: '15px', fontWeight: 900 }}>{fmtRaw(o.total_price)}</div>
+                         <div style={{ fontSize: '10px', color: T.primary, fontWeight: 800 }}>View Receipt</div>
+                      </div>
                    </div>
                  ))}
                  {orders.length === 0 && <div style={{ textAlign: 'center', padding: '32px', color: T.txt3, fontWeight: 700 }}>No history found.</div>}
               </div>
            </div>
 
-           {/* Support Card */}
-           <div style={{ gridColumn: 'span 2', background: '#f8fafc', padding: '24px', borderRadius: T.radius, display: 'flex', alignItems: 'center', gap: '16px', border: `1px solid ${T.border}` }}>
-              <div style={{ width: '50px', height: '50px', borderRadius: '50%', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 10px rgba(0,0,0,0.05)' }}>
-                 <User size={24} color={T.primary} />
+           {/* Identity & Docs Brick (Wide) */}
+           <motion.div whileTap={{ scale: 0.98 }} onClick={() => navigate(`/customer-docs/${customer.id}`)}
+              style={{ gridColumn: 'span 2', background: '#f8fafc', padding: '32px', borderRadius: T.radius, border: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', gap: '24px', position: 'relative', overflow: 'hidden' }}>
+              <div style={{ background: '#fff', width: '64px', height: '64px', borderRadius: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.primary, boxShadow: '0 8px 20px rgba(0,0,0,0.05)' }}>
+                 <CheckCircle2 style={{ width: 32, height: 32 }} />
               </div>
               <div style={{ flex: 1 }}>
-                 <div style={{ fontSize: '14px', fontWeight: 800 }}>Account Managed</div>
-                 <div style={{ fontSize: '12px', color: T.txt3, fontWeight: 700 }}>Managed by {customer.location || 'Central Bakery'}</div>
+                 <div style={{ fontSize: '11px', fontWeight: 900, color: T.primary, textTransform: 'uppercase', marginBottom: '4px' }}>Membership Vault</div>
+                 <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 900 }}>Identity & Certificates</h3>
+                 <p style={{ margin: '4px 0 0', fontSize: '13px', color: T.txt3, fontWeight: 700 }}>View your verified bakery badge</p>
               </div>
-              <ChevronRight size={20} color={T.txt3} />
-           </div>
+              <ChevronRight size={24} color={T.txt3} />
+           </motion.div>
         </div>
 
         {/* V3 FLOATING ACTION BAR */}

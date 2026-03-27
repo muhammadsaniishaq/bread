@@ -1,40 +1,67 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAppContext } from '../store/AppContext';
-import type { DebtPayment, Customer } from '../store/types';
+import { supabase } from '../lib/supabase';
+import { useAuth } from '../store/AuthContext';
 import { ArrowLeft, Printer, Share2 } from 'lucide-react';
 import html2canvas from 'html2canvas';
-
 import QRCodeImport from 'react-qr-code';
 const QRCode = (QRCodeImport as any).default || QRCodeImport;
 
 export const CustomerReceipt: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { debtPayments, customers, appSettings } = useAppContext();
+  const { debtPayments: contextPayments, customers: contextCustomers, appSettings } = useAppContext();
+  const { role } = useAuth();
   
-  const [payment, setPayment] = useState<DebtPayment | null>(null);
-  const [customer, setCustomer] = useState<Customer | null>(null);
+  const [payment, setPayment] = useState<any>(null);
+  const [customer, setCustomer] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
   const receiptRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (id) {
-      const foundPayment = debtPayments.find(p => p.id === id);
+    const fetchReceiptData = async () => {
+      if (!id) return;
+      setLoading(true);
+      
+      // 1. Try fetching payment from context
+      let foundPayment = contextPayments.find(p => p.id === id);
+      
+      if (!foundPayment) {
+        // Fallback: Fetch from Supabase directly
+        const { data: pData } = await supabase.from('debt_payments').select('*').eq('id', id).single();
+        if (pData) foundPayment = {
+          id: pData.id,
+          customerId: pData.customer_id,
+          amount: pData.amount,
+          date: pData.payment_date,
+          method: pData.payment_method,
+          notes: pData.notes
+        } as any;
+      }
+
       if (foundPayment) {
         setPayment(foundPayment);
-        const foundCustomer = customers.find(c => c.id === foundPayment.customerId);
-        if (foundCustomer) {
-          setCustomer(foundCustomer);
+        // 2. Fetch customer
+        let foundCustomer = contextCustomers.find(c => c.id === foundPayment?.customerId);
+        if (!foundCustomer) {
+           const { data: cData } = await supabase.from('customers').select('*').eq('id', foundPayment.customerId).single();
+           if (cData) foundCustomer = cData as any;
         }
+        if (foundCustomer) setCustomer(foundCustomer);
       }
-    }
-  }, [id, debtPayments, customers]);
+      setLoading(false);
+    };
+    fetchReceiptData();
+  }, [id, contextPayments, contextCustomers]);
+
+  if (loading) return <div className="p-20 text-center font-black">RETRIEVING RECEIPT...</div>;
 
   if (!payment || !customer) {
     return (
       <div className="container p-6 text-center">
         <h2 className="text-xl font-bold mb-4">Receipt Not Found</h2>
-        <button className="btn btn-primary" onClick={() => navigate('/customers')}>Back to Customers</button>
+        <button className="btn btn-primary" onClick={() => navigate(-1)}>Back</button>
       </div>
     );
   }
@@ -244,7 +271,7 @@ export const CustomerReceipt: React.FC = () => {
       `}</style>
 
       <div className="flex justify-between items-center mb-6 no-print">
-        <button className="btn btn-outline btn-icon" onClick={() => navigate('/customers')}>
+        <button className="btn btn-outline btn-icon" onClick={() => role === 'CUSTOMER' ? navigate('/customer/dashboard') : navigate('/customers')}>
           <ArrowLeft size={18} />
         </button>
         <div className="flex gap-2">
