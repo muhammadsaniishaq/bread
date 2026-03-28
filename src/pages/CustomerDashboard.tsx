@@ -28,6 +28,7 @@ const T = {
   txt:       '#1e293b',
   txt2:      '#64748b',
   txt3:      '#94a3b8',
+  bg2:       '#f1f5f9',
   radius:    '24px',
   shadow:    '0 10px 30px -10px rgba(0,0,0,0.05)'
 };
@@ -182,17 +183,32 @@ export const CustomerDashboard: React.FC = () => {
              </motion.div>
            )}
 
-           {/* Quick Stats Bricks */}
-           <div style={{ background: '#fff', padding: '18px', borderRadius: '20px', border: `1px solid ${T.border}`, boxShadow: T.shadow }}>
-              <div style={{ color: T.primary, marginBottom: '12px' }}><ShoppingCart size={18} /></div>
-              <div style={{ fontSize: '10px', fontWeight: 900, color: T.txt3, textTransform: 'uppercase' }}>Orders</div>
-              <div style={{ fontSize: '18px', fontWeight: 900, color: T.ink }}>{orders.length}</div>
-           </div>
-
-           <div style={{ background: '#fff', padding: '18px', borderRadius: '20px', border: `1px solid ${T.border}`, boxShadow: T.shadow }}>
-              <div style={{ color: T.success, marginBottom: '12px' }}><Star size={18} /></div>
-              <div style={{ fontSize: '10px', fontWeight: 900, color: T.txt3, textTransform: 'uppercase' }}>Status</div>
-              <div style={{ fontSize: '18px', fontWeight: 900, color: T.ink }}>{isVerified ? 'V.I.P' : 'Guest'}</div>
+           {/* Loyalty Tier & Quick Stats */}
+           <div style={{ gridColumn: 'span 2', background: '#fff', padding: '20px', borderRadius: '24px', border: `1px solid ${T.border}`, boxShadow: T.shadow, display: 'flex', gap: '16px', alignItems: 'center' }}>
+              <div style={{ width: '48px', height: '48px', borderRadius: '16px', background: totalBought >= 150000 ? '#fef08a' : totalBought >= 50000 ? '#e2e8f0' : '#ffedd5', display: 'flex', alignItems: 'center', justifyContent: 'center', color: totalBought >= 150000 ? '#eab308' : totalBought >= 50000 ? '#64748b' : '#f97316' }}>
+                 <Star size={24} fill="currentColor" />
+              </div>
+              <div style={{ flex: 1 }}>
+                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                    <div>
+                       <div style={{ fontSize: '10px', fontWeight: 900, color: T.txt3, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Loyalty Tier</div>
+                       <div style={{ fontSize: '15px', fontWeight: 900, color: T.ink }}>{totalBought >= 150000 ? 'Gold Member' : totalBought >= 50000 ? 'Silver Member' : 'Bronze Starter'}</div>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                       <div style={{ fontSize: '10px', fontWeight: 900, color: T.txt3, textTransform: 'uppercase' }}>Total Orders</div>
+                       <div style={{ fontSize: '15px', fontWeight: 900, color: T.primary }}>{orders.length} <ShoppingCart size={12} style={{ display: 'inline', marginBottom: '-2px' }} /></div>
+                    </div>
+                 </div>
+                 
+                 {/* Progress Bar */}
+                 <div style={{ height: '6px', background: T.bg2, borderRadius: '3px', overflow: 'hidden', position: 'relative' }}>
+                    <motion.div initial={{ width: 0 }} animate={{ width: `${Math.min(100, (totalBought / (totalBought >= 50000 ? 150000 : 50000)) * 100)}%` }} transition={{ duration: 1, delay: 0.5 }}
+                       style={{ position: 'absolute', top: 0, bottom: 0, left: 0, background: totalBought >= 150000 ? '#eab308' : totalBought >= 50000 ? '#94a3b8' : '#f97316', borderRadius: '3px' }} />
+                 </div>
+                 <div style={{ fontSize: '9px', fontWeight: 700, color: T.txt3, marginTop: '6px', textAlign: 'right' }}>
+                    {totalBought >= 150000 ? 'Max Tier Reached' : `${fmtRaw((totalBought >= 50000 ? 150000 : 50000) - totalBought)} to next tier`}
+                 </div>
+              </div>
            </div>
 
            {/* History Timeline Brick */}

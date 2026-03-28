@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../store/AuthContext';
+import { useAppContext } from '../store/AppContext';
 import { 
   ArrowLeft, User, Mail, Phone, MapPin, 
   ShieldCheck, BadgeCheck, Camera,
@@ -10,6 +11,8 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { AnimatedPage } from '../components/AnimatedPage';
 import { useNavigate } from 'react-router-dom';
+import { ImageCropModal } from '../components/ImageCropModal';
+import { DigitalIdCard } from '../components/DigitalIdCard';
 
 /* ─────────────────────────────────────────
    CUTTER/MODEL TOKENS
@@ -33,6 +36,7 @@ const T = {
 
 export const CustomerProfileHub: React.FC = () => {
   const { user } = useAuth();
+  const { appSettings } = useAppContext();
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -51,6 +55,11 @@ export const CustomerProfileHub: React.FC = () => {
   
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<{type: 'success' | 'error', text: string} | null>(null);
+
+  // Modal States
+  const [showCropper, setShowCropper] = useState(false);
+  const [cropImageSrc, setCropImageSrc] = useState('');
+  const [showIdCard, setShowIdCard] = useState(false);
 
   useEffect(() => {
     if (!user) {
@@ -90,10 +99,16 @@ export const CustomerProfileHub: React.FC = () => {
     if (file) {
       const reader = new FileReader();
       reader.onloadend = () => {
-        setImage(reader.result as string);
+        setCropImageSrc(reader.result as string);
+        setShowCropper(true);
       };
       reader.readAsDataURL(file);
     }
+  };
+
+  const handleCropComplete = (base64: string) => {
+    setImage(base64);
+    setShowCropper(false);
   };
 
   const handleSave = async () => {
@@ -109,7 +124,6 @@ export const CustomerProfileHub: React.FC = () => {
         if (pwErr) throw pwErr;
       }
 
-      // Only allow updating phone if it wasn't there initially (lock enforcement)
       const updateData: any = { location, image };
       if (!customer.phone && phone) {
          updateData.phone = phone;
@@ -311,12 +325,13 @@ export const CustomerProfileHub: React.FC = () => {
               <h3 style={{ fontSize: '12px', fontWeight: 900, color: T.txt2, textTransform: 'uppercase', marginBottom: '12px', marginLeft: '8px', letterSpacing: '0.05em' }}>Documents Vault</h3>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
                  
-                 <div style={{ background: '#fff', border: `1px solid ${T.border}`, borderRadius: '20px', padding: '16px', textAlign: 'center', position: 'relative', overflow: 'hidden', boxShadow: T.shadow }}>
+                 <button onClick={() => setShowIdCard(true)}
+                    style={{ background: '#fff', border: `1px solid ${T.success}`, borderRadius: '20px', padding: '16px', textAlign: 'center', position: 'relative', overflow: 'hidden', boxShadow: T.shadow, cursor: 'pointer', appearance: 'none' }}>
                     <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '4px', background: T.success }}></div>
-                    <CreditCard size={28} color={T.txt3} style={{ margin: '0 auto 12px' }} />
-                    <div style={{ fontSize: '11px', fontWeight: 800, color: T.ink, marginBottom: '4px' }}>Verified ID Card</div>
-                    <div style={{ fontSize: '9px', fontWeight: 700, color: T.success, background: '#ecfdf5', display: 'inline-block', padding: '2px 8px', borderRadius: '6px' }}>SECURE</div>
-                 </div>
+                    <CreditCard size={28} color={T.success} style={{ margin: '0 auto 12px' }} />
+                    <div style={{ fontSize: '11px', fontWeight: 800, color: T.ink, marginBottom: '4px' }}>View Digital ID</div>
+                    <div style={{ fontSize: '9px', fontWeight: 700, color: T.success, background: '#ecfdf5', display: 'inline-block', padding: '2px 8px', borderRadius: '6px' }}>TAP TO OPEN</div>
+                 </button>
 
                  <div style={{ background: '#fff', border: `1px solid ${T.border}`, borderRadius: '20px', padding: '16px', textAlign: 'center', position: 'relative', overflow: 'hidden', boxShadow: T.shadow }}>
                     <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '4px', background: T.primary }}></div>
@@ -338,6 +353,21 @@ export const CustomerProfileHub: React.FC = () => {
            </div>
 
         </div>
+
+        <ImageCropModal 
+          isOpen={showCropper}
+          imageSrc={cropImageSrc}
+          onClose={() => setShowCropper(false)}
+          onCropCompleteAction={handleCropComplete}
+        />
+
+        <DigitalIdCard
+          isOpen={showIdCard}
+          onClose={() => setShowIdCard(false)}
+          customer={customer}
+          profile={profile}
+          appSettings={appSettings}
+        />
 
       </div>
     </AnimatedPage>
