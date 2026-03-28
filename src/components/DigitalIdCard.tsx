@@ -65,7 +65,7 @@ export const DigitalIdCard: React.FC<IdCardProps> = ({ isOpen, onClose, customer
                      <img src={customer.image} style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} alt="Profile" />
                    ) : (
                      <div style={{ width: '100%', height: '100%', borderRadius: '50%', background: 'linear-gradient(135deg, #4f46e5, #818cf8)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '32px', fontWeight: 900 }}>
-                        {(profile?.full_name || customer.name).charAt(0)}
+                        {(profile?.full_name || customer?.name || 'V').charAt(0)}
                      </div>
                    )}
                 </div>
@@ -82,14 +82,14 @@ export const DigitalIdCard: React.FC<IdCardProps> = ({ isOpen, onClose, customer
                 <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', border: '1px solid rgba(0,0,0,0.04)' }}>
                    <div style={{ textAlign: 'left' }}>
                       <div style={{ fontSize: '9px', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px' }}>Member ID</div>
-                      <div style={{ fontSize: '13px', fontWeight: 900, color: '#1e293b', fontFamily: 'monospace' }}>#{customer.id.substring(0,8).toUpperCase()}</div>
+                      <div style={{ fontSize: '13px', fontWeight: 900, color: '#1e293b', fontFamily: 'monospace' }}>#{(customer?.id || 'VIP0000').substring(0,8).toUpperCase()}</div>
                       
                       <div style={{ fontSize: '9px', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: '12px', marginBottom: '4px' }}>Joined</div>
                       <div style={{ fontSize: '12px', fontWeight: 800, color: '#1e293b' }}>{new Date(profile?.created_at || Date.now()).toLocaleDateString()}</div>
                    </div>
                    
                    <div style={{ padding: '8px', background: '#fff', borderRadius: '12px', boxShadow: '0 4px 10px rgba(0,0,0,0.02)' }}>
-                      <QRCode value={customer.id} size={64} level="L" />
+                      <QRCode value={customer?.id || '0000'} size={64} level="L" />
                    </div>
                 </div>
              </div>

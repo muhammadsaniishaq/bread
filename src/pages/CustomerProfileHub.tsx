@@ -4,7 +4,7 @@ import { useAuth } from '../store/AuthContext';
 import { useAppContext } from '../store/AppContext';
 import { 
   ArrowLeft, User, Mail, Phone, MapPin, 
-  ShieldCheck, BadgeCheck, Camera,
+  BadgeCheck, Camera,
   Edit2, Save, X, Lock,
   FileText, CreditCard, Truck
 } from 'lucide-react';
@@ -263,9 +263,12 @@ export const CustomerProfileHub: React.FC = () => {
                  </div>
                  <div style={{ flex: 1 }}>
                     <div style={{ fontSize: '10px', fontWeight: 900, color: T.txt3, textTransform: 'uppercase', marginBottom: '2px' }}>{user?.email?.includes('@hub.local') ? 'Username' : 'Email Address'}</div>
-                    <div style={{ fontSize: '16px', fontWeight: 900, color: T.ink }}>{user?.email?.includes('@hub.local') ? `@${user.email.replace('@hub.local', '')}` : user?.email}</div>
+                    <div style={{ fontSize: '16px', fontWeight: 900, color: T.ink, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                       {user?.email?.includes('@hub.local') ? `@${user.email.replace('@hub.local', '')}` : user?.email}
+                       {isEditing && <span style={{ fontSize: '9px', background: T.bg2, padding: '2px 6px', borderRadius: '4px', color: T.txt3, fontWeight: 800 }}>LOCKED</span>}
+                    </div>
                  </div>
-                 <ShieldCheck size={16} color={T.txt3} style={{ opacity: 0.5 }} />
+                 <Lock size={16} color={T.success} style={{ opacity: 0.8 }} />
               </div>
 
               {/* EDITABLE FIELD: FULL NAME */}

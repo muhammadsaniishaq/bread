@@ -60,7 +60,13 @@ export const CustomerDashboard: React.FC = () => {
     setLoading(true);
     try {
       const { data: prof } = await supabase.from('profiles').select('*').eq('id', id).single();
-      if (prof) setProfile(prof);
+      if (prof) {
+         if (!prof.full_name && user?.user_metadata?.full_name) {
+             prof.full_name = user.user_metadata.full_name;
+             supabase.from('profiles').update({ full_name: prof.full_name }).eq('id', id).then();
+         }
+         setProfile(prof);
+      }
 
       let { data: cust } = await supabase.from('customers').select('*').eq('profile_id', id).maybeSingle();
       
@@ -82,8 +88,10 @@ export const CustomerDashboard: React.FC = () => {
         }
       } else {
         const { data: newCust, error: createErr } = await supabase.from('customers').insert({
-           name: prof?.full_name || user?.email?.split('@')[0] || 'Member',
-           email: user?.email,
+           name: prof?.full_name || user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Member',
+           email: user?.user_metadata?.contact_email || user?.email,
+           phone: user?.user_metadata?.phone || '',
+           location: user?.user_metadata?.location || '',
            profile_id: id,
            debt_balance: 0
         }).select().single();
