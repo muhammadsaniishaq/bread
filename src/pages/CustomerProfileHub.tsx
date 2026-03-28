@@ -47,6 +47,7 @@ export const CustomerProfileHub: React.FC = () => {
   
   // Edit States
   const [isEditing, setIsEditing] = useState(false);
+  const [fullName, setFullName] = useState('');
   const [location, setLocation] = useState('');
   const [phone, setPhone] = useState('');
   const [image, setImage] = useState<string>('');
@@ -74,7 +75,10 @@ export const CustomerProfileHub: React.FC = () => {
     try {
       if (!user) return;
       const { data: prof } = await supabase.from('profiles').select('*').eq('id', user.id).single();
-      if (prof) setProfile(prof);
+      if (prof) {
+         setProfile(prof);
+         setFullName(prof.full_name || '');
+      }
 
       const { data: cust } = await supabase.from('customers').select('*').eq('profile_id', user.id).maybeSingle();
       if (cust) {
@@ -136,11 +140,18 @@ export const CustomerProfileHub: React.FC = () => {
       
       if (custErr) throw custErr;
 
+      if (fullName && fullName !== profile?.full_name) {
+         const { error: profErr } = await supabase.from('profiles').update({ full_name: fullName }).eq('id', user.id);
+         if (profErr) throw profErr;
+      }
+
+      setCustomer((prev: any) => ({ ...prev, ...updateData }));
+      setProfile((prev: any) => ({ ...prev, full_name: fullName || prev?.full_name }));
+
       setMsg({ type: 'success', text: 'Profile Vault Updated!' });
       setIsEditing(false);
       setPassword('');
       setConfirmPassword('');
-      fetchProfile();
     } catch (e: any) {
       setMsg({ type: 'error', text: e.message || 'Update failed' });
     } finally {
@@ -248,10 +259,30 @@ export const CustomerProfileHub: React.FC = () => {
                     <Mail size={18} />
                  </div>
                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: '10px', fontWeight: 900, color: T.txt3, textTransform: 'uppercase', marginBottom: '2px' }}>Email Address</div>
-                    <div style={{ fontSize: '14px', fontWeight: 800, color: T.ink }}>{user?.email}</div>
+                    <div style={{ fontSize: '10px', fontWeight: 900, color: T.txt3, textTransform: 'uppercase', marginBottom: '2px' }}>Account ID</div>
+                    <div style={{ fontSize: '14px', fontWeight: 800, color: T.ink }}>{user?.email?.includes('@hub.local') ? `@${user.email.replace('@hub.local', '')}` : user?.email}</div>
                  </div>
                  <ShieldCheck size={16} color={T.txt3} style={{ opacity: 0.5 }} />
+              </div>
+
+              {/* EDITABLE FIELD: FULL NAME */}
+              <div style={{ background: '#fff', padding: '16px', borderRadius: '20px', border: isEditing ? `2px solid ${T.primary}` : `1px solid ${T.border}`, display: 'flex', alignItems: isEditing ? 'flex-start' : 'center', gap: '16px', transition: 'all 0.2s' }}>
+                 <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: isEditing ? T.primaryGlow : T.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', color: isEditing ? T.primary : T.txt3 }}>
+                    <User size={18} />
+                 </div>
+                 <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: '10px', fontWeight: 900, color: T.txt3, textTransform: 'uppercase', marginBottom: isEditing ? '6px' : '2px' }}>Full Name</div>
+                    {isEditing ? (
+                      <input 
+                        value={fullName}
+                        onChange={(e) => setFullName(e.target.value)}
+                        placeholder="Enter your full name..."
+                        style={{ width: '100%', border: `1px solid ${T.border}`, borderRadius: '10px', padding: '10px 12px', fontSize: '13px', fontWeight: 700, outline: 'none', background: T.bg2 }}
+                      />
+                    ) : (
+                      <div style={{ fontSize: '14px', fontWeight: 800, color: T.ink }}>{profile?.full_name || customer?.name}</div>
+                    )}
+                 </div>
               </div>
 
               {/* EDITABLE FIELD: PHONE NUMBER WITH LOCK */}

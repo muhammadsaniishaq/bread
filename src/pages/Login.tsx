@@ -4,7 +4,7 @@ import { useAuth } from '../store/AuthContext';
 import { useAppContext } from '../store/AppContext';
 import { supabase } from '../lib/supabase';
 import { motion } from 'framer-motion';
-import { Lock, Mail, KeyRound, ChevronRight, UserPlus, Send } from 'lucide-react';
+import { Lock, User, KeyRound, ChevronRight, UserPlus } from 'lucide-react';
 import './Login.css';
 
 export const Login: React.FC = () => {
@@ -13,7 +13,7 @@ export const Login: React.FC = () => {
   const navigate = useNavigate();
 
   const [isLogin, setIsLogin] = useState(true);
-  const [email, setEmail] = useState('');
+  const [loginId, setLoginId] = useState(''); // Handles both username and email
   const [password, setPassword] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
   const [loading, setLoading] = useState(false);
@@ -25,14 +25,25 @@ export const Login: React.FC = () => {
     }
   }, [user, navigate]);
 
+  // ALIAS CONVERTER: If they type 'sani', we treat it as 'sani@hub.local'
+  const getFormattedIdentity = (id: string) => {
+     const clean = id.trim().toLowerCase();
+     if (!clean.includes('@')) {
+        return `${clean.replace(/\s+/g, '')}@hub.local`;
+     }
+     return clean;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg('');
     setLoading(true);
 
+    const finalEmail = getFormattedIdentity(loginId);
+
     try {
       if (isLogin) {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        const { error } = await supabase.auth.signInWithPassword({ email: finalEmail, password });
         if (error) {
           if (error.message.toLowerCase().includes('email not confirmed')) {
             setNeedsConfirmation(true);
@@ -40,36 +51,30 @@ export const Login: React.FC = () => {
           throw error;
         }
       } else {
-        // First user signed up should become MANAGER to preserve owner rights
+        // Sign Up Flow
+        let metadata: any = { role: 'CUSTOMER' };
+        
+        // If they used a username alias, we can optionally save their username explicitly
+        if (!loginId.includes('@')) {
+           metadata.username = loginId.trim().toLowerCase().replace(/\s+/g, '');
+        }
+
         const { error } = await supabase.auth.signUp({ 
-          email, 
+          email: finalEmail, 
           password,
-          options: {
-            data: {
-              role: 'CUSTOMER' 
-            }
-          }
+          options: { data: metadata }
         });
+        
         if (error) throw error;
         setErrorMsg('Success! Logging you in shortly...');
       }
     } catch (err: any) {
-      setErrorMsg(err.message || 'Authentication failed');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleResend = async () => {
-    setLoading(true);
-    setErrorMsg('');
-    try {
-      const { error } = await supabase.auth.resend({ type: 'signup', email });
-      if (error) throw error;
-      setErrorMsg('Confirmation email resent! Please check your inbox including spam folder.');
-      setNeedsConfirmation(false);
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Failed to resend email.');
+      // Clean up Supabase's strict email error message if they typed a username
+      let publicMsg = err.message || 'Authentication failed';
+      if (publicMsg.toLowerCase().includes('invalid login credentials')) {
+         publicMsg = 'Incorrect Username or Password.';
+      }
+      setErrorMsg(publicMsg);
     } finally {
       setLoading(false);
     }
@@ -99,23 +104,23 @@ export const Login: React.FC = () => {
         </motion.div>
         
         <h1 className="text-center mb-2 login-title" style={{color: 'var(--text-primary)'}}>
-          {appSettings?.companyName || 'THE BEST SPECIAL BREAD'}
+          {appSettings?.companyName || 'BAKERY HUB'}
         </h1>
-        <p className="text-center text-secondary mb-8 font-medium">
-          {isLogin ? 'Sign in to your account' : 'Create a new account'}
+        <p className="text-center text-secondary mb-8 font-medium" style={{ fontSize: '13px' }}>
+          {isLogin ? 'Sign in with Username or Email' : 'Create a new account'}
         </p>
         
         <form onSubmit={handleSubmit} className="login-form w-full">
           <div className="form-group mb-4 relative">
             <div className="input-icon text-secondary">
-              <Mail size={18} />
+              <User size={18} />
             </div>
             <input 
-              type="email" 
+              type="text" 
               className="form-input login-input" 
-              placeholder="Email Address" 
-              value={email}
-              onChange={e => setEmail(e.target.value)}
+              placeholder="Username or Email" 
+              value={loginId}
+              onChange={e => setLoginId(e.target.value)}
               required 
             />
           </div>
@@ -126,7 +131,7 @@ export const Login: React.FC = () => {
             <input 
               type="password" 
               className="form-input login-input" 
-              placeholder="Password (min 6 chars)" 
+              placeholder="Password" 
               value={password}
               onChange={e => setPassword(e.target.value)}
               required 
@@ -137,14 +142,9 @@ export const Login: React.FC = () => {
           {errorMsg && <p className="text-danger text-sm mb-4 text-center font-bold px-4">{errorMsg}</p>}
           
           {needsConfirmation && (
-            <button 
-              type="button" 
-              onClick={handleResend}
-              disabled={loading} 
-              className="btn btn-outline w-full flex items-center justify-center gap-2 mb-4 border-primary text-primary"
-            >
-              <Send size={18} /> Resend Confirmation Email
-            </button>
+             <p className="text-secondary text-xs mb-4 text-center">
+                Note: Email confirmation is enabled. If you used a Username without a real email, your admin must manually confirm your account.
+             </p>
           )}
 
           <button type="submit" disabled={loading} className="btn btn-primary w-full flex items-center justify-center gap-2 login-btn">
