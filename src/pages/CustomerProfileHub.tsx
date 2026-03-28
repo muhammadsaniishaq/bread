@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../store/AuthContext';
 import { 
   ArrowLeft, User, Mail, Phone, MapPin, 
-  ShieldCheck, BadgeCheck,
-  Edit2, Save, X, Lock, CheckCircle2
+  ShieldCheck, BadgeCheck, Camera,
+  Edit2, Save, X, Lock,
+  FileText, CreditCard, Truck
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AnimatedPage } from '../components/AnimatedPage';
@@ -33,15 +34,21 @@ const T = {
 export const CustomerProfileHub: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const [profile, setProfile] = useState<any>(null);
   const [customer, setCustomer] = useState<any>(null);
+  const [assignedSupplier, setAssignedSupplier] = useState<string>('');
   const [loading, setLoading] = useState(true);
   
   // Edit States
   const [isEditing, setIsEditing] = useState(false);
   const [location, setLocation] = useState('');
+  const [phone, setPhone] = useState('');
+  const [image, setImage] = useState<string>('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<{type: 'success' | 'error', text: string} | null>(null);
 
@@ -64,11 +71,29 @@ export const CustomerProfileHub: React.FC = () => {
       if (cust) {
         setCustomer(cust);
         setLocation(cust.location || '');
+        setPhone(cust.phone || '');
+        setImage(cust.image || '');
+        
+        if (cust.assignedSupplierId) {
+           const { data: sData } = await supabase.from('profiles').select('full_name').eq('id', cust.assignedSupplierId).maybeSingle();
+           if (sData) setAssignedSupplier(sData.full_name);
+        } else {
+           setAssignedSupplier('Not Assigned');
+        }
       }
-    } catch (e) {
-      console.error(e);
-    }
+    } catch (e) { console.error(e); }
     setLoading(false);
+  };
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImage(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   const handleSave = async () => {
@@ -84,14 +109,20 @@ export const CustomerProfileHub: React.FC = () => {
         if (pwErr) throw pwErr;
       }
 
+      // Only allow updating phone if it wasn't there initially (lock enforcement)
+      const updateData: any = { location, image };
+      if (!customer.phone && phone) {
+         updateData.phone = phone;
+      }
+
       const { error: custErr } = await supabase
         .from('customers')
-        .update({ location: location })
+        .update(updateData)
         .eq('profile_id', user.id);
       
       if (custErr) throw custErr;
 
-      setMsg({ type: 'success', text: 'Profile updated!' });
+      setMsg({ type: 'success', text: 'Profile Vault Updated!' });
       setIsEditing(false);
       setPassword('');
       setConfirmPassword('');
@@ -118,7 +149,7 @@ export const CustomerProfileHub: React.FC = () => {
               </motion.button>
               <div>
                  <h1 style={{ margin: 0, fontSize: '20px', fontWeight: 900, letterSpacing: '-0.03em', color: T.ink }}>Profile Hub</h1>
-                 <p style={{ margin: 0, fontSize: '10px', fontWeight: 700, color: T.txt3, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Settings</p>
+                 <p style={{ margin: 0, fontSize: '10px', fontWeight: 700, color: T.txt3, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Settings Vault</p>
               </div>
            </div>
            
@@ -155,43 +186,49 @@ export const CustomerProfileHub: React.FC = () => {
            
            <AnimatePresence>
              {msg && (
-               <motion.div 
-                 initial={{ opacity: 0, y: -10 }}
-                 animate={{ opacity: 1, y: 0 }}
-                 exit={{ opacity: 0 }}
-                 style={{ 
-                   padding: '12px', 
-                   borderRadius: '12px', 
-                   background: msg.type === 'success' ? '#ecfdf5' : '#fff1f2',
-                   color: msg.type === 'success' ? T.success : T.danger,
-                   fontSize: '12px',
-                   fontWeight: 700,
-                   textAlign: 'center',
-                   border: `1px solid ${msg.type === 'success' ? '#a7f3d0' : '#fecdd3'}`
-                 }}
-               >
+               <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                 style={{ padding: '12px', borderRadius: '12px', background: msg.type === 'success' ? '#ecfdf5' : '#fff1f2', color: msg.type === 'success' ? T.success : T.danger, fontSize: '12px', fontWeight: 700, textAlign: 'center', border: `1px solid ${msg.type === 'success' ? '#a7f3d0' : '#fecdd3'}` }}>
                  {msg.text}
                </motion.div>
              )}
            </AnimatePresence>
 
-           {/* COMPACT IDENTITY BRICK */}
+           {/* COMPACT IDENTITY BRICK & AVATAR UPLOAD */}
            <div style={{ background: '#fff', padding: '24px', borderRadius: T.radius, border: `1px solid ${T.border}`, boxShadow: T.shadow, textAlign: 'center', position: 'relative', overflow: 'hidden' }}>
-              <div style={{ width: '80px', height: '80px', borderRadius: '32px', background: `linear-gradient(135deg, ${T.primary}, #818cf8)`, margin: '0 auto 16px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '32px', fontWeight: 900, boxShadow: '0 15px 30px rgba(79, 70, 229, 0.2)' }}>
-                 {profile?.full_name?.charAt(0) || customer?.name?.charAt(0) || '?'}
+              <div style={{ position: 'relative', width: '80px', height: '80px', margin: '0 auto 16px' }}>
+                 <div style={{ width: '100%', height: '100%', borderRadius: '32px', background: `linear-gradient(135deg, ${T.primary}, #818cf8)`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '32px', fontWeight: 900, boxShadow: '0 15px 30px rgba(79, 70, 229, 0.2)', overflow: 'hidden' }}>
+                    {image ? <img src={image} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="Avatar" /> : (profile?.full_name?.charAt(0) || customer?.name?.charAt(0) || '?')}
+                 </div>
+                 {isEditing && (
+                   <motion.button whileTap={{ scale: 0.9 }} onClick={() => fileInputRef.current?.click()}
+                      style={{ position: 'absolute', bottom: -5, right: -5, width: '28px', height: '28px', borderRadius: '10px', background: T.ink, color: '#fff', border: '2px solid #fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', zIndex: 10 }}>
+                      <Camera size={12} />
+                   </motion.button>
+                 )}
+                 <input type="file" ref={fileInputRef} onChange={handleImageUpload} accept="image/*" style={{ display: 'none' }} />
               </div>
               <h2 style={{ fontSize: '20px', fontWeight: 900, color: T.ink, margin: '0 0 4px', letterSpacing: '-0.02em' }}>{profile?.full_name || customer?.name}</h2>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', color: T.success }}>
                  <BadgeCheck size={14} />
                  <span style={{ fontSize: '10px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Verified Member</span>
               </div>
-              <div style={{ position: 'absolute', top: -10, right: -10, opacity: 0.03 }}><User size={100} /></div>
+              <div style={{ position: 'absolute', top: -20, left: -20, opacity: 0.03 }}><User size={120} /></div>
+           </div>
+
+           {/* SUPPLIER ASSIGNMENT BRICK */}
+           <div style={{ background: '#fff', padding: '16px', borderRadius: '20px', border: `1px dashed ${T.primary}`, display: 'flex', alignItems: 'center', gap: '16px', boxShadow: T.shadow }}>
+              <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: T.primaryGlow, display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.primary }}>
+                 <Truck size={18} />
+              </div>
+              <div style={{ flex: 1 }}>
+                 <div style={{ fontSize: '10px', fontWeight: 900, color: T.primary, textTransform: 'uppercase', marginBottom: '2px', letterSpacing: '0.05em' }}>Assigned Supplier</div>
+                 <div style={{ fontSize: '14px', fontWeight: 900, color: T.ink }}>{assignedSupplier || 'Not Assigned'}</div>
+              </div>
            </div>
 
            {/* COMPACT INFO GRID */}
            <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '12px' }}>
               
-              {/* READ ONLY FIELDS */}
               <div style={{ background: '#fff', padding: '16px', borderRadius: '20px', border: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', gap: '16px' }}>
                  <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: T.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.txt3 }}>
                     <Mail size={18} />
@@ -203,15 +240,27 @@ export const CustomerProfileHub: React.FC = () => {
                  <ShieldCheck size={16} color={T.txt3} style={{ opacity: 0.5 }} />
               </div>
 
-              <div style={{ background: '#fff', padding: '16px', borderRadius: '20px', border: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', gap: '16px' }}>
-                 <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: T.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.txt3 }}>
+              {/* EDITABLE FIELD: PHONE NUMBER WITH LOCK */}
+              <div style={{ background: '#fff', padding: '16px', borderRadius: '20px', border: isEditing && !customer?.phone ? `2px solid ${T.primary}` : `1px solid ${T.border}`, display: 'flex', alignItems: isEditing && !customer?.phone ? 'flex-start' : 'center', gap: '16px', transition: 'all 0.2s' }}>
+                 <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: isEditing && !customer?.phone ? T.primaryGlow : T.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', color: isEditing && !customer?.phone ? T.primary : T.txt3 }}>
                     <Phone size={18} />
                  </div>
                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: '10px', fontWeight: 900, color: T.txt3, textTransform: 'uppercase', marginBottom: '2px' }}>Phone (Verified)</div>
-                    <div style={{ fontSize: '14px', fontWeight: 800, color: T.ink }}>{customer?.phone || 'Not Linked'}</div>
+                    <div style={{ fontSize: '10px', fontWeight: 900, color: T.txt3, textTransform: 'uppercase', marginBottom: isEditing && !customer?.phone ? '6px' : '2px' }}>Phone Number</div>
+                    {isEditing && !customer?.phone ? (
+                      <input 
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value)}
+                        placeholder="Assign Phone Number..."
+                        style={{ width: '100%', border: `1px solid ${T.border}`, borderRadius: '10px', padding: '10px 12px', fontSize: '13px', fontWeight: 700, outline: 'none', background: T.bg2 }}
+                      />
+                    ) : (
+                      <div style={{ fontSize: '14px', fontWeight: 800, color: T.ink, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                         {customer?.phone || <span style={{ color: T.danger }}>Not Assigned</span>}
+                      </div>
+                    )}
                  </div>
-                 <Lock size={16} color={T.txt3} style={{ opacity: 0.5 }} />
+                 {customer?.phone && <Lock size={16} color={T.success} style={{ opacity: 0.8 }} />}
               </div>
 
               {/* EDITABLE FIELD: LOCATION */}
@@ -236,11 +285,8 @@ export const CustomerProfileHub: React.FC = () => {
 
               {/* SECURITY: PASSWORD */}
               {isEditing && (
-                <motion.div 
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  style={{ background: '#fff', padding: '16px', borderRadius: '20px', border: `2px solid ${T.primary}`, display: 'flex', flexDirection: 'column', gap: '12px' }}
-                >
+                <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}
+                  style={{ background: '#fff', padding: '16px', borderRadius: '20px', border: `2px solid ${T.primary}`, display: 'flex', flexDirection: 'column', gap: '12px' }}>
                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                       <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: T.primaryGlow, display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.primary }}>
                          <Lock size={18} />
@@ -249,20 +295,10 @@ export const CustomerProfileHub: React.FC = () => {
                    </div>
                    
                    <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '8px' }}>
-                      <input 
-                        type="password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        placeholder="New Password"
-                        style={{ width: '100%', border: `1px solid ${T.border}`, borderRadius: '10px', padding: '10px 12px', fontSize: '13px', fontWeight: 700, outline: 'none', background: T.bg2 }}
-                      />
-                      <input 
-                        type="password"
-                        value={confirmPassword}
-                        onChange={(e) => setConfirmPassword(e.target.value)}
-                        placeholder="Confirm Password"
-                        style={{ width: '100%', border: `1px solid ${T.border}`, borderRadius: '10px', padding: '10px 12px', fontSize: '13px', fontWeight: 700, outline: 'none', background: T.bg2 }}
-                      />
+                      <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="New Password"
+                        style={{ width: '100%', border: `1px solid ${T.border}`, borderRadius: '10px', padding: '10px 12px', fontSize: '13px', fontWeight: 700, outline: 'none', background: T.bg2 }} />
+                      <input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="Confirm Password"
+                        style={{ width: '100%', border: `1px solid ${T.border}`, borderRadius: '10px', padding: '10px 12px', fontSize: '13px', fontWeight: 700, outline: 'none', background: T.bg2 }} />
                    </div>
                    <p style={{ margin: 0, fontSize: '10px', color: T.txt3, fontWeight: 600 }}>Leave empty to keep current password.</p>
                 </motion.div>
@@ -270,12 +306,34 @@ export const CustomerProfileHub: React.FC = () => {
 
            </div>
 
+           {/* VERIFIED DOCUMENTS VAULT */}
+           <div style={{ marginTop: '8px' }}>
+              <h3 style={{ fontSize: '12px', fontWeight: 900, color: T.txt2, textTransform: 'uppercase', marginBottom: '12px', marginLeft: '8px', letterSpacing: '0.05em' }}>Documents Vault</h3>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
+                 
+                 <div style={{ background: '#fff', border: `1px solid ${T.border}`, borderRadius: '20px', padding: '16px', textAlign: 'center', position: 'relative', overflow: 'hidden', boxShadow: T.shadow }}>
+                    <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '4px', background: T.success }}></div>
+                    <CreditCard size={28} color={T.txt3} style={{ margin: '0 auto 12px' }} />
+                    <div style={{ fontSize: '11px', fontWeight: 800, color: T.ink, marginBottom: '4px' }}>Verified ID Card</div>
+                    <div style={{ fontSize: '9px', fontWeight: 700, color: T.success, background: '#ecfdf5', display: 'inline-block', padding: '2px 8px', borderRadius: '6px' }}>SECURE</div>
+                 </div>
+
+                 <div style={{ background: '#fff', border: `1px solid ${T.border}`, borderRadius: '20px', padding: '16px', textAlign: 'center', position: 'relative', overflow: 'hidden', boxShadow: T.shadow }}>
+                    <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '4px', background: T.primary }}></div>
+                    <FileText size={28} color={T.txt3} style={{ margin: '0 auto 12px' }} />
+                    <div style={{ fontSize: '11px', fontWeight: 800, color: T.ink, marginBottom: '4px' }}>Business Cert</div>
+                    <div style={{ fontSize: '9px', fontWeight: 700, color: T.primary, background: T.primaryGlow, display: 'inline-block', padding: '2px 8px', borderRadius: '6px' }}>SECURE</div>
+                 </div>
+
+              </div>
+           </div>
+
            {/* COMPACT FOOTER */}
            <div style={{ marginTop: '8px', background: `linear-gradient(135deg, ${T.ink}, #1e293b)`, padding: '24px', borderRadius: T.radius, color: '#fff', textAlign: 'center', boxShadow: T.shadow }}>
-              <CheckCircle2 size={24} style={{ margin: '0 auto 12px', color: T.success }} />
-              <h3 style={{ margin: '0 0 6px', fontSize: '14px', fontWeight: 900 }}>Secure Account</h3>
+              <Lock size={24} style={{ margin: '0 auto 12px', color: T.txt3 }} />
+              <h3 style={{ margin: '0 0 6px', fontSize: '14px', fontWeight: 900 }}>Vault Secured</h3>
               <p style={{ margin: 0, fontSize: '11px', color: 'rgba(255,255,255,0.6)', fontWeight: 600, lineHeight: 1.5 }}>
-                Core information is verified and can only be updated by the bakery management.
+                Core verified information (Phone & Docs) are strictly locked. Contact support for changes.
               </p>
            </div>
 

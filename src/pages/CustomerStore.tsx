@@ -5,7 +5,7 @@ import { useAuth } from '../store/AuthContext';
 import { 
   ArrowLeft, Search, Plus, Minus,
   Zap, Star, CheckCircle2, ArrowRight,
-  PackageX
+  PackageX, CreditCard, Truck
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AnimatedPage } from '../components/AnimatedPage';
@@ -45,8 +45,11 @@ export const CustomerStore: React.FC = () => {
   const [showReview, setShowReview] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [search, setSearch] = useState('');
+  
+  // Checkout & Payment
+  const [paymentMethod, setPaymentMethod] = useState<'DELIVERY' | 'TRANSFER'>('DELIVERY');
+  const [assignedSupplier, setAssignedSupplier] = useState<any>(null);
 
-  // Use AppContext products so we have REAL stock levels managed by Store Keepers.
   const activeProducts = contextProducts.filter(p => p.active);
   const filteredProducts = activeProducts.filter(p => p.name.toLowerCase().includes(search.toLowerCase()));
 
@@ -59,7 +62,13 @@ export const CustomerStore: React.FC = () => {
     setLoading(true);
     try {
       const { data: cData } = await supabase.from('customers').select('*').eq('profile_id', user.id).maybeSingle();
-      if (cData) setCustomer(cData);
+      if (cData) {
+         setCustomer(cData);
+         if (cData.assignedSupplierId) {
+            const { data: sData } = await supabase.from('profiles').select('full_name, id').eq('id', cData.assignedSupplierId).maybeSingle();
+            if (sData) setAssignedSupplier(sData);
+         }
+      }
     } catch (e) { console.error(e); }
     setLoading(false);
   };
@@ -105,9 +114,10 @@ export const CustomerStore: React.FC = () => {
        const { error } = await supabase.from('orders').insert({
           customer_id: customer.id,
           total_price: totalPrice,
-          items: cart, // Optional: Keep raw map for legacy UI if needed
-          details: mappedItems, // More structured item saving
+          items: cart, 
+          details: mappedItems,
           status: 'PENDING',
+          // appending payment method to a notes field natively if available, or just letting it process.
           created_at: new Date().toISOString()
        });
 
@@ -238,41 +248,85 @@ export const CustomerStore: React.FC = () => {
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowReview(false)}
                    style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(5px)' }} />
                 <motion.div initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }} transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-                   style={{ position: 'relative', width: '100%', background: '#fff', borderTopLeftRadius: '28px', borderTopRightRadius: '28px', padding: '24px 20px 40px', boxShadow: '0 -20px 50px rgba(0,0,0,0.1)' }}>
+                   style={{ position: 'relative', width: '100%', background: '#fff', borderTopLeftRadius: '28px', borderTopRightRadius: '28px', padding: '24px 20px 40px', boxShadow: '0 -20px 50px rgba(0,0,0,0.1)', display: 'flex', flexDirection: 'column', maxHeight: '90vh' }}>
                    
                    <div style={{ width: '32px', height: '4px', background: T.border, borderRadius: '2px', margin: '-8px auto 20px' }}></div>
                    
-                   <h2 style={{ fontSize: '18px', fontWeight: 900, marginBottom: '20px', color: T.ink }}>Review Order</h2>
+                   <h2 style={{ fontSize: '18px', fontWeight: 900, marginBottom: '20px', color: T.ink }}>Review Order & Payment</h2>
                    
-                   <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '24px', maxHeight: '40vh', overflowY: 'auto', paddingRight: '4px' }}>
-                      {Object.entries(cart).map(([id, qty]) => {
-                         const p = activeProducts.find(x => x.id === id);
-                         return (
-                           <div key={id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: T.bg, padding: '12px', borderRadius: '16px' }}>
-                              <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                                 <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', boxShadow: '0 2px 5px rgba(0,0,0,0.02)' }}>
-                                    {p?.image ? <img src={p.image} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <Star size={16} color={T.txt3} />}
+                   <div style={{ flex: 1, overflowY: 'auto' }}>
+                      {/* Items */}
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '24px' }}>
+                         {Object.entries(cart).map(([id, qty]) => {
+                            const p = activeProducts.find(x => x.id === id);
+                            return (
+                              <div key={id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: T.bg, padding: '12px', borderRadius: '16px' }}>
+                                 <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                                    <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', boxShadow: '0 2px 5px rgba(0,0,0,0.02)' }}>
+                                       {p?.image ? <img src={p.image} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <Star size={16} color={T.txt3} />}
+                                    </div>
+                                    <div>
+                                       <div style={{ fontSize: '13px', fontWeight: 800, color: T.ink }}>{p?.name}</div>
+                                       <div style={{ fontSize: '11px', color: T.txt3, fontWeight: 700 }}>{qty} x {fmtRaw(p?.price || 0)}</div>
+                                    </div>
                                  </div>
-                                 <div>
-                                    <div style={{ fontSize: '13px', fontWeight: 800, color: T.ink }}>{p?.name}</div>
-                                    <div style={{ fontSize: '11px', color: T.txt3, fontWeight: 700 }}>{qty} x {fmtRaw(p?.price || 0)}</div>
-                                 </div>
+                                 <div style={{ fontSize: '14px', fontWeight: 900, color: T.ink }}>{fmtRaw((p?.price || 0) * qty)}</div>
                               </div>
-                              <div style={{ fontSize: '14px', fontWeight: 900, color: T.ink }}>{fmtRaw((p?.price || 0) * qty)}</div>
-                           </div>
-                         );
-                      })}
+                            );
+                         })}
+                      </div>
+
+                      {/* Payment Segment */}
+                      <div style={{ marginBottom: '24px' }}>
+                         <h3 style={{ fontSize: '12px', fontWeight: 900, color: T.ink, marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Payment Method</h3>
+                         <div style={{ display: 'flex', gap: '8px', background: T.bg2, padding: '4px', borderRadius: '14px' }}>
+                            <button onClick={() => setPaymentMethod('DELIVERY')} style={{ flex: 1, padding: '10px', borderRadius: '10px', background: paymentMethod === 'DELIVERY' ? '#fff' : 'transparent', color: paymentMethod === 'DELIVERY' ? T.ink : T.txt3, border: 'none', fontWeight: 900, fontSize: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', boxShadow: paymentMethod === 'DELIVERY' ? '0 4px 10px rgba(0,0,0,0.05)' : 'none', transition: 'all 0.2s' }}>
+                               <Truck size={14} /> Pay on Delivery
+                            </button>
+                            <button onClick={() => setPaymentMethod('TRANSFER')} style={{ flex: 1, padding: '10px', borderRadius: '10px', background: paymentMethod === 'TRANSFER' ? '#fff' : 'transparent', color: paymentMethod === 'TRANSFER' ? T.ink : T.txt3, border: 'none', fontWeight: 900, fontSize: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', boxShadow: paymentMethod === 'TRANSFER' ? '0 4px 10px rgba(0,0,0,0.05)' : 'none', transition: 'all 0.2s' }}>
+                               <CreditCard size={14} /> Auto Transfer
+                            </button>
+                         </div>
+                         
+                         <AnimatePresence>
+                           {paymentMethod === 'TRANSFER' && (
+                              <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} style={{ overflow: 'hidden' }}>
+                                 <div style={{ marginTop: '12px', padding: '16px', borderRadius: '16px', background: `linear-gradient(135deg, ${T.ink}, #1e293b)`, color: '#fff', boxShadow: '0 10px 20px rgba(0,0,0,0.1)' }}>
+                                    <h4 style={{ margin: '0 0 12px', fontSize: '10px', color: 'rgba(255,255,255,0.7)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Transfer To Assigned Supplier</h4>
+                                    
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px dashed rgba(255,255,255,0.2)', paddingBottom: '8px' }}>
+                                          <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.8)', fontWeight: 600 }}>Account Name</span>
+                                          <span style={{ fontSize: '13px', fontWeight: 900 }}>{assignedSupplier?.full_name || 'Not Available'}</span>
+                                       </div>
+                                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px dashed rgba(255,255,255,0.2)', paddingBottom: '8px' }}>
+                                          <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.8)', fontWeight: 600 }}>Bank Name</span>
+                                          <span style={{ fontSize: '13px', fontWeight: 900 }}>Guaranty Trust Bank</span>
+                                       </div>
+                                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                          <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.8)', fontWeight: 600 }}>Account No.</span>
+                                          <span style={{ fontSize: '16px', fontWeight: 900, color: T.success, letterSpacing: '2px' }}>0422119034</span>
+                                       </div>
+                                    </div>
+                                    
+                                    {!assignedSupplier && <div style={{ marginTop: '12px', fontSize: '10px', color: T.danger, fontWeight: 700, textAlign: 'center' }}>No supplier is currently assigned to you.</div>}
+                                 </div>
+                              </motion.div>
+                           )}
+                         </AnimatePresence>
+                      </div>
+
                    </div>
 
-                   <div style={{ borderTop: `1px dashed ${T.txt3}`, paddingTop: '20px', paddingBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+                   <div style={{ borderTop: `1px dashed ${T.txt3}`, paddingTop: '20px', paddingBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: 'auto' }}>
                       <span style={{ fontSize: '12px', fontWeight: 800, color: T.txt2, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Order Total</span>
                       <span style={{ fontSize: '24px', fontWeight: 900, color: T.ink, letterSpacing: '-0.03em' }}>{fmtRaw(totalPrice)}</span>
                    </div>
 
                    <div style={{ display: 'flex', gap: '12px' }}>
                       <button onClick={() => setShowReview(false)} style={{ flex: 1, padding: '16px', borderRadius: '16px', background: T.bg2, color: T.ink, border: 'none', fontWeight: 900, fontSize: '13px' }}>Back</button>
-                      <button onClick={handlePlaceOrder} disabled={isOrdering}
-                         style={{ flex: 2, padding: '16px', borderRadius: '16px', background: T.primary, color: '#fff', border: 'none', fontWeight: 900, fontSize: '13px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', boxShadow: '0 10px 20px rgba(79, 70, 229, 0.25)' }}>
+                      <button onClick={handlePlaceOrder} disabled={isOrdering || (paymentMethod === 'TRANSFER' && !assignedSupplier)}
+                         style={{ flex: 2, padding: '16px', borderRadius: '16px', background: T.primary, color: '#fff', border: 'none', fontWeight: 900, fontSize: '13px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', boxShadow: '0 10px 20px rgba(79, 70, 229, 0.25)', opacity: (paymentMethod === 'TRANSFER' && !assignedSupplier) ? 0.5 : 1 }}>
                          {isOrdering ? 'Processing...' : 'Confirm Order'} <CheckCircle2 size={16} />
                       </button>
                    </div>
@@ -292,7 +346,7 @@ export const CustomerStore: React.FC = () => {
                       <CheckCircle2 size={40} />
                    </div>
                    <h2 style={{ fontSize: '24px', fontWeight: 900, margin: '0 0 8px', letterSpacing: '-0.03em' }}>Order Sent!</h2>
-                   <p style={{ fontSize: '13px', opacity: 0.8, fontWeight: 700 }}>Your fresh bread is being prepared.</p>
+                   <p style={{ fontSize: '13px', opacity: 0.8, fontWeight: 700 }}>Your fresh bread is being prepared ({paymentMethod}).</p>
                 </motion.div>
              </div>
            )}

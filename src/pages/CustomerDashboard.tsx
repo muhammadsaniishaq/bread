@@ -6,7 +6,7 @@ import {
   ShoppingBag, Wallet, History,
   LogOut, ArrowRight, Star,
   Calendar, ShoppingCart, 
-  Zap, ChefHat
+  Zap, ChefHat, ShieldAlert
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { AnimatedPage } from '../components/AnimatedPage';
@@ -17,7 +17,7 @@ import { UnifiedReceiptViewer } from '../components/UnifiedReceiptViewer';
    CUTTER/MODEL TOKENS
 ───────────────────────────────────────── */
 const T = {
-  bg:        '#f8fafc', // Softer background
+  bg:        '#f8fafc',
   panel:     '#ffffff',
   border:    'rgba(0,0,0,0.04)',
   primary:   '#4f46e5',
@@ -28,7 +28,7 @@ const T = {
   txt:       '#1e293b',
   txt2:      '#64748b',
   txt3:      '#94a3b8',
-  radius:    '24px', // Slightly tighter radius for "model" feel
+  radius:    '24px',
   shadow:    '0 10px 30px -10px rgba(0,0,0,0.05)'
 };
 
@@ -41,6 +41,7 @@ export const CustomerDashboard: React.FC = () => {
   const [profile, setProfile] = useState<any>(null);
   const [customer, setCustomer] = useState<any>(null);
   const [orders, setOrders] = useState<any[]>([]);
+  const [totalBought, setTotalBought] = useState(0);
   const [loading, setLoading] = useState(true);
   
   // Receipt Viewer State
@@ -72,8 +73,12 @@ export const CustomerDashboard: React.FC = () => {
 
       if (cust) {
         setCustomer(cust);
-        const { data: ords } = await supabase.from('orders').select('*').eq('customer_id', cust.id).order('created_at', { ascending: false }).limit(5);
-        if (ords) setOrders(ords);
+        const { data: allOrds } = await supabase.from('orders').select('*').eq('customer_id', cust.id).order('created_at', { ascending: false });
+        if (allOrds) {
+           setOrders(allOrds.slice(0, 5));
+           const bought = allOrds.reduce((sum, o) => sum + (o.total_price || 0), 0);
+           setTotalBought(bought);
+        }
       } else {
         const { data: newCust, error: createErr } = await supabase.from('customers').insert({
            name: prof?.full_name || user?.email?.split('@')[0] || 'Member',
@@ -106,6 +111,10 @@ export const CustomerDashboard: React.FC = () => {
     </div>
   );
 
+  const isVerified = !!customer.phone || !!customer.assignedSupplierId;
+  const debt = customer.debt_balance || 0;
+  const totalPaid = Math.max(0, totalBought - debt);
+
   return (
     <AnimatedPage>
       <div style={{ minHeight: '100vh', background: T.bg, paddingBottom: '110px', fontFamily: 'Inter, sans-serif' }}>
@@ -131,23 +140,47 @@ export const CustomerDashboard: React.FC = () => {
         {/* CUTICLES BENTO GRID */}
         <div style={{ padding: '0 20px', display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
            
-           {/* Account Status Brick */}
-           <motion.div initial={{ y: 15, opacity: 0 }} animate={{ y: 0, opacity: 1 }}
-              style={{ gridColumn: 'span 2', background: `linear-gradient(135deg, ${T.ink}, #1e293b)`, padding: '24px', borderRadius: T.radius, color: '#fff', boxShadow: T.shadow, position: 'relative', overflow: 'hidden' }}>
-              <div style={{ position: 'relative', zIndex: 1 }}>
-                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-                    <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                       <Wallet size={16} />
-                    </div>
-                    <span style={{ fontSize: '10px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', opacity: 0.7 }}>Account Balance</span>
-                 </div>
-                 <div style={{ fontSize: '28px', fontWeight: 900, letterSpacing: '-0.03em' }}>{fmtRaw(customer.debt_balance || 0)}</div>
-                 <div style={{ fontSize: '11px', fontWeight: 600, color: 'rgba(255,255,255,0.6)', marginTop: '4px' }}>
-                    {customer.debt_balance > 0 ? 'Remaining outstanding balance' : 'Account is fully cleared'}
-                 </div>
-              </div>
-              <div style={{ position: 'absolute', bottom: -20, right: -20, opacity: 0.05 }}><Zap size={100} /></div>
-           </motion.div>
+           {/* Account Status / Financial Ledger Brick */}
+           {isVerified ? (
+             <motion.div initial={{ y: 15, opacity: 0 }} animate={{ y: 0, opacity: 1 }}
+                style={{ gridColumn: 'span 2', background: `linear-gradient(135deg, ${T.ink}, #1e293b)`, padding: '24px', borderRadius: T.radius, color: '#fff', boxShadow: T.shadow, position: 'relative', overflow: 'hidden' }}>
+                <div style={{ position: 'relative', zIndex: 1 }}>
+                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+                      <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                         <Wallet size={16} />
+                      </div>
+                      <span style={{ fontSize: '10px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', background: 'rgba(16, 185, 129, 0.2)', color: T.success, padding: '4px 8px', borderRadius: '8px' }}>Verified Ledger</span>
+                   </div>
+                   
+                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px', textAlign: 'center' }}>
+                      <div style={{ background: 'rgba(255,255,255,0.05)', padding: '12px 8px', borderRadius: '16px' }}>
+                         <div style={{ fontSize: '9px', color: 'rgba(255,255,255,0.5)', fontWeight: 800, textTransform: 'uppercase', marginBottom: '6px' }}>Bought (Siya)</div>
+                         <div style={{ fontSize: '13px', fontWeight: 900, color: '#fff' }}>{fmtRaw(totalBought)}</div>
+                      </div>
+                      <div style={{ background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.2)', padding: '12px 8px', borderRadius: '16px' }}>
+                         <div style={{ fontSize: '9px', color: 'rgba(255,255,255,0.7)', fontWeight: 800, textTransform: 'uppercase', marginBottom: '6px' }}>Paid (Biya)</div>
+                         <div style={{ fontSize: '13px', fontWeight: 900, color: T.success }}>{fmtRaw(totalPaid)}</div>
+                      </div>
+                      <div style={{ background: 'rgba(244, 63, 94, 0.1)', border: '1px solid rgba(244, 63, 94, 0.2)', padding: '12px 8px', borderRadius: '16px' }}>
+                         <div style={{ fontSize: '9px', color: 'rgba(255,255,255,0.7)', fontWeight: 800, textTransform: 'uppercase', marginBottom: '6px' }}>Debt (Bashi)</div>
+                         <div style={{ fontSize: '13px', fontWeight: 900, color: T.danger }}>{fmtRaw(debt)}</div>
+                      </div>
+                   </div>
+                </div>
+                <div style={{ position: 'absolute', bottom: -20, right: -20, opacity: 0.05 }}><Zap size={100} /></div>
+             </motion.div>
+           ) : (
+             <motion.div initial={{ y: 15, opacity: 0 }} animate={{ y: 0, opacity: 1 }}
+                style={{ gridColumn: 'span 2', background: `linear-gradient(135deg, ${T.danger}, #be123c)`, padding: '24px', borderRadius: T.radius, color: '#fff', boxShadow: T.shadow, display: 'flex', gap: '16px', alignItems: 'center' }}>
+                <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                   <ShieldAlert size={20} />
+                </div>
+                <div style={{ flex: 1 }}>
+                   <h3 style={{ margin: '0 0 4px', fontSize: '14px', fontWeight: 900 }}>Action Required</h3>
+                   <p style={{ margin: 0, fontSize: '11px', color: 'rgba(255,255,255,0.8)', fontWeight: 600 }}>Please update your phone number in Profile Settings to unlock your financial ledger.</p>
+                </div>
+             </motion.div>
+           )}
 
            {/* Quick Stats Bricks */}
            <div style={{ background: '#fff', padding: '18px', borderRadius: '20px', border: `1px solid ${T.border}`, boxShadow: T.shadow }}>
@@ -159,7 +192,7 @@ export const CustomerDashboard: React.FC = () => {
            <div style={{ background: '#fff', padding: '18px', borderRadius: '20px', border: `1px solid ${T.border}`, boxShadow: T.shadow }}>
               <div style={{ color: T.success, marginBottom: '12px' }}><Star size={18} /></div>
               <div style={{ fontSize: '10px', fontWeight: 900, color: T.txt3, textTransform: 'uppercase' }}>Status</div>
-              <div style={{ fontSize: '18px', fontWeight: 900, color: T.ink }}>V.I.P</div>
+              <div style={{ fontSize: '18px', fontWeight: 900, color: T.ink }}>{isVerified ? 'V.I.P' : 'Guest'}</div>
            </div>
 
            {/* History Timeline Brick */}
