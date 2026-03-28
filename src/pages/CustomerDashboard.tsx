@@ -1,48 +1,50 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../store/AuthContext';
+import { useAppContext } from '../store/AppContext';
 import { 
   ShoppingBag, Wallet, History,
   LogOut, ArrowRight, Star,
   Calendar, ShoppingCart, 
-  Zap, ChevronRight, CheckCircle2,
-  ChefHat
+  Zap, ChefHat
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { AnimatedPage } from '../components/AnimatedPage';
 import { useNavigate } from 'react-router-dom';
+import { UnifiedReceiptViewer } from '../components/UnifiedReceiptViewer';
 
 /* ─────────────────────────────────────────
-   V3 TOKENS (Match Suite)
+   CUTTER/MODEL TOKENS
 ───────────────────────────────────────── */
 const T = {
-  bg:        '#fdfdfd', 
+  bg:        '#f8fafc', // Softer background
   panel:     '#ffffff',
-  border:    'rgba(0,0,0,0.06)',
+  border:    'rgba(0,0,0,0.04)',
   primary:   '#4f46e5',
-  primaryGlow: 'rgba(79, 70, 229, 0.1)',
+  primaryGlow: 'rgba(79, 70, 229, 0.08)',
   success:   '#10b981',
   danger:    '#f43f5e',
   ink:       '#0f172a',
   txt:       '#1e293b',
   txt2:      '#64748b',
   txt3:      '#94a3b8',
-  radius:    '32px',
-  shadow:    '0 20px 50px -12px rgba(0,0,0,0.05)'
+  radius:    '24px', // Slightly tighter radius for "model" feel
+  shadow:    '0 10px 30px -10px rgba(0,0,0,0.05)'
 };
 
 const fmtRaw = (v: number) => `₦${v.toLocaleString()}`;
 
-/* ─────────────────────────────────────────
-   MAIN COMPONENT
-───────────────────────────────────────── */
-const CustomerDashboard: React.FC = () => {
+export const CustomerDashboard: React.FC = () => {
   const { user, signOut } = useAuth();
+  const { appSettings } = useAppContext();
   const navigate = useNavigate();
   const [profile, setProfile] = useState<any>(null);
   const [customer, setCustomer] = useState<any>(null);
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  // Receipt Viewer State
+  const [selectedOrder, setSelectedOrder] = useState<any>(null);
 
   useEffect(() => {
     if (!user) {
@@ -55,18 +57,14 @@ const CustomerDashboard: React.FC = () => {
   const fetchData = async (id: string) => {
     setLoading(true);
     try {
-      // 0. Fetch Profile
       const { data: prof } = await supabase.from('profiles').select('*').eq('id', id).single();
       if (prof) setProfile(prof);
 
-      // 1. Try fetching by profile_id linkage
       let { data: cust } = await supabase.from('customers').select('*').eq('profile_id', id).maybeSingle();
       
-      // 2. Fallback: If no link but we have email, try matching email
       if (!cust && user?.email) {
          const { data: byEmail } = await supabase.from('customers').select('*').eq('email', user.email).maybeSingle();
          if (byEmail) {
-            // Auto-link for future visits
             await supabase.from('customers').update({ profile_id: id }).eq('id', byEmail.id);
             cust = byEmail;
          }
@@ -77,7 +75,6 @@ const CustomerDashboard: React.FC = () => {
         const { data: ords } = await supabase.from('orders').select('*').eq('customer_id', cust.id).order('created_at', { ascending: false }).limit(5);
         if (ords) setOrders(ords);
       } else {
-        // 3. AUTO-LINK: Create a new customer ledger if none exists
         const { data: newCust, error: createErr } = await supabase.from('customers').insert({
            name: prof?.full_name || user?.email?.split('@')[0] || 'Member',
            email: user?.email,
@@ -98,129 +95,125 @@ const CustomerDashboard: React.FC = () => {
     navigate('/login');
   };
 
-  if (loading) return <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: T.bg, fontWeight: 900, color: T.primary }}>LOADING VAULT...</div>;
+  if (loading) return <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: T.bg, fontWeight: 900, color: T.primary, fontSize: '13px', letterSpacing: '0.05em' }}>LOADING VAULT...</div>;
   
   if (!customer) return (
     <div style={{ padding: '60px 40px', textAlign: 'center', background: T.bg, height: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-       <div style={{ color: T.danger, marginBottom: '24px' }}><Zap size={60} /></div>
-       <h1 style={{ fontSize: '24px', fontWeight: 900 }}>Profile Unlinked</h1>
-       <p style={{ color: T.txt2, fontWeight: 700, margin: '12px 0 32px' }}>Your authentication account ({user?.email}) is not yet linked to a bakery ledger. Please contact management.</p>
-       <button onClick={handleSignOut} style={{ padding: '16px 32px', borderRadius: '18px', background: T.ink, color: '#fff', border: 'none', fontWeight: 900 }}>Sign Out</button>
+       <div style={{ color: T.danger, marginBottom: '20px' }}><Zap size={48} /></div>
+       <h1 style={{ fontSize: '20px', fontWeight: 900 }}>Profile Unlinked</h1>
+       <p style={{ color: T.txt2, fontSize: '13px', fontWeight: 700, margin: '12px 0 24px' }}>Account ({user?.email}) not linked. Contact management.</p>
+       <button onClick={handleSignOut} style={{ padding: '14px 28px', borderRadius: '16px', background: T.ink, color: '#fff', border: 'none', fontWeight: 900, fontSize: '13px' }}>Sign Out</button>
     </div>
   );
 
   return (
     <AnimatedPage>
-      <div style={{ minHeight: '100vh', background: T.bg, paddingBottom: '120px', fontFamily: 'Inter, sans-serif' }}>
+      <div style={{ minHeight: '100vh', background: T.bg, paddingBottom: '110px', fontFamily: 'Inter, sans-serif' }}>
         
-        {/* V3 HEADER */}
-        <div style={{ padding: '32px 24px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        {/* MODEL HEADER */}
+        <div style={{ padding: '24px 20px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
            <div>
-              <p style={{ margin: 0, fontSize: '11px', fontWeight: 900, color: T.primary, textTransform: 'uppercase', letterSpacing: '0.1em' }}>Premium Customer</p>
-              <h1 style={{ margin: 0, fontSize: '28px', fontWeight: 900, letterSpacing: '-0.05em', color: T.ink }}>Hello, {profile?.full_name || customer.name}</h1>
+              <p style={{ margin: 0, fontSize: '10px', fontWeight: 900, color: T.primary, textTransform: 'uppercase', letterSpacing: '0.1em' }}>Member Area</p>
+              <h1 style={{ margin: 0, fontSize: '22px', fontWeight: 900, letterSpacing: '-0.03em', color: T.ink }}>Hi, {profile?.full_name?.split(' ')[0] || customer.name.split(' ')[0]}</h1>
            </div>
-           <div style={{ display: 'flex', gap: '12px' }}>
+           <div style={{ display: 'flex', gap: '8px' }}>
              <motion.button whileTap={{ scale: 0.9 }} onClick={() => navigate('/customer/profile')}
-                style={{ width: '48px', height: '48px', borderRadius: '18px', background: '#f8fafc', border: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.txt2 }}>
-                <ChefHat size={20} />
+                style={{ width: '40px', height: '40px', borderRadius: '14px', background: '#fff', border: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.txt2, boxShadow: '0 4px 10px rgba(0,0,0,0.02)' }}>
+                <ChefHat size={18} />
              </motion.button>
              <motion.button whileTap={{ scale: 0.9 }} onClick={handleSignOut}
-                style={{ width: '48px', height: '48px', borderRadius: '18px', background: '#f8fafc', border: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.txt2 }}>
-                <LogOut size={20} />
+                style={{ width: '40px', height: '40px', borderRadius: '14px', background: '#fff', border: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.txt2, boxShadow: '0 4px 10px rgba(0,0,0,0.02)' }}>
+                <LogOut size={18} />
              </motion.button>
            </div>
         </div>
 
-        {/* BENTO GRID */}
-        <div style={{ padding: '0 20px', display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' }}>
+        {/* CUTICLES BENTO GRID */}
+        <div style={{ padding: '0 20px', display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
            
-           {/* Account Status Brick (Wide) */}
-           <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }}
-              style={{ gridColumn: 'span 2', background: `linear-gradient(135deg, ${T.ink}, #2d3748)`, padding: '32px', borderRadius: T.radius, color: '#fff', boxShadow: T.shadow, position: 'relative', overflow: 'hidden' }}>
+           {/* Account Status Brick */}
+           <motion.div initial={{ y: 15, opacity: 0 }} animate={{ y: 0, opacity: 1 }}
+              style={{ gridColumn: 'span 2', background: `linear-gradient(135deg, ${T.ink}, #1e293b)`, padding: '24px', borderRadius: T.radius, color: '#fff', boxShadow: T.shadow, position: 'relative', overflow: 'hidden' }}>
               <div style={{ position: 'relative', zIndex: 1 }}>
-                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
-                    <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: 'rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                       <Wallet size={20} />
+                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+                    <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                       <Wallet size={16} />
                     </div>
-                    <span style={{ fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', opacity: 0.7 }}>Account Balance</span>
+                    <span style={{ fontSize: '10px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', opacity: 0.7 }}>Account Balance</span>
                  </div>
-                 <div style={{ fontSize: '36px', fontWeight: 900, letterSpacing: '-0.03em' }}>{fmtRaw(customer.debt_balance || 0)}</div>
-                 <div style={{ fontSize: '12px', fontWeight: 600, color: 'rgba(255,255,255,0.6)', marginTop: '8px' }}>
-                    {customer.debt_balance > 0 ? 'Outstanding balance owed' : 'Your account is clear'}
+                 <div style={{ fontSize: '28px', fontWeight: 900, letterSpacing: '-0.03em' }}>{fmtRaw(customer.debt_balance || 0)}</div>
+                 <div style={{ fontSize: '11px', fontWeight: 600, color: 'rgba(255,255,255,0.6)', marginTop: '4px' }}>
+                    {customer.debt_balance > 0 ? 'Remaining outstanding balance' : 'Account is fully cleared'}
                  </div>
               </div>
-              <div style={{ position: 'absolute', bottom: -20, right: -20, opacity: 0.1 }}><Zap size={140} /></div>
+              <div style={{ position: 'absolute', bottom: -20, right: -20, opacity: 0.05 }}><Zap size={100} /></div>
            </motion.div>
 
            {/* Quick Stats Bricks */}
-           <div style={{ background: '#fff', padding: '24px', borderRadius: T.radius, border: `1px solid ${T.border}`, boxShadow: T.shadow }}>
-              <div style={{ color: T.primary, marginBottom: '16px' }}><ShoppingCart size={24} /></div>
-              <div style={{ fontSize: '11px', fontWeight: 900, color: T.txt3, textTransform: 'uppercase' }}>Orders</div>
-              <div style={{ fontSize: '20px', fontWeight: 900, color: T.ink }}>{orders.length}+</div>
+           <div style={{ background: '#fff', padding: '18px', borderRadius: '20px', border: `1px solid ${T.border}`, boxShadow: T.shadow }}>
+              <div style={{ color: T.primary, marginBottom: '12px' }}><ShoppingCart size={18} /></div>
+              <div style={{ fontSize: '10px', fontWeight: 900, color: T.txt3, textTransform: 'uppercase' }}>Orders</div>
+              <div style={{ fontSize: '18px', fontWeight: 900, color: T.ink }}>{orders.length}</div>
            </div>
 
-           <div style={{ background: '#fff', padding: '24px', borderRadius: T.radius, border: `1px solid ${T.border}`, boxShadow: T.shadow }}>
-              <div style={{ color: T.success, marginBottom: '16px' }}><Star size={24} /></div>
-              <div style={{ fontSize: '11px', fontWeight: 900, color: T.txt3, textTransform: 'uppercase' }}>Status</div>
-              <div style={{ fontSize: '20px', fontWeight: 900, color: T.ink }}>Gold</div>
+           <div style={{ background: '#fff', padding: '18px', borderRadius: '20px', border: `1px solid ${T.border}`, boxShadow: T.shadow }}>
+              <div style={{ color: T.success, marginBottom: '12px' }}><Star size={18} /></div>
+              <div style={{ fontSize: '10px', fontWeight: 900, color: T.txt3, textTransform: 'uppercase' }}>Status</div>
+              <div style={{ fontSize: '18px', fontWeight: 900, color: T.ink }}>V.I.P</div>
            </div>
 
-           {/* History Timeline Brick (Wide) */}
-           <div style={{ gridColumn: 'span 2', background: '#fff', padding: '28px', borderRadius: T.radius, border: `1px solid ${T.border}`, boxShadow: T.shadow }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-                 <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 900, color: T.ink }}>Purchase Ledger</h3>
-                 <History size={18} color={T.txt3} />
+           {/* History Timeline Brick */}
+           <div style={{ gridColumn: 'span 2', background: '#fff', padding: '24px', borderRadius: '24px', border: `1px solid ${T.border}`, boxShadow: T.shadow, marginTop: '4px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                 <h3 style={{ margin: 0, fontSize: '14px', fontWeight: 900, color: T.ink }}>Recent Orders</h3>
+                 <History size={16} color={T.txt3} />
               </div>
               
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                  {orders.map((o, i) => (
-                   <div key={i} onClick={() => navigate(`/customer-receipt/${o.id}`)} 
-                     style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '16px', paddingBottom: '16px', borderBottom: i < orders.length - 1 ? `1px solid ${T.border}` : 'none' }}>
-                      <div style={{ width: '44px', height: '44px', borderRadius: '14px', background: T.primaryGlow, color: T.primary, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                         <ShoppingBag size={20} />
+                   <div key={i} onClick={() => setSelectedOrder(o)} 
+                     style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '14px', paddingBottom: '12px', borderBottom: i < orders.length - 1 ? `1px solid ${T.border}` : 'none' }}>
+                      <div style={{ width: '38px', height: '38px', borderRadius: '12px', background: T.primaryGlow, color: T.primary, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                         <ShoppingBag size={16} />
                       </div>
                       <div style={{ flex: 1 }}>
-                         <div style={{ fontSize: '14px', fontWeight: 800, color: T.ink }}>Bakery Shipment</div>
-                         <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginTop: '2px' }}>
-                            <div style={{ fontSize: '11px', fontWeight: 700, color: T.txt3, display: 'flex', alignItems: 'center', gap: '4px' }}><Calendar size={12} /> {new Date(o.created_at).toLocaleDateString()}</div>
-                            <span style={{ fontSize: '10px', color: T.txt3 }}>•</span>
-                            <div style={{ fontSize: '11px', fontWeight: 800, color: T.success }}>{o.status}</div>
+                         <div style={{ fontSize: '13px', fontWeight: 800, color: T.ink }}>Bakery Delivery</div>
+                         <div style={{ display: 'flex', gap: '6px', alignItems: 'center', marginTop: '2px' }}>
+                            <div style={{ fontSize: '10px', fontWeight: 700, color: T.txt3, display: 'flex', alignItems: 'center', gap: '4px' }}><Calendar size={10} /> {new Date(o.created_at).toLocaleDateString()}</div>
+                            <span style={{ fontSize: '8px', color: T.txt3 }}>•</span>
+                            <div style={{ fontSize: '10px', fontWeight: 800, color: o.status === 'PENDING' ? '#eab308' : T.success }}>{o.status}</div>
                          </div>
                       </div>
                       <div style={{ textAlign: 'right' }}>
-                         <div style={{ fontSize: '15px', fontWeight: 900 }}>{fmtRaw(o.total_price)}</div>
-                         <div style={{ fontSize: '10px', color: T.primary, fontWeight: 800 }}>View Receipt</div>
+                         <div style={{ fontSize: '14px', fontWeight: 900, letterSpacing: '-0.02em' }}>{fmtRaw(o.total_price)}</div>
+                         <div style={{ fontSize: '9px', color: T.primary, fontWeight: 800 }}>Receipt</div>
                       </div>
                    </div>
                  ))}
-                 {orders.length === 0 && <div style={{ textAlign: 'center', padding: '32px', color: T.txt3, fontWeight: 700 }}>No history found.</div>}
+                 {orders.length === 0 && <div style={{ textAlign: 'center', padding: '24px', color: T.txt3, fontWeight: 700, fontSize: '12px' }}>No recent orders.</div>}
               </div>
            </div>
 
-           {/* Identity & Docs Brick (Wide) */}
-           <motion.div whileTap={{ scale: 0.98 }} onClick={() => navigate(`/customer-docs/${customer.id}`)}
-              style={{ gridColumn: 'span 2', background: '#f8fafc', padding: '32px', borderRadius: T.radius, border: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', gap: '24px', position: 'relative', overflow: 'hidden' }}>
-              <div style={{ background: '#fff', width: '64px', height: '64px', borderRadius: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.primary, boxShadow: '0 8px 20px rgba(0,0,0,0.05)' }}>
-                 <CheckCircle2 style={{ width: 32, height: 32 }} />
-              </div>
-              <div style={{ flex: 1 }}>
-                 <div style={{ fontSize: '11px', fontWeight: 900, color: T.primary, textTransform: 'uppercase', marginBottom: '4px' }}>Membership Vault</div>
-                 <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 900 }}>Identity & Certificates</h3>
-                 <p style={{ margin: '4px 0 0', fontSize: '13px', color: T.txt3, fontWeight: 700 }}>View your verified bakery badge</p>
-              </div>
-              <ChevronRight size={24} color={T.txt3} />
-           </motion.div>
         </div>
 
-        {/* V3 FLOATING ACTION BAR */}
-        <div style={{ position: 'fixed', bottom: '32px', left: '20px', right: '20px', zIndex: 100 }}>
+        {/* COMPACT FLOATING BAR */}
+        <div style={{ position: 'fixed', bottom: '24px', left: '20px', right: '20px', zIndex: 100 }}>
            <motion.button whileTap={{ scale: 0.95 }} onClick={() => navigate('/customer/store')}
-              style={{ width: '100%', padding: '20px', borderRadius: '24px', background: T.primary, color: '#fff', border: 'none', fontWeight: 900, fontSize: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', boxShadow: '0 20px 40px rgba(79, 70, 229, 0.3)' }}>
-              <ShoppingCart size={22} /> New Order <ArrowRight size={20} />
+              style={{ width: '100%', padding: '16px', borderRadius: '20px', background: T.primary, color: '#fff', border: 'none', fontWeight: 900, fontSize: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', boxShadow: '0 15px 30px rgba(79, 70, 229, 0.25)' }}>
+              <ShoppingCart size={18} /> View Store <ArrowRight size={16} />
            </motion.button>
         </div>
 
       </div>
+
+      <UnifiedReceiptViewer 
+        isOpen={!!selectedOrder} 
+        onClose={() => setSelectedOrder(null)} 
+        order={selectedOrder} 
+        appSettings={appSettings} 
+        customerName={profile?.full_name || customer?.name} 
+      />
+
     </AnimatedPage>
   );
 };
