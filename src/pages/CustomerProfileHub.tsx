@@ -133,12 +133,15 @@ export const CustomerProfileHub: React.FC = () => {
          updateData.phone = phone;
       }
 
-      const { error: custErr } = await supabase
+      const { data: updatedCust, error: custErr } = await supabase
         .from('customers')
         .update(updateData)
-        .eq('profile_id', user.id);
+        .eq('profile_id', user.id)
+        .select()
+        .maybeSingle();
       
       if (custErr) throw custErr;
+      if (!updatedCust) throw new Error("Security Blocked Update. Please apply the Supabase SQL RLS Policy!");
 
       if (fullName && fullName !== profile?.full_name) {
          const { error: profErr } = await supabase.from('profiles').update({ full_name: fullName }).eq('id', user.id);
@@ -259,8 +262,8 @@ export const CustomerProfileHub: React.FC = () => {
                     <Mail size={18} />
                  </div>
                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: '10px', fontWeight: 900, color: T.txt3, textTransform: 'uppercase', marginBottom: '2px' }}>Account ID</div>
-                    <div style={{ fontSize: '14px', fontWeight: 800, color: T.ink }}>{user?.email?.includes('@hub.local') ? `@${user.email.replace('@hub.local', '')}` : user?.email}</div>
+                    <div style={{ fontSize: '10px', fontWeight: 900, color: T.txt3, textTransform: 'uppercase', marginBottom: '2px' }}>{user?.email?.includes('@hub.local') ? 'Username' : 'Email Address'}</div>
+                    <div style={{ fontSize: '16px', fontWeight: 900, color: T.ink }}>{user?.email?.includes('@hub.local') ? `@${user.email.replace('@hub.local', '')}` : user?.email}</div>
                  </div>
                  <ShieldCheck size={16} color={T.txt3} style={{ opacity: 0.5 }} />
               </div>
