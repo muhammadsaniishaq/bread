@@ -5,7 +5,8 @@ import {
   ShoppingBag, Wallet, History,
   LogOut, ArrowRight, Star,
   Calendar, ShoppingCart, 
-  Zap, ChevronRight, CheckCircle2
+  Zap, ChevronRight, CheckCircle2,
+  ChefHat
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { AnimatedPage } from '../components/AnimatedPage';
@@ -118,10 +119,16 @@ const CustomerDashboard: React.FC = () => {
               <p style={{ margin: 0, fontSize: '11px', fontWeight: 900, color: T.primary, textTransform: 'uppercase', letterSpacing: '0.1em' }}>Premium Customer</p>
               <h1 style={{ margin: 0, fontSize: '28px', fontWeight: 900, letterSpacing: '-0.05em', color: T.ink }}>Hello, {profile?.full_name || customer.name}</h1>
            </div>
-           <motion.button whileTap={{ scale: 0.9 }} onClick={handleSignOut}
-              style={{ width: '48px', height: '48px', borderRadius: '18px', background: '#f8fafc', border: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.txt2 }}>
-              <LogOut size={20} />
-           </motion.button>
+           <div style={{ display: 'flex', gap: '12px' }}>
+             <motion.button whileTap={{ scale: 0.9 }} onClick={() => navigate('/customer/profile')}
+                style={{ width: '48px', height: '48px', borderRadius: '18px', background: '#f8fafc', border: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.txt2 }}>
+                <ChefHat size={20} />
+             </motion.button>
+             <motion.button whileTap={{ scale: 0.9 }} onClick={handleSignOut}
+                style={{ width: '48px', height: '48px', borderRadius: '18px', background: '#f8fafc', border: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.txt2 }}>
+                <LogOut size={20} />
+             </motion.button>
+           </div>
         </div>
 
         {/* BENTO GRID */}

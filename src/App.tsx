@@ -12,6 +12,8 @@ import ManagerDashboard from './pages/ManagerDashboard';
 import StoreDashboard from './pages/StoreDashboard';
 import CustomerDashboard from './pages/CustomerDashboard';
 import CustomerStore from './pages/CustomerStore';
+import LandingPage from './pages/LandingPage';
+import CustomerProfileHub from './pages/CustomerProfileHub';
 
 import RawMaterialsManager from './components/RawMaterialsManager';
 import UserManagement from './components/UserManagement';
@@ -91,21 +93,21 @@ const AppContent: React.FC = () => {
     return <SplashScreen onFinish={() => setShowSplash(false)} />;
   }
 
-  // The isAuthenticated check is now handled by ProtectedRoute for most routes
-  // Login page is explicitly rendered if not authenticated
   return (
     <LanguageProvider>
       <Router>
         <Routes>
-          <Route path="/login" element={<Login />} />
-          
-          {/* Root Role-Based Redirector */}
+          {/* Landing Page for Unauthenticated / Root */}
           <Route path="/" element={
-            <ProtectedRoute>
-              <RoleRouter />
-            </ProtectedRoute>
+            isAuthenticated ? (
+              <ProtectedRoute>
+                <RoleRouter />
+              </ProtectedRoute>
+            ) : <LandingPage />
           } />
 
+          <Route path="/login" element={<Login />} />
+          
           {/* Role-Specific Dashboards wrapped in intelligent Layout */}
           
           <Route element={<Layout />}>
@@ -127,10 +129,13 @@ const AppContent: React.FC = () => {
             
             <Route path="/supplier" element={<RoleGuard allowedRoles={['SUPPLIER']}><Dashboard /></RoleGuard>} />
           </Route>
+
           <Route path="/store" element={<RoleGuard allowedRoles={['STORE_KEEPER']}><StoreDashboard /></RoleGuard>} />
-           <Route path="/customer/dashboard" element={<CustomerDashboard />} />
-           <Route path="/customer/store" element={<CustomerStore />} />
-           <Route path="/customer" element={<CustomerDashboard />} />
+          <Route path="/customer/dashboard" element={<CustomerDashboard />} />
+          <Route path="/customer/store" element={<CustomerStore />} />
+          <Route path="/customer/profile" element={<CustomerProfileHub />} />
+          <Route path="/customer" element={<CustomerDashboard />} />
+
 
           {/* Legacy App Routes - Protected and shared across Managers/Suppliers until fully migrated */}
           <Route element={
