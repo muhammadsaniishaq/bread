@@ -3,10 +3,9 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../store/AuthContext';
 import { useAppContext } from '../store/AppContext';
 import { 
-  ArrowLeft, User, Mail, Phone, MapPin, 
-  BadgeCheck, Camera,
-  Edit2, Save, X, Lock,
-  FileText, CreditCard, Truck
+  ArrowLeft, Mail, Phone, MapPin, 
+  BadgeCheck, Camera, Edit2, X, Lock,
+  FileText, CreditCard, Truck, ShieldAlert
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AnimatedPage } from '../components/AnimatedPage';
@@ -15,23 +14,25 @@ import { ImageCropModal } from '../components/ImageCropModal';
 import { DigitalIdCard } from '../components/DigitalIdCard';
 
 /* ─────────────────────────────────────────
-   CUTTER/MODEL TOKENS
+   V3 TOKENS
 ───────────────────────────────────────── */
 const T = {
-  bg:        '#f8fafc', 
+  bg:        '#fdfdfd',
   panel:     '#ffffff',
-  border:    'rgba(0,0,0,0.04)',
+  border:    'rgba(0,0,0,0.06)',
   primary:   '#4f46e5',
-  primaryGlow: 'rgba(79, 70, 229, 0.08)',
+  primaryGlow: 'rgba(79, 70, 229, 0.1)',
   success:   '#10b981',
   danger:    '#f43f5e',
+  warn:      '#f59e0b',
   ink:       '#0f172a',
   txt:       '#1e293b',
-  txt2:      '#64748b',
+  txt2:      '#475569',
   txt3:      '#94a3b8',
   bg2:       '#f1f5f9',
-  radius:    '24px',
-  shadow:    '0 10px 30px -10px rgba(0,0,0,0.05)'
+  radius:    '32px',
+  shadow:    '0 20px 50px -12px rgba(0,0,0,0.05)',
+  glass:     'rgba(255,255,255,0.8)'
 };
 
 export const CustomerProfileHub: React.FC = () => {
@@ -45,19 +46,19 @@ export const CustomerProfileHub: React.FC = () => {
   const [assignedSupplier, setAssignedSupplier] = useState<string>('');
   const [loading, setLoading] = useState(true);
   
-  // Edit States
+  // EDIT MODAL STATES
   const [isEditing, setIsEditing] = useState(false);
   const [fullName, setFullName] = useState('');
   const [location, setLocation] = useState('');
   const [phone, setPhone] = useState('');
-  const [image, setImage] = useState<string>('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<{type: 'success' | 'error', text: string} | null>(null);
 
-  // Modal States
+  // AVATAR & DOC STATES
+  const [image, setImage] = useState<string>('');
   const [showCropper, setShowCropper] = useState(false);
   const [cropImageSrc, setCropImageSrc] = useState('');
   const [showIdCard, setShowIdCard] = useState(false);
@@ -108,14 +109,22 @@ export const CustomerProfileHub: React.FC = () => {
       };
       reader.readAsDataURL(file);
     }
+    if (e.target) e.target.value = '';
   };
 
-  const handleCropComplete = (base64: string) => {
+  const handleCropComplete = async (base64: string) => {
     setImage(base64);
     setShowCropper(false);
+    
+    // Auto-save image directly so they don't have to hit "Save" on the main modal for avatar only
+    try {
+       await supabase.from('customers').update({ image: base64 }).eq('profile_id', user?.id).select().maybeSingle();
+       setCustomer((prev: any) => ({ ...prev, image: base64 }));
+    } catch(e) { console.error("Could not upload avatar securely", e); }
   };
 
-  const handleSave = async () => {
+  const handleSave = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     if (!user || !customer) return;
     setSaving(true);
     setMsg(null);
@@ -128,9 +137,9 @@ export const CustomerProfileHub: React.FC = () => {
         if (pwErr) throw pwErr;
       }
 
-      const updateData: any = { location, image };
+      const updateData: any = { location };
       if (!customer.phone && phone) {
-         updateData.phone = phone;
+         updateData.phone = phone; // Locks securely once inserted in DB via trigger/RLS if applicable
       }
 
       const { data: updatedCust, error: custErr } = await supabase
@@ -151,7 +160,7 @@ export const CustomerProfileHub: React.FC = () => {
       setCustomer((prev: any) => ({ ...prev, ...updateData }));
       setProfile((prev: any) => ({ ...prev, full_name: fullName || prev?.full_name }));
 
-      setMsg({ type: 'success', text: 'Profile Vault Updated!' });
+      setMsg({ type: 'success', text: 'Profile Updated successfully!' });
       setIsEditing(false);
       setPassword('');
       setConfirmPassword('');
@@ -162,234 +171,209 @@ export const CustomerProfileHub: React.FC = () => {
     }
   };
 
-  if (loading) return <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: T.bg, fontWeight: 900, color: T.primary, fontSize: '13px', letterSpacing: '0.05em' }}>ACCESSING VAULT...</div>;
+  if (loading) return <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: T.bg, fontWeight: 900, color: T.primary, fontSize: '13px', letterSpacing: '0.05em' }}>ACCESSING SECURE VAULT...</div>;
+
+  const isVerified = customer?.phone || customer?.assignedSupplierId;
+  const usernameDisplay = user?.email?.includes('@hub.local') ? user.email.replace('@hub.local', '') : user?.email;
 
   return (
     <AnimatedPage>
-      <div style={{ minHeight: '100vh', background: T.bg, paddingBottom: '100px', fontFamily: 'Inter, sans-serif' }}>
+      <div style={{ minHeight: '100vh', background: T.bg, paddingBottom: '120px', fontFamily: 'Inter, sans-serif' }}>
         
-        {/* COMPACT HEADER */}
-        <div style={{ padding: '24px 20px 20px', display: 'flex', justifyItems: 'center', justifyContent: 'space-between', alignItems: 'center' }}>
-           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <motion.button whileTap={{ scale: 0.9 }} onClick={() => navigate('/customer/dashboard')}
-                 style={{ width: '40px', height: '40px', borderRadius: '14px', background: '#fff', border: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.txt2, boxShadow: '0 4px 10px rgba(0,0,0,0.02)' }}>
-                 <ArrowLeft size={18} />
+        {/* V3 STICKY HEADER */}
+        <div style={{ position: 'sticky', top: 0, zIndex: 50, background: 'rgba(253, 253, 253, 0.7)', backdropFilter: 'blur(16px)', padding: '16px', display: 'flex', alignItems: 'center', gap: '16px', borderBottom: `1px solid ${T.border}` }}>
+           <motion.button whileTap={{ scale: 0.9 }} onClick={() => navigate('/customer/dashboard')} 
+             style={{ background: '#fff', border: `1px solid ${T.border}`, padding: '10px', borderRadius: '16px', boxShadow: '0 4px 10px rgba(0,0,0,0.02)' }}>
+             <ArrowLeft size={18} color={T.txt} />
+           </motion.button>
+           <h1 style={{ fontSize: '14px', fontWeight: 900, margin: 0, color: T.txt, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Personal Vault</h1>
+           <div style={{ marginLeft: 'auto' }}>
+              <motion.button whileTap={{ scale: 0.95 }} onClick={() => { setIsEditing(true); setMsg(null); }} 
+                style={{ background: T.ink, color: '#fff', border: 'none', padding: '10px 16px', borderRadius: '14px', fontSize: '12px', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                 <Edit2 size={14} /> Update
               </motion.button>
-              <div>
-                 <h1 style={{ margin: 0, fontSize: '20px', fontWeight: 900, letterSpacing: '-0.03em', color: T.ink }}>Profile Hub</h1>
-                 <p style={{ margin: 0, fontSize: '10px', fontWeight: 700, color: T.txt3, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Settings Vault</p>
-              </div>
            </div>
-           
-           {!isEditing ? (
-             <motion.button 
-               whileTap={{ scale: 0.95 }}
-               onClick={() => setIsEditing(true)}
-               style={{ padding: '8px 16px', borderRadius: '12px', background: T.primary, color: '#fff', border: 'none', fontWeight: 800, fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px', boxShadow: '0 8px 16px rgba(79, 70, 229, 0.2)' }}
-             >
-               <Edit2 size={12} /> Edit
-             </motion.button>
-           ) : (
-             <div style={{ display: 'flex', gap: '8px' }}>
-                <motion.button 
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => setIsEditing(false)}
-                  style={{ width: '36px', height: '36px', borderRadius: '12px', background: '#fff', border: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.txt2 }}
-                >
-                  <X size={16} />
-                </motion.button>
-                <motion.button 
-                  whileTap={{ scale: 0.95 }}
-                  onClick={handleSave}
-                  disabled={saving}
-                  style={{ padding: '8px 16px', borderRadius: '12px', background: T.success, color: '#fff', border: 'none', fontWeight: 800, fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px', boxShadow: '0 8px 16px rgba(16, 185, 129, 0.2)' }}
-                >
-                  {saving ? '...' : <><Save size={12} /> Save</>}
-                </motion.button>
-             </div>
-           )}
         </div>
 
-        <div style={{ padding: '0 20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+        <div style={{ padding: '24px 16px', display: 'grid', gap: '16px' }}>
            
            <AnimatePresence>
              {msg && (
-               <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-                 style={{ padding: '12px', borderRadius: '12px', background: msg.type === 'success' ? '#ecfdf5' : '#fff1f2', color: msg.type === 'success' ? T.success : T.danger, fontSize: '12px', fontWeight: 700, textAlign: 'center', border: `1px solid ${msg.type === 'success' ? '#a7f3d0' : '#fecdd3'}` }}>
+               <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }}
+                 style={{ padding: '14px', borderRadius: '20px', background: msg.type === 'success' ? '#ecfdf5' : '#fff1f2', color: msg.type === 'success' ? T.success : T.danger, fontSize: '13px', fontWeight: 800, textAlign: 'center', border: `1px solid ${msg.type === 'success' ? '#a7f3d0' : '#fecdd3'}` }}>
                  {msg.text}
                </motion.div>
              )}
            </AnimatePresence>
 
-           {/* COMPACT IDENTITY BRICK & AVATAR UPLOAD */}
-           <div style={{ background: '#fff', padding: '24px', borderRadius: T.radius, border: `1px solid ${T.border}`, boxShadow: T.shadow, textAlign: 'center', position: 'relative', overflow: 'hidden' }}>
-              <div style={{ position: 'relative', width: '80px', height: '80px', margin: '0 auto 16px' }}>
-                 <div style={{ width: '100%', height: '100%', borderRadius: '32px', background: `linear-gradient(135deg, ${T.primary}, #818cf8)`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '32px', fontWeight: 900, boxShadow: '0 15px 30px rgba(79, 70, 229, 0.2)', overflow: 'hidden' }}>
-                    {image ? <img src={image} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="Avatar" /> : (profile?.full_name?.charAt(0) || customer?.name?.charAt(0) || '?')}
+           {/* HOLOGRAPHIC HERO CARD */}
+           <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }}
+              style={{ background: `linear-gradient(135deg, ${T.ink}, #2d3748)`, borderRadius: T.radius, padding: '40px 32px', color: '#fff', position: 'relative', overflow: 'hidden', boxShadow: T.shadow }}>
+              <div style={{ position: 'absolute', top: '-50px', right: '-50px', width: '150px', height: '150px', background: 'rgba(255,255,255,0.03)', borderRadius: '50%', pointerEvents: 'none' }} />
+              
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '28px', alignItems: 'center', position: 'relative', zIndex: 10 }}>
+                 
+                 {/* AVATAR WITH CAMERA OVERLAY */}
+                 <div style={{ position: 'relative' }}>
+                    <div style={{ width: '100px', height: '100px', borderRadius: '32px', background: 'rgba(255,255,255,0.1)', backdropFilter: 'blur(10px)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid rgba(255,255,255,0.2)', overflow: 'hidden', boxShadow: '0 10px 30px rgba(0,0,0,0.3)' }}>
+                       {image ? <img src={image} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="Avatar" /> : <span style={{ fontSize: '36px', fontWeight: 900 }}>{(profile?.full_name || customer?.name || '?').charAt(0)}</span>}
+                    </div>
+                    <motion.button whileTap={{ scale: 0.9 }} onClick={() => fileInputRef.current?.click()}
+                       style={{ position: 'absolute', bottom: -10, right: -10, width: '36px', height: '36px', borderRadius: '12px', background: T.primary, color: '#fff', border: '3px solid #1e293b', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 5px 15px rgba(0,0,0,0.3)' }}>
+                       <Camera size={14} />
+                    </motion.button>
+                    <input type="file" ref={fileInputRef} onChange={handleImageUpload} accept="image/*" style={{ display: 'none' }} />
                  </div>
-                 {isEditing && (
-                   <motion.button whileTap={{ scale: 0.9 }} onClick={() => fileInputRef.current?.click()}
-                      style={{ position: 'absolute', bottom: -5, right: -5, width: '28px', height: '28px', borderRadius: '10px', background: T.ink, color: '#fff', border: '2px solid #fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', zIndex: 10 }}>
-                      <Camera size={12} />
-                   </motion.button>
-                 )}
-                 <input type="file" ref={fileInputRef} onChange={handleImageUpload} accept="image/*" style={{ display: 'none' }} />
-              </div>
-              <h2 style={{ fontSize: '20px', fontWeight: 900, color: T.ink, margin: '0 0 4px', letterSpacing: '-0.02em' }}>{profile?.full_name || customer?.name}</h2>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', color: T.success }}>
-                 <BadgeCheck size={14} />
-                 <span style={{ fontSize: '10px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Verified Member</span>
-              </div>
-              <div style={{ position: 'absolute', top: -20, left: -20, opacity: 0.03 }}><User size={120} /></div>
-           </div>
 
-           {/* SUPPLIER ASSIGNMENT BRICK */}
-           <div style={{ background: '#fff', padding: '16px', borderRadius: '20px', border: `1px dashed ${T.primary}`, display: 'flex', alignItems: 'center', gap: '16px', boxShadow: T.shadow }}>
-              <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: T.primaryGlow, display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.primary }}>
-                 <Truck size={18} />
+                 <div style={{ flex: 1 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: isVerified ? T.success : '#fbbf24', fontSize: '10px', fontWeight: 900, textTransform: 'uppercase', marginBottom: '8px' }}>
+                       <BadgeCheck size={12} /> {isVerified ? 'Verified Member' : 'Pending Verification'}
+                    </div>
+                    <h2 style={{ margin: 0, fontSize: '28px', fontWeight: 900, letterSpacing: '-0.05em' }}>{profile?.full_name || customer?.name}</h2>
+                    <div style={{ fontSize: '12px', fontWeight: 700, color: 'rgba(255,255,255,0.6)', marginTop: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                       ID: #{customer?.id.substring(0,8).toUpperCase()}
+                    </div>
+                 </div>
+              </div>
+           </motion.div>
+
+           {/* SUPPLIER BRICK */}
+           <div style={{ background: '#fff', padding: '20px', borderRadius: '24px', border: `1px solid ${T.success}40`, display: 'flex', alignItems: 'center', gap: '16px', boxShadow: '0 10px 30px rgba(16, 185, 129, 0.05)' }}>
+              <div style={{ width: '48px', height: '48px', borderRadius: '16px', background: '#ecfdf5', display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.success }}>
+                 <Truck size={20} />
               </div>
               <div style={{ flex: 1 }}>
-                 <div style={{ fontSize: '10px', fontWeight: 900, color: T.primary, textTransform: 'uppercase', marginBottom: '2px', letterSpacing: '0.05em' }}>Assigned Supplier</div>
-                 <div style={{ fontSize: '14px', fontWeight: 900, color: T.ink }}>{assignedSupplier || 'Not Assigned'}</div>
+                 <div style={{ fontSize: '10px', fontWeight: 900, color: T.success, textTransform: 'uppercase', marginBottom: '4px', letterSpacing: '0.05em' }}>Assigned Supplier</div>
+                 <div style={{ fontSize: '16px', fontWeight: 900, color: T.ink }}>{assignedSupplier}</div>
               </div>
            </div>
 
-           {/* COMPACT INFO GRID */}
-           <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '12px' }}>
+           {/* BENTO GRID: DETAILS */}
+           <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: '12px' }}>
               
-              <div style={{ background: '#fff', padding: '16px', borderRadius: '20px', border: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', gap: '16px' }}>
-                 <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: T.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.txt3 }}>
+              <div style={{ background: '#fff', padding: '20px', borderRadius: '24px', border: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', gap: '16px', boxShadow: T.shadow }}>
+                 <div style={{ width: '44px', height: '44px', borderRadius: '14px', background: T.bg2, display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.txt3 }}>
                     <Mail size={18} />
                  </div>
                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: '10px', fontWeight: 900, color: T.txt3, textTransform: 'uppercase', marginBottom: '2px' }}>{user?.email?.includes('@hub.local') ? 'Username' : 'Email Address'}</div>
-                    <div style={{ fontSize: '16px', fontWeight: 900, color: T.ink, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                       {user?.email?.includes('@hub.local') ? `@${user.email.replace('@hub.local', '')}` : user?.email}
-                       {isEditing && <span style={{ fontSize: '9px', background: T.bg2, padding: '2px 6px', borderRadius: '4px', color: T.txt3, fontWeight: 800 }}>LOCKED</span>}
+                    <div style={{ fontSize: '10px', fontWeight: 900, color: T.txt3, textTransform: 'uppercase', marginBottom: '4px' }}>{user?.email?.includes('@hub.local') ? 'Username' : 'Email Address'}</div>
+                    <div style={{ fontSize: '17px', fontWeight: 900, color: T.ink, display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                       {user?.email?.includes('@hub.local') ? `@${usernameDisplay}` : user?.email}
+                       <span style={{ fontSize: '9px', background: T.bg2, padding: '3px 8px', borderRadius: '6px', color: T.txt3, fontWeight: 800 }}>LOCKED</span>
                     </div>
                  </div>
-                 <Lock size={16} color={T.success} style={{ opacity: 0.8 }} />
+                 <Lock size={18} color={T.success} style={{ opacity: 0.8 }} />
               </div>
 
-              {/* EDITABLE FIELD: FULL NAME */}
-              <div style={{ background: '#fff', padding: '16px', borderRadius: '20px', border: isEditing ? `2px solid ${T.primary}` : `1px solid ${T.border}`, display: 'flex', alignItems: isEditing ? 'flex-start' : 'center', gap: '16px', transition: 'all 0.2s' }}>
-                 <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: isEditing ? T.primaryGlow : T.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', color: isEditing ? T.primary : T.txt3 }}>
-                    <User size={18} />
-                 </div>
-                 <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: '10px', fontWeight: 900, color: T.txt3, textTransform: 'uppercase', marginBottom: isEditing ? '6px' : '2px' }}>Full Name</div>
-                    {isEditing ? (
-                      <input 
-                        value={fullName}
-                        onChange={(e) => setFullName(e.target.value)}
-                        placeholder="Enter your full name..."
-                        style={{ width: '100%', border: `1px solid ${T.border}`, borderRadius: '10px', padding: '10px 12px', fontSize: '13px', fontWeight: 700, outline: 'none', background: T.bg2 }}
-                      />
-                    ) : (
-                      <div style={{ fontSize: '14px', fontWeight: 800, color: T.ink }}>{profile?.full_name || customer?.name}</div>
-                    )}
-                 </div>
-              </div>
-
-              {/* EDITABLE FIELD: PHONE NUMBER WITH LOCK */}
-              <div style={{ background: '#fff', padding: '16px', borderRadius: '20px', border: isEditing && !customer?.phone ? `2px solid ${T.primary}` : `1px solid ${T.border}`, display: 'flex', alignItems: isEditing && !customer?.phone ? 'flex-start' : 'center', gap: '16px', transition: 'all 0.2s' }}>
-                 <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: isEditing && !customer?.phone ? T.primaryGlow : T.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', color: isEditing && !customer?.phone ? T.primary : T.txt3 }}>
+              <div style={{ background: '#fff', padding: '20px', borderRadius: '24px', border: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', gap: '16px', boxShadow: T.shadow }}>
+                 <div style={{ width: '44px', height: '44px', borderRadius: '14px', background: customer?.phone ? T.bg2 : '#fef2f2', display: 'flex', alignItems: 'center', justifyContent: 'center', color: customer?.phone ? T.txt3 : T.danger }}>
                     <Phone size={18} />
                  </div>
                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: '10px', fontWeight: 900, color: T.txt3, textTransform: 'uppercase', marginBottom: isEditing && !customer?.phone ? '6px' : '2px' }}>Phone Number</div>
-                    {isEditing && !customer?.phone ? (
-                      <input 
-                        value={phone}
-                        onChange={(e) => setPhone(e.target.value)}
-                        placeholder="Assign Phone Number..."
-                        style={{ width: '100%', border: `1px solid ${T.border}`, borderRadius: '10px', padding: '10px 12px', fontSize: '13px', fontWeight: 700, outline: 'none', background: T.bg2 }}
-                      />
-                    ) : (
-                      <div style={{ fontSize: '14px', fontWeight: 800, color: T.ink, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                         {customer?.phone || <span style={{ color: T.danger }}>Not Assigned</span>}
-                      </div>
-                    )}
+                    <div style={{ fontSize: '10px', fontWeight: 900, color: customer?.phone ? T.txt3 : T.danger, textTransform: 'uppercase', marginBottom: '4px' }}>Phone Number</div>
+                    <div style={{ fontSize: '16px', fontWeight: 900, color: T.ink, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                       {customer?.phone || <span style={{ color: T.danger }}>Not Set</span>}
+                       {customer?.phone && <span style={{ fontSize: '9px', background: T.bg2, padding: '3px 8px', borderRadius: '6px', color: T.txt3, fontWeight: 800 }}>LOCKED</span>}
+                    </div>
                  </div>
-                 {customer?.phone && <Lock size={16} color={T.success} style={{ opacity: 0.8 }} />}
+                 {customer?.phone ? <Lock size={18} color={T.success} style={{ opacity: 0.8 }} /> : <ShieldAlert size={18} color={T.danger} />}
               </div>
 
-              {/* EDITABLE FIELD: LOCATION */}
-              <div style={{ background: '#fff', padding: '16px', borderRadius: '20px', border: isEditing ? `2px solid ${T.primary}` : `1px solid ${T.border}`, display: 'flex', alignItems: isEditing ? 'flex-start' : 'center', gap: '16px', transition: 'all 0.2s' }}>
-                 <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: isEditing ? T.primaryGlow : T.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', color: isEditing ? T.primary : T.txt3 }}>
+              <div style={{ background: '#fff', padding: '20px', borderRadius: '24px', border: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', gap: '16px', boxShadow: T.shadow }}>
+                 <div style={{ width: '44px', height: '44px', borderRadius: '14px', background: T.bg2, display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.txt3 }}>
                     <MapPin size={18} />
                  </div>
                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: '10px', fontWeight: 900, color: T.txt3, textTransform: 'uppercase', marginBottom: isEditing ? '6px' : '2px' }}>Delivery Location</div>
-                    {isEditing ? (
-                      <input 
-                        value={location}
-                        onChange={(e) => setLocation(e.target.value)}
-                        placeholder="Enter your address..."
-                        style={{ width: '100%', border: `1px solid ${T.border}`, borderRadius: '10px', padding: '10px 12px', fontSize: '13px', fontWeight: 700, outline: 'none', background: T.bg2 }}
-                      />
-                    ) : (
-                      <div style={{ fontSize: '14px', fontWeight: 800, color: T.ink }}>{customer?.location || 'Local Delivery'}</div>
-                    )}
+                    <div style={{ fontSize: '10px', fontWeight: 900, color: T.txt3, textTransform: 'uppercase', marginBottom: '4px' }}>Delivery Location</div>
+                    <div style={{ fontSize: '16px', fontWeight: 800, color: T.txt }}>{customer?.location || 'Local Delivery'}</div>
                  </div>
               </div>
 
-              {/* SECURITY: PASSWORD */}
-              {isEditing && (
-                <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}
-                  style={{ background: '#fff', padding: '16px', borderRadius: '20px', border: `2px solid ${T.primary}`, display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                      <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: T.primaryGlow, display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.primary }}>
-                         <Lock size={18} />
-                      </div>
-                      <div style={{ fontSize: '10px', fontWeight: 900, color: T.txt3, textTransform: 'uppercase' }}>Update Password (Optional)</div>
-                   </div>
-                   
-                   <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '8px' }}>
-                      <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="New Password"
-                        style={{ width: '100%', border: `1px solid ${T.border}`, borderRadius: '10px', padding: '10px 12px', fontSize: '13px', fontWeight: 700, outline: 'none', background: T.bg2 }} />
-                      <input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="Confirm Password"
-                        style={{ width: '100%', border: `1px solid ${T.border}`, borderRadius: '10px', padding: '10px 12px', fontSize: '13px', fontWeight: 700, outline: 'none', background: T.bg2 }} />
-                   </div>
-                   <p style={{ margin: 0, fontSize: '10px', color: T.txt3, fontWeight: 600 }}>Leave empty to keep current password.</p>
-                </motion.div>
-              )}
-
            </div>
 
-           {/* VERIFIED DOCUMENTS VAULT */}
+           {/* DOCUMENTS VAULT - TWO COLUMN BRICKS */}
            <div style={{ marginTop: '8px' }}>
-              <h3 style={{ fontSize: '12px', fontWeight: 900, color: T.txt2, textTransform: 'uppercase', marginBottom: '12px', marginLeft: '8px', letterSpacing: '0.05em' }}>Documents Vault</h3>
+              <h3 style={{ fontSize: '12px', fontWeight: 900, color: T.txt3, textTransform: 'uppercase', marginBottom: '16px', marginLeft: '8px', letterSpacing: '0.05em' }}>Documents Vault</h3>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
                  
                  <button onClick={() => setShowIdCard(true)}
-                    style={{ background: '#fff', border: `1px solid ${T.success}`, borderRadius: '20px', padding: '16px', textAlign: 'center', position: 'relative', overflow: 'hidden', boxShadow: T.shadow, cursor: 'pointer', appearance: 'none' }}>
-                    <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '4px', background: T.success }}></div>
-                    <CreditCard size={28} color={T.success} style={{ margin: '0 auto 12px' }} />
-                    <div style={{ fontSize: '11px', fontWeight: 800, color: T.ink, marginBottom: '4px' }}>View Digital ID</div>
-                    <div style={{ fontSize: '9px', fontWeight: 700, color: T.success, background: '#ecfdf5', display: 'inline-block', padding: '2px 8px', borderRadius: '6px' }}>TAP TO OPEN</div>
+                    style={{ background: '#fff', border: `1px solid ${T.success}`, borderRadius: '24px', padding: '20px 16px', textAlign: 'center', position: 'relative', overflow: 'hidden', boxShadow: '0 10px 30px rgba(16, 185, 129, 0.1)', cursor: 'pointer' }}>
+                    <CreditCard size={32} color={T.success} style={{ margin: '0 auto 12px' }} />
+                    <div style={{ fontSize: '13px', fontWeight: 900, color: T.ink, marginBottom: '6px' }}>Digital ID Card</div>
+                    <div style={{ fontSize: '9px', fontWeight: 800, color: T.success, background: '#ecfdf5', display: 'inline-block', padding: '4px 10px', borderRadius: '8px' }}>VIEW ID</div>
                  </button>
 
-                 <div style={{ background: '#fff', border: `1px solid ${T.border}`, borderRadius: '20px', padding: '16px', textAlign: 'center', position: 'relative', overflow: 'hidden', boxShadow: T.shadow }}>
-                    <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '4px', background: T.primary }}></div>
-                    <FileText size={28} color={T.txt3} style={{ margin: '0 auto 12px' }} />
-                    <div style={{ fontSize: '11px', fontWeight: 800, color: T.ink, marginBottom: '4px' }}>Business Cert</div>
-                    <div style={{ fontSize: '9px', fontWeight: 700, color: T.primary, background: T.primaryGlow, display: 'inline-block', padding: '2px 8px', borderRadius: '6px' }}>SECURE</div>
+                 <div style={{ background: '#fff', border: `1px solid ${T.border}`, borderRadius: '24px', padding: '20px 16px', textAlign: 'center', position: 'relative', overflow: 'hidden', boxShadow: T.shadow }}>
+                    <FileText size={32} color={T.txt3} style={{ margin: '0 auto 12px' }} />
+                    <div style={{ fontSize: '13px', fontWeight: 900, color: T.ink, marginBottom: '6px' }}>Business Cert</div>
+                    <div style={{ fontSize: '9px', fontWeight: 800, color: T.primary, background: T.primaryGlow, display: 'inline-block', padding: '4px 10px', borderRadius: '8px' }}>SECURED</div>
                  </div>
 
               </div>
            </div>
 
-           {/* COMPACT FOOTER */}
-           <div style={{ marginTop: '8px', background: `linear-gradient(135deg, ${T.ink}, #1e293b)`, padding: '24px', borderRadius: T.radius, color: '#fff', textAlign: 'center', boxShadow: T.shadow }}>
-              <Lock size={24} style={{ margin: '0 auto 12px', color: T.txt3 }} />
-              <h3 style={{ margin: '0 0 6px', fontSize: '14px', fontWeight: 900 }}>Vault Secured</h3>
-              <p style={{ margin: 0, fontSize: '11px', color: 'rgba(255,255,255,0.6)', fontWeight: 600, lineHeight: 1.5 }}>
-                Core verified information (Phone & Docs) are strictly locked. Contact support for changes.
-              </p>
-           </div>
-
         </div>
+
+        {/* GLASSMORPHIC EDIT MODAL */}
+        <AnimatePresence>
+           {isEditing && (
+             <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsEditing(false)} 
+                  style={{ position: 'absolute', inset: 0, background: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(12px)' }} />
+                
+                <motion.div initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }} transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+                   className="edit-modal-content"
+                   style={{ position: 'relative', background: '#fff', width: '100%', maxWidth: '450px', borderRadius: '32px 32px 0 0', maxHeight: '90vh', overflowY: 'auto' }}>
+                   
+                   <div style={{ position: 'sticky', top: 0, background: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(10px)', borderBottom: `1px solid ${T.border}`, padding: '20px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', zIndex: 10 }}>
+                      <h3 style={{ margin: 0, fontSize: '20px', fontWeight: 900, color: T.ink }}>Update Profile</h3>
+                      <button onClick={() => setIsEditing(false)} style={{ border: 'none', background: T.bg2, width: '36px', height: '36px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}><X size={18} color={T.txt2} /></button>
+                   </div>
+                   
+                   <form onSubmit={handleSave} style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                      
+                      <div className="input-group">
+                         <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: T.txt3, textTransform: 'uppercase', marginBottom: '8px', letterSpacing: '0.05em' }}>Full Name *</label>
+                         <input type="text" value={fullName} onChange={e => setFullName(e.target.value)} required placeholder="Musa Sani"
+                           style={{ width: '100%', padding: '16px', borderRadius: '16px', border: `2px solid ${T.border}`, background: T.bg2, fontWeight: 700, fontSize: '15px', color: T.ink, outlineColor: T.primary }} />
+                      </div>
+                      
+                      {/* Phone - Only editable if empty in DB to lock it securely */}
+                      {!customer?.phone && (
+                        <div className="input-group">
+                           <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: T.txt3, textTransform: 'uppercase', marginBottom: '8px', letterSpacing: '0.05em' }}>Phone Number *</label>
+                           <input type="tel" value={phone} onChange={e => setPhone(e.target.value)} required placeholder="E.g 080..."
+                             style={{ width: '100%', padding: '16px', borderRadius: '16px', border: `2px solid ${T.border}`, background: T.bg2, fontWeight: 700, fontSize: '15px', color: T.ink, outlineColor: T.primary }} />
+                           <p style={{ margin: '6px 0 0', fontSize: '11px', color: T.warn, fontWeight: 700 }}>Note: Phone number completely locks once saved.</p>
+                        </div>
+                      )}
+
+                      <div className="input-group">
+                         <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: T.txt3, textTransform: 'uppercase', marginBottom: '8px', letterSpacing: '0.05em' }}>Delivery Location</label>
+                         <input type="text" value={location} onChange={e => setLocation(e.target.value)} placeholder="Store Address..."
+                           style={{ width: '100%', padding: '16px', borderRadius: '16px', border: `2px solid ${T.border}`, background: T.bg2, fontWeight: 600, fontSize: '15px', color: T.ink, outlineColor: T.primary }} />
+                      </div>
+
+                      <div className="input-group" style={{ marginTop: '12px', paddingTop: '20px', borderTop: `1px dashed ${T.border}` }}>
+                         <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: T.txt3, textTransform: 'uppercase', marginBottom: '8px', letterSpacing: '0.05em' }}><Lock size={12} style={{display:'inline'}}/> Update Password (Optional)</label>
+                         <div style={{ display: 'grid', gap: '12px' }}>
+                           <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="New Password"
+                             style={{ width: '100%', padding: '16px', borderRadius: '16px', border: `2px solid ${T.border}`, background: T.bg2, fontWeight: 600, fontSize: '15px', outlineColor: T.primary }} />
+                           <input type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} placeholder="Confirm New Password"
+                             style={{ width: '100%', padding: '16px', borderRadius: '16px', border: `2px solid ${T.border}`, background: T.bg2, fontWeight: 600, fontSize: '15px', outlineColor: T.primary }} />
+                         </div>
+                      </div>
+
+                      <button type="submit" disabled={saving} 
+                        style={{ marginTop: '16px', padding: '18px', borderRadius: '20px', background: T.primary, color: '#fff', border: 'none', fontWeight: 900, fontSize: '15px', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 10px 25px rgba(79, 70, 229, 0.3)', cursor: 'pointer' }}>
+                        {saving ? 'Syncing Vault...' : 'Save & Secure'}
+                       </button>
+
+                   </form>
+                </motion.div>
+             </div>
+           )}
+        </AnimatePresence>
 
         <ImageCropModal 
           isOpen={showCropper}
