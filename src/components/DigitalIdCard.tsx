@@ -1,8 +1,11 @@
 import React, { useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, BadgeCheck, Download } from 'lucide-react';
-import QRCode from 'react-qr-code';
+import ReactQRCode from 'react-qr-code';
 import html2canvas from 'html2canvas';
+
+// Safely extract the component whether it's wrapped in { default } by Vite or not.
+const QRCode: any = typeof ReactQRCode === 'function' ? ReactQRCode : (ReactQRCode as any).default || ReactQRCode;
 
 interface IdCardProps {
   isOpen: boolean;
@@ -90,7 +93,7 @@ export const DigitalIdCard: React.FC<IdCardProps> = ({ isOpen, onClose, customer
                      </div>
                      
                      <div style={{ padding: '8px', background: '#fff', borderRadius: '12px', boxShadow: '0 4px 10px rgba(0,0,0,0.02)' }}>
-                        <QRCode value={customer?.id || '0000'} size={64} level="L" />
+                        {QRCode ? <QRCode value={customer?.id || '0000'} size={64} level="L" /> : <div style={{ width: 64, height: 64 }} />}
                      </div>
                   </div>
                </div>

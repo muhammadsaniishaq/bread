@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Home, ShoppingBag, ClipboardList, User } from 'lucide-react';
+import { Home, ShoppingBag, History, User } from 'lucide-react';
 
 export const CustomerBottomNav: React.FC = () => {
   const navigate = useNavigate();
@@ -46,15 +46,15 @@ export const CustomerBottomNav: React.FC = () => {
         <span style={{ fontSize: '10px', fontWeight: currentPath.includes('/dashboard') ? 800 : 600, color: currentPath.includes('/dashboard') ? T.primary : T.inactive }}>Home</span>
       </div>
 
-      {/* 2. Orders */}
+      {/* 2. History */}
       <div 
         onClick={() => navigate('/customer/orders')}
         style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', cursor: 'pointer' }}
       >
         <div style={{ padding: '6px', borderRadius: '12px', background: currentPath.includes('/orders') ? T.primaryGlow : 'transparent', color: currentPath.includes('/orders') ? T.primary : T.inactive, transition: 'all 0.2s' }}>
-          <ClipboardList size={22} strokeWidth={currentPath.includes('/orders') ? 2.5 : 2} />
+          <History size={22} strokeWidth={currentPath.includes('/orders') ? 2.5 : 2} />
         </div>
-        <span style={{ fontSize: '10px', fontWeight: currentPath.includes('/orders') ? 800 : 600, color: currentPath.includes('/orders') ? T.primary : T.inactive }}>Orders</span>
+        <span style={{ fontSize: '10px', fontWeight: currentPath.includes('/orders') ? 800 : 600, color: currentPath.includes('/orders') ? T.primary : T.inactive }}>History</span>
       </div>
 
       {/* 3. STORE (Prominent Middle/Action Button) */}

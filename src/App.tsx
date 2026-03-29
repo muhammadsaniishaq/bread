@@ -15,6 +15,7 @@ import CustomerStore from './pages/CustomerStore';
 import LandingPage from './pages/LandingPage';
 import CustomerProfileHub from './pages/CustomerProfileHub';
 import CustomerOrders from './pages/CustomerOrders';
+import CustomerOfficialDocs from './pages/CustomerOfficialDocs';
 
 import RawMaterialsManager from './components/RawMaterialsManager';
 import UserManagement from './components/UserManagement';
@@ -135,6 +136,7 @@ const AppContent: React.FC = () => {
           <Route path="/customer/dashboard" element={<CustomerDashboard />} />
           <Route path="/customer/store" element={<CustomerStore />} />
           <Route path="/customer/orders" element={<CustomerOrders />} />
+          <Route path="/customer/docs" element={<CustomerOfficialDocs />} />
           <Route path="/customer/profile" element={<CustomerProfileHub />} />
           <Route path="/customer" element={<CustomerDashboard />} />
 

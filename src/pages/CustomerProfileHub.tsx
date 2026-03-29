@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../store/AuthContext';
-import { useAppContext } from '../store/AppContext';
 import { 
   ArrowLeft, Mail, Phone, MapPin, 
   BadgeCheck, Camera, Edit2, X, Lock,
@@ -12,8 +11,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { AnimatedPage } from '../components/AnimatedPage';
 import { useNavigate } from 'react-router-dom';
 import { ImageCropModal } from '../components/ImageCropModal';
-import { DigitalIdCard } from '../components/DigitalIdCard';
-import { SimpleErrorBoundary } from '../components/SimpleErrorBoundary';
 import { CustomerBottomNav } from '../components/CustomerBottomNav';
 
 /* ─────────────────────────────────────────
@@ -40,7 +37,6 @@ const T = {
 
 export const CustomerProfileHub: React.FC = () => {
   const { user } = useAuth();
-  const { appSettings } = useAppContext();
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -65,8 +61,6 @@ export const CustomerProfileHub: React.FC = () => {
   const [image, setImage] = useState<string>('');
   const [showCropper, setShowCropper] = useState(false);
   const [cropImageSrc, setCropImageSrc] = useState('');
-  const [showIdCard, setShowIdCard] = useState(false);
-  const [showCert, setShowCert] = useState(false);
 
   useEffect(() => {
     if (!user) { navigate('/login'); return; }
@@ -330,14 +324,14 @@ export const CustomerProfileHub: React.FC = () => {
 
            {/* MY DOCUMENTS GRID */}
            <div style={{ marginTop: '12px', display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px' }}>
-              <button onClick={() => setShowIdCard(true)}
+              <button onClick={() => navigate('/customer/docs')}
                  style={{ background: '#fff', border: `1px solid ${T.success}50`, borderRadius: T.radius, padding: '16px', textAlign: 'center', cursor: 'pointer', boxShadow: '0 4px 15px rgba(16, 185, 129, 0.05)' }}>
                  <CreditCard size={24} color={T.success} style={{ margin: '0 auto 8px' }} />
                  <div style={{ fontSize: '11px', fontWeight: 900, color: T.ink, marginBottom: '6px' }}>Digital ID</div>
                  <div style={{ fontSize: '9px', fontWeight: 900, color: T.success, background: '#ecfdf5', display: 'inline-block', padding: '3px 8px', borderRadius: '6px' }}>VIEW NOW</div>
               </button>
 
-              <button onClick={() => setShowCert(true)} 
+              <button onClick={() => navigate('/customer/docs')} 
                  style={{ background: '#fff', border: `1px solid ${T.border}`, borderRadius: T.radius, padding: '16px', textAlign: 'center', boxShadow: T.shadow, cursor: 'pointer' }}>
                  <FileText size={24} color={T.txt3} style={{ margin: '0 auto 8px' }} />
                  <div style={{ fontSize: '11px', fontWeight: 900, color: T.ink, marginBottom: '6px' }}>Business Cert</div>
@@ -424,51 +418,6 @@ export const CustomerProfileHub: React.FC = () => {
           onClose={() => setShowCropper(false)}
           onCropCompleteAction={handleCropComplete}
         />
-
-        <SimpleErrorBoundary>
-          <DigitalIdCard
-            isOpen={showIdCard}
-            onClose={() => setShowIdCard(false)}
-            customer={customer}
-            profile={profile}
-            appSettings={appSettings}
-          />
-        </SimpleErrorBoundary>
-
-        {/* Basic implementation for Certificate Viewer Modal */}
-        <SimpleErrorBoundary>
-          <AnimatePresence>
-          {showCert && (
-             <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
-               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowCert(false)} 
-                 style={{ position: 'absolute', inset: 0, background: 'rgba(15, 23, 42, 0.8)', backdropFilter: 'blur(12px)' }} />
-               
-               <motion.div initial={{ y: 50, opacity: 0, scale: 0.95 }} animate={{ y: 0, opacity: 1, scale: 1 }} exit={{ y: 20, opacity: 0, scale: 0.95 }}
-                 style={{ position: 'relative', width: '100%', maxWidth: '340px', background: '#fff', borderRadius: '24px', overflow: 'hidden', boxShadow: '0 30px 60px rgba(0,0,0,0.3)' }}>
-                 
-                 <div style={{ background: T.bg2, padding: '24px', textAlign: 'center', borderBottom: `1px solid ${T.border}` }}>
-                    <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 900, color: T.ink }}>Business Certificate</h2>
-                 </div>
-                 
-                 <div style={{ padding: '32px 24px', textAlign: 'center' }}>
-                    <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: T.primaryGlow, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
-                       <BadgeCheck size={36} color={T.primary} />
-                    </div>
-                    <h3 style={{ margin: '0 0 8px', fontSize: '16px', fontWeight: 800, color: T.ink }}>{profile?.full_name || customer?.name}</h3>
-                    <p style={{ margin: 0, fontSize: '13px', color: T.txt2, fontWeight: 600, lineHeight: 1.5 }}>
-                      This certifies that the above member is a verified partner of {appSettings?.companyName || 'Bakery Hub'}.
-                    </p>
-                    <div style={{ marginTop: '24px', padding: '12px', background: '#f8fafc', borderRadius: '12px', border: `1px solid ${T.border}`, fontSize: '11px', fontWeight: 800, color: T.txt3, textTransform: 'uppercase' }}>
-                       CERT ID: #{customer?.id.substring(0,12).toUpperCase()}
-                    </div>
-                 </div>
-
-                 <button onClick={() => setShowCert(false)} style={{ margin: '0 24px 24px', width: 'calc(100% - 48px)', padding: '14px', borderRadius: '14px', background: T.ink, color: '#fff', border: 'none', fontWeight: 800, cursor: 'pointer' }}>Close Certificate</button>
-               </motion.div>
-             </div>
-          )}
-        </AnimatePresence>
-       </SimpleErrorBoundary>
 
        <CustomerBottomNav />
 
