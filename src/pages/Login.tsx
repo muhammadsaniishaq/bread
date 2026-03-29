@@ -76,18 +76,20 @@ export const Login: React.FC = () => {
          }
 
          // 2. Fallback: Check Manager-Ledger (customers table)
-         // Check by Username or Email, and match against Password or PIN
+         // We use ilike for case-insensitive matching of username/email
          const { data: legacyUser, error: legacyErr } = await supabase
             .from('customers')
             .select('*')
-            .or(`username.eq."${loginInput}",email.eq."${loginInput}"`)
+            .or(`username.ilike.${loginInput},email.ilike.${loginInput}`)
             .maybeSingle();
 
          if (!legacyErr && legacyUser) {
-            const matchesPassword = legacyUser.password === password;
-            const matchesPin = legacyUser.pin === password;
+            // Ensure we compare strings properly and trim any accidental whitespace
+            const dbPassword = (legacyUser.password || '').toString().trim();
+            const dbPin = (legacyUser.pin || '').toString().trim();
+            const inputPassword = password.trim();
 
-            if (matchesPassword || matchesPin) {
+            if ((dbPassword && dbPassword === inputPassword) || (dbPin && dbPin === inputPassword)) {
                // Success! Create a manual session
                const manualSession = {
                   id: legacyUser.id,
@@ -97,14 +99,15 @@ export const Login: React.FC = () => {
                      role: 'CUSTOMER' 
                   },
                   is_manual: true
-               };
+               } as any;
+               
                setManualUser(manualSession, 'CUSTOMER');
-               setSuccessMsg('Logged in via Secure Ledger.');
+               setSuccessMsg('Authentication successful! Welcome back.');
                return;
             }
          }
 
-         throw new Error("Invalid Credentials. Please check your username and password.");
+         throw new Error("Invalid Username/Email or Password. Please try again or contact the manager.");
       } else {
         // Sign Up Flow - Real Email Used Here!
         if (!email || !fullName || !password) {

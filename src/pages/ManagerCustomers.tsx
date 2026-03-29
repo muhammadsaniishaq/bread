@@ -138,19 +138,29 @@ export const ManagerCustomers: React.FC = () => {
     try {
       let profile_id = null;
       if (fUsername) {
-         const { data: existing } = await supabase.from('profiles').select('id').eq('username', fUsername).maybeSingle();
-         if (existing) {
-            profile_id = existing.id;
-         } else {
-            const newPid = crypto.randomUUID();
-            await supabase.from('profiles').insert({
-               id: newPid,
-               full_name: fName,
-               username: fUsername,
-               role: 'CUSTOMER'
-            });
-            profile_id = newPid;
-         }
+          const { data: legacyUser, error: legacyErr } = await supabase
+             .from('customers')
+             .select('*')
+             .or(`username.ilike."${fUsername}",email.ilike."${fUsername}"`)
+             .maybeSingle();
+          
+          if (legacyErr && !legacyErr.message.includes('column "username" does not exist')) {
+             throw legacyErr;
+          }
+         
+         if (legacyUser) {
+            profile_id = legacyUser.profile_id;
+          } else {
+             const newPid = (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : `p-${Date.now()}-${Math.random().toString(36).slice(2,9)}`;
+             const { error: pErr } = await supabase.from('profiles').insert({
+                id: newPid,
+                full_name: fName,
+                username: fUsername,
+                role: 'CUSTOMER'
+             });
+             if (pErr) throw pErr;
+             profile_id = newPid;
+          }
       }
 
       const newCust: any = {
@@ -170,12 +180,32 @@ export const ManagerCustomers: React.FC = () => {
       };
 
       await addCustomer(newCust);
-      await supabase.from('customers').upsert(newCust);
+      
+      const toDB = (c: any) => ({
+         id: c.id,
+         name: c.name,
+         phone: c.phone || null,
+         email: c.email || null,
+         username: c.username || null,
+         password: c.password || null,
+         location: c.location || null,
+         notes: c.notes || null,
+         debt_balance: c.debtBalance,
+         loyalty_points: c.loyaltyPoints,
+         assignedSupplierId: c.assignedSupplierId || null,
+         pin: c.pin || null,
+         profile_id: c.profile_id || null,
+         image: c.image || null
+      });
+
+      const { error: upErr } = await supabase.from('customers').upsert(toDB(newCust));
+      if (upErr) throw upErr;
 
       // Reset
       setFName(''); setFPhone(''); setFEmail(''); setFUsername(''); setFPassword(''); setFLocation(''); setFSup(''); setFPin(''); setFNote(''); setIsAdding(false);
-    } catch (err) {
+    } catch (err: any) {
        console.error(err);
+       alert("Error creating customer: " + (err.message || JSON.stringify(err)));
     } finally {
        setLoading(false);
     }
@@ -209,10 +239,30 @@ export const ManagerCustomers: React.FC = () => {
           assignedSupplierId: eSup||undefined, pin: ePin||undefined, notes: eNote
        };
        await updateCustomer(updated);
-       await supabase.from('customers').upsert(updated);
+
+       const toDB = (c: any) => ({
+          id: c.id,
+          name: c.name,
+          phone: c.phone || null,
+          email: c.email || null,
+          username: c.username || null,
+          password: c.password || null,
+          location: c.location || null,
+          notes: c.notes || null,
+          debt_balance: c.debtBalance,
+          loyalty_points: c.loyaltyPoints,
+          assignedSupplierId: c.assignedSupplierId || null,
+          pin: c.pin || null,
+          profile_id: c.profile_id || null,
+          image: c.image || null
+       });
+
+       const { error: upErr } = await supabase.from('customers').upsert(toDB(updated));
+       if (upErr) throw upErr;
        setEditing(false);
-    } catch (err) {
+    } catch (err: any) {
        console.error(err);
+       alert("Error updating customer: " + (err.message || JSON.stringify(err)));
     } finally {
        setLoading(false);
     }
