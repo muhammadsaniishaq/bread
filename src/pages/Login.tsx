@@ -49,8 +49,18 @@ export const Login: React.FC = () => {
 
     try {
       if (activeTab === 'login') {
-         if (!email || !password) throw new Error("Please enter your Email and Password.");
-         const { error } = await supabase.auth.signInWithPassword({ email: email.trim().toLowerCase(), password });
+         if (!email || !password) throw new Error("Please enter your Email or Username and Password.");
+         
+         let finalEmail = email.trim().toLowerCase();
+         
+         // Detect if it's a Username (no '@' symbol) and translate it to the real Email
+         if (!finalEmail.includes('@')) {
+            const { data: realEmail, error: rpcErr } = await supabase.rpc('get_email_for_username', { lookup_user: finalEmail });
+            if (rpcErr || !realEmail) throw new Error("Invalid Username or Password.");
+            finalEmail = realEmail;
+         }
+
+         const { error } = await supabase.auth.signInWithPassword({ email: finalEmail, password });
          if (error) {
             if (error.message.toLowerCase().includes('email not confirmed')) {
               throw new Error("Your email is not confirmed. Please check your inbox for an OTP or Link.");
@@ -63,10 +73,21 @@ export const Login: React.FC = () => {
            throw new Error("Email, Full Name, and Password are required.");
         }
 
+        const normalizedUsername = username ? username.trim().toLowerCase().replace(/\s+/g, '') : email.split('@')[0];
+
+        // --- PRE-SIGNUP: UNIVERSE UNIQUENESS CHECK ---
+        const { data: avail, error: availErr } = await supabase.rpc('check_account_availability', { 
+           chk_username: normalizedUsername, 
+           chk_phone: phone.trim() 
+        });
+        if (availErr) throw new Error("Verification network error. Please try again.");
+        if (avail?.username_taken) throw new Error("Bummer! This Username is already taken.");
+        if (avail?.phone_taken) throw new Error("This Phone Number is already registered.");
+
         const metadata = { 
            role: 'CUSTOMER',
            full_name: fullName.trim(),
-           username: username ? username.trim().toLowerCase().replace(/\s+/g, '') : email.split('@')[0],
+           username: normalizedUsername,
            phone: phone.trim(),
            location: address.trim()
         };
@@ -161,10 +182,10 @@ export const Login: React.FC = () => {
                  {activeTab === 'login' ? (
                    <motion.div key="login" initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10 }} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                       <div className="login-input-group">
-                        <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: T.txt3, textTransform: 'uppercase', marginBottom: '8px', letterSpacing: '0.05em' }}>Email Address</label>
+                        <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: T.txt3, textTransform: 'uppercase', marginBottom: '8px', letterSpacing: '0.05em' }}>Email or Username</label>
                         <div style={{ position: 'relative' }}>
                            <Mail size={18} style={{ position: 'absolute', top: '50%', transform: 'translateY(-50%)', left: '16px', color: T.txt3 }} />
-                           <input type="email" placeholder="example@mail.com" value={email} onChange={e => setEmail(e.target.value)} required 
+                           <input type="text" placeholder="name@email.com or @alias" value={email} onChange={e => setEmail(e.target.value)} required 
                              style={{ width: '100%', padding: '16px 16px 16px 44px', borderRadius: '16px', border: `2px solid ${T.border}`, background: '#f8fafc', fontSize: '14px', fontWeight: 600, color: T.ink, outlineColor: T.primary, transition: 'all 0.2s' }} />
                         </div>
                       </div>
