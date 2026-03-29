@@ -12,6 +12,8 @@ export interface Customer {
   id: string;
   name: string;
   phone: string;
+  email?: string;       // Unified login email
+  username?: string;    // App login username
   location: string;
   notes: string;
   debtBalance: number;
@@ -19,6 +21,7 @@ export interface Customer {
   image?: string;
   assignedSupplierId?: string; // Links a customer permanently to a specific supplier
   pin?: string; // App login PIN
+  profile_id?: string; // Links to Supabase profiles.id
 }
 
 export interface TransactionItem {
