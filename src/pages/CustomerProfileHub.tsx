@@ -64,6 +64,7 @@ export const CustomerProfileHub: React.FC = () => {
   const [showCropper, setShowCropper] = useState(false);
   const [cropImageSrc, setCropImageSrc] = useState('');
   const [showIdCard, setShowIdCard] = useState(false);
+  const [showCert, setShowCert] = useState(false);
 
   useEffect(() => {
     if (!user) { navigate('/login'); return; }
@@ -225,26 +226,27 @@ export const CustomerProfileHub: React.FC = () => {
              )}
            </AnimatePresence>
 
-           {/* HOLOGRAPHIC HERO CARD (Compacted) */}
+           {/* MODERN LIGHT HERO CARD */}
            <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }}
-              style={{ background: `linear-gradient(135deg, ${T.ink}, #2d3748)`, borderRadius: T.radius, padding: '24px 20px', color: '#fff', position: 'relative', overflow: 'hidden', boxShadow: T.shadow }}>
-              <div style={{ position: 'absolute', top: '-30px', right: '-30px', width: '100px', height: '100px', background: 'rgba(255,255,255,0.04)', borderRadius: '50%', pointerEvents: 'none' }} />
+              style={{ background: '#ffffff', borderRadius: T.radius, padding: '24px 20px', color: T.ink, position: 'relative', overflow: 'hidden', boxShadow: '0 10px 40px -10px rgba(0,0,0,0.08)', border: `1px solid ${T.border}` }}>
+              <div style={{ position: 'absolute', top: '-30px', right: '-30px', width: '100px', height: '100px', background: T.primaryGlow, borderRadius: '50%', pointerEvents: 'none' }} />
+              <div style={{ position: 'absolute', bottom: '-40px', left: '20px', width: '120px', height: '120px', background: 'rgba(16, 185, 129, 0.05)', borderRadius: '50%', pointerEvents: 'none' }} />
               
               <div style={{ display: 'flex', gap: '20px', alignItems: 'center', position: 'relative', zIndex: 10 }}>
                  <div style={{ position: 'relative' }}>
-                    <div style={{ width: '70px', height: '70px', borderRadius: '22px', background: 'rgba(255,255,255,0.1)', backdropFilter: 'blur(10px)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid rgba(255,255,255,0.2)', overflow: 'hidden', boxShadow: '0 10px 30px rgba(0,0,0,0.3)' }}>
-                       {image ? <img src={image} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="Avatar" /> : <span style={{ fontSize: '24px', fontWeight: 900 }}>{(profile?.full_name || customer?.name || '?').charAt(0)}</span>}
+                    <div style={{ width: '70px', height: '70px', borderRadius: '22px', background: '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'center', border: `1px solid ${T.border}`, overflow: 'hidden', boxShadow: '0 10px 30px rgba(0,0,0,0.05)' }}>
+                       {image ? <img src={image} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="Avatar" /> : <span style={{ fontSize: '24px', fontWeight: 900, color: T.primary }}>{(profile?.full_name || customer?.name || '?').charAt(0)}</span>}
                     </div>
                     <motion.button whileTap={{ scale: 0.9 }} onClick={() => fileInputRef.current?.click()}
-                       style={{ position: 'absolute', bottom: -6, right: -6, width: '28px', height: '28px', borderRadius: '10px', background: T.primary, color: '#fff', border: '2px solid #1e293b', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 5px 15px rgba(0,0,0,0.3)' }}>
+                       style={{ position: 'absolute', bottom: -6, right: -6, width: '28px', height: '28px', borderRadius: '10px', background: T.primary, color: '#fff', border: '2px solid #fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 5px 15px rgba(79, 70, 229, 0.3)' }}>
                        <Camera size={12} />
                     </motion.button>
                     <input type="file" ref={fileInputRef} onChange={handleImageUpload} accept="image/*" style={{ display: 'none' }} />
                  </div>
 
                  <div style={{ flex: 1 }}>
-                    <h2 style={{ margin: '0 0 4px', fontSize: '18px', fontWeight: 900, letterSpacing: '-0.02em' }}>{profile?.full_name || customer?.name}</h2>
-                    <div style={{ fontSize: '11px', fontWeight: 700, color: 'rgba(255,255,255,0.6)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <h2 style={{ margin: '0 0 4px', fontSize: '18px', fontWeight: 900, letterSpacing: '-0.02em', color: T.ink }}>{profile?.full_name || customer?.name || 'V.I.P Member'}</h2>
+                    <div style={{ fontSize: '11px', fontWeight: 800, color: T.txt3, display: 'flex', alignItems: 'center', gap: '6px' }}>
                        ID: #{customer?.id.substring(0,8).toUpperCase()}
                     </div>
                     <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: isVerified ? T.success : '#fbbf24', fontSize: '9px', fontWeight: 900, textTransform: 'uppercase', marginTop: '8px', background: isVerified ? 'rgba(16,185,129,0.1)' : 'rgba(251,191,36,0.1)', padding: '4px 8px', borderRadius: '6px' }}>
@@ -333,11 +335,12 @@ export const CustomerProfileHub: React.FC = () => {
                  <div style={{ fontSize: '9px', fontWeight: 900, color: T.success, background: '#ecfdf5', display: 'inline-block', padding: '3px 8px', borderRadius: '6px' }}>VIEW NOW</div>
               </button>
 
-              <div style={{ background: '#fff', border: `1px solid ${T.border}`, borderRadius: T.radius, padding: '16px', textAlign: 'center', boxShadow: T.shadow }}>
+              <button onClick={() => setShowCert(true)} 
+                 style={{ background: '#fff', border: `1px solid ${T.border}`, borderRadius: T.radius, padding: '16px', textAlign: 'center', boxShadow: T.shadow, cursor: 'pointer' }}>
                  <FileText size={24} color={T.txt3} style={{ margin: '0 auto 8px' }} />
                  <div style={{ fontSize: '11px', fontWeight: 900, color: T.ink, marginBottom: '6px' }}>Business Cert</div>
                  <div style={{ fontSize: '9px', fontWeight: 900, color: T.primary, background: T.primaryGlow, display: 'inline-block', padding: '3px 8px', borderRadius: '6px' }}>SECURED</div>
-              </div>
+              </button>
            </div>
 
         </div>
@@ -427,6 +430,39 @@ export const CustomerProfileHub: React.FC = () => {
           profile={profile}
           appSettings={appSettings}
         />
+
+        {/* Basic implementation for Certificate Viewer Modal */}
+        <AnimatePresence>
+          {showCert && (
+             <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowCert(false)} 
+                 style={{ position: 'absolute', inset: 0, background: 'rgba(15, 23, 42, 0.8)', backdropFilter: 'blur(12px)' }} />
+               
+               <motion.div initial={{ y: 50, opacity: 0, scale: 0.95 }} animate={{ y: 0, opacity: 1, scale: 1 }} exit={{ y: 20, opacity: 0, scale: 0.95 }}
+                 style={{ position: 'relative', width: '100%', maxWidth: '340px', background: '#fff', borderRadius: '24px', overflow: 'hidden', boxShadow: '0 30px 60px rgba(0,0,0,0.3)' }}>
+                 
+                 <div style={{ background: T.bg2, padding: '24px', textAlign: 'center', borderBottom: `1px solid ${T.border}` }}>
+                    <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 900, color: T.ink }}>Business Certificate</h2>
+                 </div>
+                 
+                 <div style={{ padding: '32px 24px', textAlign: 'center' }}>
+                    <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: T.primaryGlow, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
+                       <BadgeCheck size={36} color={T.primary} />
+                    </div>
+                    <h3 style={{ margin: '0 0 8px', fontSize: '16px', fontWeight: 800, color: T.ink }}>{profile?.full_name || customer?.name}</h3>
+                    <p style={{ margin: 0, fontSize: '13px', color: T.txt2, fontWeight: 600, lineHeight: 1.5 }}>
+                      This certifies that the above member is a verified partner of {appSettings?.companyName || 'Bakery Hub'}.
+                    </p>
+                    <div style={{ marginTop: '24px', padding: '12px', background: '#f8fafc', borderRadius: '12px', border: `1px solid ${T.border}`, fontSize: '11px', fontWeight: 800, color: T.txt3, textTransform: 'uppercase' }}>
+                       CERT ID: #{customer?.id.substring(0,12).toUpperCase()}
+                    </div>
+                 </div>
+
+                 <button onClick={() => setShowCert(false)} style={{ margin: '0 24px 24px', width: 'calc(100% - 48px)', padding: '14px', borderRadius: '14px', background: T.ink, color: '#fff', border: 'none', fontWeight: 800, cursor: 'pointer' }}>Close Certificate</button>
+               </motion.div>
+             </div>
+          )}
+        </AnimatePresence>
 
       </div>
     </AnimatedPage>

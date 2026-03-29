@@ -146,44 +146,44 @@ export const CustomerDashboard: React.FC = () => {
         {/* BENTO GRID */}
         <div style={{ padding: '24px 16px', display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: '16px' }}>
            
-           {/* Financial Ledger Brick */}
+           {/* Modern Light Financial Ledger Brick */}
            {isVerified ? (
              <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }}
-                style={{ background: `linear-gradient(135deg, ${T.ink}, #2d3748)`, padding: '32px 24px', borderRadius: T.radius, color: '#fff', boxShadow: T.shadow, position: 'relative', overflow: 'hidden' }}>
+                style={{ background: '#ffffff', padding: '32px 24px', borderRadius: T.radius, color: T.ink, boxShadow: '0 10px 40px -10px rgba(0,0,0,0.08)', border: `1px solid ${T.border}`, position: 'relative', overflow: 'hidden' }}>
                 <div style={{ position: 'relative', zIndex: 1 }}>
                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-                      <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: 'rgba(255,255,255,0.1)', backdropFilter: 'blur(10px)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid rgba(255,255,255,0.2)' }}>
+                      <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: 'rgba(16, 185, 129, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
                          <Wallet size={18} color="#10b981" />
                       </div>
-                      <span style={{ fontSize: '10px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.05em', background: 'rgba(16, 185, 129, 0.15)', color: T.success, padding: '4px 8px', borderRadius: '8px', border: '1px solid rgba(16, 185, 129, 0.2)' }}>Verified Ledger</span>
+                      <span style={{ fontSize: '10px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.05em', background: 'rgba(16, 185, 129, 0.1)', color: T.success, padding: '4px 8px', borderRadius: '8px', border: '1px solid rgba(16, 185, 129, 0.2)' }}>Verified Ledger</span>
                    </div>
                    
                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px', textAlign: 'center' }}>
-                      <div style={{ background: 'rgba(255,255,255,0.05)', padding: '16px 8px', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                         <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.6)', fontWeight: 800, textTransform: 'uppercase', marginBottom: '6px' }}>Bought</div>
-                         <div style={{ fontSize: '15px', fontWeight: 900, color: '#fff' }}>{fmtRaw(totalBought)}</div>
+                      <div style={{ background: '#f8fafc', padding: '16px 8px', borderRadius: '20px', border: `1px solid ${T.border}` }}>
+                         <div style={{ fontSize: '10px', color: T.txt3, fontWeight: 800, textTransform: 'uppercase', marginBottom: '6px' }}>Bought</div>
+                         <div style={{ fontSize: '15px', fontWeight: 900, color: T.ink }}>{fmtRaw(totalBought)}</div>
                       </div>
-                      <div style={{ background: 'rgba(16, 185, 129, 0.1)', padding: '16px 8px', borderRadius: '20px', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
-                         <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.7)', fontWeight: 800, textTransform: 'uppercase', marginBottom: '6px' }}>Paid</div>
+                      <div style={{ background: 'rgba(16, 185, 129, 0.05)', padding: '16px 8px', borderRadius: '20px', border: '1px solid rgba(16, 185, 129, 0.1)' }}>
+                         <div style={{ fontSize: '10px', color: T.txt2, fontWeight: 800, textTransform: 'uppercase', marginBottom: '6px' }}>Paid</div>
                          <div style={{ fontSize: '15px', fontWeight: 900, color: T.success }}>{fmtRaw(totalPaid)}</div>
                       </div>
-                      <div style={{ background: 'rgba(244, 63, 94, 0.1)', padding: '16px 8px', borderRadius: '20px', border: '1px solid rgba(244, 63, 94, 0.2)' }}>
-                         <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.7)', fontWeight: 800, textTransform: 'uppercase', marginBottom: '6px' }}>Debt</div>
+                      <div style={{ background: 'rgba(244, 63, 94, 0.05)', padding: '16px 8px', borderRadius: '20px', border: '1px solid rgba(244, 63, 94, 0.1)' }}>
+                         <div style={{ fontSize: '10px', color: T.txt2, fontWeight: 800, textTransform: 'uppercase', marginBottom: '6px' }}>Debt</div>
                          <div style={{ fontSize: '15px', fontWeight: 900, color: T.danger }}>{fmtRaw(debt)}</div>
                       </div>
                    </div>
                 </div>
-                <div style={{ position: 'absolute', top: '-50px', right: '-50px', width: '150px', height: '150px', background: 'rgba(255,255,255,0.03)', borderRadius: '50%', pointerEvents: 'none' }} />
+                <div style={{ position: 'absolute', top: '-50px', right: '-50px', width: '150px', height: '150px', background: 'rgba(16, 185, 129, 0.03)', borderRadius: '50%', pointerEvents: 'none' }} />
              </motion.div>
            ) : (
              <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }}
-                style={{ background: `linear-gradient(135deg, ${T.danger}, #be123c)`, padding: '32px 24px', borderRadius: T.radius, color: '#fff', boxShadow: T.shadow, display: 'flex', gap: '16px', alignItems: 'center' }}>
-                <div style={{ width: '48px', height: '48px', borderRadius: '16px', background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                style={{ background: '#fff1f2', padding: '32px 24px', borderRadius: T.radius, color: T.ink, boxShadow: '0 10px 40px -10px rgba(0,0,0,0.06)', border: `1px solid #ffe4e6`, display: 'flex', gap: '16px', alignItems: 'center' }}>
+                <div style={{ width: '48px', height: '48px', borderRadius: '16px', background: 'rgba(244,63,94,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.danger }}>
                    <ShieldAlert size={24} />
                 </div>
                 <div style={{ flex: 1 }}>
-                   <h3 style={{ margin: '0 0 4px', fontSize: '16px', fontWeight: 900 }}>Action Required</h3>
-                   <p style={{ margin: 0, fontSize: '12px', color: 'rgba(255,255,255,0.9)', fontWeight: 600, lineHeight: 1.5 }}>Please update your phone number in Profile Settings to unlock your financial ledger.</p>
+                   <h3 style={{ margin: '0 0 4px', fontSize: '16px', fontWeight: 900, color: T.danger }}>Action Required</h3>
+                   <p style={{ margin: 0, fontSize: '12px', color: T.txt, fontWeight: 700, lineHeight: 1.5 }}>Please update your phone number in Profile Settings to unlock your financial ledger.</p>
                 </div>
              </motion.div>
            )}
