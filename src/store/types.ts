@@ -21,6 +21,7 @@ export interface Customer {
   image?: string;
   assignedSupplierId?: string; // Links a customer permanently to a specific supplier
   pin?: string; // App login PIN
+  password?: string; // App login password (manager set)
   profile_id?: string; // Links to Supabase profiles.id
 }
 
