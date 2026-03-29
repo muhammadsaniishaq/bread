@@ -171,7 +171,7 @@ export const CustomerProfileHub: React.FC = () => {
     }
   };
 
-  if (loading) return <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: T.bg, fontWeight: 900, color: T.primary, fontSize: '13px', letterSpacing: '0.05em' }}>ACCESSING SECURE VAULT...</div>;
+  if (loading) return <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: T.bg, fontWeight: 900, color: T.primary, fontSize: '13px', letterSpacing: '0.05em' }}>ACCESSING SYSTEM...</div>;
 
   const isVerified = customer?.phone || customer?.assignedSupplierId;
   const usernameDisplay = user?.email?.includes('@hub.local') ? user.email.replace('@hub.local', '') : user?.email;
@@ -186,7 +186,7 @@ export const CustomerProfileHub: React.FC = () => {
              style={{ background: '#fff', border: `1px solid ${T.border}`, padding: '10px', borderRadius: '16px', boxShadow: '0 4px 10px rgba(0,0,0,0.02)' }}>
              <ArrowLeft size={18} color={T.txt} />
            </motion.button>
-           <h1 style={{ fontSize: '14px', fontWeight: 900, margin: 0, color: T.txt, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Personal Vault</h1>
+           <h1 style={{ fontSize: '14px', fontWeight: 900, margin: 0, color: T.txt, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Personal Profile</h1>
            <div style={{ marginLeft: 'auto' }}>
               <motion.button whileTap={{ scale: 0.95 }} onClick={() => { setIsEditing(true); setMsg(null); }} 
                 style={{ background: T.ink, color: '#fff', border: 'none', padding: '10px 16px', borderRadius: '14px', fontSize: '12px', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -291,9 +291,8 @@ export const CustomerProfileHub: React.FC = () => {
 
            </div>
 
-           {/* DOCUMENTS VAULT - TWO COLUMN BRICKS */}
            <div style={{ marginTop: '8px' }}>
-              <h3 style={{ fontSize: '12px', fontWeight: 900, color: T.txt3, textTransform: 'uppercase', marginBottom: '16px', marginLeft: '8px', letterSpacing: '0.05em' }}>Documents Vault</h3>
+              <h3 style={{ fontSize: '12px', fontWeight: 900, color: T.txt3, textTransform: 'uppercase', marginBottom: '16px', marginLeft: '8px', letterSpacing: '0.05em' }}>My Documents</h3>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
                  
                  <button onClick={() => setShowIdCard(true)}
@@ -366,7 +365,7 @@ export const CustomerProfileHub: React.FC = () => {
 
                       <button type="submit" disabled={saving} 
                         style={{ marginTop: '16px', padding: '18px', borderRadius: '20px', background: T.primary, color: '#fff', border: 'none', fontWeight: 900, fontSize: '15px', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 10px 25px rgba(79, 70, 229, 0.3)', cursor: 'pointer' }}>
-                        {saving ? 'Syncing Vault...' : 'Save & Secure'}
+                        {saving ? 'Saving Profile...' : 'Save & Secure'}
                        </button>
 
                    </form>

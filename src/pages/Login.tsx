@@ -80,7 +80,7 @@ export const Login: React.FC = () => {
         if (error) throw error;
         
         if (data?.session) {
-           setSuccessMsg('Success! Vault Unlocked.');
+           setSuccessMsg('Success! Account Created. Welcome to the portal.');
         } else {
            setSuccessMsg('Registration successful! Please check your email for the OTP / Confirmation Link.');
         }
@@ -125,7 +125,7 @@ export const Login: React.FC = () => {
                </h1>
             </div>
             <h2 style={{ fontSize: '48px', fontWeight: 900, color: '#fff', lineHeight: 1.1, letterSpacing: '-0.04em', margin: '0 0 24px', maxWidth: '500px' }}>
-               Supply & Vault Management.
+               Supply & Profile Management.
             </h2>
             <p style={{ fontSize: '16px', color: 'rgba(255,255,255,0.8)', fontWeight: 500, lineHeight: 1.6, maxWidth: '400px', margin: 0 }}>
                Seamlessly track orders, settle supplier debts securely, and unlock digital rewards with industry-standard encryption.
@@ -234,14 +234,14 @@ export const Login: React.FC = () => {
 
                <button type="submit" disabled={loading} 
                   style={{ marginTop: '16px', padding: '18px', borderRadius: '20px', background: T.primary, color: '#fff', border: 'none', fontWeight: 900, fontSize: '15px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', boxShadow: '0 10px 30px rgba(79, 70, 229, 0.3)', cursor: 'pointer', transition: 'all 0.2s' }}>
-                 {loading ? 'Authenticating...' : (activeTab === 'login' ? 'Secure Login' : 'Create Vault Account')} <ChevronRight size={18} />
+                 {loading ? 'Authenticating...' : (activeTab === 'login' ? 'Secure Login' : 'Create Customer Account')} <ChevronRight size={18} />
                </button>
 
             </form>
          </div>
 
          <div style={{ textAlign: 'center', padding: '24px', borderTop: `1px solid ${T.border}`, color: T.txt3, fontSize: '12px', fontWeight: 600 }}>
-            Powered by Hub Encrypted Vaults
+            Powered by Hub Encrypted Systems
          </div>
 
       </div>

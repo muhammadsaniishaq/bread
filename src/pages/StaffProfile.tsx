@@ -155,7 +155,7 @@ const StaffProfile: React.FC = () => {
            {/* ANALYTICS BRICKS */}
            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' }}>
               <div style={{ gridColumn: 'span 2', background: metrics?.currentDebt > 0 ? 'linear-gradient(135deg, #fff1f2, #fff)' : '#fff', borderRadius: T.radius, padding: '24px', border: `1px solid ${T.border}`, boxShadow: T.shadow }}>
-                 <div style={{ fontSize: '11px', fontWeight: 900, color: metrics?.currentDebt > 0 ? T.danger : T.success, textTransform: 'uppercase', marginBottom: '8px' }}>Vault Condition</div>
+                 <div style={{ fontSize: '11px', fontWeight: 900, color: metrics?.currentDebt > 0 ? T.danger : T.success, textTransform: 'uppercase', marginBottom: '8px' }}>Account Standing</div>
                  <div style={{ fontSize: '32px', fontWeight: 900, color: T.txt }}>{fmtRaw(metrics?.currentDebt || 0)}</div>
                  <div style={{ fontSize: '13px', fontWeight: 600, color: T.txt3, marginTop: '16px' }}>Total Volume: {fmtRaw(metrics?.totalSales || 0)}</div>
               </div>
@@ -212,7 +212,7 @@ const StaffProfile: React.FC = () => {
 
            {/* Remissions */}
            <div style={{ background: '#fff', borderRadius: T.radius, padding: '24px', border: `1px solid ${T.border}` }}>
-              <h3 style={{ margin: '0 0 20px', fontSize: '14px', fontWeight: 900, color: T.txt2 }}><Wallet size={16} /> Remission Vault</h3>
+              <h3 style={{ margin: '0 0 20px', fontSize: '14px', fontWeight: 900, color: T.txt2 }}><Wallet size={16} /> Remission Ledger</h3>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                  {remissions.map((r, idx) => (
                    <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', borderBottom: `1px solid ${T.border}`, paddingBottom: '12px' }}>
