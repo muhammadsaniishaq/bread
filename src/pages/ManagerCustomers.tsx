@@ -1,13 +1,14 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { AnimatedPage } from '../components/AnimatedPage';
 import { useAppContext } from '../store/AppContext';
 import {
-  ArrowLeft, Search, UserPlus, X
+  ArrowLeft, Search, UserPlus, X, Camera
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import type { Customer } from '../store/types';
 import { motion, AnimatePresence } from 'framer-motion';
+import { ImageCropModal } from '../components/ImageCropModal';
 
 /* ─── Design Tokens ─── */
 const T = {
@@ -39,6 +40,7 @@ const getAvatar = (name: string) => avatarPalette[name.charCodeAt(0) % avatarPal
 export const ManagerCustomers: React.FC = () => {
   const { customers, transactions, addCustomer, updateCustomer, recordDebtPayment } = useAppContext();
   const navigate = useNavigate();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   /* State */
   const [search, setSearch]           = useState('');
@@ -47,6 +49,10 @@ export const ManagerCustomers: React.FC = () => {
   const [isAdding, setIsAdding]       = useState(false);
   const [suppliers, setSuppliers]     = useState<{id:string; full_name:string}[]>([]);
   const [loading, setLoading]         = useState(false);
+
+  // Avatar / Cropping
+  const [showCropper, setShowCropper] = useState(false);
+  const [cropImageSrc, setCropImageSrc] = useState('');
 
   /* Add form */
   const [fName, setFName] = useState('');
@@ -105,12 +111,36 @@ export const ManagerCustomers: React.FC = () => {
       if (filter === 'Dormant')    return activity[c.id] > 30;
       return true;
     });
-    return [...r].sort((a,b) => Number(b.id) - Number(a.id));
+    return [...r].sort((a, b) => Number(b.id) - Number(a.id));
   }, [customers, search, filter, activity]);
 
   const totalDebt   = customers.reduce((s,c) => s+(c.debtBalance||0), 0);
 
   /* Actions */
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setCropImageSrc(reader.result as string);
+        setShowCropper(true);
+      };
+      reader.readAsDataURL(file);
+    }
+    if (e.target) e.target.value = '';
+  };
+
+  const handleCropComplete = async (base64: string) => {
+    setEImage(base64);
+    setShowCropper(false);
+    if (drawer) {
+       try {
+          await supabase.from('customers').update({ image: base64 }).eq('id', drawer.id);
+          await updateCustomer({ ...drawer, image: base64 } as any);
+       } catch(e) { console.error(e); }
+    }
+  };
+
   const handleAdd = async (e:React.FormEvent) => {
     e.preventDefault(); if(!fName) return;
     setLoading(true);
@@ -337,6 +367,18 @@ export const ManagerCustomers: React.FC = () => {
                      <button onClick={()=>setDTab('ledger')} style={{ ...sx.pill(dTab==='ledger'), flex:1 }}>Ledger</button>
                   </div>
 
+                  {/* Avatar Picker Overlay */}
+                  <div style={{ position: 'relative', width: '120px', height: '120px', margin: '0 auto 24px' }}>
+                     <div style={{ width: '100%', height: '100%', borderRadius: '24px', background: '#f8fafc', border: `2px solid ${T.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', boxShadow: '0 10px 30px -10px rgba(0,0,0,0.1)' }}>
+                        {eImage ? <img src={eImage} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="Avatar" /> : <div style={{ fontSize: '32px', fontWeight: 900, color: T.accent }}>{eName[0]}</div>}
+                     </div>
+                     <button onClick={() => fileInputRef.current?.click()}
+                        style={{ position: 'absolute', bottom: -10, right: -10, width: '42px', height: '42px', borderRadius: '14px', background: T.accent, color: '#fff', border: '4px solid #fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 10px 20px rgba(79, 70, 229, 0.3)' }}>
+                        <Camera size={18} />
+                     </button>
+                     <input type="file" ref={fileInputRef} onChange={handleImageUpload} accept="image/*" style={{ display: 'none' }} />
+                  </div>
+
                   <div style={{ flex:1, overflowY:'auto' }}>
                      {dTab === 'profile' && (
                         editing ? (
@@ -387,6 +429,13 @@ export const ManagerCustomers: React.FC = () => {
              </>
            )}
         </AnimatePresence>
+
+        <ImageCropModal 
+          isOpen={showCropper}
+          imageSrc={cropImageSrc}
+          onClose={() => setShowCropper(false)}
+          onCropCompleteAction={handleCropComplete}
+        />
       </div>
     </AnimatedPage>
   );
