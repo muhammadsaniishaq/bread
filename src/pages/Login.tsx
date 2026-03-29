@@ -75,36 +75,28 @@ export const Login: React.FC = () => {
             // Standard auth failed, proceed to fallback
          }
 
-         // 2. Fallback: Check Manager-Ledger (customers table)
-         // We use ilike for case-insensitive matching of username/email
-         const { data: legacyUser, error: legacyErr } = await supabase
-            .from('customers')
-            .select('*')
-            .or(`username.ilike.${loginInput},email.ilike.${loginInput}`)
-            .maybeSingle();
+         // 2. Fallback: Call Secure Database Bridge (RPC)
+         // This bypasses RLS safely to check manager-set credentials
+         const { data: legacySession, error: rpcErr } = await supabase.rpc('verify_customer_credentials', { 
+            val_input: loginInput,
+            val_password: password.trim()
+         });
 
-         if (!legacyErr && legacyUser) {
-            // Ensure we compare strings properly and trim any accidental whitespace
-            const dbPassword = (legacyUser.password || '').toString().trim();
-            const dbPin = (legacyUser.pin || '').toString().trim();
-            const inputPassword = password.trim();
-
-            if ((dbPassword && dbPassword === inputPassword) || (dbPin && dbPin === inputPassword)) {
-               // Success! Create a manual session
-               const manualSession = {
-                  id: legacyUser.id,
-                  email: legacyUser.email || `${legacyUser.username || legacyUser.id}@bakery.internal`,
-                  user_metadata: { 
-                     full_name: legacyUser.name, 
-                     role: 'CUSTOMER' 
-                  },
-                  is_manual: true
-               } as any;
-               
-               setManualUser(manualSession, 'CUSTOMER');
-               setSuccessMsg('Authentication successful! Welcome back.');
-               return;
-            }
+         if (!rpcErr && legacySession) {
+            // Success! Create a manual session
+            const manualSession = {
+               id: legacySession.id,
+               email: legacySession.email,
+               user_metadata: { 
+                  full_name: legacySession.name, 
+                  role: legacySession.role 
+               },
+               is_manual: true
+            } as any;
+            
+            setManualUser(manualSession, 'CUSTOMER');
+            setSuccessMsg('Authentication successful! Welcome back.');
+            return;
          }
 
          throw new Error("Invalid Username/Email or Password. Please try again or contact the manager.");
