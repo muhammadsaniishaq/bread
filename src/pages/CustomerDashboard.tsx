@@ -4,7 +4,7 @@ import { useAuth } from '../store/AuthContext';
 import { useAppContext } from '../store/AppContext';
 import { 
   ShoppingBag, Wallet, History,
-  LogOut, ArrowRight, Star,
+  LogOut, Star,
   Calendar, ShoppingCart, 
   Zap, ChefHat, ShieldAlert
 } from 'lucide-react';
@@ -12,6 +12,7 @@ import { motion } from 'framer-motion';
 import { AnimatedPage } from '../components/AnimatedPage';
 import { useNavigate } from 'react-router-dom';
 import { UnifiedReceiptViewer } from '../components/UnifiedReceiptViewer';
+import { CustomerBottomNav } from '../components/CustomerBottomNav';
 
 /* ─────────────────────────────────────────
    V3 TOKENS
@@ -252,13 +253,7 @@ export const CustomerDashboard: React.FC = () => {
 
         </div>
 
-        {/* COMPACT FLOATING BAR */}
-        <div style={{ position: 'fixed', bottom: '24px', left: '16px', right: '16px', zIndex: 100 }}>
-           <motion.button whileTap={{ scale: 0.95 }} onClick={() => navigate('/customer/store')}
-              style={{ width: '100%', padding: '18px', borderRadius: '20px', background: T.primary, color: '#fff', border: 'none', fontWeight: 900, fontSize: '15px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', boxShadow: '0 15px 30px rgba(79, 70, 229, 0.25)' }}>
-              <ShoppingCart size={18} /> View Store <ArrowRight size={16} />
-           </motion.button>
-        </div>
+        <CustomerBottomNav />
 
       </div>
 

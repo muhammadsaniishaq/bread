@@ -13,6 +13,8 @@ import { AnimatedPage } from '../components/AnimatedPage';
 import { useNavigate } from 'react-router-dom';
 import { ImageCropModal } from '../components/ImageCropModal';
 import { DigitalIdCard } from '../components/DigitalIdCard';
+import { SimpleErrorBoundary } from '../components/SimpleErrorBoundary';
+import { CustomerBottomNav } from '../components/CustomerBottomNav';
 
 /* ─────────────────────────────────────────
    COMPACT V3 TOKENS (iOS Settings Vibe)
@@ -423,16 +425,19 @@ export const CustomerProfileHub: React.FC = () => {
           onCropCompleteAction={handleCropComplete}
         />
 
-        <DigitalIdCard
-          isOpen={showIdCard}
-          onClose={() => setShowIdCard(false)}
-          customer={customer}
-          profile={profile}
-          appSettings={appSettings}
-        />
+        <SimpleErrorBoundary>
+          <DigitalIdCard
+            isOpen={showIdCard}
+            onClose={() => setShowIdCard(false)}
+            customer={customer}
+            profile={profile}
+            appSettings={appSettings}
+          />
+        </SimpleErrorBoundary>
 
         {/* Basic implementation for Certificate Viewer Modal */}
-        <AnimatePresence>
+        <SimpleErrorBoundary>
+          <AnimatePresence>
           {showCert && (
              <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowCert(false)} 
@@ -463,6 +468,9 @@ export const CustomerProfileHub: React.FC = () => {
              </div>
           )}
         </AnimatePresence>
+       </SimpleErrorBoundary>
+
+       <CustomerBottomNav />
 
       </div>
     </AnimatedPage>

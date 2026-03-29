@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AnimatedPage } from '../components/AnimatedPage';
+import { CustomerBottomNav } from '../components/CustomerBottomNav';
 import { useNavigate } from 'react-router-dom';
 
 /* ─────────────────────────────────────────
@@ -352,6 +353,7 @@ export const CustomerStore: React.FC = () => {
            )}
         </AnimatePresence>
 
+        <CustomerBottomNav />
       </div>
     </AnimatedPage>
   );
