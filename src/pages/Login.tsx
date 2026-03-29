@@ -15,7 +15,7 @@ const T = {
 };
 
 export const Login: React.FC = () => {
-  const { user } = useAuth();
+  const { user, setManualUser } = useAuth();
   const { appSettings } = useAppContext();
   const navigate = useNavigate();
 
@@ -51,22 +51,60 @@ export const Login: React.FC = () => {
       if (activeTab === 'login') {
          if (!email || !password) throw new Error("Please enter your Email or Username and Password.");
          
-         let finalEmail = email.trim().toLowerCase();
+         const loginInput = email.trim().toLowerCase();
+         let finalEmail = loginInput;
          
-         // Detect if it's a Username (no '@' symbol) and translate it to the real Email
-         if (!finalEmail.includes('@')) {
-            const { data: realEmail, error: rpcErr } = await supabase.rpc('get_email_for_username', { lookup_user: finalEmail });
-            if (rpcErr || !realEmail) throw new Error("Invalid Username or Password.");
-            finalEmail = realEmail;
+         // 1. Try Standard Supabase Auth First
+         try {
+            // Detect if it's a Username and translate it to the real Email
+            if (!finalEmail.includes('@')) {
+               const { data: realEmail } = await supabase.rpc('get_email_for_username', { lookup_user: finalEmail });
+               if (realEmail) finalEmail = realEmail;
+            }
+
+            const { error: authErr } = await supabase.auth.signInWithPassword({ 
+               email: finalEmail, 
+               password 
+            });
+
+            if (!authErr) return; // Success! AuthContext handles the redirect
+            
+            // If it's a "Email not confirmed" error, we still allow fallback check
+            // if we want them to bypass email confirmation for manager-created accounts.
+         } catch (e) {
+            // Standard auth failed, proceed to fallback
          }
 
-         const { error } = await supabase.auth.signInWithPassword({ email: finalEmail, password });
-         if (error) {
-            if (error.message.toLowerCase().includes('email not confirmed')) {
-              throw new Error("Your email is not confirmed. Please check your inbox for an OTP or Link.");
+         // 2. Fallback: Check Manager-Ledger (customers table)
+         // Check by Username or Email, and match against Password or PIN
+         const { data: legacyUser, error: legacyErr } = await supabase
+            .from('customers')
+            .select('*')
+            .or(`username.eq."${loginInput}",email.eq."${loginInput}"`)
+            .maybeSingle();
+
+         if (!legacyErr && legacyUser) {
+            const matchesPassword = legacyUser.password === password;
+            const matchesPin = legacyUser.pin === password;
+
+            if (matchesPassword || matchesPin) {
+               // Success! Create a manual session
+               const manualSession = {
+                  id: legacyUser.id,
+                  email: legacyUser.email || `${legacyUser.username || legacyUser.id}@bakery.internal`,
+                  user_metadata: { 
+                     full_name: legacyUser.name, 
+                     role: 'CUSTOMER' 
+                  },
+                  is_manual: true
+               };
+               setManualUser(manualSession, 'CUSTOMER');
+               setSuccessMsg('Logged in via Secure Ledger.');
+               return;
             }
-            throw error;
          }
+
+         throw new Error("Invalid Credentials. Please check your username and password.");
       } else {
         // Sign Up Flow - Real Email Used Here!
         if (!email || !fullName || !password) {
