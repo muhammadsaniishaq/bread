@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../store/AuthContext';
-import { ShoppingBag, Calendar, Search } from 'lucide-react';
+import { useAppContext } from '../store/AppContext';
+import { ChevronRight, FileText, Search, Receipt } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { AnimatedPage } from '../components/AnimatedPage';
 import { useNavigate } from 'react-router-dom';
+import { UnifiedReceiptViewer } from '../components/UnifiedReceiptViewer';
 import { CustomerBottomNav } from '../components/CustomerBottomNav';
 
 /* ─────────────────────────────────────────
@@ -30,13 +32,16 @@ const fmtRaw = (num: number) => {
   return "₦" + num.toLocaleString('en-US');
 };
 
-export default function CustomerOrders() {
+export default function CustomerHistory() {
   const { user } = useAuth();
+  const { appSettings } = useAppContext();
   const navigate = useNavigate();
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filter, setFilter] = useState<'all' | 'paid' | 'debt'>('all');
+  const [selectedOrder, setSelectedOrder] = useState<any>(null);
+  const [customerName, setCustomerName] = useState('');
 
   useEffect(() => {
     if (!user) {
@@ -49,8 +54,9 @@ export default function CustomerOrders() {
   const fetchHistory = async () => {
     setLoading(true);
     try {
-      const { data: cust } = await supabase.from('customers').select('id').eq('profile_id', user!.id).maybeSingle();
+      const { data: cust } = await supabase.from('customers').select('id, name').eq('profile_id', user!.id).maybeSingle();
       if (!cust) return;
+      setCustomerName(cust.name);
 
       const { data: allOrds } = await supabase.from('orders')
         .select(`
@@ -80,11 +86,11 @@ export default function CustomerOrders() {
 
   return (
     <AnimatedPage>
-      <div style={{ minHeight: '100vh', background: T.bg, paddingBottom: '100px', fontFamily: 'Inter, sans-serif' }}>
+      <div style={{ minHeight: '100vh', background: T.bg, paddingBottom: '110px', fontFamily: 'Inter, sans-serif' }}>
         
         <div style={{ position: 'sticky', top: 0, zIndex: 50, background: 'rgba(253, 253, 253, 0.85)', backdropFilter: 'blur(16px)', padding: '16px 20px', borderBottom: `1px solid ${T.border}` }}>
-           <h1 style={{ fontSize: '20px', fontWeight: 900, margin: 0, color: T.ink, letterSpacing: '-0.02em' }}>My Orders</h1>
-           <p style={{ margin: '4px 0 0', fontSize: '13px', color: T.txt2, fontWeight: 600 }}>Track your bakery purchases and items.</p>
+           <h1 style={{ fontSize: '20px', fontWeight: 900, margin: 0, color: T.ink, letterSpacing: '-0.02em' }}>Receipt History</h1>
+           <p style={{ margin: '4px 0 0', fontSize: '13px', color: T.txt2, fontWeight: 600 }}>Access all your formal payment documents.</p>
         </div>
 
         <div style={{ padding: '20px' }}>
@@ -93,14 +99,14 @@ export default function CustomerOrders() {
                  <Search size={18} color={T.txt3} style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)' }} />
                  <input 
                     type="text" 
-                    placeholder="Search by amount or date..." 
+                    placeholder="Find receipt by date or price..." 
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     style={{ width: '100%', padding: '16px 16px 16px 44px', borderRadius: '16px', border: `1px solid ${T.border}`, background: '#fff', fontSize: '14px', fontWeight: 600, color: T.ink, outline: 'none' }}
                  />
               </div>
 
-              <div style={{ display: 'flex', gap: '8px', overflowX: 'auto' }}>
+              <div style={{ display: 'flex', gap: '8px' }}>
                  {['all', 'paid', 'debt'].map(f => (
                     <button key={f} onClick={() => setFilter(f as any)} 
                        style={{ padding: '8px 16px', borderRadius: '12px', border: 'none', background: filter === f ? T.ink : '#fff', color: filter === f ? '#fff' : T.txt2, fontWeight: 800, fontSize: '11px', textTransform: 'capitalize', cursor: 'pointer' }}>
@@ -111,35 +117,32 @@ export default function CustomerOrders() {
            </div>
 
            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-             {loading ? <div style={{ textAlign: 'center', padding: '40px', color: T.txt3 }}>Loading orders...</div> : (
+             {loading ? <div style={{ textAlign: 'center', padding: '40px', color: T.txt3 }}>Loading vault...</div> : (
                 <>
                   {filteredOrders.length === 0 ? (
                      <div style={{ textAlign: 'center', padding: '60px 20px', background: '#fff', borderRadius: T.radius, border: `1px dashed ${T.border}` }}>
-                        <ShoppingBag size={40} color={T.txt3} style={{ margin: '0 auto 16px', opacity: 0.5 }} />
-                        <h3 style={{ margin: '0 0 8px', color: T.ink, fontSize: '16px', fontWeight: 900 }}>No Orders</h3>
+                        <Receipt size={40} color={T.txt3} style={{ margin: '0 auto 16px', opacity: 0.5 }} />
+                        <h3 style={{ margin: '0 0 8px', color: T.ink, fontSize: '16px', fontWeight: 900 }}>No Receipts</h3>
                      </div>
                   ) : (
                     filteredOrders.map((o, idx) => (
                       <motion.div key={o.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.05 }}
-                         style={{ background: '#fff', borderRadius: '20px', padding: '16px', display: 'flex', alignItems: 'center', gap: '16px', border: `1px solid ${T.border}`, boxShadow: '0 4px 20px -10px rgba(0,0,0,0.05)' }}>
-                         <div style={{ width: '48px', height: '48px', borderRadius: '14px', background: 'rgba(16,185,129,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.success }}>
-                            <ShoppingBag size={20} />
+                         onClick={() => setSelectedOrder(o)}
+                         style={{ background: '#fff', borderRadius: '20px', padding: '16px', display: 'flex', alignItems: 'center', gap: '16px', border: `1px solid ${T.border}`, cursor: 'pointer' }}>
+                         <div style={{ width: '48px', height: '48px', borderRadius: '14px', background: 'rgba(79, 70, 229, 0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.primary }}>
+                            <FileText size={20} />
                          </div>
                          <div style={{ flex: 1 }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
-                               <Calendar size={12} color={T.txt3} />
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px' }}>
                                <span style={{ fontSize: '11px', fontWeight: 800, color: T.txt2 }}>{new Date(o.created_at).toLocaleDateString()}</span>
                             </div>
-                            <div style={{ fontSize: '14px', fontWeight: 800, color: T.ink }}>
-                               {o.order_items?.map((i: any) => `${i.quantity}x ${i.products?.name}`).join(', ') || 'Bread Pack'}
-                            </div>
+                            <div style={{ fontSize: '13px', fontWeight: 900, color: T.ink }}>Receipt #{o.id.substring(0,8).toUpperCase()}</div>
                          </div>
                          <div style={{ textAlign: 'right' }}>
                             <div style={{ fontSize: '16px', fontWeight: 900, color: T.ink }}>{fmtRaw(o.total_price)}</div>
-                            <div style={{ display: 'inline-block', fontSize: '9px', fontWeight: 900, textTransform: 'uppercase', background: o.payment_status === 'PAID' ? 'rgba(16,185,129,0.1)' : 'rgba(244,63,94,0.1)', color: o.payment_status === 'PAID' ? T.success : T.danger, padding: '4px 8px', borderRadius: '6px' }}>
-                               {o.payment_status}
-                            </div>
+                            <div style={{ fontSize: '9px', fontWeight: 900, color: o.payment_status === 'PAID' ? T.success : T.danger }}>{o.payment_status}</div>
                          </div>
+                         <ChevronRight size={18} color={T.txt3} />
                       </motion.div>
                     ))
                   )}
@@ -147,6 +150,14 @@ export default function CustomerOrders() {
              )}
            </div>
         </div>
+
+        <UnifiedReceiptViewer 
+           isOpen={!!selectedOrder}
+           onClose={() => setSelectedOrder(null)}
+           order={selectedOrder}
+           appSettings={appSettings}
+           customerName={customerName || 'Customer'}
+        />
 
         <CustomerBottomNav />
       </div>
