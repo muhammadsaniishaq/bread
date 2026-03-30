@@ -132,84 +132,94 @@ export const ManagerCustomers: React.FC = () => {
     }
   };
 
-  const handleAdd = async (e:React.FormEvent) => {
-    e.preventDefault(); if(!fName) return;
-    setLoading(true);
-    try {
-      let profile_id = null;
-      if (fUsername) {
-          const { data: legacyUser, error: legacyErr } = await supabase
+   const handleAdd = async (e:React.FormEvent) => {
+     e.preventDefault(); if(!fName) return;
+     setLoading(true);
+     try {
+       let profile_id = null;
+       
+       if (fUsername) {
+          // 1. First, see if this name is already linked in the Ledger
+          const { data: legacyUser } = await supabase
              .from('customers')
-             .select('*')
+             .select('profile_id')
              .or(`username.ilike."${fUsername}",email.ilike."${fUsername}"`)
              .maybeSingle();
-          
-          if (legacyErr && !legacyErr.message.includes('column "username" does not exist')) {
-             throw legacyErr;
-          }
-         
-         if (legacyUser) {
-            profile_id = legacyUser.profile_id;
+
+          if (legacyUser?.profile_id) {
+             profile_id = legacyUser.profile_id;
           } else {
-             const newPid = (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : `p-${Date.now()}-${Math.random().toString(36).slice(2,9)}`;
-             const { error: pErr } = await supabase.from('profiles').insert({
-                id: newPid,
-                full_name: fName,
-                username: fUsername,
-                role: 'CUSTOMER'
-             });
-             if (pErr) throw pErr;
-             profile_id = newPid;
+             // 2. See if the username already exists in the main Profiles/Auth table
+             const { data: existingProfile } = await supabase
+                .from('profiles')
+                .select('id')
+                .eq('username', fUsername.toLowerCase().trim())
+                .maybeSingle();
+
+             if (existingProfile) {
+                profile_id = existingProfile.id;
+             } else {
+                // 3. Create a brand new Profile ID if it doesn't exist anywhere
+                const newPid = (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : `p-${Date.now()}-${Math.random().toString(36).slice(2,9)}`;
+                const { error: pErr } = await supabase.from('profiles').insert({
+                   id: newPid,
+                   full_name: fName,
+                   username: fUsername.toLowerCase().trim(),
+                   role: 'CUSTOMER'
+                });
+                if (pErr) throw pErr;
+                profile_id = newPid;
+             }
           }
-      }
+       }
 
-      const newCust: any = {
-        id: Date.now().toString(), 
-        name: fName, 
-        phone: fPhone, 
-        email: fEmail,
-        username: fUsername,
-        password: fPassword, // Store manager-set password
-        location: fLocation, 
-        notes: fNote, 
-        debtBalance: 0, 
-        loyaltyPoints: 0, 
-        assignedSupplierId: fSup||undefined, 
-        pin: fPin||undefined,
-        profile_id: profile_id || undefined
-      };
+       const newCust: any = {
+         id: Date.now().toString(), 
+         name: fName, 
+         phone: fPhone, 
+         email: fEmail,
+         username: fUsername,
+         password: fPassword,
+         location: fLocation, 
+         notes: fNote, 
+         debtBalance: 0, 
+         loyaltyPoints: 0, 
+         assignedSupplierId: fSup||undefined, 
+         pin: fPin||undefined,
+         profile_id: profile_id || undefined
+       };
 
-      await addCustomer(newCust);
-      
-      const toDB = (c: any) => ({
-         id: c.id,
-         name: c.name,
-         phone: c.phone || null,
-         email: c.email || null,
-         username: c.username || null,
-         password: c.password || null,
-         location: c.location || null,
-         notes: c.notes || null,
-         debt_balance: c.debtBalance,
-         loyalty_points: c.loyaltyPoints,
-         assignedSupplierId: c.assignedSupplierId || null,
-         pin: c.pin || null,
-         profile_id: c.profile_id || null,
-         image: c.image || null
-      });
+       await addCustomer(newCust);
+       
+       const toDB = (c: any) => ({
+          id: c.id,
+          name: c.name,
+          phone: c.phone || null,
+          email: c.email || null,
+          username: c.username || null,
+          password: c.password || null,
+          location: c.location || null,
+          notes: c.notes || null,
+          debt_balance: c.debtBalance,
+          loyalty_points: c.loyaltyPoints,
+          assignedSupplierId: c.assignedSupplierId || null,
+          pin: c.pin || null,
+          profile_id: c.profile_id || null,
+          image: c.image || null
+       });
 
-      const { error: upErr } = await supabase.from('customers').upsert(toDB(newCust));
-      if (upErr) throw upErr;
+       const { error: upErr } = await supabase.from('customers').upsert(toDB(newCust));
+       if (upErr) throw upErr;
 
-      // Reset
-      setFName(''); setFPhone(''); setFEmail(''); setFUsername(''); setFPassword(''); setFLocation(''); setFSup(''); setFPin(''); setFNote(''); setIsAdding(false);
-    } catch (err: any) {
-       console.error(err);
-       alert("Error creating customer: " + (err.message || JSON.stringify(err)));
-    } finally {
-       setLoading(false);
-    }
-  };
+       setFName(''); setFPhone(''); setFEmail(''); setFUsername(''); setFPassword(''); setFLocation(''); setFSup(''); setFPin(''); setFNote(''); setIsAdding(false);
+       alert("Success! Customer linked to Portal.");
+     } catch (err: any) {
+        console.error(err);
+        alert("Sync Error: " + (err.message || JSON.stringify(err)));
+     } finally {
+        setLoading(false);
+     }
+   };
 
   const openDrawer = (c:Customer) => {
     setDrawerId(c.id); setEName(c.name); setEPhone(c.phone||''); 
