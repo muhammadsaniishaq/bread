@@ -84,17 +84,20 @@ export const Login: React.FC = () => {
 
          if (!rpcErr && legacySession) {
             // Success! Create a manual session
+            // We use the ACTUAL role returned by the database (MANAGER, SUPPLIER, or CUSTOMER)
+            const resolvedRole = (legacySession.role as UserRole) || 'CUSTOMER';
+
             const manualSession = {
                id: legacySession.id,
                email: legacySession.email,
                user_metadata: { 
                   full_name: legacySession.name, 
-                  role: legacySession.role 
+                  role: resolvedRole 
                },
                is_manual: true
             } as any;
             
-            setManualUser(manualSession, 'CUSTOMER');
+            setManualUser(manualSession, resolvedRole);
             setSuccessMsg('Authentication successful! Welcome back.');
             return;
          }
