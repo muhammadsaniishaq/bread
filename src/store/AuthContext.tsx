@@ -30,10 +30,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // Only fallback to metadata if profile is completely missing
         setRole((u.user_metadata?.role as UserRole) || 'CUSTOMER');
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("AuthContext: Failed to fetch role", err);
-      // Default to customer on complete failure for security
-      setRole('CUSTOMER');
+      
+      // If it's a real Auth user but their profile is missing or hidden by RLS
+      if (err.message?.includes("PGRST116") || err.code === 'PGRST116') {
+         console.warn("AuthContext: Profile row not found for this UID. Defaulting to metadata.");
+         setRole((u.user_metadata?.role as UserRole) || 'CUSTOMER');
+      } else {
+         // Show a one-time structural alert for the developer/manager
+         alert("Role Sync Error: " + (err.message || "RLS Policy Loop Detected"));
+         setRole('CUSTOMER');
+      }
     } finally {
       setLoading(false);
     }
