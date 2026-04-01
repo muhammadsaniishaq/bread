@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import {
   Star, ShieldCheck, ArrowRight, Heart,
-  MapPin, Clock, ChefHat, Award,
+  MapPin, Clock, Award,
   Sparkles, TrendingUp, Users, Package,
   LogIn, CheckCircle2, Crown,
   Wheat, Flame
@@ -89,8 +89,8 @@ const LandingPage: React.FC = () => {
         }}>
           {/* Logo */}
           <motion.div whileTap={{ scale: 0.96 }} style={{ display: 'flex', alignItems: 'center', gap: '9px', cursor: 'default' }}>
-            <div style={{ width: '36px', height: '36px', borderRadius: '11px', background: `linear-gradient(135deg, ${C.primary}, #a855f7)`, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 4px 14px ${C.pMid}` }}>
-              <ChefHat size={18} color="#fff" />
+            <div style={{ width: '38px', height: '38px', borderRadius: '12px', background: `linear-gradient(135deg, ${C.primary}, #a855f7)`, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 4px 14px ${C.pMid}`, overflow: 'hidden', padding: '3px' }}>
+              <img src="/logo.png" alt="Logo" style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: '9px' }} />
             </div>
             <div>
               <div style={{ fontSize: '13px', fontWeight: 900, color: C.ink, lineHeight: 1, letterSpacing: '-0.02em' }}>BEST SPECIAL</div>
@@ -189,7 +189,9 @@ const LandingPage: React.FC = () => {
 
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', position: 'relative', zIndex: 1 }}>
                 <motion.div animate={{ y: [0, -10, 0] }} transition={{ repeat: Infinity, duration: 2.8, ease: 'easeInOut' }}
-                  style={{ fontSize: '72px', filter: 'drop-shadow(0 8px 16px rgba(0,0,0,0.3))' }}>🍞</motion.div>
+                  style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+                <img src="/logo.png" alt="Bakery Logo" style={{ width: '80px', height: '80px', objectFit: 'contain', filter: 'drop-shadow(0 8px 20px rgba(0,0,0,0.3)) brightness(1.1)' }} />
+              </motion.div>
                 <span style={{ color: 'rgba(255,255,255,0.95)', fontSize: '17px', fontWeight: 900, letterSpacing: '-0.02em' }}>The Best Special Bread</span>
                 <div style={{ display: 'flex', gap: '3px' }}>
                   {[...Array(5)].map((_, i) => <Star key={i} size={12} color="#fde68a" fill="#fde68a" />)}
