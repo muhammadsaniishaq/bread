@@ -8,28 +8,28 @@ export const CustomerBottomNav: React.FC = () => {
   const location = useLocation();
   const path = location.pathname;
 
-  const NAV = [
-    { id: 'dashboard', label: 'Home',    icon: Home,         route: '/customer/dashboard' },
-    { id: 'orders',    label: 'Orders',  icon: ListOrdered,  route: '/customer/orders' },
-    { id: 'store',     label: 'Shop',    icon: ShoppingBag,  route: '/customer/store', isCenter: true },
-    { id: 'docs',      label: 'Docs',    icon: FileText,     route: '/customer/docs' },
-    { id: 'profile',   label: 'Profile', icon: User,         route: '/customer/profile' },
-  ];
+  const primary = '#635bff';
+  const primaryLight = 'rgba(99,91,255,0.10)';
 
-  const primary = '#7c3aed';
-  const primaryGlow = 'rgba(124, 58, 237, 0.3)';
+  const NAV = [
+    { id: 'dashboard', label: 'Home',    icon: Home,        route: '/customer/dashboard' },
+    { id: 'orders',    label: 'Orders',  icon: ListOrdered, route: '/customer/orders' },
+    { id: 'store',     label: 'Shop',    icon: ShoppingBag, route: '/customer/store', isCenter: true },
+    { id: 'docs',      label: 'Docs',    icon: FileText,    route: '/customer/docs' },
+    { id: 'profile',   label: 'Profile', icon: User,        route: '/customer/profile' },
+  ];
 
   return (
     <div style={{
       position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 100,
-      height: '76px',
-      background: 'rgba(15, 12, 41, 0.85)',
-      backdropFilter: 'blur(24px)',
-      WebkitBackdropFilter: 'blur(24px)',
-      borderTop: '1px solid rgba(255,255,255,0.08)',
+      height: '74px',
+      background: 'rgba(255,255,255,0.92)',
+      backdropFilter: 'blur(20px)',
+      WebkitBackdropFilter: 'blur(20px)',
+      borderTop: '1.5px solid rgba(99,91,255,0.10)',
       display: 'flex', alignItems: 'center', justifyContent: 'space-around',
       paddingBottom: 'env(safe-area-inset-bottom)',
-      boxShadow: '0 -20px 60px rgba(0,0,0,0.5)'
+      boxShadow: '0 -4px 30px rgba(99,91,255,0.06)'
     }}>
       {NAV.map((item) => {
         const isActive = path.includes(item.id) || (path === '/customer' && item.id === 'dashboard');
@@ -39,17 +39,18 @@ export const CustomerBottomNav: React.FC = () => {
           return (
             <div key={item.id} onClick={() => navigate(item.route)}
               style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer', position: 'relative' }}>
-              <motion.div whileTap={{ scale: 0.92 }} style={{
-                position: 'absolute', top: '-28px',
-                width: '58px', height: '58px', borderRadius: '19px',
-                background: `linear-gradient(135deg, ${primary}, #06b6d4)`,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                boxShadow: `0 10px 30px ${primaryGlow}`,
-                border: '3px solid rgba(15,12,41,0.8)',
-              }}>
-                <Icon size={24} color="#fff" strokeWidth={2.5} />
+              <motion.div whileTap={{ scale: 0.90 }}
+                style={{
+                  position: 'absolute', top: '-28px',
+                  width: '56px', height: '56px', borderRadius: '18px',
+                  background: `linear-gradient(135deg, ${primary}, #06b6d4)`,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  boxShadow: '0 8px 24px rgba(99,91,255,0.35)',
+                  border: '3px solid white',
+                }}>
+                <Icon size={23} color="#fff" strokeWidth={2.5} />
               </motion.div>
-              <span style={{ fontSize: '10px', fontWeight: 800, color: isActive ? primary : 'rgba(255,255,255,0.35)', marginTop: '34px' }}>
+              <span style={{ fontSize: '10px', fontWeight: 700, color: isActive ? primary : '#94a3b8', marginTop: '32px' }}>
                 {item.label}
               </span>
             </div>
@@ -57,22 +58,20 @@ export const CustomerBottomNav: React.FC = () => {
         }
 
         return (
-          <motion.div key={item.id} whileTap={{ scale: 0.9 }}
+          <motion.div key={item.id} whileTap={{ scale: 0.88 }}
             onClick={() => navigate(item.route)}
             style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', cursor: 'pointer' }}>
             <div style={{
-              width: '40px', height: '36px', borderRadius: '12px',
-              background: isActive ? 'rgba(124,58,237,0.2)' : 'transparent',
+              width: '40px', height: '34px', borderRadius: '11px',
+              background: isActive ? primaryLight : 'transparent',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              transition: 'all 0.2s ease'
+              transition: 'all 0.18s ease'
             }}>
-              <Icon size={22} color={isActive ? primary : 'rgba(255,255,255,0.35)'} strokeWidth={isActive ? 2.5 : 2} />
+              <Icon size={21} color={isActive ? primary : '#94a3b8'} strokeWidth={isActive ? 2.5 : 2} />
             </div>
-            <span style={{
-              fontSize: '10px', fontWeight: isActive ? 800 : 600,
-              color: isActive ? primary : 'rgba(255,255,255,0.35)',
-              transition: 'all 0.2s'
-            }}>{item.label}</span>
+            <span style={{ fontSize: '10px', fontWeight: isActive ? 800 : 600, color: isActive ? primary : '#94a3b8', transition: 'all 0.18s' }}>
+              {item.label}
+            </span>
           </motion.div>
         );
       })}

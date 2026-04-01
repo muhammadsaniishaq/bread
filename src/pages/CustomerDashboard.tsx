@@ -7,7 +7,7 @@ import {
   Calendar, ShoppingCart, Zap,
   ChefHat, TrendingUp, Package,
   FileText, Phone, Bell, ChevronRight,
-  Award, Sparkles, ArrowUpRight
+  Award, ArrowUpRight, Sparkles
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AnimatedPage } from '../components/AnimatedPage';
@@ -16,65 +16,65 @@ import { UnifiedReceiptViewer } from '../components/UnifiedReceiptViewer';
 import { CustomerBottomNav } from '../components/CustomerBottomNav';
 
 /* ─────────────────────────────────────────
-   DESIGN SYSTEM V4 — Premium Dark Palette
+   DESIGN SYSTEM V5 — Premium Light Palette
 ───────────────────────────────────────── */
 const T = {
-  bg:          'linear-gradient(145deg, #0f0c29, #302b63, #24243e)',
-  bgSolid:     '#0f0c29',
-  glass:       'rgba(255,255,255,0.06)',
-  glassBorder: 'rgba(255,255,255,0.12)',
-  glassHover:  'rgba(255,255,255,0.10)',
-  panel:       'rgba(255,255,255,0.08)',
-  primary:     '#7c3aed',
-  primaryGlow: 'rgba(124, 58, 237, 0.4)',
-  accent:      '#06b6d4',
-  accentGlow:  'rgba(6, 182, 212, 0.3)',
-  success:     '#10b981',
-  successGlow: 'rgba(16, 185, 129, 0.3)',
-  danger:      '#f43f5e',
-  dangerGlow:  'rgba(244, 63, 94, 0.3)',
-  gold:        '#f59e0b',
-  goldGlow:    'rgba(245, 158, 11, 0.3)',
-  silver:      '#94a3b8',
-  bronze:      '#cd7c2f',
-  white:       '#ffffff',
-  txt:         'rgba(255,255,255,0.92)',
-  txt2:        'rgba(255,255,255,0.55)',
-  txt3:        'rgba(255,255,255,0.30)',
-  radius:      '24px',
-  radiusSm:    '16px',
-  shadow:      '0 25px 60px -12px rgba(0,0,0,0.6)',
-  shadowSm:    '0 8px 30px -8px rgba(0,0,0,0.4)',
+  bg:           '#f8f7ff',
+  bg2:          '#f0eeff',
+  white:        '#ffffff',
+  border:       'rgba(99,91,255,0.10)',
+  borderLight:  'rgba(0,0,0,0.06)',
+  primary:      '#635bff',
+  primaryLight: 'rgba(99,91,255,0.10)',
+  primaryMid:   'rgba(99,91,255,0.20)',
+  accent:       '#06b6d4',
+  accentLight:  'rgba(6,182,212,0.10)',
+  success:      '#059669',
+  successLight: 'rgba(5,150,105,0.10)',
+  danger:       '#e11d48',
+  dangerLight:  'rgba(225,29,72,0.10)',
+  gold:         '#d97706',
+  goldLight:    'rgba(217,119,6,0.10)',
+  silver:       '#64748b',
+  bronze:       '#92400e',
+  ink:          '#0f172a',
+  txt:          '#1e293b',
+  txt2:         '#475569',
+  txt3:         '#94a3b8',
+  radius:       '24px',
+  radiusSm:     '16px',
+  shadow:       '0 4px 24px rgba(99,91,255,0.08)',
+  shadowMd:     '0 8px 40px rgba(99,91,255,0.12)',
 };
 
 const fmt = (v: number) => `₦${v.toLocaleString()}`;
 
 const getLoyaltyTier = (total: number) => {
-  if (total >= 500000) return { name: 'Diamond', icon: '💎', color: T.accent, glow: T.accentGlow, next: null, nextAt: 0 };
-  if (total >= 150000) return { name: 'Gold', icon: '🥇', color: T.gold, glow: T.goldGlow, next: 'Diamond', nextAt: 500000 };
-  if (total >= 50000)  return { name: 'Silver', icon: '🥈', color: T.silver, glow: 'rgba(148,163,184,0.3)', next: 'Gold', nextAt: 150000 };
-  return { name: 'Bronze', icon: '🥉', color: T.bronze, glow: 'rgba(205,124,47,0.3)', next: 'Silver', nextAt: 50000 };
+  if (total >= 500000) return { name: 'Diamond', icon: '💎', color: T.accent,  light: T.accentLight,  next: null,     nextAt: 0 };
+  if (total >= 150000) return { name: 'Gold',    icon: '🥇', color: T.gold,    light: T.goldLight,    next: 'Diamond',nextAt: 500000 };
+  if (total >= 50000)  return { name: 'Silver',  icon: '🥈', color: T.silver,  light: 'rgba(100,116,139,0.10)', next: 'Gold', nextAt: 150000 };
+  return { name: 'Bronze', icon: '🥉', color: T.bronze, light: 'rgba(146,64,14,0.10)', next: 'Silver', nextAt: 50000 };
 };
 
 const cardAnim = (i: number) => ({
-  initial: { opacity: 0, y: 30 },
-  animate: { opacity: 1, y: 0, transition: { delay: i * 0.08, duration: 0.5, ease: 'easeOut' as const } }
+  initial: { opacity: 0, y: 24 },
+  animate: { opacity: 1, y: 0, transition: { delay: i * 0.07, duration: 0.45, ease: 'easeOut' as const } }
 });
 
 // Animated Number Counter
-const AnimatedCounter: React.FC<{ value: number; prefix?: string }> = ({ value, prefix = '₦' }) => {
+const AnimatedCounter: React.FC<{ value: number }> = ({ value }) => {
   const [display, setDisplay] = useState(0);
   useEffect(() => {
-    let start = 0;
-    const step = value / 40;
-    const timer = setInterval(() => {
-      start += step;
-      if (start >= value) { setDisplay(value); clearInterval(timer); }
-      else setDisplay(Math.floor(start));
-    }, 25);
-    return () => clearInterval(timer);
+    let cur = 0;
+    const step = value / 36;
+    const t = setInterval(() => {
+      cur += step;
+      if (cur >= value) { setDisplay(value); clearInterval(t); }
+      else setDisplay(Math.floor(cur));
+    }, 22);
+    return () => clearInterval(t);
   }, [value]);
-  return <span>{prefix}{display.toLocaleString()}</span>;
+  return <span>₦{display.toLocaleString()}</span>;
 };
 
 export const CustomerDashboard: React.FC = () => {
@@ -88,7 +88,6 @@ export const CustomerDashboard: React.FC = () => {
   const [totalBought, setTotalBought] = useState(0);
   const [loading, setLoading] = useState(true);
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
-  const [notifCount] = useState(0);
 
   useEffect(() => {
     if (!user) { navigate('/login'); return; }
@@ -106,32 +105,19 @@ export const CustomerDashboard: React.FC = () => {
         }
         setProfile(prof);
       }
-
       let { data: cust } = await supabase.from('customers').select('*').eq('profile_id', id).maybeSingle();
       if (!cust && user?.email) {
         const { data: byEmail } = await supabase.from('customers').select('*').eq('email', user.email).maybeSingle();
-        if (byEmail) {
-          await supabase.from('customers').update({ profile_id: id }).eq('id', byEmail.id);
-          cust = byEmail;
-        }
+        if (byEmail) { await supabase.from('customers').update({ profile_id: id }).eq('id', byEmail.id); cust = byEmail; }
       }
-
       if (cust) {
         setCustomer(cust);
-        const { data: allOrds } = await supabase
-          .from('orders').select('*')
-          .eq('customer_id', cust.id)
-          .order('created_at', { ascending: false });
-        if (allOrds) {
-          setOrders(allOrds.slice(0, 6));
-          setTotalBought(allOrds.reduce((s, o) => s + (o.total_price || 0), 0));
-        }
+        const { data: allOrds } = await supabase.from('orders').select('*').eq('customer_id', cust.id).order('created_at', { ascending: false });
+        if (allOrds) { setOrders(allOrds.slice(0, 6)); setTotalBought(allOrds.reduce((s, o) => s + (o.total_price || 0), 0)); }
       } else {
         const { data: newCust } = await supabase.from('customers').insert({
           name: prof?.full_name || user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Member',
-          email: user?.email,
-          profile_id: id,
-          debt_balance: 0
+          email: user?.email, profile_id: id, debt_balance: 0
         }).select().single();
         if (newCust) setCustomer(newCust);
       }
@@ -140,22 +126,22 @@ export const CustomerDashboard: React.FC = () => {
   };
 
   if (loading) return (
-    <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: T.bgSolid, gap: '16px' }}>
-      <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}
-        style={{ width: '40px', height: '40px', borderRadius: '12px', border: `3px solid ${T.primary}`, borderTopColor: 'transparent' }} />
-      <div style={{ color: T.txt2, fontSize: '12px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase' }}>Loading Portal...</div>
+    <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: T.bg, gap: '16px' }}>
+      <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 0.9, ease: 'linear' }}
+        style={{ width: '36px', height: '36px', borderRadius: '10px', border: `3px solid ${T.primary}`, borderTopColor: 'transparent' }} />
+      <div style={{ color: T.txt3, fontSize: '12px', fontWeight: 700, letterSpacing: '0.08em' }}>LOADING PORTAL...</div>
     </div>
   );
 
   if (!customer) return (
-    <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: T.bgSolid, textAlign: 'center', padding: '40px' }}>
-      <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} style={{ width: '80px', height: '80px', borderRadius: '24px', background: T.dangerGlow, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '24px' }}>
-        <Zap size={40} color={T.danger} />
-      </motion.div>
-      <h2 style={{ color: T.white, fontSize: '22px', fontWeight: 900, margin: '0 0 8px' }}>Profile Unlinked</h2>
-      <p style={{ color: T.txt2, fontSize: '13px', margin: '0 0 32px' }}>Your account ({user?.email}) needs to be linked.<br />Please contact management.</p>
+    <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: T.bg, textAlign: 'center', padding: '40px' }}>
+      <div style={{ width: '72px', height: '72px', borderRadius: '22px', background: T.dangerLight, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '20px' }}>
+        <Zap size={36} color={T.danger} />
+      </div>
+      <h2 style={{ color: T.ink, fontSize: '20px', fontWeight: 900, margin: '0 0 8px' }}>Profile Unlinked</h2>
+      <p style={{ color: T.txt2, fontSize: '13px', margin: '0 0 28px' }}>Account ({user?.email}) not linked.<br />Contact management to fix this.</p>
       <motion.button whileTap={{ scale: 0.96 }} onClick={() => { signOut(); navigate('/login'); }}
-        style={{ padding: '14px 28px', borderRadius: '16px', background: T.primary, color: '#fff', border: 'none', fontWeight: 900, fontSize: '14px', cursor: 'pointer' }}>
+        style={{ padding: '14px 28px', borderRadius: '14px', background: T.primary, color: '#fff', border: 'none', fontWeight: 900, fontSize: '14px', cursor: 'pointer', boxShadow: T.shadow }}>
         Sign Out
       </motion.button>
     </div>
@@ -169,105 +155,97 @@ export const CustomerDashboard: React.FC = () => {
   const avatar = customer.image || profile?.avatar_url;
 
   const quickActions = [
-    { id: 'shop',    label: 'Shop',     icon: ShoppingCart, color: T.primary,  glow: T.primaryGlow, path: '/customer/store' },
-    { id: 'orders',  label: 'Orders',   icon: Package,      color: T.accent,   glow: T.accentGlow,  path: '/customer/orders' },
-    { id: 'docs',    label: 'My Docs',  icon: FileText,     color: T.gold,     glow: T.goldGlow,    path: '/customer/docs' },
-    { id: 'profile', label: 'Profile',  icon: ChefHat,      color: T.success,  glow: T.successGlow, path: '/customer/profile' },
+    { id: 'shop',    label: 'Shop',    icon: ShoppingCart, color: T.primary, light: T.primaryLight,  path: '/customer/store' },
+    { id: 'orders',  label: 'Orders',  icon: Package,      color: T.accent,  light: T.accentLight,   path: '/customer/orders' },
+    { id: 'docs',    label: 'My Docs', icon: FileText,     color: T.gold,    light: T.goldLight,     path: '/customer/docs' },
+    { id: 'profile', label: 'Profile', icon: ChefHat,      color: T.success, light: T.successLight,  path: '/customer/profile' },
   ];
 
   return (
     <AnimatedPage>
-      <div style={{ minHeight: '100vh', background: T.bg, paddingBottom: '100px', fontFamily: "'Inter', sans-serif" }}>
+      <div style={{ minHeight: '100vh', background: T.bg, paddingBottom: '100px', fontFamily: "'Inter', -apple-system, sans-serif" }}>
 
         {/* ─── HERO HEADER ─── */}
-        <div style={{ position: 'relative', padding: '56px 20px 32px', overflow: 'hidden' }}>
-          {/* Glow orbs */}
-          <div style={{ position: 'absolute', top: '-60px', left: '-60px', width: '200px', height: '200px', background: T.primaryGlow, borderRadius: '50%', filter: 'blur(60px)', pointerEvents: 'none' }} />
-          <div style={{ position: 'absolute', top: '-20px', right: '-40px', width: '150px', height: '150px', background: T.accentGlow, borderRadius: '50%', filter: 'blur(50px)', pointerEvents: 'none' }} />
+        <div style={{ background: T.white, borderBottom: `1px solid ${T.borderLight}`, padding: '52px 20px 28px', position: 'relative', overflow: 'hidden' }}>
+          {/* Purple accent blob */}
+          <div style={{ position: 'absolute', top: '-80px', right: '-60px', width: '220px', height: '220px', background: T.primaryLight, borderRadius: '50%', filter: 'blur(50px)', pointerEvents: 'none' }} />
+          <div style={{ position: 'absolute', bottom: '-40px', left: '-40px', width: '140px', height: '140px', background: T.accentLight, borderRadius: '50%', filter: 'blur(35px)', pointerEvents: 'none' }} />
 
           {/* Top bar */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '32px', position: 'relative', zIndex: 2 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <motion.div whileTap={{ scale: 0.95 }}
-                style={{ width: '38px', height: '38px', borderRadius: '12px', background: T.glass, border: `1px solid ${T.glassBorder}`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', backdropFilter: 'blur(10px)' }}>
-                <Bell size={16} color={T.txt} />
-                {notifCount > 0 && <div style={{ position: 'absolute', top: '6px', right: '6px', width: '8px', height: '8px', borderRadius: '50%', background: T.danger }} />}
-              </motion.div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '28px', position: 'relative', zIndex: 1 }}>
+            <div style={{ width: '38px', height: '38px', borderRadius: '12px', background: T.bg, border: `1px solid ${T.borderLight}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Bell size={16} color={T.txt2} />
             </div>
             <motion.button whileTap={{ scale: 0.95 }} onClick={() => { signOut(); navigate('/login'); }}
-              style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px', borderRadius: '12px', background: T.glass, border: `1px solid ${T.glassBorder}`, color: T.txt2, fontSize: '12px', fontWeight: 700, cursor: 'pointer', backdropFilter: 'blur(10px)' }}>
-              <LogOut size={14} />
-              Sign Out
+              style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px', borderRadius: '12px', background: T.dangerLight, border: '1px solid rgba(225,29,72,0.15)', color: T.danger, fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}>
+              <LogOut size={13} /> Sign Out
             </motion.button>
           </div>
 
           {/* Avatar + Greeting */}
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} style={{ display: 'flex', alignItems: 'center', gap: '18px', position: 'relative', zIndex: 2 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px', position: 'relative', zIndex: 1 }}>
             <motion.div whileTap={{ scale: 0.95 }} onClick={() => navigate('/customer/profile')}
-              style={{ width: '72px', height: '72px', borderRadius: '22px', overflow: 'hidden', border: `2px solid ${tier.color}`, boxShadow: `0 0 20px ${tier.glow}`, cursor: 'pointer', flexShrink: 0, background: T.glass }}>
+              style={{ width: '68px', height: '68px', borderRadius: '22px', overflow: 'hidden', border: `2.5px solid ${tier.color}`, boxShadow: `0 0 0 4px ${tier.light}, 0 8px 20px rgba(0,0,0,0.08)`, cursor: 'pointer', background: T.bg2, flexShrink: 0 }}>
               {avatar
                 ? <img src={avatar} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '26px' }}>{displayName[0]?.toUpperCase()}</div>
+                : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '26px', fontWeight: 900, color: T.primary, background: T.primaryLight }}>{displayName[0]?.toUpperCase()}</div>
               }
             </motion.div>
             <div>
-              <div style={{ color: T.txt2, fontSize: '12px', fontWeight: 700, letterSpacing: '0.05em', marginBottom: '4px' }}>Welcome back,</div>
-              <div style={{ color: T.white, fontSize: '26px', fontWeight: 900, lineHeight: 1.1 }}>{displayName}</div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '6px' }}>
-                <span style={{ fontSize: '14px' }}>{tier.icon}</span>
-                <span style={{ color: tier.color, fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{tier.name} Member</span>
+              <div style={{ color: T.txt3, fontSize: '12px', fontWeight: 600, marginBottom: '2px' }}>Welcome back 👋</div>
+              <div style={{ color: T.ink, fontSize: '24px', fontWeight: 900, lineHeight: 1.1 }}>{displayName}</div>
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', marginTop: '6px', padding: '3px 10px', borderRadius: '8px', background: tier.light, border: `1px solid ${tier.color}30` }}>
+                <span style={{ fontSize: '12px' }}>{tier.icon}</span>
+                <span style={{ color: tier.color, fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em' }}>{tier.name} Member</span>
               </div>
             </div>
-          </motion.div>
+          </div>
         </div>
 
-        <div style={{ padding: '0 16px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <div style={{ padding: '20px 16px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
 
           {/* ─── FINANCIAL LEDGER CARD ─── */}
           <motion.div {...cardAnim(0)}
-            style={{ background: T.glass, borderRadius: T.radius, border: `1px solid ${T.glassBorder}`, padding: '24px', backdropFilter: 'blur(20px)', position: 'relative', overflow: 'hidden' }}>
-            <div style={{ position: 'absolute', top: '-30px', right: '-30px', width: '120px', height: '120px', background: T.successGlow, borderRadius: '50%', filter: 'blur(40px)', pointerEvents: 'none' }} />
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+            style={{ background: T.white, borderRadius: T.radius, border: `1px solid ${T.border}`, padding: '22px', boxShadow: T.shadow }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <div style={{ width: '36px', height: '36px', borderRadius: '12px', background: T.successGlow, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{ width: '36px', height: '36px', borderRadius: '11px', background: T.successLight, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <Wallet size={18} color={T.success} />
                 </div>
-                <span style={{ color: T.txt, fontSize: '14px', fontWeight: 800 }}>Financial Ledger</span>
+                <span style={{ color: T.ink, fontSize: '14px', fontWeight: 800 }}>Financial Ledger</span>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '4px 10px', borderRadius: '8px', background: 'rgba(16,185,129,0.15)', border: '1px solid rgba(16,185,129,0.2)' }}>
-                <TrendingUp size={12} color={T.success} />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '4px 10px', borderRadius: '8px', background: T.successLight }}>
+                <TrendingUp size={11} color={T.success} />
                 <span style={{ color: T.success, fontSize: '10px', fontWeight: 900 }}>LIVE</span>
               </div>
             </div>
-
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px' }}>
               {[
-                { label: 'Total Bought', value: totalBought, color: T.white, bg: 'rgba(255,255,255,0.06)' },
-                { label: 'Total Paid',   value: totalPaid,   color: T.success, bg: 'rgba(16,185,129,0.08)' },
-                { label: 'Balance Due',  value: debt,        color: debt > 0 ? T.danger : T.success, bg: debt > 0 ? 'rgba(244,63,94,0.08)' : 'rgba(16,185,129,0.08)' },
+                { label: 'Total Bought', value: totalBought, color: T.ink,     bg: T.bg },
+                { label: 'Total Paid',   value: totalPaid,   color: T.success, bg: T.successLight },
+                { label: 'Balance Due',  value: debt,        color: debt > 0 ? T.danger : T.success, bg: debt > 0 ? T.dangerLight : T.successLight },
               ].map((stat, i) => (
-                <motion.div key={i} initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: 0.2 + i * 0.1 }}
-                  style={{ textAlign: 'center', padding: '14px 8px', borderRadius: '16px', background: stat.bg, border: `1px solid rgba(255,255,255,0.06)` }}>
-                  <div style={{ color: T.txt2, fontSize: '9px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '8px' }}>{stat.label}</div>
-                  <div style={{ color: stat.color, fontSize: '13px', fontWeight: 900, letterSpacing: '-0.02em' }}>
+                <div key={i} style={{ textAlign: 'center', padding: '14px 6px', borderRadius: '16px', background: stat.bg, border: `1px solid ${T.borderLight}` }}>
+                  <div style={{ color: T.txt3, fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>{stat.label}</div>
+                  <div style={{ color: stat.color, fontSize: '13px', fontWeight: 900 }}>
                     <AnimatedCounter value={stat.value} />
                   </div>
-                </motion.div>
+                </div>
               ))}
             </div>
           </motion.div>
 
           {/* ─── QUICK ACTIONS ─── */}
           <motion.div {...cardAnim(1)}>
-            <div style={{ color: T.txt2, fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '12px' }}>Quick Actions</div>
+            <div style={{ color: T.txt3, fontSize: '10px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '10px' }}>Quick Actions</div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px' }}>
               {quickActions.map((action) => (
                 <motion.button key={action.id} whileTap={{ scale: 0.93 }} onClick={() => navigate(action.path)}
-                  style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', padding: '16px 8px', borderRadius: T.radiusSm, background: T.glass, border: `1px solid ${T.glassBorder}`, cursor: 'pointer', backdropFilter: 'blur(10px)' }}>
-                  <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: action.glow, display: 'flex', alignItems: 'center', justifyContent: 'center', border: `1px solid ${action.color}40` }}>
-                    <action.icon size={18} color={action.color} />
+                  style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', padding: '16px 6px', borderRadius: T.radiusSm, background: T.white, border: `1px solid ${T.borderLight}`, cursor: 'pointer', boxShadow: '0 2px 12px rgba(0,0,0,0.04)' }}>
+                  <div style={{ width: '42px', height: '42px', borderRadius: '13px', background: action.light, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <action.icon size={20} color={action.color} />
                   </div>
-                  <span style={{ color: T.txt, fontSize: '10px', fontWeight: 800, textAlign: 'center', lineHeight: 1.2 }}>{action.label}</span>
+                  <span style={{ color: T.txt, fontSize: '10px', fontWeight: 800 }}>{action.label}</span>
                 </motion.button>
               ))}
             </div>
@@ -275,68 +253,61 @@ export const CustomerDashboard: React.FC = () => {
 
           {/* ─── LOYALTY TIER ─── */}
           <motion.div {...cardAnim(2)}
-            style={{ background: T.glass, borderRadius: T.radius, border: `1px solid ${T.glassBorder}`, padding: '20px', backdropFilter: 'blur(20px)', position: 'relative', overflow: 'hidden' }}>
-            <div style={{ position: 'absolute', top: '-20px', left: '-20px', width: '100px', height: '100px', background: tier.glow, borderRadius: '50%', filter: 'blur(30px)', pointerEvents: 'none' }} />
+            style={{ background: T.white, borderRadius: T.radius, border: `1px solid ${T.border}`, padding: '20px', boxShadow: T.shadow, overflow: 'hidden', position: 'relative' }}>
+            <div style={{ position: 'absolute', top: '-30px', right: '-30px', width: '120px', height: '120px', background: tier.light, borderRadius: '50%', filter: 'blur(30px)', pointerEvents: 'none' }} />
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <div style={{ width: '36px', height: '36px', borderRadius: '12px', background: tier.glow, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px' }}>
-                  {tier.icon}
-                </div>
+                <div style={{ width: '40px', height: '40px', borderRadius: '13px', background: tier.light, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}>{tier.icon}</div>
                 <div>
-                  <div style={{ color: T.txt2, fontSize: '10px', fontWeight: 700, textTransform: 'uppercase' }}>Loyalty Status</div>
+                  <div style={{ color: T.txt3, fontSize: '10px', fontWeight: 700, textTransform: 'uppercase' }}>Loyalty Status</div>
                   <div style={{ color: tier.color, fontSize: '16px', fontWeight: 900 }}>{tier.name} Member</div>
                 </div>
               </div>
               <div style={{ textAlign: 'right' }}>
-                <div style={{ color: T.txt2, fontSize: '10px', fontWeight: 700 }}>Total Orders</div>
-                <div style={{ color: T.white, fontSize: '20px', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '4px', justifyContent: 'flex-end' }}>
-                  {orders.length} <ShoppingCart size={14} color={T.txt2} />
-                </div>
+                <div style={{ color: T.txt3, fontSize: '10px', fontWeight: 600 }}>Total Orders</div>
+                <div style={{ color: T.ink, fontSize: '20px', fontWeight: 900 }}>{orders.length}</div>
               </div>
             </div>
 
-            {/* Award badges row */}
+            {/* Badge icons row */}
             <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
               {[
-                { label: 'Member', icon: Award, reached: true },
-                { label: 'Silver', icon: Star, reached: totalBought >= 50000 },
-                { label: 'Gold', icon: Sparkles, reached: totalBought >= 150000 },
-                { label: 'Diamond', icon: Zap, reached: totalBought >= 500000 },
-              ].map((badge, i) => (
-                <div key={i} style={{ flex: 1, textAlign: 'center', padding: '8px 4px', borderRadius: '10px', background: badge.reached ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.03)', border: `1px solid ${badge.reached ? T.glassBorder : 'rgba(255,255,255,0.04)'}` }}>
-                  <badge.icon size={14} color={badge.reached ? tier.color : T.txt3} style={{ margin: '0 auto 4px' }} />
-                  <div style={{ fontSize: '9px', fontWeight: 700, color: badge.reached ? T.txt : T.txt3 }}>{badge.label}</div>
+                { label: 'Member', icon: Award,    reached: true },
+                { label: 'Silver', icon: Star,     reached: totalBought >= 50000 },
+                { label: 'Gold',   icon: Sparkles, reached: totalBought >= 150000 },
+                { label: 'Gem',    icon: Zap,      reached: totalBought >= 500000 },
+              ].map((b, i) => (
+                <div key={i} style={{ flex: 1, textAlign: 'center', padding: '8px 4px', borderRadius: '10px', background: b.reached ? tier.light : T.bg, border: `1px solid ${b.reached ? tier.color + '30' : T.borderLight}` }}>
+                  <b.icon size={13} color={b.reached ? tier.color : T.txt3} style={{ margin: '0 auto 3px', display: 'block' }} />
+                  <div style={{ fontSize: '9px', fontWeight: 700, color: b.reached ? tier.color : T.txt3 }}>{b.label}</div>
                 </div>
               ))}
             </div>
 
-            {/* Progress bar */}
-            {tier.next && (
-              <div>
+            {tier.next ? (
+              <>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                  <span style={{ color: T.txt2, fontSize: '10px', fontWeight: 700 }}>Progress to {tier.next}</span>
-                  <span style={{ color: tier.color, fontSize: '10px', fontWeight: 900 }}>{fmt(tier.nextAt - totalBought)} remaining</span>
+                  <span style={{ color: T.txt2, fontSize: '11px', fontWeight: 600 }}>Progress to {tier.next}</span>
+                  <span style={{ color: tier.color, fontSize: '11px', fontWeight: 800 }}>{fmt(tier.nextAt - totalBought)} to go</span>
                 </div>
-                <div style={{ height: '6px', background: 'rgba(255,255,255,0.08)', borderRadius: '3px', overflow: 'hidden' }}>
-                  <motion.div initial={{ width: 0 }} animate={{ width: `${tierProgress}%` }} transition={{ duration: 1.5, ease: 'easeOut', delay: 0.5 }}
-                    style={{ height: '100%', background: `linear-gradient(90deg, ${tier.color}, ${T.accent})`, borderRadius: '3px' }} />
+                <div style={{ height: '7px', background: T.bg, borderRadius: '4px', overflow: 'hidden', border: `1px solid ${T.borderLight}` }}>
+                  <motion.div initial={{ width: 0 }} animate={{ width: `${tierProgress}%` }} transition={{ duration: 1.4, ease: 'easeOut', delay: 0.4 }}
+                    style={{ height: '100%', background: `linear-gradient(90deg, ${tier.color}, ${T.primary})`, borderRadius: '4px' }} />
                 </div>
-              </div>
-            )}
-            {!tier.next && (
-              <div style={{ textAlign: 'center', padding: '8px', background: T.accentGlow, borderRadius: '10px', color: T.accent, fontSize: '11px', fontWeight: 800 }}>
-                🎉 Maximum Tier Reached! You're a Diamond Member.
+              </>
+            ) : (
+              <div style={{ textAlign: 'center', padding: '10px', background: T.accentLight, borderRadius: '10px', color: T.accent, fontSize: '12px', fontWeight: 800 }}>
+                🎉 Maximum Tier Reached — Diamond Member!
               </div>
             )}
           </motion.div>
 
-          {/* ─── CONTACT INFO BANNER ─── */}
+          {/* ─── PROFILE COMPLETION NUDGE ─── */}
           {!customer.phone && (
-            <motion.div {...cardAnim(3)}
-              onClick={() => navigate('/customer/profile')}
-              style={{ cursor: 'pointer', background: 'rgba(245,158,11,0.08)', borderRadius: T.radiusSm, border: '1px solid rgba(245,158,11,0.25)', padding: '14px 16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'rgba(245,158,11,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Phone size={18} color={T.gold} />
+            <motion.div {...cardAnim(3)} onClick={() => navigate('/customer/profile')}
+              style={{ cursor: 'pointer', background: T.goldLight, borderRadius: T.radiusSm, border: '1px solid rgba(217,119,6,0.2)', padding: '14px 16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'rgba(217,119,6,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Phone size={17} color={T.gold} />
               </div>
               <div style={{ flex: 1 }}>
                 <div style={{ color: T.gold, fontSize: '13px', fontWeight: 800 }}>Complete Your Profile</div>
@@ -348,72 +319,64 @@ export const CustomerDashboard: React.FC = () => {
 
           {/* ─── RECENT ORDERS ─── */}
           <motion.div {...cardAnim(4)}
-            style={{ background: T.glass, borderRadius: T.radius, border: `1px solid ${T.glassBorder}`, padding: '20px', backdropFilter: 'blur(20px)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+            style={{ background: T.white, borderRadius: T.radius, border: `1px solid ${T.border}`, padding: '20px', boxShadow: T.shadow }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <div style={{ width: '36px', height: '36px', borderRadius: '12px', background: T.primaryGlow, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{ width: '36px', height: '36px', borderRadius: '11px', background: T.primaryLight, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <ShoppingBag size={18} color={T.primary} />
                 </div>
-                <span style={{ color: T.txt, fontSize: '15px', fontWeight: 900 }}>Recent Orders</span>
+                <span style={{ color: T.ink, fontSize: '15px', fontWeight: 900 }}>Recent Orders</span>
               </div>
               <motion.button whileTap={{ scale: 0.95 }} onClick={() => navigate('/customer/orders')}
-                style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '6px 12px', borderRadius: '10px', background: T.primaryGlow, border: 'none', color: T.primary, fontSize: '11px', fontWeight: 800, cursor: 'pointer' }}>
+                style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '6px 12px', borderRadius: '10px', background: T.primaryLight, border: 'none', color: T.primary, fontSize: '11px', fontWeight: 800, cursor: 'pointer' }}>
                 View All <ArrowUpRight size={12} />
               </motion.button>
             </div>
 
             <AnimatePresence>
               {orders.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '32px', color: T.txt3, fontWeight: 700, fontSize: '13px' }}>
-                  <ShoppingCart size={32} color={T.txt3} style={{ margin: '0 auto 12px', display: 'block' }} />
-                  No orders yet. Start shopping!
+                <div style={{ textAlign: 'center', padding: '32px 0', color: T.txt3 }}>
+                  <ShoppingCart size={32} color={T.txt3} style={{ margin: '0 auto 10px', display: 'block', opacity: 0.4 }} />
+                  <div style={{ fontWeight: 700, fontSize: '13px' }}>No orders yet. Start shopping!</div>
                 </div>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                  {orders.map((o, i) => (
-                    <motion.div key={i} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.06 }}
-                      onClick={() => setSelectedOrder(o)}
-                      style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '14px', padding: '14px 12px', borderRadius: '14px', background: 'transparent' }}
-                      onMouseEnter={e => (e.currentTarget.style.background = T.glassHover)}
-                      onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
-                      <div style={{ width: '42px', height: '42px', borderRadius: '13px', background: T.primaryGlow, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                        <ShoppingBag size={18} color={T.primary} />
+              ) : orders.map((o, i) => (
+                <motion.div key={i} initial={{ opacity: 0, x: -16 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.06 }}
+                  onClick={() => setSelectedOrder(o)}
+                  style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', borderRadius: '14px', marginBottom: i < orders.length - 1 ? '4px' : 0, transition: 'background 0.15s' }}
+                  onMouseEnter={e => (e.currentTarget.style.background = T.bg)}
+                  onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
+                  <div style={{ width: '42px', height: '42px', borderRadius: '13px', background: T.primaryLight, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <ShoppingBag size={18} color={T.primary} />
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ color: T.ink, fontSize: '13px', fontWeight: 800 }}>Bakery Order</div>
+                    <div style={{ display: 'flex', gap: '6px', alignItems: 'center', marginTop: '3px' }}>
+                      <div style={{ color: T.txt3, fontSize: '11px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '3px' }}>
+                        <Calendar size={10} />{new Date(o.created_at).toLocaleDateString()}
                       </div>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ color: T.txt, fontSize: '13px', fontWeight: 800 }}>Bakery Order</div>
-                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginTop: '3px' }}>
-                          <div style={{ color: T.txt2, fontSize: '11px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '3px' }}>
-                            <Calendar size={10} />
-                            {new Date(o.created_at).toLocaleDateString()}
-                          </div>
-                          <div style={{
-                            fontSize: '9px', fontWeight: 900, padding: '2px 6px', borderRadius: '6px', textTransform: 'uppercase',
-                            background: o.status === 'PENDING' ? 'rgba(245,158,11,0.15)' : 'rgba(16,185,129,0.15)',
-                            color: o.status === 'PENDING' ? T.gold : T.success
-                          }}>{o.status}</div>
-                        </div>
+                      <div style={{ fontSize: '9px', fontWeight: 900, padding: '2px 6px', borderRadius: '6px', textTransform: 'uppercase',
+                        background: o.status === 'PENDING' ? 'rgba(217,119,6,0.1)' : T.successLight,
+                        color: o.status === 'PENDING' ? T.gold : T.success }}>
+                        {o.status}
                       </div>
-                      <div style={{ textAlign: 'right' }}>
-                        <div style={{ color: T.white, fontSize: '14px', fontWeight: 900 }}>{fmt(o.total_price)}</div>
-                        <div style={{ color: T.primary, fontSize: '10px', fontWeight: 700, marginTop: '2px' }}>Receipt →</div>
-                      </div>
-                    </motion.div>
-                  ))}
-                </div>
-              )}
+                    </div>
+                  </div>
+                  <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                    <div style={{ color: T.ink, fontSize: '14px', fontWeight: 900 }}>{fmt(o.total_price)}</div>
+                    <div style={{ color: T.primary, fontSize: '10px', fontWeight: 700, marginTop: '2px' }}>Receipt →</div>
+                  </div>
+                </motion.div>
+              ))}
             </AnimatePresence>
           </motion.div>
 
         </div>
-
         <CustomerBottomNav />
       </div>
 
       <UnifiedReceiptViewer
-        isOpen={!!selectedOrder}
-        onClose={() => setSelectedOrder(null)}
-        order={selectedOrder}
-        appSettings={appSettings}
+        isOpen={!!selectedOrder} onClose={() => setSelectedOrder(null)}
+        order={selectedOrder} appSettings={appSettings}
         customerName={profile?.full_name || customer?.name}
       />
     </AnimatedPage>
