@@ -36,6 +36,9 @@ export const Login: React.FC = () => {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
+    // Clear any old, stuck sessions upon entering the Login screen
+    localStorage.removeItem('bakery_manual_session');
+
     if (user) {
       navigate('/', { replace: true });
     }
@@ -84,12 +87,13 @@ export const Login: React.FC = () => {
 
          if (!rpcErr && legacySession) {
             // Success! Create a manual session
-            // We use the ACTUAL role returned by the database (MANAGER, SUPPLIER, or CUSTOMER)
             const resolvedRole = (legacySession.role as UserRole) || 'CUSTOMER';
 
+            // DEBUG ALERT - REMOVE ONCE FIXED
+            alert("Login Bridge Detected Role: " + resolvedRole);
+
             const manualSession = {
-               id: legacySession.id,
-               email: legacySession.email,
+               id: legacySession.id,               email: legacySession.email,
                user_metadata: { 
                   full_name: legacySession.name, 
                   role: resolvedRole 
@@ -97,6 +101,8 @@ export const Login: React.FC = () => {
                is_manual: true
             } as any;
             
+            // Clear any old cache!
+            localStorage.removeItem('bakery_manual_session');
             setManualUser(manualSession, resolvedRole);
             setSuccessMsg('Authentication successful! Welcome back.');
             return;

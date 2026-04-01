@@ -21,13 +21,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const fetchRoleFromProfile = async (u: User) => {
     try {
-      const { data } = await supabase.from('profiles').select('role').eq('id', u.id).single();
+      const { data, error } = await supabase.from('profiles').select('role').eq('id', u.id).single();
+      if (error) throw error;
+      
       if (data && data.role) {
         setRole(data.role as UserRole);
       } else {
+        // Only fallback to metadata if profile is completely missing
         setRole((u.user_metadata?.role as UserRole) || 'CUSTOMER');
       }
     } catch (err) {
+      console.error("AuthContext: Failed to fetch role", err);
+      // Default to customer on complete failure for security
       setRole('CUSTOMER');
     } finally {
       setLoading(false);

@@ -1,40 +1,39 @@
 -- ==============================================================
--- PHASE 29: SECURE CUSTOMER AUTH BRIDGE
+-- PHASE 33: ULTIMATE AUTH BRIDGE (Dynamic Roles)
 -- ==============================================================
 -- Run this in your Supabase SQL Editor (https://supabase.com/dashboard)
--- This function allows people to verify their password BEFORE 
--- logging in, bypassing RLS (Row Level Security) safely.
+-- This function identifies a user and gets their REAL role from 
+-- the profiles table, avoiding hardcoded "Customer" redirects.
 -- ==============================================================
 
 CREATE OR REPLACE FUNCTION verify_customer_credentials(val_input TEXT, val_password TEXT)
 RETURNS jsonb
 LANGUAGE plpgsql
-SECURITY DEFINER -- IMPORTANT: Bypasses RLS to see the ledger passwords
+SECURITY DEFINER
 AS $$
 DECLARE
   found_user JSONB;
 BEGIN
-  -- 1. Look up by username or email in the customers table
-  -- We prioritize the manager-set password or pin
+  -- Search by Username or Email (Case-Insensitive)
+  -- Join with profiles to get the correct ROLE
   SELECT jsonb_build_object(
-    'id', id,
-    'email', COALESCE(email, (username || '@bakery.internal')),
-    'name', name,
-    'role', 'CUSTOMER',
-    'profile_id', profile_id,
+    'id', c.id,
+    'email', COALESCE(c.email, (c.username || '@bakery.internal')),
+    'name', c.name,
+    'role', COALESCE(p.role, 'CUSTOMER'), -- Get the actual role from profiles!
+    'profile_id', c.profile_id,
     'is_manual', true
   ) INTO found_user
-  FROM public.customers
-  WHERE (username ILIKE val_input OR email ILIKE val_input)
-    AND (password = val_password OR pin = val_password)
+  FROM public.customers c
+  LEFT JOIN public.profiles p ON c.profile_id = p.id
+  WHERE (c.username ILIKE val_input OR c.email ILIKE val_input)
+    AND (c.password = val_password OR c.pin = val_password)
   LIMIT 1;
 
-  -- 2. Return found user or NULL if no match
   RETURN found_user;
 END;
 $$;
 
--- Grant access to everyone (public/anon) so they can call it at login
+-- Grant access
 GRANT EXECUTE ON FUNCTION verify_customer_credentials(TEXT, TEXT) TO anon;
 GRANT EXECUTE ON FUNCTION verify_customer_credentials(TEXT, TEXT) TO authenticated;
-GRANT EXECUTE ON FUNCTION verify_customer_credentials(TEXT, TEXT) TO service_role;
