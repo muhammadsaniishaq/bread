@@ -1,110 +1,81 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Home, ShoppingBag, History as HistoryIcon, User, ListOrdered } from 'lucide-react';
+import { Home, ShoppingBag, FileText, User, ListOrdered } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 export const CustomerBottomNav: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const path = location.pathname;
 
-  const T = {
-    primary: '#10b981',
-    primaryGlow: 'rgba(16, 185, 129, 0.2)',
-    inactive: '#94a3b8',
-    bg: 'rgba(255, 255, 255, 0.9)',
-    border: 'rgba(0,0,0,0.05)',
-  };
+  const NAV = [
+    { id: 'dashboard', label: 'Home',    icon: Home,         route: '/customer/dashboard' },
+    { id: 'orders',    label: 'Orders',  icon: ListOrdered,  route: '/customer/orders' },
+    { id: 'store',     label: 'Shop',    icon: ShoppingBag,  route: '/customer/store', isCenter: true },
+    { id: 'docs',      label: 'Docs',    icon: FileText,     route: '/customer/docs' },
+    { id: 'profile',   label: 'Profile', icon: User,         route: '/customer/profile' },
+  ];
 
-  const currentPath = location.pathname;
+  const primary = '#7c3aed';
+  const primaryGlow = 'rgba(124, 58, 237, 0.3)';
 
   return (
     <div style={{
-      position: 'fixed',
-      bottom: 0,
-      left: 0,
-      right: 0,
+      position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 100,
       height: '76px',
-      background: T.bg,
-      backdropFilter: 'blur(20px)',
-      WebkitBackdropFilter: 'blur(20px)',
-      borderTop: `1px solid ${T.border}`,
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'space-around',
+      background: 'rgba(15, 12, 41, 0.85)',
+      backdropFilter: 'blur(24px)',
+      WebkitBackdropFilter: 'blur(24px)',
+      borderTop: '1px solid rgba(255,255,255,0.08)',
+      display: 'flex', alignItems: 'center', justifyContent: 'space-around',
       paddingBottom: 'env(safe-area-inset-bottom)',
-      zIndex: 50,
-      boxShadow: '0 -10px 40px rgba(0,0,0,0.04)'
+      boxShadow: '0 -20px 60px rgba(0,0,0,0.5)'
     }}>
-      
-      {/* 1. Dashboard */}
-      <div 
-        onClick={() => navigate('/customer/dashboard')}
-        style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', cursor: 'pointer' }}
-      >
-        <div style={{ padding: '6px', borderRadius: '12px', background: currentPath.includes('/dashboard') ? T.primaryGlow : 'transparent', color: currentPath.includes('/dashboard') ? T.primary : T.inactive, transition: 'all 0.2s' }}>
-          <Home size={22} strokeWidth={currentPath.includes('/dashboard') ? 2.5 : 2} />
-        </div>
-        <span style={{ fontSize: '10px', fontWeight: currentPath.includes('/dashboard') ? 800 : 600, color: currentPath.includes('/dashboard') ? T.primary : T.inactive }}>Home</span>
-      </div>
+      {NAV.map((item) => {
+        const isActive = path.includes(item.id) || (path === '/customer' && item.id === 'dashboard');
+        const Icon = item.icon;
 
-      {/* 2. Order History List */}
-      <div 
-        onClick={() => navigate('/customer/orders')}
-        style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', cursor: 'pointer' }}
-      >
-        <div style={{ padding: '6px', borderRadius: '12px', background: currentPath.includes('/orders') ? T.primaryGlow : 'transparent', color: currentPath.includes('/orders') ? T.primary : T.inactive, transition: 'all 0.2s' }}>
-          <ListOrdered size={22} strokeWidth={currentPath.includes('/orders') ? 2.5 : 2} />
-        </div>
-        <span style={{ fontSize: '10px', fontWeight: currentPath.includes('/orders') ? 800 : 600, color: currentPath.includes('/orders') ? T.primary : T.inactive }}>Orders</span>
-      </div>
+        if (item.isCenter) {
+          return (
+            <div key={item.id} onClick={() => navigate(item.route)}
+              style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer', position: 'relative' }}>
+              <motion.div whileTap={{ scale: 0.92 }} style={{
+                position: 'absolute', top: '-28px',
+                width: '58px', height: '58px', borderRadius: '19px',
+                background: `linear-gradient(135deg, ${primary}, #06b6d4)`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                boxShadow: `0 10px 30px ${primaryGlow}`,
+                border: '3px solid rgba(15,12,41,0.8)',
+              }}>
+                <Icon size={24} color="#fff" strokeWidth={2.5} />
+              </motion.div>
+              <span style={{ fontSize: '10px', fontWeight: 800, color: isActive ? primary : 'rgba(255,255,255,0.35)', marginTop: '34px' }}>
+                {item.label}
+              </span>
+            </div>
+          );
+        }
 
-      {/* 3. STORE (Prominent Middle/Action Button) */}
-      <div 
-        onClick={() => navigate('/customer/store')}
-        style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer', position: 'relative' }}
-      >
-        <div style={{ 
-          position: 'absolute', 
-          top: '-24px', 
-          width: '56px', 
-          height: '56px', 
-          borderRadius: '28px', 
-          background: T.primary, 
-          display: 'flex', 
-          alignItems: 'center', 
-          justifyContent: 'center',
-          boxShadow: '0 10px 25px rgba(16, 185, 129, 0.4)',
-          color: '#ffffff',
-          border: '4px solid #ffffff',
-          transform: currentPath.includes('/store') ? 'scale(1.05)' : 'scale(1)',
-          transition: 'transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275)'
-        }}>
-          <ShoppingBag size={24} strokeWidth={2.5} />
-        </div>
-        <span style={{ fontSize: '10px', fontWeight: 800, color: currentPath.includes('/store') ? T.primary : T.inactive, marginTop: '34px' }}>Store</span>
-      </div>
-
-      {/* 4. Receipt History (History) */}
-      <div 
-        onClick={() => navigate('/customer/history')}
-        style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', cursor: 'pointer' }}
-      >
-        <div style={{ padding: '6px', borderRadius: '12px', background: currentPath.includes('/history') ? T.primaryGlow : 'transparent', color: currentPath.includes('/history') ? T.primary : T.inactive, transition: 'all 0.2s' }}>
-          <HistoryIcon size={22} strokeWidth={currentPath.includes('/history') ? 2.5 : 2} />
-        </div>
-        <span style={{ fontSize: '10px', fontWeight: currentPath.includes('/history') ? 800 : 600, color: currentPath.includes('/history') ? T.primary : T.inactive }}>History</span>
-      </div>
-
-      {/* 5. Profile */}
-      <div 
-        onClick={() => navigate('/customer/profile')}
-        style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', cursor: 'pointer' }}
-      >
-        <div style={{ padding: '6px', borderRadius: '12px', background: currentPath.includes('/profile') ? T.primaryGlow : 'transparent', color: currentPath.includes('/profile') ? T.primary : T.inactive, transition: 'all 0.2s' }}>
-          <User size={22} strokeWidth={currentPath.includes('/profile') ? 2.5 : 2} />
-        </div>
-        <span style={{ fontSize: '10px', fontWeight: currentPath.includes('/profile') ? 800 : 600, color: currentPath.includes('/profile') ? T.primary : T.inactive }}>Profile</span>
-      </div>
-
+        return (
+          <motion.div key={item.id} whileTap={{ scale: 0.9 }}
+            onClick={() => navigate(item.route)}
+            style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', cursor: 'pointer' }}>
+            <div style={{
+              width: '40px', height: '36px', borderRadius: '12px',
+              background: isActive ? 'rgba(124,58,237,0.2)' : 'transparent',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              transition: 'all 0.2s ease'
+            }}>
+              <Icon size={22} color={isActive ? primary : 'rgba(255,255,255,0.35)'} strokeWidth={isActive ? 2.5 : 2} />
+            </div>
+            <span style={{
+              fontSize: '10px', fontWeight: isActive ? 800 : 600,
+              color: isActive ? primary : 'rgba(255,255,255,0.35)',
+              transition: 'all 0.2s'
+            }}>{item.label}</span>
+          </motion.div>
+        );
+      })}
     </div>
   );
 };
