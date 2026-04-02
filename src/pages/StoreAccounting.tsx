@@ -31,12 +31,13 @@ const T = {
 const fmt = (v: number) => "₦" + v.toLocaleString();
 
 export default function StoreAccounting() {
-  const { customers, transactions, debtPayments, updateTransactionStatus } = useAppContext();
+  const { customers, transactions, debtPayments, updateTransactionStatus, updateCustomer } = useAppContext();
   const [suppliers, setSuppliers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchSup, setSearchSup] = useState('');
   const [selectedSup, setSelectedSup] = useState<any>(null);
-  const [tab, setTab] = useState<'LEDGER' | 'REQUESTS'>('LEDGER');
+  const [tab, setTab] = useState<'LEDGER' | 'REQUESTS' | 'CUSTOMERS'>('LEDGER');
+  const [searchCust, setSearchCust] = useState('');
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -94,14 +95,15 @@ export default function StoreAccounting() {
           <div style={{ display: 'flex', background: 'rgba(0,0,0,0.05)', padding: '4px', borderRadius: '14px', marginBottom: '24px' }}>
              <button onClick={() => setTab('LEDGER')}
                style={{ flex: 1, padding: '10px', borderRadius: '11px', border: 'none', background: tab === 'LEDGER' ? '#fff' : 'transparent', color: tab === 'LEDGER' ? T.primary : T.txt3, fontSize: '13px', fontWeight: 800, cursor: 'pointer', boxShadow: tab === 'LEDGER' ? '0 2px 8px rgba(0,0,0,0.05)' : 'none' }}>
-                Supplier Ledger
+                Ledger
              </button>
              <button onClick={() => setTab('REQUESTS')}
-               style={{ flex: 1, padding: '10px', borderRadius: '11px', border: 'none', background: tab === 'REQUESTS' ? '#fff' : 'transparent', color: tab === 'REQUESTS' ? T.primary : T.txt3, fontSize: '13px', fontWeight: 800, cursor: 'pointer', boxShadow: tab === 'REQUESTS' ? '0 2px 8px rgba(0,0,0,0.05)' : 'none', position: 'relative' }}>
-                Handover Requests
-                {transactions.filter(t => t.status === 'PENDING_STORE').length > 0 && (
-                  <div style={{ position: 'absolute', top: '7px', right: '10px', width: '8px', height: '8px', borderRadius: '50%', background: T.danger }} />
-                )}
+               style={{ flex: 1, padding: '10px', borderRadius: '11px', border: 'none', background: tab === 'REQUESTS' ? '#fff' : 'transparent', color: tab === 'REQUESTS' ? T.primary : T.txt3, fontSize: '13px', fontWeight: 800, cursor: 'pointer', boxShadow: tab === 'REQUESTS' ? '0 2px 8px rgba(0,0,0,0.05)' : 'none' }}>
+                Requests
+             </button>
+             <button onClick={() => setTab('CUSTOMERS')}
+               style={{ flex: 1, padding: '10px', borderRadius: '11px', border: 'none', background: tab === 'CUSTOMERS' ? '#fff' : 'transparent', color: tab === 'CUSTOMERS' ? T.primary : T.txt3, fontSize: '13px', fontWeight: 800, cursor: 'pointer', boxShadow: tab === 'CUSTOMERS' ? '0 2px 8px rgba(0,0,0,0.05)' : 'none' }}>
+                Assignment
              </button>
           </div>
 
@@ -180,7 +182,7 @@ export default function StoreAccounting() {
                 )}
               </div>
             </>
-          ) : (
+          ) : tab === 'REQUESTS' ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                {transactions.filter(t => t.status === 'PENDING_STORE').length === 0 ? (
                  <div style={{ textAlign: 'center', padding: '60px 20px', background: '#fff', borderRadius: T.radius, border: `1px dashed ${T.border}` }}>
@@ -222,6 +224,35 @@ export default function StoreAccounting() {
                    );
                  })
                )}
+            </div>
+          ) : (
+            /* Customers Tab (Assignment) */
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+               <div style={{ position: 'relative', marginBottom: '8px' }}>
+                  <Search size={18} color={T.txt3} style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)' }} />
+                  <input type="text" placeholder="Search customer..." value={searchCust} onChange={(e) => setSearchCust(e.target.value)}
+                    style={{ width: '100%', padding: '14px 16px 14px 44px', borderRadius: '16px', border: `1px solid ${T.border}`, background: '#fff', fontSize: '14px', fontWeight: 600, color: T.ink, outline: 'none', boxSizing: 'border-box' }} />
+               </div>
+
+               {customers.filter(c => !suppliers.some(s => s.profile_id === c.profile_id))
+                .filter(c => c.name.toLowerCase().includes(searchCust.toLowerCase()))
+                .map(cust => (
+                  <div key={cust.id} style={{ background: '#fff', borderRadius: '20px', padding: '16px', border: `1px solid ${T.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                     <div>
+                        <div style={{ fontSize: '14px', fontWeight: 800, color: T.ink }}>{cust.name}</div>
+                        <div style={{ fontSize: '11px', color: T.txt3, fontWeight: 700 }}>{cust.location || 'No Location'}</div>
+                     </div>
+                     <select 
+                       value={cust.assignedSupplierId || ''} 
+                       onChange={(e) => updateCustomer({ ...cust, assignedSupplierId: e.target.value || undefined })}
+                       style={{ padding: '8px', borderRadius: '10px', border: `1.5px solid ${T.border}`, background: T.bg, fontSize: '12px', fontWeight: 700, outline: 'none', maxWidth: '120px' }}>
+                        <option value="">(None)</option>
+                        {suppliers.map(s => (
+                          <option key={s.id} value={s.custId}>{s.full_name}</option>
+                        ))}
+                     </select>
+                  </div>
+                ))}
             </div>
           )}
         </div>

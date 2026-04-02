@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { supabase } from '../lib/supabase';
 import { AnimatedPage } from '../components/AnimatedPage';
 import { useAppContext } from '../store/AppContext';
 import { useNavigate } from 'react-router-dom';
@@ -22,6 +23,20 @@ const StoreRecords: React.FC = () => {
   const [search, setSearch] = useState('');
   const [filterType, setFilterType] = useState<'ALL' | 'Cash' | 'Debt'>('ALL');
   const [filterDate, setFilterDate] = useState<'TODAY' | 'WEEK' | 'MONTH' | 'ALL'>('TODAY');
+  const [supplierIds, setSupplierIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    const fetchSuppliers = async () => {
+      const { data } = await supabase.from('profiles').select('id').eq('role', 'SUPPLIER');
+      if (data) {
+        const ids = customers.filter(c => data.some((p: any) => p.id === c.profile_id)).map(c => c.id);
+        setSupplierIds(ids);
+      }
+    };
+    fetchSuppliers();
+  }, [customers]);
+
+  const isSupplier = (cid?: string) => cid ? supplierIds.includes(cid) : false;
 
   const getCustomer = (id?: string) => customers.find(c => c.id === id)?.name || 'Walk-in';
   const getProductNames = (tx: typeof transactions[0]) => {
@@ -56,7 +71,8 @@ const StoreRecords: React.FC = () => {
 
   const totalFiltered = filtered.reduce((s, t) => s + t.totalPrice, 0);
   const cashFiltered  = filtered.filter(t => t.type === 'Cash').reduce((s, t) => s + t.totalPrice, 0);
-  const debtFiltered  = filtered.filter(t => t.type === 'Debt').reduce((s, t) => s + t.totalPrice, 0);
+  // Only count Supplier Debt in the summary for the store keeper
+  const debtFiltered  = filtered.filter(t => t.type === 'Debt' && isSupplier(t.customerId)).reduce((s, t) => s + t.totalPrice, 0);
 
   return (
     <AnimatedPage>
@@ -144,7 +160,9 @@ const StoreRecords: React.FC = () => {
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                     <div style={{ fontSize: '13px', fontWeight: 800, color: T.ink, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '55%' }}>{getCustomer(tx.customerId)}</div>
-                    <div style={{ fontSize: '15px', fontWeight: 900, color: T.ink }}>{fmt(tx.totalPrice)}</div>
+                    <div style={{ fontSize: '15px', fontWeight: 900, color: T.ink }}>
+                       {tx.type === 'Debt' && !isSupplier(tx.customerId) ? 'HIDDEN' : fmt(tx.totalPrice)}
+                    </div>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
                     <div style={{ fontSize: '10px', color: T.txt3, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '65%' }}>{getProductNames(tx)}</div>
