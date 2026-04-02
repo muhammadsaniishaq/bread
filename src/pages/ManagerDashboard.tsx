@@ -10,7 +10,8 @@ import {
   ShoppingCart, Receipt, Wallet, Zap, Clock, ArrowRight,
   Activity, ChevronRight, AlertTriangle, Target, BarChart3,
   RefreshCw, Star, CheckCircle, XCircle, Eye, Trophy,
-  TrendingDown, Percent
+  TrendingDown, Percent, UserCircle, ClipboardList, Boxes,
+  CreditCard, PieChart, Building2
 } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -142,20 +143,53 @@ export const ManagerDashboard: React.FC = () => {
     { label: 'Stock Units', value: metrics.stockRemaining.toLocaleString(), sub: `${metrics.lowStock.length} low stock`, icon: Package, color: T.emerald, bg: T.emeraldL, path: '/manager/products' },
   ];
 
-  const modules = [
-    { label: 'Executive POS', icon: ShoppingCart, color: T.emerald, bg: T.emeraldL, path: '/manager/sales' },
-    { label: 'Sales Stream',  icon: Receipt,      color: T.blue,    bg: T.blueL,    path: '/manager/transactions' },
-    { label: 'Bread Catalog', icon: PackageSearch, color: T.amber,  bg: T.amberL,   path: '/manager/products' },
-    { label: 'Payouts',       icon: Landmark,     color: T.primary, bg: T.pLight,   path: '/manager/remissions' },
-    { label: 'Raw Materials', icon: Package,       color: T.amber,  bg: T.amberL,   path: '/manager/raw-materials' },
-    { label: 'Staff Roles',   icon: Shield,        color: '#9333ea',bg: 'rgba(147,51,234,0.08)', path: '/manager/staff' },
-    { label: 'Assign Stock',  icon: ArrowRightLeft,color: T.blue,   bg: T.blueL,    path: '/manager/stock-assignment' },
-    { label: 'Reconcile',     icon: Scale,         color: T.rose,   bg: T.roseL,    path: '/manager/reconciliation' },
-    { label: 'Full Reports',  icon: FileBarChart,  color: '#6366f1',bg: 'rgba(99,102,241,0.08)', path: '/manager/reports' },
-    { label: 'Customers',     icon: Users,         color: T.emerald,bg: T.emeraldL,  path: '/manager/customers' },
-    { label: 'Expenses',      icon: Wallet,        color: T.rose,   bg: T.roseL,    path: '/manager/expenses' },
-    { label: 'Audit Log',     icon: Eye,           color: '#64748b',bg: 'rgba(100,116,139,0.08)', path: '/manager/audit' },
-    { label: 'Settings',      icon: Settings,      color: '#475569',bg: 'rgba(71,85,105,0.08)', path: '/manager/settings' },
+  const moduleGroups = [
+    {
+      title: '💰 Sales & Finance',
+      color: T.emerald,
+      bg: T.emeraldL,
+      modules: [
+        { label: 'POS / Sales',    icon: ShoppingCart, color: T.emerald, bg: T.emeraldL, path: '/manager/sales' },
+        { label: 'Transactions',   icon: Receipt,      color: T.blue,    bg: T.blueL,    path: '/manager/transactions' },
+        { label: 'Remissions',     icon: Landmark,     color: T.primary, bg: T.pLight,   path: '/manager/remissions' },
+        { label: 'Expenses',       icon: Wallet,       color: T.rose,    bg: T.roseL,    path: '/manager/expenses' },
+        { label: 'Reconciliation', icon: Scale,        color: '#6366f1', bg: 'rgba(99,102,241,0.10)', path: '/manager/reconciliation' },
+        { label: 'Full Reports',   icon: FileBarChart, color: '#6366f1', bg: 'rgba(99,102,241,0.08)', path: '/manager/reports' },
+      ]
+    },
+    {
+      title: '📦 Inventory & Stock',
+      color: T.amber,
+      bg: T.amberL,
+      modules: [
+        { label: 'Bread Catalog',  icon: PackageSearch, color: T.amber,   bg: T.amberL,  path: '/manager/products' },
+        { label: 'Raw Materials',  icon: Boxes,         color: '#92400e', bg: 'rgba(146,64,14,0.10)', path: '/manager/raw-materials' },
+        { label: 'Assign Stock',   icon: ArrowRightLeft,color: T.blue,    bg: T.blueL,   path: '/manager/stock-assignment' },
+        { label: 'Stock Levels',   icon: PieChart,      color: T.emerald, bg: T.emeraldL, path: '/manager/products' },
+      ]
+    },
+    {
+      title: '👥 People & Accounts',
+      color: T.primary,
+      bg: T.pLight,
+      modules: [
+        { label: 'Customers',      icon: Users,         color: T.emerald, bg: T.emeraldL, path: '/manager/customers' },
+        { label: 'Staff Roster',   icon: Shield,        color: '#9333ea', bg: 'rgba(147,51,234,0.08)', path: '/manager/staff' },
+        { label: 'Staff Profiles', icon: UserCircle,    color: T.blue,    bg: T.blueL,    path: '/manager/staff' },
+        { label: 'Customer IDs',   icon: CreditCard,    color: T.primary, bg: T.pLight,   path: '/manager/customers' },
+      ]
+    },
+    {
+      title: '⚙️ System & Admin',
+      color: '#475569',
+      bg: 'rgba(71,85,105,0.08)',
+      modules: [
+        { label: 'Audit Log',      icon: Eye,           color: '#64748b', bg: 'rgba(100,116,139,0.08)', path: '/manager/audit' },
+        { label: 'Audit History',  icon: ClipboardList, color: '#94a3b8', bg: 'rgba(148,163,184,0.10)', path: '/manager/audit' },
+        { label: 'App Settings',   icon: Settings,      color: '#475569', bg: 'rgba(71,85,105,0.08)',  path: '/manager/settings' },
+        { label: 'Company Info',   icon: Building2,     color: T.primary, bg: T.pLight,   path: '/manager/settings' },
+      ]
+    },
   ];
 
   return (
@@ -562,26 +596,39 @@ export const ManagerDashboard: React.FC = () => {
             )}
           </AnimatePresence>
 
-          {/* ─── MODULE GRID ─── */}
-          <motion.div {...cardAnim(6)}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+          {/* ─── MODULE GROUPS ─── */}
+          <motion.div {...cardAnim(6)} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <div style={{ width: '32px', height: '32px', borderRadius: '10px', background: T.pLight, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <Zap size={15} color={T.primary} />
               </div>
               <span style={{ fontSize: '14px', fontWeight: 900, color: T.ink }}>System Modules</span>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px' }}>
-              {modules.map((m, i) => (
-                <motion.button key={i} whileTap={{ scale: 0.93 }} onClick={() => navigate(m.path)}
-                  style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '7px', padding: '14px 6px', borderRadius: '16px', background: T.white, border: `1px solid ${T.borderL}`, cursor: 'pointer', boxShadow: '0 2px 10px rgba(0,0,0,0.04)', fontFamily: 'inherit' }}>
-                  <div style={{ width: '38px', height: '38px', borderRadius: '12px', background: m.bg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <m.icon size={18} color={m.color} />
+
+            {moduleGroups.map((group, gi) => (
+              <div key={gi} style={{ background: T.white, borderRadius: T.radius, padding: '14px', boxShadow: T.shadow, border: `1px solid ${T.borderL}` }}>
+                {/* Group header */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                  <div style={{ padding: '3px 10px', borderRadius: '8px', background: group.bg, border: `1px solid ${group.color}25` }}>
+                    <span style={{ fontSize: '11px', fontWeight: 800, color: group.color }}>{group.title}</span>
                   </div>
-                  <span style={{ fontSize: '9px', fontWeight: 800, color: T.txt2, textAlign: 'center', lineHeight: 1.3 }}>{m.label}</span>
-                </motion.button>
-              ))}
-            </div>
+                </div>
+                {/* Module buttons grid */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
+                  {group.modules.map((m, i) => (
+                    <motion.button key={i} whileTap={{ scale: 0.93 }} onClick={() => navigate(m.path)}
+                      style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', padding: '12px 6px', borderRadius: '14px', background: T.bg, border: `1px solid ${T.borderL}`, cursor: 'pointer', fontFamily: 'inherit' }}>
+                      <div style={{ width: '36px', height: '36px', borderRadius: '11px', background: m.bg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <m.icon size={17} color={m.color} />
+                      </div>
+                      <span style={{ fontSize: '9px', fontWeight: 800, color: T.txt2, textAlign: 'center', lineHeight: 1.3 }}>{m.label}</span>
+                    </motion.button>
+                  ))}
+                </div>
+              </div>
+            ))}
           </motion.div>
+
 
           {/* ─── QUICK ACCESS ROW ─── */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
