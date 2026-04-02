@@ -34,6 +34,8 @@ import ManagerAudit from './pages/ManagerAudit';
 import ManagerStockLevels from './pages/ManagerStockLevels';
 import ManagerCustomerIDs from './pages/ManagerCustomerIDs';
 import ManagerCompanyInfo from './pages/ManagerCompanyInfo';
+import ManagerStaffProfiles from './pages/ManagerStaffProfiles';
+import ManagerAuditHistory from './pages/ManagerAuditHistory';
 
 import Dashboard from './pages/Dashboard';
 import Settings from './pages/Settings';
@@ -135,6 +137,8 @@ const AppContent: React.FC = () => {
             <Route path="/manager/stock-levels" element={<RoleGuard allowedRoles={['MANAGER']}><ManagerStockLevels /></RoleGuard>} />
             <Route path="/manager/customer-ids" element={<RoleGuard allowedRoles={['MANAGER']}><ManagerCustomerIDs /></RoleGuard>} />
             <Route path="/manager/company" element={<RoleGuard allowedRoles={['MANAGER']}><ManagerCompanyInfo /></RoleGuard>} />
+            <Route path="/manager/staff-profiles" element={<RoleGuard allowedRoles={['MANAGER']}><ManagerStaffProfiles /></RoleGuard>} />
+            <Route path="/manager/audit-history" element={<RoleGuard allowedRoles={['MANAGER']}><ManagerAuditHistory /></RoleGuard>} />
             
             <Route path="/supplier" element={<RoleGuard allowedRoles={['SUPPLIER']}><Dashboard /></RoleGuard>} />
           </Route>

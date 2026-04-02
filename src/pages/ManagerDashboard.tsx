@@ -175,7 +175,7 @@ export const ManagerDashboard: React.FC = () => {
       modules: [
         { label: 'Customers',      icon: Users,         color: T.emerald, bg: T.emeraldL, path: '/manager/customers' },
         { label: 'Staff Roster',   icon: Shield,        color: '#9333ea', bg: 'rgba(147,51,234,0.08)', path: '/manager/staff' },
-        { label: 'Staff Profiles', icon: UserCircle,    color: T.blue,    bg: T.blueL,    path: '/manager/staff' },
+        { label: 'Staff Profiles', icon: UserCircle,    color: T.blue,    bg: T.blueL,    path: '/manager/staff-profiles' },
         { label: 'Customer IDs',   icon: CreditCard,    color: T.primary, bg: T.pLight,   path: '/manager/customer-ids' },
       ]
     },
@@ -185,7 +185,7 @@ export const ManagerDashboard: React.FC = () => {
       bg: 'rgba(71,85,105,0.08)',
       modules: [
         { label: 'Audit Log',      icon: Eye,           color: '#64748b', bg: 'rgba(100,116,139,0.08)', path: '/manager/audit' },
-        { label: 'Audit History',  icon: ClipboardList, color: '#94a3b8', bg: 'rgba(148,163,184,0.10)', path: '/manager/audit' },
+        { label: 'Audit History',  icon: ClipboardList, color: '#94a3b8', bg: 'rgba(148,163,184,0.10)', path: '/manager/audit-history' },
         { label: 'App Settings',   icon: Settings,      color: '#475569', bg: 'rgba(71,85,105,0.08)',  path: '/manager/settings' },
         { label: 'Company Info',   icon: Building2,     color: T.primary, bg: T.pLight,   path: '/manager/company' },
       ]
