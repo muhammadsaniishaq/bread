@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAppContext } from '../store/AppContext';
 import { 
-  Users, Search, Calculator, Package, Clock, CheckCircle2, XCircle, ArrowRightLeft
+  Users, Search, Clock, ArrowRightLeft
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AnimatedPage } from '../components/AnimatedPage';
@@ -31,7 +31,7 @@ const T = {
 const fmt = (v: number) => "₦" + v.toLocaleString();
 
 export default function StoreAccounting() {
-  const { customers, transactions, debtPayments, updateTransactionStatus, updateCustomer } = useAppContext();
+  const { customers = [], transactions = [], debtPayments = [], updateTransactionStatus, updateCustomer } = useAppContext();
   const [suppliers, setSuppliers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchSup, setSearchSup] = useState('');
@@ -76,18 +76,18 @@ export default function StoreAccounting() {
   };
 
   const filteredSuppliers = suppliers.filter(s => 
-    s.full_name.toLowerCase().includes(searchSup.toLowerCase())
+    (String(s.full_name || '')).toLowerCase().includes(searchSup.toLowerCase())
   );
 
   return (
     <AnimatedPage>
-      <div style={{ minHeight: '100vh', background: T.bg, paddingBottom: '110px', fontFamily: 'Inter, sans-serif' }}>
+      <div style={{ minHeight: '100vh', background: T.bg, paddingBottom: '110px', fontFamily: 'Inter, system-ui, sans-serif' }}>
         
         <div style={{ background: 'linear-gradient(145deg, #0a1628 0%, #0f2952 50%, #1e40af 100%)', padding: '48px 20px 24px', position: 'relative', overflow: 'hidden' }}>
           <div style={{ position: 'absolute', top: '-10%', right: '-10%', width: '180px', height: '180px', background: 'radial-gradient(circle, rgba(37,99,235,0.3) 0%, transparent 70%)' }} />
           <div style={{ position: 'relative', zIndex: 10 }}>
             <h1 style={{ fontSize: '24px', fontWeight: 900, color: '#fff', letterSpacing: '-0.02em', margin: 0 }}>Supplier Ledger</h1>
-            <p style={{ margin: '4px 0 0', fontSize: '13px', color: 'rgba(255,255,255,0.6)', fontWeight: 600 }}>Lissafin Supplier: Bread da ya dauka da kudin da ya biya.</p>
+            <p style={{ margin: '4px 0 0', fontSize: '13px', color: 'rgba(255,255,255,0.6)', fontWeight: 600 }}>Track supplier debt and unit counts.</p>
           </div>
         </div>
 
@@ -113,7 +113,7 @@ export default function StoreAccounting() {
                 <Search size={18} color={T.txt3} style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)' }} />
                 <input 
                   type="text" 
-                  placeholder="Search Supplier (Dila)..." 
+                  placeholder="Search Supplier..." 
                   value={searchSup}
                   onChange={(e) => setSearchSup(e.target.value)}
                   style={{ width: '100%', padding: '14px 16px 14px 44px', borderRadius: '16px', border: `1px solid ${T.border}`, background: '#fff', fontSize: '14px', fontWeight: 600, color: T.ink, outline: 'none', boxSizing: 'border-box', boxShadow: T.shadow }}
@@ -130,31 +130,31 @@ export default function StoreAccounting() {
                       </div>
                     ) : (
                       filteredSuppliers.map((s, idx) => (
-                        <motion.div key={s.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.05 }}
+                        <motion.div key={s.id || idx} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.05 }}
                           onClick={() => setSelectedSup(selectedSup?.id === s.id ? null : s)}
                           style={{ background: '#fff', borderRadius: '24px', padding: '20px', border: selectedSup?.id === s.id ? `2px solid ${T.primary}` : `1px solid ${T.border}`, boxShadow: T.shadow, cursor: 'pointer' }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
                              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                                 <div style={{ width: '48px', height: '48px', borderRadius: '16px', background: T.pLight, display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.primary, fontSize: '20px', fontWeight: 900 }}>
-                                   {s.full_name?.charAt(0)}
+                                   {String(s.full_name || '?').charAt(0)}
                                 </div>
                                 <div>
-                                   <div style={{ fontSize: '16px', fontWeight: 900, color: T.ink }}>{s.full_name}</div>
-                                   <div style={{ fontSize: '11px', fontWeight: 700, color: T.txt3 }}>ID: {s.id.slice(0, 8).toUpperCase()}</div>
+                                   <div style={{ fontSize: '16px', fontWeight: 900, color: T.ink }}>{s.full_name || 'Unnamed'}</div>
+                                   <div style={{ fontSize: '11px', fontWeight: 700, color: T.txt3 }}>ID: {String(s.id || '').slice(0, 8).toUpperCase()}</div>
                                 </div>
                              </div>
                              <div style={{ textAlign: 'right' }}>
-                                <div style={{ fontSize: '11px', fontWeight: 800, color: T.txt3, textTransform: 'uppercase' }}>Current Debt</div>
+                                <div style={{ fontSize: '11px', fontWeight: 800, color: T.txt3, textTransform: 'uppercase' }}>Debt</div>
                                 <div style={{ fontSize: '18px', fontWeight: 900, color: s.debt > 0 ? T.danger : T.success }}>{fmt(s.debt)}</div>
                              </div>
                           </div>
                           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                              <div style={{ padding: '12px', background: T.bg, borderRadius: '16px' }}>
-                                <div style={{ fontSize: '10px', fontWeight: 800, color: T.txt3, textTransform: 'uppercase', marginBottom: '4px' }}>Bread Taken</div>
-                                <div style={{ fontSize: '16px', fontWeight: 900, color: T.ink }}>{s.unitsTaken} Units</div>
+                                <div style={{ fontSize: '10px', fontWeight: 800, color: T.txt3 }}>Units Taken</div>
+                                <div style={{ fontSize: '16px', fontWeight: 900, color: T.ink }}>{s.unitsTaken}</div>
                              </div>
                              <div style={{ padding: '12px', background: T.bg, borderRadius: '16px' }}>
-                                <div style={{ fontSize: '10px', fontWeight: 800, color: T.txt3, textTransform: 'uppercase', marginBottom: '4px' }}>Total Paid</div>
+                                <div style={{ fontSize: '10px', fontWeight: 800, color: T.txt3 }}>Paid</div>
                                 <div style={{ fontSize: '16px', fontWeight: 900, color: T.success }}>{fmt(s.paid)}</div>
                              </div>
                           </div>
@@ -164,12 +164,8 @@ export default function StoreAccounting() {
                                 style={{ overflow: 'hidden', marginTop: '16px', paddingTop: '16px', borderTop: `1px solid ${T.border}` }}>
                                  <div style={{ display: 'flex', gap: '8px' }}>
                                     <button onClick={(e) => { e.stopPropagation(); navigate('/store/dispatch', { state: { supplierId: s.custId } }); }}
-                                      style={{ flex: 1, padding: '12px', borderRadius: '12px', border: 'none', background: T.primary, color: '#fff', fontSize: '12px', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
-                                       <Package size={14} /> New Dispatch
-                                    </button>
-                                    <button onClick={(e) => { e.stopPropagation(); }}
-                                      style={{ flex: 1, padding: '12px', borderRadius: '12px', border: `1px solid ${T.primary}`, background: '#fff', color: T.primary, fontSize: '12px', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
-                                       <Calculator size={14} /> Add Payment
+                                      style={{ flex: 1, padding: '12px', borderRadius: '12px', border: 'none', background: T.primary, color: '#fff', fontSize: '12px', fontWeight: 800, cursor: 'pointer' }}>
+                                       Dispatch
                                     </button>
                                  </div>
                               </motion.div>
@@ -187,12 +183,11 @@ export default function StoreAccounting() {
                {transactions.filter(t => t.status === 'PENDING_STORE').length === 0 ? (
                  <div style={{ textAlign: 'center', padding: '60px 20px', background: '#fff', borderRadius: T.radius, border: `1px dashed ${T.border}` }}>
                     <Clock size={40} color={T.txt3} style={{ margin: '0 auto 16px', opacity: 0.5 }} />
-                    <h3 style={{ margin: '0 0 8px', color: T.ink, fontSize: '16px', fontWeight: 900 }}>No Pending Requests</h3>
+                    <h3 style={{ margin: '0 0 8px', color: T.ink, fontSize: '16px', fontWeight: 900 }}>No Requests</h3>
                  </div>
                ) : (
                  transactions.filter(t => t.status === 'PENDING_STORE').map(tx => {
                    const sup = customers.find(c => c.id === tx.customerId);
-                   const item = tx.items?.[0];
                    return (
                      <div key={tx.id} style={{ background: '#fff', borderRadius: '24px', padding: '20px', border: `1px solid ${T.border}`, boxShadow: T.shadow }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
@@ -202,22 +197,21 @@ export default function StoreAccounting() {
                               </div>
                               <div>
                                  <div style={{ fontSize: '15px', fontWeight: 900, color: T.ink }}>{sup?.name || 'Unknown'}</div>
-                                 <div style={{ fontSize: '11px', fontWeight: 700, color: T.txt3 }}>{tx.type === 'Return' ? 'Maida Kaya' : 'Karba Kaya'}</div>
+                                 <div style={{ fontSize: '11px', fontWeight: 700, color: T.txt3 }}>{tx.type}</div>
                               </div>
                            </div>
                            <div style={{ textAlign: 'right' }}>
-                              <div style={{ fontSize: '18px', fontWeight: 900, color: T.ink }}>{item?.quantity} Units</div>
-                              <div style={{ fontSize: '11px', color: T.txt3, fontWeight: 700 }}>{new Date(tx.date).toLocaleTimeString()}</div>
+                              <div style={{ fontSize: '18px', fontWeight: 900, color: T.ink }}>{tx.totalPrice}</div>
                            </div>
                         </div>
                         <div style={{ display: 'flex', gap: '8px' }}>
                            <button onClick={() => updateTransactionStatus(tx.id, 'COMPLETED')}
-                             style={{ flex: 1, padding: '12px', borderRadius: '12px', border: 'none', background: T.success, color: '#fff', fontSize: '12px', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
-                              <CheckCircle2 size={15} /> Confirm
+                             style={{ flex: 1, padding: '12px', borderRadius: '12px', border: 'none', background: T.success, color: '#fff', fontSize: '12px', fontWeight: 800 }}>
+                               Confirm
                            </button>
                            <button onClick={() => updateTransactionStatus(tx.id, 'CANCELLED')}
-                             style={{ flex: 1, padding: '12px', borderRadius: '12px', border: `1px solid ${T.danger}`, background: '#fff', color: T.danger, fontSize: '12px', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
-                              <XCircle size={15} /> Reject
+                             style={{ flex: 1, padding: '12px', borderRadius: '12px', border: `1px solid ${T.danger}`, background: '#fff', color: T.danger, fontSize: '12px', fontWeight: 800 }}>
+                               Reject
                            </button>
                         </div>
                      </div>
@@ -226,29 +220,28 @@ export default function StoreAccounting() {
                )}
             </div>
           ) : (
-            /* Customers Tab (Assignment) */
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                <div style={{ position: 'relative', marginBottom: '8px' }}>
                   <Search size={18} color={T.txt3} style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)' }} />
                   <input type="text" placeholder="Search customer..." value={searchCust} onChange={(e) => setSearchCust(e.target.value)}
-                    style={{ width: '100%', padding: '14px 16px 14px 44px', borderRadius: '16px', border: `1px solid ${T.border}`, background: '#fff', fontSize: '14px', fontWeight: 600, color: T.ink, outline: 'none', boxSizing: 'border-box' }} />
+                    style={{ width: '100%', padding: '14px 16px 14px 44px', borderRadius: '16px', border: `1px solid ${T.border}`, background: '#fff', fontSize: '14px', fontWeight: 600, color: T.ink, outline: 'none' }} />
                </div>
 
                {customers.filter(c => !suppliers.some(s => s.profile_id === c.profile_id))
-                .filter(c => c.name.toLowerCase().includes(searchCust.toLowerCase()))
+                .filter(c => (c.name || '').toLowerCase().includes(searchCust.toLowerCase()))
                 .map(cust => (
                   <div key={cust.id} style={{ background: '#fff', borderRadius: '20px', padding: '16px', border: `1px solid ${T.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                      <div>
-                        <div style={{ fontSize: '14px', fontWeight: 800, color: T.ink }}>{cust.name}</div>
-                        <div style={{ fontSize: '11px', color: T.txt3, fontWeight: 700 }}>{cust.location || 'No Location'}</div>
+                        <div style={{ fontSize: '14px', fontWeight: 800, color: T.ink }}>{cust.name || 'Unnamed'}</div>
+                        <div style={{ fontSize: '11px', color: T.txt3 }}>{cust.location || 'No Location'}</div>
                      </div>
                      <select 
                        value={cust.assignedSupplierId || ''} 
                        onChange={(e) => updateCustomer({ ...cust, assignedSupplierId: e.target.value || undefined })}
-                       style={{ padding: '8px', borderRadius: '10px', border: `1.5px solid ${T.border}`, background: T.bg, fontSize: '12px', fontWeight: 700, outline: 'none', maxWidth: '120px' }}>
+                       style={{ padding: '8px', borderRadius: '10px', border: `1.5px solid ${T.border}`, background: T.bg, fontSize: '12px', fontWeight: 700 }}>
                         <option value="">(None)</option>
                         {suppliers.map(s => (
-                          <option key={s.id} value={s.custId}>{s.full_name}</option>
+                          <option key={s.id || s.profile_id} value={s.custId}>{s.full_name || 'Unnamed'}</option>
                         ))}
                      </select>
                   </div>
