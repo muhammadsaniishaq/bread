@@ -10,6 +10,8 @@ import RoleRouter from './components/RoleRouter';
 
 import ManagerDashboard from './pages/ManagerDashboard';
 import StoreDashboard from './pages/StoreDashboard';
+import StoreInventory from './pages/StoreInventory';
+import StoreRecords from './pages/StoreRecords';
 import CustomerDashboard from './pages/CustomerDashboard';
 import CustomerStore from './pages/CustomerStore';
 import LandingPage from './pages/LandingPage';
@@ -143,7 +145,9 @@ const AppContent: React.FC = () => {
             <Route path="/supplier" element={<RoleGuard allowedRoles={['SUPPLIER']}><Dashboard /></RoleGuard>} />
           </Route>
 
-          <Route path="/store" element={<RoleGuard allowedRoles={['STORE_KEEPER']}><StoreDashboard /></RoleGuard>} />
+            <Route path="/store" element={<RoleGuard allowedRoles={['STORE_KEEPER']}><StoreDashboard /></RoleGuard>} />
+            <Route path="/store/inventory" element={<RoleGuard allowedRoles={['STORE_KEEPER']}><StoreInventory /></RoleGuard>} />
+            <Route path="/store/records" element={<RoleGuard allowedRoles={['STORE_KEEPER']}><StoreRecords /></RoleGuard>} />
           <Route path="/customer/dashboard" element={<CustomerDashboard />} />
           <Route path="/customer/store" element={<CustomerStore />} />
           <Route path="/customer/orders" element={<CustomerOrders />} />
