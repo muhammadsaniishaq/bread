@@ -13,6 +13,10 @@ import StoreDashboard from './pages/StoreDashboard';
 import StoreInventory from './pages/StoreInventory';
 import StoreRecords from './pages/StoreRecords';
 import StoreDispatch from './pages/StoreDispatch';
+import StoreOrders from './pages/StoreOrders';
+import StoreProfile from './pages/StoreProfile';
+import StoreAccounting from './pages/StoreAccounting';
+import StoreMore from './pages/StoreMore';
 import CustomerDashboard from './pages/CustomerDashboard';
 import CustomerStore from './pages/CustomerStore';
 import LandingPage from './pages/LandingPage';
@@ -148,8 +152,12 @@ const AppContent: React.FC = () => {
 
             <Route path="/store" element={<RoleGuard allowedRoles={['STORE_KEEPER']}><StoreDashboard /></RoleGuard>} />
             <Route path="/store/dispatch" element={<RoleGuard allowedRoles={['STORE_KEEPER']}><StoreDispatch /></RoleGuard>} />
+            <Route path="/store/orders" element={<RoleGuard allowedRoles={['STORE_KEEPER']}><StoreOrders /></RoleGuard>} />
             <Route path="/store/inventory" element={<RoleGuard allowedRoles={['STORE_KEEPER']}><StoreInventory /></RoleGuard>} />
             <Route path="/store/records" element={<RoleGuard allowedRoles={['STORE_KEEPER']}><StoreRecords /></RoleGuard>} />
+            <Route path="/store/accounting" element={<RoleGuard allowedRoles={['STORE_KEEPER']}><StoreAccounting /></RoleGuard>} />
+            <Route path="/store/profile" element={<RoleGuard allowedRoles={['STORE_KEEPER']}><StoreProfile /></RoleGuard>} />
+            <Route path="/store/more" element={<RoleGuard allowedRoles={['STORE_KEEPER']}><StoreMore /></RoleGuard>} />
           <Route path="/customer/dashboard" element={<CustomerDashboard />} />
           <Route path="/customer/store" element={<CustomerStore />} />
           <Route path="/customer/orders" element={<CustomerOrders />} />
