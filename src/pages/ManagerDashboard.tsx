@@ -165,7 +165,7 @@ export const ManagerDashboard: React.FC = () => {
         { label: 'Bread Catalog',  icon: PackageSearch, color: T.amber,   bg: T.amberL,  path: '/manager/products' },
         { label: 'Raw Materials',  icon: Boxes,         color: '#92400e', bg: 'rgba(146,64,14,0.10)', path: '/manager/raw-materials' },
         { label: 'Assign Stock',   icon: ArrowRightLeft,color: T.blue,    bg: T.blueL,   path: '/manager/stock-assignment' },
-        { label: 'Stock Levels',   icon: PieChart,      color: T.emerald, bg: T.emeraldL, path: '/manager/products' },
+        { label: 'Stock Levels',   icon: PieChart,      color: T.emerald, bg: T.emeraldL, path: '/manager/stock-levels' },
       ]
     },
     {
@@ -176,7 +176,7 @@ export const ManagerDashboard: React.FC = () => {
         { label: 'Customers',      icon: Users,         color: T.emerald, bg: T.emeraldL, path: '/manager/customers' },
         { label: 'Staff Roster',   icon: Shield,        color: '#9333ea', bg: 'rgba(147,51,234,0.08)', path: '/manager/staff' },
         { label: 'Staff Profiles', icon: UserCircle,    color: T.blue,    bg: T.blueL,    path: '/manager/staff' },
-        { label: 'Customer IDs',   icon: CreditCard,    color: T.primary, bg: T.pLight,   path: '/manager/customers' },
+        { label: 'Customer IDs',   icon: CreditCard,    color: T.primary, bg: T.pLight,   path: '/manager/customer-ids' },
       ]
     },
     {
@@ -187,7 +187,7 @@ export const ManagerDashboard: React.FC = () => {
         { label: 'Audit Log',      icon: Eye,           color: '#64748b', bg: 'rgba(100,116,139,0.08)', path: '/manager/audit' },
         { label: 'Audit History',  icon: ClipboardList, color: '#94a3b8', bg: 'rgba(148,163,184,0.10)', path: '/manager/audit' },
         { label: 'App Settings',   icon: Settings,      color: '#475569', bg: 'rgba(71,85,105,0.08)',  path: '/manager/settings' },
-        { label: 'Company Info',   icon: Building2,     color: T.primary, bg: T.pLight,   path: '/manager/settings' },
+        { label: 'Company Info',   icon: Building2,     color: T.primary, bg: T.pLight,   path: '/manager/company' },
       ]
     },
   ];
