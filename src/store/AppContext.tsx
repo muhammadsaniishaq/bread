@@ -1,6 +1,10 @@
 export {};
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import type { Product, Customer, Transaction, DebtPayment, InventoryLog,
+import { 
+  getTransactionItems 
+} from './types';
+import type { 
+  Product, Customer, Transaction, DebtPayment, InventoryLog,
   CompanyMetrics,
   Expense,
   AppSettings,
@@ -47,6 +51,7 @@ interface AppContextType {
   deleteCustomer: (id: string) => Promise<void>;
   
   recordSale: (transaction: Transaction) => Promise<void>;
+  updateTransactionStatus: (id: string, status: 'COMPLETED' | 'CANCELLED') => Promise<void>;
   recordDebtPayment: (payment: DebtPayment) => Promise<void>;
   addInventory: (log: InventoryLog) => Promise<void>;
   returnInventory: (log: InventoryLog) => Promise<void>;
@@ -172,12 +177,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const recordSale = async (tx: Transaction) => {
-    // 1. ALWAYS save transaction first — this is the most critical step
+    // 1. ALWAYS save transaction first
     await dbTransactions.setItem(tx.id, tx);
-    
-    // 2. Immediately update the in-memory state so UI reflects the new sale instantly
-    //    This ensures history shows even before refreshData completes
     setTransactions(prev => [tx, ...prev]);
+
+    // If it's PENDING, we stop here. Accounting/Stock only updates on confirmation.
+    if (tx.status === 'PENDING_STORE') {
+       await refreshData();
+       return;
+    }
 
     // 3. Update company metrics
     try {
@@ -234,6 +242,45 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     refreshData().catch(e => console.error('refreshData failed', e));
   };
 
+
+  const updateTransactionStatus = async (id: string, status: 'COMPLETED' | 'CANCELLED') => {
+    const tx = transactions.find(t => t.id === id);
+    if (!tx || tx.status === status) return;
+
+    const updatedTx = { ...tx, status };
+    await dbTransactions.setItem(id, updatedTx);
+
+    if (status === 'COMPLETED') {
+      // Apply the effects that were skipped during initial recordSale
+      
+      // A. Update Stock
+      const items = getTransactionItems(tx);
+      const updatedProducts = [...products];
+      for (const item of items) {
+        const pIdx = updatedProducts.findIndex(p => p.id === item.productId);
+        if (pIdx !== -1) {
+          const delta = tx.type === 'Return' ? item.quantity : -item.quantity;
+          updatedProducts[pIdx] = {
+            ...updatedProducts[pIdx],
+            stock: Math.max(0, Number(updatedProducts[pIdx].stock || 0) + delta)
+          };
+          await dbProducts.setItem(updatedProducts[pIdx].id, updatedProducts[pIdx]);
+        }
+      }
+
+      // B. Update Customer Debt
+      if (tx.customerId) {
+        const customer = customers.find(c => c.id === tx.customerId);
+        if (customer) {
+          const delta = tx.type === 'Return' ? -tx.totalPrice : tx.totalPrice;
+          const updatedCustomer = { ...customer, debtBalance: customer.debtBalance + delta };
+          await dbCustomers.setItem(customer.id, updatedCustomer);
+        }
+      }
+    }
+
+    await refreshData();
+  };
 
   const recordDebtPayment = async (payment: DebtPayment) => {
     await dbDebtPayments.setItem(payment.id, payment);
@@ -367,7 +414,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     <AppContext.Provider value={{
       products, customers, transactions, debtPayments, inventoryLogs, bakeryPayments, companyMetrics, expenses, loading, refreshData,
       isAuthenticated, login, logout, updatePin,
-      addProduct, updateProduct, deleteProduct, addCustomer, updateCustomer, deleteCustomer, recordSale, recordDebtPayment, addInventory, returnInventory, processInventoryBatch, recordBakeryPayment, addExpense,
+      addProduct, updateProduct, deleteProduct, addCustomer, updateCustomer, deleteCustomer, recordSale, updateTransactionStatus, recordDebtPayment, addInventory, returnInventory, processInventoryBatch, recordBakeryPayment, addExpense,
       appSettings, updateSettings
     }}>
       {children}

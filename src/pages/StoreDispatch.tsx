@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { AnimatedPage } from '../components/AnimatedPage';
 import { useAppContext } from '../store/AppContext';
 import type { Transaction, TransactionItem } from '../store/types';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
   ShoppingCart, Trash2, ArrowLeft,
   CheckCircle, Camera, Minus, Plus, User
@@ -10,6 +10,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { QRScanner } from '../components/QRScanner';
 import StoreBottomNav from '../components/StoreBottomNav';
+import { supabase } from '../lib/supabase';
 
 const T = {
   bg: '#f4f8ff', white: '#ffffff', primary: '#2563eb', pLight: 'rgba(37,99,235,0.09)',
@@ -25,8 +26,10 @@ const T = {
 const StoreDispatch: React.FC = () => {
   const { customers, products, transactions, recordSale } = useAppContext();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [customerId, setCustomerId]     = useState('');
+  const [supplierProfiles, setSupplierProfiles] = useState<any[]>([]);
   const [paymentType, setPaymentType]   = useState<'Cash' | 'Debt'>('Cash');
   const [discountInput, setDiscountInput] = useState('');
   const [redeemPoints, setRedeemPoints] = useState(false);
@@ -35,6 +38,20 @@ const StoreDispatch: React.FC = () => {
   const [submitting, setSubmitting]     = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('All');
 
+  // Load Supplier profiles to filter the customer list
+  useEffect(() => {
+    supabase.from('profiles').select('id').eq('role', 'SUPPLIER')
+      .then(({ data }) => { if (data) setSupplierProfiles(data.map(d => d.id)); });
+  }, []);
+
+  // Handle incoming supplierId from Ledger
+  useEffect(() => {
+     if (location.state?.supplierId) {
+        setCustomerId(location.state.supplierId);
+        setPaymentType('Debt'); // Suppliers usually take on debt
+     }
+  }, [location.state]);
+
   const activeProducts = products.filter(p => p.active);
   const categories = ['All', ...Array.from(new Set(activeProducts.map(p => p.category || 'Standard')))];
 
@@ -42,10 +59,22 @@ const StoreDispatch: React.FC = () => {
     .filter(p => selectedCategory === 'All' || (p.category || 'Standard') === selectedCategory)
     .sort((a, b) => a.price - b.price);
 
+  // Filter customers to show only those who are linked to a Supplier profile
+  const supplierCustomers = useMemo(() => {
+    return customers.filter(c => c.profile_id && supplierProfiles.includes(c.profile_id));
+  }, [customers, supplierProfiles]);
+
   const selectedCustomer = customers.find(c => c.id === customerId);
   const maxPoints = selectedCustomer?.loyaltyPoints || 0;
 
   useEffect(() => { setRedeemPoints(false); }, [customerId]);
+  
+  // Set payment to Debt automatically if a Supplier is selected
+  useEffect(() => {
+    if (selectedCustomer && supplierProfiles.includes(selectedCustomer.profile_id || '')) {
+       setPaymentType('Debt');
+    }
+  }, [customerId, selectedCustomer, supplierProfiles]);
 
   const subtotal = useMemo(() =>
     cart.reduce((s, item) => s + item.quantity * item.unitPrice, 0), [cart]);
@@ -99,6 +128,7 @@ const StoreDispatch: React.FC = () => {
     if (cart.length === 0) return;
     if (paymentType === 'Debt' && !customerId) { alert('Please select a customer for debt.'); return; }
     setSubmitting(true);
+    const isSupplier = supplierProfiles.includes(selectedCustomer?.profile_id || '');
     const tx: Transaction = {
       id: Date.now().toString(),
       date: new Date().toISOString(),
@@ -106,6 +136,8 @@ const StoreDispatch: React.FC = () => {
       items: cart,
       totalPrice: totalAmount,
       type: paymentType,
+      status: isSupplier ? 'PENDING_SUPPLIER' : 'COMPLETED',
+      origin: 'STORE',
       discount: totalDiscount > 0 ? totalDiscount : undefined,
       pointsEarned: pointsEarned > 0 ? pointsEarned : undefined,
       pointsUsed: redeemPoints ? maxPointsToUse : undefined,
@@ -184,8 +216,12 @@ const StoreDispatch: React.FC = () => {
                       {inCart.quantity}
                     </div>
                   )}
-                  <div style={{ width: '38px', height: '38px', borderRadius: '12px', background: isOut ? 'rgba(0,0,0,0.05)' : T.pLight, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '8px', fontSize: '20px' }}>
-                    🍞
+                  <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: isOut ? 'rgba(0,0,0,0.05)' : T.pLight, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '8px', overflow: 'hidden' }}>
+                    {p.image ? (
+                      <img src={p.image} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    ) : (
+                      <span style={{ fontSize: '20px' }}>🍞</span>
+                    )}
                   </div>
                   <div style={{ fontSize: '13px', fontWeight: 800, color: T.ink, lineHeight: 1.2, marginBottom: '4px' }}>{p.name}</div>
                   <div style={{ fontSize: '14px', fontWeight: 900, color: T.primary }}>₦{p.price.toLocaleString()}</div>
@@ -241,8 +277,8 @@ const StoreDispatch: React.FC = () => {
                   <User size={14} style={{ position: 'absolute', top: '50%', transform: 'translateY(-50%)', left: '12px', color: T.txt3 }} />
                   <select value={customerId} onChange={e => setCustomerId(e.target.value)}
                     style={{ width: '100%', padding: '11px 12px 11px 34px', borderRadius: '12px', border: `1.5px solid ${T.borderL}`, background: T.bg, fontSize: '13px', fontWeight: 600, color: T.ink, fontFamily: 'inherit', outline: 'none', appearance: 'none', boxSizing: 'border-box' }}>
-                    <option value="">— Walk-in Customer —</option>
-                    {customers.map(c => (
+                    <option value="">— Select Supplier (Dila) —</option>
+                    {supplierCustomers.map(c => (
                       <option key={c.id} value={c.id}>{c.name}{c.debtBalance > 0 ? ` (owes ₦${c.debtBalance.toLocaleString()})` : ''}</option>
                     ))}
                   </select>
