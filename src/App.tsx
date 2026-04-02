@@ -12,6 +12,7 @@ import ManagerDashboard from './pages/ManagerDashboard';
 import StoreDashboard from './pages/StoreDashboard';
 import StoreInventory from './pages/StoreInventory';
 import StoreRecords from './pages/StoreRecords';
+import StoreDispatch from './pages/StoreDispatch';
 import CustomerDashboard from './pages/CustomerDashboard';
 import CustomerStore from './pages/CustomerStore';
 import LandingPage from './pages/LandingPage';
@@ -146,6 +147,7 @@ const AppContent: React.FC = () => {
           </Route>
 
             <Route path="/store" element={<RoleGuard allowedRoles={['STORE_KEEPER']}><StoreDashboard /></RoleGuard>} />
+            <Route path="/store/dispatch" element={<RoleGuard allowedRoles={['STORE_KEEPER']}><StoreDispatch /></RoleGuard>} />
             <Route path="/store/inventory" element={<RoleGuard allowedRoles={['STORE_KEEPER']}><StoreInventory /></RoleGuard>} />
             <Route path="/store/records" element={<RoleGuard allowedRoles={['STORE_KEEPER']}><StoreRecords /></RoleGuard>} />
           <Route path="/customer/dashboard" element={<CustomerDashboard />} />

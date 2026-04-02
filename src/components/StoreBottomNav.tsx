@@ -13,7 +13,7 @@ const T = {
 
 const tabs = [
   { label: 'Dashboard', icon: LayoutDashboard, path: '/store' },
-  { label: 'Dispatch',  icon: ShoppingCart,    path: '/sales' },
+  { label: 'Dispatch',  icon: ShoppingCart,    path: '/store/dispatch' },
   { label: 'Stock',     icon: Package,          path: '/store/inventory' },
   { label: 'Records',   icon: ClipboardList,    path: '/store/records' },
 ];
