@@ -288,15 +288,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const recordDebtPayment = async (payment: DebtPayment) => {
+    // 1. Save payment record
     await dbDebtPayments.setItem(payment.id, payment);
+    setDebtPayments(prev => [payment, ...prev]);
     
-    // Reduce customer debt
+    // 2. Reduce supplier debt balance
     const customer = customers.find(c => c.id === payment.customerId);
     if (customer) {
-      const updatedCustomer = { ...customer, debtBalance: customer.debtBalance - payment.amount };
+      const updatedCustomer = { ...customer, debtBalance: (customer.debtBalance || 0) - payment.amount };
       await dbCustomers.setItem(customer.id, updatedCustomer);
     }
     
+    // 3. Update financial metrics (Value Received)
+    try {
+      const metrics = { ...companyMetrics };
+      metrics.totalValueReceived += payment.amount;
+      await dbCompanyMetrics.setItem('main', metrics);
+      setCompanyMetrics(metrics);
+    } catch (e) { console.error('AppContext: Metrics update during payment failed', e); }
+
     await refreshData();
   };
 
