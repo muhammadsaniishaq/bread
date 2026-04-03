@@ -276,10 +276,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (tx.customerId) {
         const customer = customers.find(c => c.id === tx.customerId);
         if (customer) {
-          // If Return, debt decreases. If Debt, debt increases.
-          const delta = tx.type === 'Return' ? -tx.totalPrice : tx.totalPrice;
+          // If Return, debt decreases. If Debt, debt increases. If Payment, debt decreases.
+          let delta = 0;
+          if (tx.type === 'Return' || tx.type === 'Payment') {
+            delta = -tx.totalPrice;
+          } else {
+            delta = tx.totalPrice;
+          }
           const updatedCustomer = { ...customer, debtBalance: (customer.debtBalance || 0) + delta };
           await dbCustomers.setItem(customer.id, updatedCustomer);
+          
+          // C. Update Metrics for Payments
+          if (tx.type === 'Payment') {
+            try {
+              const metrics = { ...companyMetrics };
+              metrics.totalValueReceived += tx.totalPrice;
+              await dbCompanyMetrics.setItem('main', metrics);
+            } catch (e) {
+              console.error('AppContext: Metrics update failed during payment approval', e);
+            }
+          }
         }
       }
     }

@@ -4,6 +4,7 @@ import { useAppContext } from '../store/AppContext';
 import { useAuth } from '../store/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { getTransactionItems } from '../store/types';
+import { useTranslation } from '../store/LanguageContext';
 import {
   Package, ShoppingCart, LogOut,
   TrendingUp, AlertTriangle, CheckCircle, ArrowRight,
@@ -38,25 +39,29 @@ const fmt = (v: number) => `₦${v.toLocaleString()}`;
 export const StoreDashboard: React.FC = () => {
   const { products, transactions, customers, inventoryLogs } = useAppContext();
   const { signOut, user } = useAuth();
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [clockStr, setClockStr] = useState('');
-  const [greeting, setGreeting] = useState('');
 
   useEffect(() => {
     const tick = () => {
       const now = new Date();
       setClockStr(now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
-      const h = now.getHours();
-      let g = '';
-      if (h < 12) g = 'Ina kwana (Good Morning)';
-      else if (h < 17) g = 'Barka da Rana (Good Afternoon)';
-      else g = 'Ina wuni (Good Evening)';
-      setGreeting(g);
     };
     tick();
     const id = setInterval(tick, 1000);
     return () => clearInterval(id);
   }, []);
+
+  const getGreeting = () => {
+    const h = new Date().getHours();
+    if (h < 5) return t('store.earlyMorning');
+    if (h < 10) return t('store.morning');
+    if (h < 12) return t('store.lateMorning');
+    if (h < 16) return t('store.afternoon');
+    if (h < 19) return t('store.evening');
+    return t('store.night');
+  };
 
   const metrics = React.useMemo(() => {
     const today = new Date().toISOString().split('T')[0];
@@ -122,7 +127,7 @@ export const StoreDashboard: React.FC = () => {
                 </div>
                 <div>
                   <div style={{ fontSize: '11px', color: 'rgba(147,197,253,0.8)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em' }}>🏪 Storefront</div>
-                  <div style={{ fontSize: '18px', fontWeight: 900, color: '#fff', letterSpacing: '-0.03em' }}>{greeting}, {staffName.split(' ')[0]}</div>
+                  <div style={{ fontSize: '18px', fontWeight: 900, color: '#fff', letterSpacing: '-0.03em' }}>{getGreeting()}, {staffName.split(' ')[0]}</div>
                   <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', fontWeight: 700, fontVariantNumeric: 'tabular-nums', marginTop: '1px' }}>🕐 {clockStr}</div>
                 </div>
               </div>
@@ -136,17 +141,17 @@ export const StoreDashboard: React.FC = () => {
             <div style={{ background: 'rgba(255,255,255,0.08)', border: '1.5px solid rgba(255,255,255,0.12)', borderRadius: '18px', padding: '16px 20px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                 <div>
-                  <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.5)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '4px' }}>Today's Dispatches</div>
+                  <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.5)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '4px' }}>{t('store.dispatched')}</div>
                   <div style={{ fontSize: '28px', fontWeight: 900, color: '#93c5fd', letterSpacing: '-0.04em' }}>{fmt(metrics.totalSales)}</div>
                   <div style={{ display: 'flex', gap: '14px', marginTop: '6px' }}>
-                    <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.45)', fontWeight: 600 }}>Cash: {fmt(metrics.totalCash)}</span>
-                    <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.45)', fontWeight: 600 }}>Debt: {fmt(metrics.totalDebt)}</span>
+                    <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.45)', fontWeight: 600 }}>{t('store.cashShort')}: {fmt(metrics.totalCash)}</span>
+                    <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.45)', fontWeight: 600 }}>{t('store.debtShort')}: {fmt(metrics.totalDebt)}</span>
                   </div>
                 </div>
                 <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', fontWeight: 700, marginBottom: '3px' }}>Units Out</div>
+                  <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', fontWeight: 700, marginBottom: '3px' }}>{t('store.unitsOut')}</div>
                   <div style={{ fontSize: '32px', fontWeight: 900, color: '#fff' }}>{metrics.unitsSold}</div>
-                  <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)', fontWeight: 600 }}>dispatched today</div>
+                  <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)', fontWeight: 600 }}>{t('store.dispatchedToday')}</div>
                 </div>
               </div>
 
@@ -157,10 +162,10 @@ export const StoreDashboard: React.FC = () => {
                     ? <AlertTriangle size={13} color="#fde68a" />
                     : <CheckCircle size={13} color="#6ee7b7" />}
                   <span style={{ fontSize: '11px', fontWeight: 700, color: metrics.lowStock.length > 0 ? '#fde68a' : '#6ee7b7' }}>
-                    {metrics.lowStock.length > 0 ? `${metrics.lowStock.length} product(s) low on stock` : 'All stock levels OK'}
+                    {metrics.lowStock.length > 0 ? `${metrics.lowStock.length} ${t('store.lowStockAlert')}` : t('store.allStockOk')}
                   </span>
                 </div>
-                <span style={{ fontSize: '12px', fontWeight: 900, color: '#fff' }}>{metrics.stock} units left</span>
+                <span style={{ fontSize: '12px', fontWeight: 900, color: '#fff' }}>{metrics.stock} {t('store.unitsLeft')}</span>
               </div>
             </div>
           </div>
@@ -176,8 +181,8 @@ export const StoreDashboard: React.FC = () => {
                 <ShoppingCart size={18} color="#fff" />
               </div>
               <div>
-                <div style={{ fontSize: '14px', fontWeight: 900, lineHeight: 1.2 }}>Dispatch<br/>Stock</div>
-                <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.65)', marginTop: '3px' }}>Open POS system</div>
+                <div style={{ fontSize: '14px', fontWeight: 900, lineHeight: 1.2 }}>{t('store.dispatchStock').split(' ')[0]}<br/>{t('store.dispatchStock').split(' ')[1] || ''}</div>
+                <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.65)', marginTop: '3px' }}>{t('store.openPOS')}</div>
               </div>
             </motion.button>
 
@@ -188,8 +193,8 @@ export const StoreDashboard: React.FC = () => {
                   <Package size={16} color={T.amber} />
                 </div>
                 <div style={{ textAlign: 'left' }}>
-                  <div style={{ fontSize: '12px', fontWeight: 800, color: T.ink }}>Live Stock</div>
-                  <div style={{ fontSize: '10px', color: T.txt3 }}>{metrics.stock} units</div>
+                  <div style={{ fontSize: '12px', fontWeight: 800, color: T.ink }}>{t('nav.inventory')}</div>
+                  <div style={{ fontSize: '10px', color: T.txt3 }}>{metrics.stock} {t('rep.units')}</div>
                 </div>
               </motion.button>
 
@@ -199,8 +204,8 @@ export const StoreDashboard: React.FC = () => {
                   <Clock size={16} color={metrics.pendingRequestsCount > 0 ? '#f97316' : T.primary} />
                 </div>
                 <div style={{ textAlign: 'left' }}>
-                  <div style={{ fontSize: '12px', fontWeight: 800, color: T.ink }}>Pending</div>
-                  <div style={{ fontSize: '10px', color: metrics.pendingRequestsCount > 0 ? '#f97316' : T.txt3, fontWeight: 700 }}>{metrics.pendingRequestsCount} Requests</div>
+                  <div style={{ fontSize: '12px', fontWeight: 800, color: T.ink }}>{t('store.pendingRequests').split(' ')[0]}</div>
+                  <div style={{ fontSize: '10px', color: metrics.pendingRequestsCount > 0 ? '#f97316' : T.txt3, fontWeight: 700 }}>{metrics.pendingRequestsCount} {t('store.pendingRequests').split(' ')[1]}</div>
                 </div>
               </motion.button>
             </div>
@@ -209,9 +214,9 @@ export const StoreDashboard: React.FC = () => {
           {/* ─── STAT TILES ─── */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
             {[
-              { label: 'Cash Sales', value: fmt(metrics.totalCash), color: T.emerald, bg: T.emeraldL, icon: TrendingUp },
-              { label: 'Received Today', value: `${metrics.received}`, color: T.amber, bg: T.amberL, icon: Package, sub: 'units from bakery' },
-              { label: 'Debt Sales', value: fmt(metrics.totalDebt), color: T.rose, bg: T.roseL, icon: AlertTriangle },
+              { label: t('rep.cashSales'), value: fmt(metrics.totalCash), color: T.emerald, bg: T.emeraldL, icon: TrendingUp },
+              { label: t('inv.receive'), value: `${metrics.received}`, color: T.amber, bg: T.amberL, icon: Package },
+              { label: t('rep.debtIssued'), value: fmt(metrics.totalDebt), color: T.rose, bg: T.roseL, icon: AlertTriangle },
             ].map((s, i) => (
               <motion.div key={i} initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.08 }}
                 style={{ background: T.white, borderRadius: '16px', padding: '12px', boxShadow: T.shadow, border: `1px solid ${T.borderL}`, textAlign: 'center' }}>
@@ -230,7 +235,7 @@ export const StoreDashboard: React.FC = () => {
               <div style={{ width: '30px', height: '30px', borderRadius: '9px', background: T.pLight, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <BarChart3 size={15} color={T.primary} />
               </div>
-              <span style={{ fontSize: '13px', fontWeight: 800, color: T.ink }}>Weekly Dispatch Trend</span>
+              <span style={{ fontSize: '13px', fontWeight: 800, color: T.ink }}>{t('store.weeklyTrend')}</span>
             </div>
             <div style={{ height: '120px' }}>
               <ResponsiveContainer width="100%" height="100%">
@@ -242,7 +247,7 @@ export const StoreDashboard: React.FC = () => {
                     </linearGradient>
                   </defs>
                   <XAxis dataKey="d" fontSize={10} tickLine={false} axisLine={false} stroke={T.txt3} />
-                  <Tooltip contentStyle={{ background: T.white, border: `1px solid ${T.borderL}`, borderRadius: '10px', fontSize: '11px' }} formatter={(v) => [`₦${Number(v).toLocaleString()}`, 'Sales']} />
+                  <Tooltip contentStyle={{ background: T.white, border: `1px solid ${T.borderL}`, borderRadius: '10px', fontSize: '11px' }} formatter={(v) => [`₦${Number(v).toLocaleString()}`, t('nav.sales')]} />
                   <Area type="monotone" dataKey="v" stroke={T.primary} strokeWidth={2.5} fillOpacity={1} fill="url(#storeGrad)" />
                 </AreaChart>
               </ResponsiveContainer>
@@ -256,10 +261,10 @@ export const StoreDashboard: React.FC = () => {
                 <div style={{ width: '30px', height: '30px', borderRadius: '9px', background: T.amberL, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <Package size={14} color={T.amber} />
                 </div>
-                <span style={{ fontSize: '13px', fontWeight: 800, color: T.ink }}>Live Stock</span>
+                <span style={{ fontSize: '13px', fontWeight: 800, color: T.ink }}>{t('store.liveStock')}</span>
               </div>
               <button onClick={() => navigate('/store/inventory')} style={{ display: 'flex', alignItems: 'center', gap: '3px', background: 'none', border: 'none', color: T.primary, fontSize: '11px', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
-                View All <ArrowRight size={12} />
+                {t('store.viewAll')} <ArrowRight size={12} />
               </button>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
@@ -296,17 +301,17 @@ export const StoreDashboard: React.FC = () => {
                 <div style={{ width: '30px', height: '30px', borderRadius: '9px', background: T.pLight, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <Clock size={14} color={T.primary} />
                 </div>
-                <span style={{ fontSize: '13px', fontWeight: 800, color: T.ink }}>Today's Dispatches</span>
+                <span style={{ fontSize: '13px', fontWeight: 800, color: T.ink }}>{t('store.dispatched')}</span>
               </div>
               <button onClick={() => navigate('/store/records')} style={{ display: 'flex', alignItems: 'center', gap: '3px', background: 'none', border: 'none', color: T.primary, fontSize: '11px', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
-                All <ArrowRight size={12} />
+                {t('sales.all')} <ArrowRight size={12} />
               </button>
             </div>
 
             {metrics.recent.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '24px', color: T.txt3 }}>
                 <Zap size={24} style={{ margin: '0 auto 8px', display: 'block', opacity: 0.3 }} />
-                <div style={{ fontSize: '12px', fontWeight: 600 }}>No dispatches recorded yet today.</div>
+                <div style={{ fontSize: '12px', fontWeight: 600 }}>{t('store.noDispatches')}</div>
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>

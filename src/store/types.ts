@@ -34,7 +34,7 @@ export interface TransactionItem {
 export interface Transaction {
   id: string;
   date: string;
-  type: 'Cash' | 'Debt' | 'Return'; // Added Return
+  type: 'Cash' | 'Debt' | 'Return' | 'Payment'; // Added Return and Payment
   status?: 'PENDING_SUPPLIER' | 'PENDING_STORE' | 'COMPLETED' | 'CANCELLED'; // Added statuses
   origin?: 'STORE' | 'SUPPLIER'; // Where the transaction was initiated
   items?: TransactionItem[]; // V3 Shopping Cart

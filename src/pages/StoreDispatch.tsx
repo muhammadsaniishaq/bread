@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { AnimatedPage } from '../components/AnimatedPage';
 import { useAppContext } from '../store/AppContext';
+import { useTranslation } from '../store/LanguageContext';
 import type { Transaction, TransactionItem } from '../store/types';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
@@ -25,6 +26,7 @@ const T = {
 
 const StoreDispatch: React.FC = () => {
   const { customers, products, transactions, recordSale } = useAppContext();
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -98,11 +100,11 @@ const StoreDispatch: React.FC = () => {
   };
 
   const addToCart = (product: typeof activeProducts[0]) => {
-    if (product.stock <= 0) { alert('Out of stock!'); return; }
+    if (product.stock <= 0) { alert(t('store.outOfStock')); return; }
     setCart(prev => {
       const ex = prev.find(i => i.productId === product.id);
       if (ex) {
-        if (ex.quantity >= product.stock) { alert(`Only ${product.stock} left in stock!`); return prev; }
+        if (ex.quantity >= product.stock) { alert(`${t('store.unitsTotal')} ${product.stock} left!`); return prev; }
         return prev.map(i => i.productId === product.id ? { ...i, quantity: i.quantity + 1 } : i);
       }
       return [...prev, { productId: product.id, quantity: 1, unitPrice: product.price }];
@@ -161,15 +163,15 @@ const StoreDispatch: React.FC = () => {
           <div style={{ position: 'relative', zIndex: 10 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
               <button onClick={() => navigate('/store')} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '10px', padding: '7px 12px', color: '#fff', fontSize: '12px', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
-                <ArrowLeft size={14} /> Back
+                <ArrowLeft size={14} /> {t('store.backToDashboard')}
               </button>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <div style={{ width: '40px', height: '40px', borderRadius: '13px', background: 'rgba(255,255,255,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <ShoppingCart size={18} color="#93c5fd" />
                 </div>
                 <div>
-                  <div style={{ fontSize: '16px', fontWeight: 900, color: '#fff' }}>Dispatch POS</div>
-                  <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.5)', fontWeight: 600 }}>{todayTx.length} dispatches today</div>
+                  <div style={{ fontSize: '16px', fontWeight: 900, color: '#fff' }}>{t('store.dispatchPOS')}</div>
+                  <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.5)', fontWeight: 600 }}>{todayTx.length} {t('store.matching')}</div>
                 </div>
               </div>
               <button onClick={() => setShowScanner(true)} style={{ width: '38px', height: '38px', borderRadius: '12px', background: 'rgba(255,255,255,0.1)', border: '1.5px solid rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#fff' }}>
@@ -183,7 +185,7 @@ const StoreDispatch: React.FC = () => {
                 style={{ padding: '10px 14px', borderRadius: '12px', background: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.15)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                   <ShoppingCart size={14} color="#93c5fd" />
-                  <span style={{ fontSize: '12px', fontWeight: 700, color: '#fff' }}>{cartTotal} item{cartTotal !== 1 ? 's' : ''} in cart</span>
+                  <span style={{ fontSize: '12px', fontWeight: 700, color: '#fff' }}>{cartTotal} {t('store.inCart')}</span>
                 </div>
                 <span style={{ fontSize: '16px', fontWeight: 900, color: '#93c5fd' }}>₦{totalAmount.toLocaleString()}</span>
               </motion.div>
@@ -198,7 +200,7 @@ const StoreDispatch: React.FC = () => {
             {categories.map(cat => (
               <button key={cat} onClick={() => setSelectedCategory(cat)}
                 style={{ flexShrink: 0, padding: '7px 14px', borderRadius: '10px', border: 'none', fontSize: '11px', fontWeight: 700, cursor: 'pointer', background: selectedCategory === cat ? T.primary : T.white, color: selectedCategory === cat ? '#fff' : T.txt3, boxShadow: T.shadow, fontFamily: 'inherit', transition: 'all 0.2s' }}>
-                {cat}
+                {cat === 'All' ? t('store.allTime') : cat}
               </button>
             ))}
           </div>
@@ -210,7 +212,7 @@ const StoreDispatch: React.FC = () => {
               const isOut  = p.stock <= 0;
               return (
                 <motion.div key={p.id} whileTap={{ scale: isOut ? 1 : 0.96 }} onClick={() => !isOut && addToCart(p)}
-                  style={{ background: T.white, borderRadius: '16px', padding: '14px 12px', boxShadow: T.shadow, border: `2px solid ${inCart ? T.primary : T.borderL}`, cursor: isOut ? 'not-allowed' : 'pointer', opacity: isOut ? 0.45 : 1, transition: 'border 0.2s', position: 'relative', overflow: 'hidden' }}>
+                   style={{ background: T.white, borderRadius: '16px', padding: '14px 12px', boxShadow: T.shadow, border: `2px solid ${inCart ? T.primary : T.borderL}`, cursor: isOut ? 'not-allowed' : 'pointer', opacity: isOut ? 0.45 : 1, transition: 'border 0.2s', position: 'relative', overflow: 'hidden' }}>
                   {inCart && (
                     <div style={{ position: 'absolute', top: '8px', right: '8px', width: '20px', height: '20px', borderRadius: '50%', background: T.primary, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 900, color: '#fff' }}>
                       {inCart.quantity}
@@ -226,7 +228,7 @@ const StoreDispatch: React.FC = () => {
                   <div style={{ fontSize: '13px', fontWeight: 800, color: T.ink, lineHeight: 1.2, marginBottom: '4px' }}>{p.name}</div>
                   <div style={{ fontSize: '14px', fontWeight: 900, color: T.primary }}>₦{p.price.toLocaleString()}</div>
                   <div style={{ fontSize: '9px', fontWeight: 800, marginTop: '5px', padding: '2px 7px', borderRadius: '5px', display: 'inline-block', background: isOut ? T.roseL : p.stock < 20 ? T.amberL : T.emeraldL, color: isOut ? T.rose : p.stock < 20 ? T.amber : T.emerald }}>
-                    {isOut ? 'Out of stock' : `${p.stock} left`}
+                    {isOut ? t('store.outOfStock') : `${p.stock} ${t('store.unitsLeft')}`}
                   </div>
                 </motion.div>
               );
@@ -277,9 +279,9 @@ const StoreDispatch: React.FC = () => {
                   <User size={14} style={{ position: 'absolute', top: '50%', transform: 'translateY(-50%)', left: '12px', color: T.txt3 }} />
                   <select value={customerId} onChange={e => setCustomerId(e.target.value)}
                     style={{ width: '100%', padding: '11px 12px 11px 34px', borderRadius: '12px', border: `1.5px solid ${T.borderL}`, background: T.bg, fontSize: '13px', fontWeight: 600, color: T.ink, fontFamily: 'inherit', outline: 'none', appearance: 'none', boxSizing: 'border-box' }}>
-                    <option value="">— Select Supplier (Dila) —</option>
+                    <option value="">{t('store.selectSupplierDila')}</option>
                     {supplierCustomers.map(c => (
-                      <option key={c.id} value={c.id}>{c.name}{c.debtBalance > 0 ? ` (owes ₦${c.debtBalance.toLocaleString()})` : ''}</option>
+                      <option key={c.id} value={c.id}>{c.name}{c.debtBalance > 0 ? ` (${t('store.debtShort')} ₦${c.debtBalance.toLocaleString()})` : ''}</option>
                     ))}
                   </select>
                 </div>
@@ -287,7 +289,7 @@ const StoreDispatch: React.FC = () => {
                   <div style={{ marginTop: '6px', padding: '8px 12px', borderRadius: '10px', background: T.pLight, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <span style={{ fontSize: '11px', fontWeight: 700, color: T.primary }}>⭐ {selectedCustomer.loyaltyPoints ?? 0} pts (₦{((selectedCustomer.loyaltyPoints ?? 0) * 10).toLocaleString()} value)</span>
                     <label style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '11px', fontWeight: 700, color: T.primary, cursor: 'pointer' }}>
-                      <input type="checkbox" checked={redeemPoints} onChange={e => setRedeemPoints(e.target.checked)} /> Redeem
+                      <input type="checkbox" checked={redeemPoints} onChange={e => setRedeemPoints(e.target.checked)} /> {t('store.redeemPoints')}
                     </label>
                   </div>
                 )}
@@ -298,19 +300,19 @@ const StoreDispatch: React.FC = () => {
                 {(['Cash', 'Debt'] as const).map(type => (
                   <button key={type} onClick={() => setPaymentType(type)}
                     style={{ flex: 1, padding: '10px', borderRadius: '12px', border: 'none', fontWeight: 800, fontSize: '13px', cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.2s', background: paymentType === type ? (type === 'Cash' ? T.emerald : T.rose) : T.bg, color: paymentType === type ? '#fff' : T.txt3 }}>
-                    {type === 'Cash' ? '💵 Cash' : '📒 Debt'}
+                    {type === 'Cash' ? '💵 ' + t('store.cashShort') : '📒 ' + t('store.debtShort')}
                   </button>
                 ))}
               </div>
 
               {/* Discount */}
-              <input value={discountInput} onChange={e => setDiscountInput(e.target.value)} placeholder="Discount: e.g. 500 or 10%"
+              <input value={discountInput} onChange={e => setDiscountInput(e.target.value)} placeholder={t('store.discountPlaceholder')}
                 style={{ width: '100%', padding: '10px 12px', borderRadius: '12px', border: `1.5px solid ${T.borderL}`, background: T.bg, fontSize: '13px', fontWeight: 600, color: T.ink, fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box', marginBottom: '10px' }} />
 
               {/* Total + submit */}
               <div style={{ background: `linear-gradient(135deg, ${T.primary}, #1d4ed8)`, borderRadius: '16px', padding: '14px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
                 <div>
-                  {totalDiscount > 0 && <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.6)', fontWeight: 700, marginBottom: '2px' }}>Discount: -₦{totalDiscount.toLocaleString()}</div>}
+                   {totalDiscount > 0 && <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.6)', fontWeight: 700, marginBottom: '2px' }}>Ragi: -₦{totalDiscount.toLocaleString()}</div>}
                   <div style={{ fontSize: '22px', fontWeight: 900, color: '#fff' }}>₦{totalAmount.toLocaleString()}</div>
                   {pointsEarned > 0 && customerId && <div style={{ fontSize: '9px', color: 'rgba(255,255,255,0.6)', fontWeight: 700 }}>+{pointsEarned} loyalty pts</div>}
                 </div>
@@ -320,7 +322,7 @@ const StoreDispatch: React.FC = () => {
                   {submitting ? (
                     <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 0.8 }} style={{ width: '14px', height: '14px', borderRadius: '50%', border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff' }} />
                   ) : (
-                    <><CheckCircle size={16} /> Complete</>
+                    <><CheckCircle size={16} /> {t('store.completeDispatch')}</>
                   )}
                 </motion.button>
               </div>

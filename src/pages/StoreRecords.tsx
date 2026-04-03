@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { AnimatedPage } from '../components/AnimatedPage';
 import { useAppContext } from '../store/AppContext';
+import { useTranslation } from '../store/LanguageContext';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, ClipboardList, Search, Filter, Calendar } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -20,6 +21,7 @@ const fmt = (v: number) => `₦${v.toLocaleString()}`;
 const StoreRecords: React.FC = () => {
   const navigate = useNavigate();
   const { transactions = [], customers = [], products = [] } = useAppContext();
+  const { t } = useTranslation();
   const [search, setSearch] = useState('');
   const [filterType, setFilterType] = useState<'ALL' | 'Cash' | 'Debt'>('ALL');
   const [filterDate, setFilterDate] = useState<'TODAY' | 'WEEK' | 'MONTH' | 'ALL'>('TODAY');
@@ -81,7 +83,7 @@ const StoreRecords: React.FC = () => {
           <div style={{ position: 'absolute', top: '-20%', right: '-5%', width: '200px', height: '200px', background: 'radial-gradient(circle, rgba(37,99,235,0.3) 0%, transparent 70%)', pointerEvents: 'none' }} />
           <div style={{ position: 'relative', zIndex: 10 }}>
             <button onClick={() => navigate('/store')} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '10px', padding: '7px 12px', color: '#fff', fontSize: '12px', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', marginBottom: '18px' }}>
-              <ArrowLeft size={14} /> Dashboard
+              <ArrowLeft size={14} /> {t('store.backToDashboard')}
             </button>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
@@ -89,16 +91,16 @@ const StoreRecords: React.FC = () => {
                 <ClipboardList size={20} color="#93c5fd" />
               </div>
               <div>
-                <h1 style={{ fontSize: '20px', fontWeight: 900, color: '#fff', margin: 0 }}>Dispatch Records</h1>
-                <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.5)', margin: 0, fontWeight: 600 }}>{filtered.length} matching</p>
+                <h1 style={{ fontSize: '20px', fontWeight: 900, color: '#fff', margin: 0 }}>{t('store.dispatchRecords')}</h1>
+                <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.5)', margin: 0, fontWeight: 600 }}>{filtered.length} {t('store.matching')}</p>
               </div>
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', marginBottom: '14px' }}>
               {[
-                { label: 'Total', value: fmt(totalFiltered), color: '#93c5fd' },
-                { label: 'Cash', value: fmt(cashFiltered), color: '#6ee7b7' },
-                { label: 'Debt', value: fmt(debtFiltered), color: '#fca5a5' },
+                { label: t('store.allTime'), value: fmt(totalFiltered), color: '#93c5fd' },
+                { label: t('store.cashShort'), value: fmt(cashFiltered), color: '#6ee7b7' },
+                { label: t('store.debtShort'), value: fmt(debtFiltered), color: '#fca5a5' },
               ].map((s, i) => (
                 <div key={i} style={{ padding: '9px 8px', borderRadius: '12px', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.1)', textAlign: 'center' }}>
                   <div style={{ fontSize: '14px', fontWeight: 900, color: s.color }}>{s.value}</div>
@@ -109,7 +111,7 @@ const StoreRecords: React.FC = () => {
 
             <div style={{ position: 'relative' }}>
               <Search size={14} style={{ position: 'absolute', top: '50%', transform: 'translateY(-50%)', left: '13px', color: 'rgba(255,255,255,0.5)' }} />
-              <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by customer…"
+              <input value={search} onChange={e => setSearch(e.target.value)} placeholder={t('store.searchCustomer')}
                 style={{ width: '100%', padding: '11px 12px 11px 35px', borderRadius: '12px', border: '1.5px solid rgba(255,255,255,0.15)', background: 'rgba(255,255,255,0.1)', color: '#fff', fontSize: '13px', fontWeight: 600, boxSizing: 'border-box', fontFamily: 'inherit', outline: 'none' }} />
             </div>
           </div>
@@ -121,7 +123,7 @@ const StoreRecords: React.FC = () => {
             {(['TODAY', 'WEEK', 'MONTH', 'ALL'] as const).map(f => (
               <button key={f} onClick={() => setFilterDate(f)}
                 style={{ padding: '6px 11px', borderRadius: '9px', border: 'none', fontSize: '10px', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', background: filterDate === f ? T.primary : T.white, color: filterDate === f ? '#fff' : T.txt3, boxShadow: T.shadow }}>
-                {f === 'TODAY' ? 'Today' : f === 'WEEK' ? '7 Days' : f === 'MONTH' ? '30 Days' : 'All'}
+                {f === 'TODAY' ? 'Today' : f === 'WEEK' ? t('store.last7Days') : f === 'MONTH' ? t('store.last30Days') : t('store.allTime')}
               </button>
             ))}
           </div>
@@ -131,7 +133,7 @@ const StoreRecords: React.FC = () => {
             {(['ALL', 'Cash', 'Debt'] as const).map(f => (
               <button key={f} onClick={() => setFilterType(f)}
                 style={{ padding: '6px 11px', borderRadius: '9px', border: 'none', fontSize: '10px', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', background: filterType === f ? (f === 'Cash' ? T.emerald : f === 'Debt' ? T.rose : T.primary) : T.white, color: filterType === f ? '#fff' : T.txt3, boxShadow: T.shadow }}>
-                {f === 'ALL' ? '📋 All' : f === 'Cash' ? '💵 Cash' : '📒 Debt'}
+                {f === 'ALL' ? '📋 ' + t('store.allTime') : f === 'Cash' ? '💵 ' + t('store.cashShort') : '📒 ' + t('store.debtShort')}
               </button>
             ))}
           </div>
@@ -139,7 +141,7 @@ const StoreRecords: React.FC = () => {
           {filtered.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '48px 20px', color: T.txt3, background: T.white, borderRadius: T.radius, border: `1px dashed ${T.borderL}` }}>
               <ClipboardList size={28} style={{ margin: '0 auto 10px', display: 'block', opacity: 0.3 }} />
-              <div style={{ fontSize: '13px', fontWeight: 600 }}>No records found.</div>
+              <div style={{ fontSize: '13px', fontWeight: 600 }}>{t('store.noRecordsFound')}</div>
             </div>
           ) : filtered.map((tx, i) => (
             <motion.div key={tx.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03 }}
@@ -152,12 +154,12 @@ const StoreRecords: React.FC = () => {
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                     <div style={{ fontSize: '13px', fontWeight: 800, color: T.ink, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '55%' }}>{getCustomer(tx.customerId)}</div>
                     <div style={{ fontSize: '15px', fontWeight: 900, color: T.ink }}>
-                       {tx.type === 'Debt' && !isSupplier(tx.customerId) ? 'HIDDEN' : fmt(tx.totalPrice)}
+                       {tx.type === 'Debt' && !isSupplier(tx.customerId) ? t('store.hidden') : fmt(tx.totalPrice)}
                     </div>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
                     <div style={{ fontSize: '10px', color: T.txt3, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '65%' }}>{getProductNames(tx)}</div>
-                    <span style={{ fontSize: '9px', fontWeight: 800, padding: '2px 6px', borderRadius: '5px', background: tx.type === 'Cash' ? T.emeraldL : T.roseL, color: tx.type === 'Cash' ? T.emerald : T.rose }}>{tx.type}</span>
+                    <span style={{ fontSize: '9px', fontWeight: 800, padding: '2px 6px', borderRadius: '5px', background: tx.type === 'Cash' ? T.emeraldL : T.roseL, color: tx.type === 'Cash' ? T.emerald : T.rose }}>{tx.type === 'Cash' ? t('store.cashShort') : t('store.debtShort')}</span>
                   </div>
                   <div style={{ fontSize: '10px', color: T.txt3, fontWeight: 600, marginTop: '3px' }}>
                     {new Date(tx.date).toLocaleDateString()} · {new Date(tx.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}

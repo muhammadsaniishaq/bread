@@ -28,21 +28,21 @@ const T = {
 export default function StoreMore() {
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
-  const { language, setLanguage } = useTranslation();
+  const { language, setLanguage, t } = useTranslation();
 
   const sections = [
     {
-      label: 'Main Services',
+      label: t('store.allProducts'),
       items: [
-        { title: 'My Profile', desc: 'Manage your details', icon: User, path: '/store/profile', color: T.primary },
-        { title: 'Accounting', desc: 'Supplier & Bakery sync', icon: TrendingUp, path: '/store/accounting', color: T.success },
-        { title: 'Dispatch Stats', desc: 'Records & History', icon: Database, path: '/store/records', color: '#8b5cf6' },
+        { title: t('store.profile'), desc: t('store.manageDetails'), icon: User, path: '/store/profile', color: T.primary },
+        { title: t('store.accounting'), desc: t('store.bakerySync'), icon: TrendingUp, path: '/store/accounting', color: T.success },
+        { title: t('store.dispatchStats'), desc: t('store.dispatchHistory'), icon: Database, path: '/store/records', color: '#8b5cf6' },
       ]
     },
     {
-      label: 'Preferences',
+      label: t('store.appSettings'),
       items: [
-        { title: 'App Settings', desc: 'Display & Security', icon: Settings, path: '/store/settings', color: '#64748b' },
+        { title: t('store.appSettings'), desc: t('store.displaySecurity'), icon: Settings, path: '/store/settings', color: '#64748b' },
       ]
     }
   ];
@@ -59,10 +59,10 @@ export default function StoreMore() {
                 {user?.email?.charAt(0).toUpperCase() || 'S'}
              </div>
              <div>
-                <h1 style={{ fontSize: '20px', fontWeight: 900, color: '#fff', margin: 0 }}>Store Options</h1>
+                <h1 style={{ fontSize: '20px', fontWeight: 900, color: '#fff', margin: 0 }}>{t('store.moreOptions')}</h1>
                 <p style={{ margin: '2px 0 0', fontSize: '12px', color: 'rgba(255,255,255,0.6)', fontWeight: 600 }}>{user?.email}</p>
                 <div style={{ marginTop: '8px', display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '4px 8px', borderRadius: '8px', background: 'rgba(16,185,129,0.2)', color: '#10b981', fontSize: '10px', fontWeight: 800, textTransform: 'uppercase' }}>
-                   <ShieldCheck size={12} /> Verified Store Access
+                   <ShieldCheck size={12} /> {t('store.verifiedAccess')}
                 </div>
              </div>
           </div>
@@ -77,8 +77,8 @@ export default function StoreMore() {
                    <Languages size={20} />
                 </div>
                 <div>
-                   <div style={{ fontSize: '14px', fontWeight: 800, color: T.ink }}>App Language</div>
-                   <div style={{ fontSize: '11px', color: T.txt3, fontWeight: 700 }}>Choose your tongue</div>
+                   <div style={{ fontSize: '14px', fontWeight: 800, color: T.ink }}>{t('store.appLanguage')}</div>
+                   <div style={{ fontSize: '11px', color: T.txt3, fontWeight: 700 }}>{t('store.chooseTongue')}</div>
                 </div>
              </div>
              <div style={{ display: 'flex', background: T.bg, padding: '4px', borderRadius: '10px' }}>
@@ -113,40 +113,40 @@ export default function StoreMore() {
           ))}
 
           {/* Support & Tools */}
-          <div style={{ fontSize: '11px', fontWeight: 800, color: T.txt3, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '12px', marginLeft: '4px' }}>Support & Tools</div>
+          <div style={{ fontSize: '11px', fontWeight: 800, color: T.txt3, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '12px', marginLeft: '4px' }}>{t('store.supportTools')}</div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '24px' }}>
              <button style={{ padding: '16px', borderRadius: '20px', background: T.white, border: `1px solid ${T.border}`, textAlign: 'left', cursor: 'pointer' }}>
                 <Phone size={20} color={T.primary} />
-                <div style={{ fontSize: '13px', fontWeight: 800, color: T.ink, marginTop: '8px' }}>Call Support</div>
-                <div style={{ fontSize: '10px', color: T.txt3, fontWeight: 700 }}>Talk to us</div>
+                <div style={{ fontSize: '13px', fontWeight: 800, color: T.ink, marginTop: '8px' }}>{t('store.callSupport')}</div>
+                <div style={{ fontSize: '10px', color: T.txt3, fontWeight: 700 }}>{t('store.talkToUs')}</div>
              </button>
              <button style={{ padding: '16px', borderRadius: '20px', background: T.white, border: `1px solid ${T.border}`, textAlign: 'left', cursor: 'pointer' }}>
                 <MessageSquare size={20} color="#25D366" />
-                <div style={{ fontSize: '13px', fontWeight: 800, color: T.ink, marginTop: '8px' }}>WhatsApp</div>
-                <div style={{ fontSize: '10px', color: T.txt3, fontWeight: 700 }}>Instant chat</div>
+                <div style={{ fontSize: '13px', fontWeight: 800, color: T.ink, marginTop: '8px' }}>{t('store.whatsappSupport')}</div>
+                <div style={{ fontSize: '10px', color: T.txt3, fontWeight: 700 }}>{t('store.instantChat')}</div>
              </button>
              <button style={{ padding: '16px', borderRadius: '20px', background: T.white, border: `1px solid ${T.border}`, textAlign: 'left', cursor: 'pointer' }}>
                 <Download size={20} color={T.success} />
-                <div style={{ fontSize: '13px', fontWeight: 800, color: T.ink, marginTop: '8px' }}>Export CSV</div>
-                <div style={{ fontSize: '10px', color: T.txt3, fontWeight: 700 }}>Accounting data</div>
+                <div style={{ fontSize: '13px', fontWeight: 800, color: T.ink, marginTop: '8px' }}>{t('store.exportCSV')}</div>
+                <div style={{ fontSize: '10px', color: T.txt3, fontWeight: 700 }}>{t('store.accountingData')}</div>
              </button>
              <button style={{ padding: '16px', borderRadius: '20px', background: T.white, border: `1px solid ${T.border}`, textAlign: 'left', cursor: 'pointer' }}>
                 <HelpCircle size={20} color="#ff8d00" />
-                <div style={{ fontSize: '13px', fontWeight: 800, color: T.ink, marginTop: '8px' }}>Help Center</div>
-                <div style={{ fontSize: '10px', color: T.txt3, fontWeight: 700 }}>FAQs & Guides</div>
+                <div style={{ fontSize: '13px', fontWeight: 800, color: T.ink, marginTop: '8px' }}>{t('store.helpCenter')}</div>
+                <div style={{ fontSize: '10px', color: T.txt3, fontWeight: 700 }}>{t('store.faqsGuides')}</div>
              </button>
           </div>
 
           {/* Quick Actions / Logout */}
           <button onClick={() => signOut()}
             style={{ width: '100%', padding: '16px', borderRadius: '20px', border: `1px solid ${T.danger}20`, background: `${T.danger}05`, color: T.danger, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontSize: '14px', fontWeight: 900, cursor: 'pointer', marginBottom: '32px' }}>
-            <LogOut size={18} /> Sign Out Account
+            <LogOut size={18} /> {t('store.signOut')}
           </button>
 
           {/* App Footer */}
           <div style={{ textAlign: 'center', opacity: 0.5 }}>
-             <div style={{ fontSize: '10px', fontWeight: 800, color: T.txt3 }}>BAKERY MANAGEMENT SYSTEM</div>
-             <div style={{ fontSize: '9px', fontWeight: 700, color: T.txt3, marginTop: '4px' }}>Version 2.4.0 • Built with ❤️ in Nigeria</div>
+             <div style={{ fontSize: '10px', fontWeight: 800, color: T.txt3 }}>{t('store.bakerySystem')}</div>
+             <div style={{ fontSize: '9px', fontWeight: 700, color: T.txt3, marginTop: '4px' }}>Version 2.4.0 • {t('store.nigeriaBuilt')}</div>
           </div>
 
         </div>

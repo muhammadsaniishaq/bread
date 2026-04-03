@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../store/AuthContext';
+import { useTranslation } from '../store/LanguageContext';
 import { User, Mail, Clock, TrendingUp, LogOut, ChevronRight, Settings, Phone, ShieldCheck } from 'lucide-react';
 import { AnimatedPage } from '../components/AnimatedPage';
 import { useNavigate } from 'react-router-dom';
@@ -26,6 +27,7 @@ const T = {
 export default function StoreProfile() {
   const { user, signOut } = useAuth();
   const { transactions } = useAppContext();
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [profile, setProfile] = useState<any>(null);
 
@@ -57,7 +59,7 @@ export default function StoreProfile() {
             </div>
             <h2 style={{ fontSize: '20px', fontWeight: 900, color: '#fff', margin: '0 0 6px' }}>{profile?.full_name || 'Store Keeper'}</h2>
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '4px 10px', borderRadius: '8px', background: 'rgba(16,185,129,0.2)', color: '#10b981', fontSize: '10px', fontWeight: 800, textTransform: 'uppercase' }}>
-               <ShieldCheck size={12} /> Verified Personnel
+               <ShieldCheck size={12} /> {t('store.verifiedAccess')}
             </div>
           </div>
         </div>
@@ -68,18 +70,18 @@ export default function StoreProfile() {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '20px' }}>
              <div style={{ background: T.white, borderRadius: '22px', padding: '16px', border: `1px solid ${T.border}`, boxShadow: T.shadow, textAlign: 'center' }}>
                 <div style={{ fontSize: '22px', fontWeight: 900, color: T.primary }}>{todayDisp}</div>
-                <div style={{ fontSize: '10px', fontWeight: 800, color: T.txt3, textTransform: 'uppercase' }}>Today</div>
+                <div style={{ fontSize: '10px', fontWeight: 800, color: T.txt3, textTransform: 'uppercase' }}>{t('store.allTime')}</div>
              </div>
              <div style={{ background: T.white, borderRadius: '22px', padding: '16px', border: `1px solid ${T.border}`, boxShadow: T.shadow, textAlign: 'center' }}>
                 <div style={{ fontSize: '22px', fontWeight: 900, color: T.success }}>{weekDisp}</div>
-                <div style={{ fontSize: '10px', fontWeight: 800, color: T.txt3, textTransform: 'uppercase' }}>Weekly</div>
+                <div style={{ fontSize: '10px', fontWeight: 800, color: T.txt3, textTransform: 'uppercase' }}>{t('store.last7Days')}</div>
              </div>
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
              {/* Info Section */}
              <div style={{ background: T.white, borderRadius: '24px', padding: '20px', border: `1px solid ${T.border}`, boxShadow: T.shadow }}>
-                <h3 style={{ margin: '0 0 20px', fontSize: '13px', fontWeight: 800, color: T.txt3, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Personnel Details</h3>
+                <h3 style={{ margin: '0 0 20px', fontSize: '13px', fontWeight: 800, color: T.txt3, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('store.manageDetails')}</h3>
                 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -87,7 +89,7 @@ export default function StoreProfile() {
                          <Mail size={18} />
                       </div>
                       <div>
-                         <div style={{ fontSize: '10px', fontWeight: 700, color: T.txt3 }}>System Email</div>
+                         <div style={{ fontSize: '10px', fontWeight: 700, color: T.txt3 }}>{t('store.appSettings')}</div>
                          <div style={{ fontSize: '14px', fontWeight: 700, color: T.ink }}>{user?.email || 'N/A'}</div>
                       </div>
                    </div>
@@ -97,7 +99,7 @@ export default function StoreProfile() {
                          <Phone size={18} />
                       </div>
                       <div>
-                         <div style={{ fontSize: '10px', fontWeight: 700, color: T.txt3 }}>Contact</div>
+                         <div style={{ fontSize: '10px', fontWeight: 700, color: T.txt3 }}>{t('store.callSupport')}</div>
                          <div style={{ fontSize: '14px', fontWeight: 700, color: T.ink }}>{profile?.phone || '0800 000 0000'}</div>
                       </div>
                    </div>
@@ -107,8 +109,8 @@ export default function StoreProfile() {
                          <Clock size={18} />
                       </div>
                       <div>
-                         <div style={{ fontSize: '10px', fontWeight: 700, color: T.txt3 }}>Member Since</div>
-                         <div style={{ fontSize: '14px', fontWeight: 700, color: T.ink }}>{new Date(profile?.created_at).toLocaleDateString()}</div>
+                         <div style={{ fontSize: '10px', fontWeight: 700, color: T.txt3 }}>{t('store.dispatchHistory')}</div>
+                         <div style={{ fontSize: '14px', fontWeight: 700, color: T.ink }}>{profile?.created_at ? new Date(profile.created_at).toLocaleDateString() : 'N/A'}</div>
                       </div>
                    </div>
                 </div>
@@ -122,7 +124,7 @@ export default function StoreProfile() {
                       <div style={{ width: '34px', height: '34px', borderRadius: '10px', background: `${T.primary}15`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.primary }}>
                          <TrendingUp size={16} />
                       </div>
-                      <span style={{ fontSize: '14px', fontWeight: 800, color: T.ink }}>Reconciliation</span>
+                      <span style={{ fontSize: '14px', fontWeight: 800, color: T.ink }}>{t('store.accounting')}</span>
                    </div>
                    <ChevronRight size={16} color={T.txt3} />
                 </button>
@@ -133,7 +135,7 @@ export default function StoreProfile() {
                       <div style={{ width: '34px', height: '34px', borderRadius: '10px', background: `${T.txt2}15`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.txt2 }}>
                          <Settings size={16} />
                       </div>
-                      <span style={{ fontSize: '14px', fontWeight: 800, color: T.ink }}>Settings</span>
+                      <span style={{ fontSize: '14px', fontWeight: 800, color: T.ink }}>{t('store.appSettings')}</span>
                    </div>
                    <ChevronRight size={16} color={T.txt3} />
                 </button>
@@ -141,7 +143,7 @@ export default function StoreProfile() {
 
              <button onClick={() => signOut()}
                style={{ padding: '16px', borderRadius: '20px', border: 'none', background: `${T.danger}08`, color: T.danger, fontSize: '14px', fontWeight: 900, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-                <LogOut size={18} /> Sign Out Account
+                <LogOut size={18} /> {t('store.signOut')}
              </button>
           </div>
         </div>
