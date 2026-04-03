@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAppContext } from '../store/AppContext';
 import { 
-  Users, Search, Clock, ArrowRightLeft
+  Users, Search, Clock, ArrowRightLeft, ShieldCheck, 
+  CheckCircle2, XCircle, CreditCard, Wallet, PackageOpen
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AnimatedPage } from '../components/AnimatedPage';
@@ -21,7 +22,6 @@ const T = {
   txt2: '#475569',
   txt3: '#94a3b8',
   bg: '#f8fafc',
-  bg2: '#ffffff',
   white: '#ffffff',
   border: 'rgba(0,0,0,0.06)',
   radius: '24px',
@@ -79,93 +79,108 @@ export default function StoreAccounting() {
     (String(s.full_name || '')).toLowerCase().includes(searchSup.toLowerCase())
   );
 
+  const pendingCount = transactions.filter(t => t.status === 'PENDING_STORE').length;
+  const totalDebt = suppliers.reduce((s, sup) => s + sup.debt, 0);
+  const totalPaid = suppliers.reduce((s, sup) => s + sup.paid, 0);
+
   return (
     <AnimatedPage>
-      <div style={{ minHeight: '100vh', background: T.bg, paddingBottom: '110px', fontFamily: 'Inter, system-ui, sans-serif' }}>
+      <div style={{ minHeight: '100vh', background: T.bg, paddingBottom: '120px', fontFamily: "'Inter', system-ui, sans-serif" }}>
         
-        <div style={{ background: 'linear-gradient(145deg, #0a1628 0%, #0f2952 50%, #1e40af 100%)', padding: '48px 20px 24px', position: 'relative', overflow: 'hidden' }}>
-          <div style={{ position: 'absolute', top: '-10%', right: '-10%', width: '180px', height: '180px', background: 'radial-gradient(circle, rgba(37,99,235,0.3) 0%, transparent 70%)' }} />
+        {/* Premium Indigo Header */}
+        <div style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%)', padding: '60px 24px 64px', position: 'relative', overflow: 'hidden', borderBottomLeftRadius: '32px', borderBottomRightRadius: '32px' }}>
+          <div style={{ position: 'absolute', top: '-20%', right: '-5%', width: '200px', height: '200px', background: 'radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%)' }} />
           <div style={{ position: 'relative', zIndex: 10 }}>
-            <h1 style={{ fontSize: '24px', fontWeight: 900, color: '#fff', letterSpacing: '-0.02em', margin: 0 }}>Supplier Ledger</h1>
-            <p style={{ margin: '4px 0 0', fontSize: '13px', color: 'rgba(255,255,255,0.6)', fontWeight: 600 }}>Track supplier debt and unit counts.</p>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+               <h1 style={{ fontSize: '22px', fontWeight: 900, color: '#fff', letterSpacing: '-0.02em', margin: 0 }}>Supplier Ledger</h1>
+               <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '4px 8px', borderRadius: '8px', background: 'rgba(16,185,129,0.2)', color: '#10b981', fontSize: '10px', fontWeight: 800, textTransform: 'uppercase' }}>
+                  <ShieldCheck size={12} /> Accounting Staff
+               </div>
+            </div>
+            <p style={{ margin: 0, fontSize: '12px', color: 'rgba(255,255,255,0.5)', fontWeight: 600 }}>Manage supplier debt, repayments and unit distributions.</p>
           </div>
         </div>
 
-        <div style={{ padding: '20px' }}>
-          <div style={{ display: 'flex', background: 'rgba(0,0,0,0.05)', padding: '4px', borderRadius: '14px', marginBottom: '24px' }}>
-             <button onClick={() => setTab('LEDGER')}
-               style={{ flex: 1, padding: '10px', borderRadius: '11px', border: 'none', background: tab === 'LEDGER' ? '#fff' : 'transparent', color: tab === 'LEDGER' ? T.primary : T.txt3, fontSize: '13px', fontWeight: 800, cursor: 'pointer', boxShadow: tab === 'LEDGER' ? '0 2px 8px rgba(0,0,0,0.05)' : 'none' }}>
-                Ledger
-             </button>
-             <button onClick={() => setTab('REQUESTS')}
-               style={{ flex: 1, padding: '10px', borderRadius: '11px', border: 'none', background: tab === 'REQUESTS' ? '#fff' : 'transparent', color: tab === 'REQUESTS' ? T.primary : T.txt3, fontSize: '13px', fontWeight: 800, cursor: 'pointer', boxShadow: tab === 'REQUESTS' ? '0 2px 8px rgba(0,0,0,0.05)' : 'none' }}>
-                Requests
-             </button>
-             <button onClick={() => setTab('CUSTOMERS')}
-               style={{ flex: 1, padding: '10px', borderRadius: '11px', border: 'none', background: tab === 'CUSTOMERS' ? '#fff' : 'transparent', color: tab === 'CUSTOMERS' ? T.primary : T.txt3, fontSize: '13px', fontWeight: 800, cursor: 'pointer', boxShadow: tab === 'CUSTOMERS' ? '0 2px 8px rgba(0,0,0,0.05)' : 'none' }}>
-                Assignment
-             </button>
+        <div style={{ padding: '0 20px', marginTop: '-44px', position: 'relative', zIndex: 20 }}>
+          
+          {/* Dashboard Summary Cards */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', marginBottom: '24px' }}>
+             {[
+               { label: 'Total Debt', val: fmt(totalDebt), icon: Wallet, color: '#fca5a5' },
+               { label: 'Pending', val: pendingCount, icon: Clock, color: '#fcd34d' },
+               { label: 'Repayments', val: fmt(totalPaid), icon: CreditCard, color: '#6ee7b7' }
+             ].map((s, i) => (
+               <div key={i} style={{ background: '#fff', borderRadius: '20px', padding: '12px 8px', border: `1px solid ${T.border}`, boxShadow: T.shadow, textAlign: 'center' }}>
+                  <div style={{ width: '28px', height: '28px', borderRadius: '10px', background: `${s.color}20`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: s.color, margin: '0 auto 8px' }}>
+                     <s.icon size={14} strokeWidth={2.5} />
+                  </div>
+                  <div style={{ fontSize: '14px', fontWeight: 900, color: T.ink, letterSpacing: '-0.03em' }}>{s.val}</div>
+                  <div style={{ fontSize: '9px', fontWeight: 800, color: T.txt3, textTransform: 'uppercase', marginTop: '2px' }}>{s.label}</div>
+               </div>
+             ))}
+          </div>
+
+          {/* Compact Tabs */}
+          <div style={{ display: 'flex', background: 'rgba(0,0,0,0.03)', padding: '4px', borderRadius: '16px', marginBottom: '20px', backdropFilter: 'blur(10px)' }}>
+             {(['LEDGER', 'REQUESTS', 'CUSTOMERS'] as const).map(t => (
+               <button key={t} onClick={() => setTab(t)}
+                 style={{ flex: 1, padding: '10px', borderRadius: '12px', border: 'none', background: tab === t ? '#fff' : 'transparent', color: tab === t ? T.primary : T.txt3, fontSize: '11px', fontWeight: 900, cursor: 'pointer', boxShadow: tab === t ? '0 2px 10px rgba(37,99,235,0.08)' : 'none', transition: 'all 0.2s' }}>
+                  {t === 'CUSTOMERS' ? 'Assign' : t.charAt(0) + t.slice(1).toLowerCase()}
+               </button>
+             ))}
           </div>
 
           {tab === 'LEDGER' ? (
             <>
-              <div style={{ position: 'relative', marginBottom: '20px' }}>
-                <Search size={18} color={T.txt3} style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)' }} />
-                <input 
-                  type="text" 
-                  placeholder="Search Supplier..." 
-                  value={searchSup}
-                  onChange={(e) => setSearchSup(e.target.value)}
-                  style={{ width: '100%', padding: '14px 16px 14px 44px', borderRadius: '16px', border: `1px solid ${T.border}`, background: '#fff', fontSize: '14px', fontWeight: 600, color: T.ink, outline: 'none', boxSizing: 'border-box', boxShadow: T.shadow }}
-                />
+              {/* Compact Search */}
+              <div style={{ position: 'relative', marginBottom: '16px' }}>
+                <Search size={16} color={T.txt3} style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)' }} />
+                <input type="text" placeholder="Search Supplier..." value={searchSup} onChange={(e) => setSearchSup(e.target.value)}
+                  style={{ width: '100%', padding: '12px 16px 12px 42px', borderRadius: '16px', border: `1.5px solid ${T.border}`, background: '#fff', fontSize: '13px', fontWeight: 600, color: T.ink, outline: 'none' }} />
               </div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 {loading ? <div style={{ textAlign: 'center', padding: '40px', color: T.txt3 }}>Loading...</div> : (
                   <>
                     {filteredSuppliers.length === 0 ? (
-                      <div style={{ textAlign: 'center', padding: '60px 20px', background: '#fff', borderRadius: T.radius, border: `1px dashed ${T.border}` }}>
-                        <Users size={40} color={T.txt3} style={{ margin: '0 auto 16px', opacity: 0.5 }} />
-                        <h3 style={{ margin: '0 0 8px', color: T.ink, fontSize: '16px', fontWeight: 900 }}>No Suppliers Found</h3>
+                      <div style={{ textAlign: 'center', padding: '48px 20px', background: '#fff', borderRadius: T.radius, border: `1px dashed ${T.border}` }}>
+                        <Users size={32} color={T.txt3} style={{ margin: '0 auto 12px', opacity: 0.5 }} />
+                        <h3 style={{ margin: 0, color: T.ink, fontSize: '14px', fontWeight: 900 }}>No Suppliers Found</h3>
                       </div>
                     ) : (
                       filteredSuppliers.map((s, idx) => (
-                        <motion.div key={s.id || idx} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.05 }}
+                        <motion.div key={s.id || idx} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.04 }}
                           onClick={() => setSelectedSup(selectedSup?.id === s.id ? null : s)}
-                          style={{ background: '#fff', borderRadius: '24px', padding: '20px', border: selectedSup?.id === s.id ? `2px solid ${T.primary}` : `1px solid ${T.border}`, boxShadow: T.shadow, cursor: 'pointer' }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
+                          style={{ background: '#fff', borderRadius: '22px', padding: '14px', border: selectedSup?.id === s.id ? `1.5px solid ${T.primary}` : `1px solid ${T.border}`, boxShadow: T.shadow, cursor: 'pointer' }}>
+                          
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                <div style={{ width: '48px', height: '48px', borderRadius: '16px', background: T.pLight, display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.primary, fontSize: '20px', fontWeight: 900 }}>
+                                <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: T.pLight, display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.primary, fontSize: '15px', fontWeight: 900 }}>
                                    {String(s.full_name || '?').charAt(0)}
                                 </div>
-                                <div>
-                                   <div style={{ fontSize: '16px', fontWeight: 900, color: T.ink }}>{s.full_name || 'Unnamed'}</div>
-                                   <div style={{ fontSize: '11px', fontWeight: 700, color: T.txt3 }}>ID: {String(s.id || '').slice(0, 8).toUpperCase()}</div>
+                                <div style={{ minWidth: 0 }}>
+                                   <div style={{ fontSize: '14px', fontWeight: 800, color: T.ink, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.full_name || 'Unnamed'}</div>
+                                   <div style={{ fontSize: '10px', fontWeight: 700, color: T.txt3 }}>Units: {s.unitsTaken}</div>
                                 </div>
                              </div>
                              <div style={{ textAlign: 'right' }}>
                                 <div style={{ fontSize: '11px', fontWeight: 800, color: T.txt3, textTransform: 'uppercase' }}>Debt</div>
-                                <div style={{ fontSize: '18px', fontWeight: 900, color: s.debt > 0 ? T.danger : T.success }}>{fmt(s.debt)}</div>
+                                <div style={{ fontSize: '15px', fontWeight: 900, color: s.debt > 0 ? T.danger : T.success }}>{fmt(s.debt)}</div>
                              </div>
                           </div>
-                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                             <div style={{ padding: '12px', background: T.bg, borderRadius: '16px' }}>
-                                <div style={{ fontSize: '10px', fontWeight: 800, color: T.txt3 }}>Units Taken</div>
-                                <div style={{ fontSize: '16px', fontWeight: 900, color: T.ink }}>{s.unitsTaken}</div>
-                             </div>
-                             <div style={{ padding: '12px', background: T.bg, borderRadius: '16px' }}>
-                                <div style={{ fontSize: '10px', fontWeight: 800, color: T.txt3 }}>Paid</div>
-                                <div style={{ fontSize: '16px', fontWeight: 900, color: T.success }}>{fmt(s.paid)}</div>
-                             </div>
-                          </div>
+
                           <AnimatePresence>
                             {selectedSup?.id === s.id && (
                               <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}
-                                style={{ overflow: 'hidden', marginTop: '16px', paddingTop: '16px', borderTop: `1px solid ${T.border}` }}>
+                                style={{ overflow: 'hidden', marginTop: '12px', paddingTop: '12px', borderTop: `1px solid ${T.border}` }}>
                                  <div style={{ display: 'flex', gap: '8px' }}>
                                     <button onClick={(e) => { e.stopPropagation(); navigate('/store/dispatch', { state: { supplierId: s.custId } }); }}
-                                      style={{ flex: 1, padding: '12px', borderRadius: '12px', border: 'none', background: T.primary, color: '#fff', fontSize: '12px', fontWeight: 800, cursor: 'pointer' }}>
+                                      style={{ flex: 1, padding: '10px', borderRadius: '12px', border: 'none', background: T.primary, color: '#fff', fontSize: '11px', fontWeight: 900, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
                                        Dispatch
+                                    </button>
+                                    <button onClick={(e) => e.stopPropagation()}
+                                      style={{ flex: 1, padding: '10px', borderRadius: '12px', border: `1.5px solid ${T.border}`, background: 'transparent', color: T.ink, fontSize: '11px', fontWeight: 900, cursor: 'pointer' }}>
+                                       Pay Report
                                     </button>
                                  </div>
                               </motion.div>
@@ -179,66 +194,69 @@ export default function StoreAccounting() {
               </div>
             </>
           ) : tab === 'REQUESTS' ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                {transactions.filter(t => t.status === 'PENDING_STORE').length === 0 ? (
-                 <div style={{ textAlign: 'center', padding: '60px 20px', background: '#fff', borderRadius: T.radius, border: `1px dashed ${T.border}` }}>
-                    <Clock size={40} color={T.txt3} style={{ margin: '0 auto 16px', opacity: 0.5 }} />
-                    <h3 style={{ margin: '0 0 8px', color: T.ink, fontSize: '16px', fontWeight: 900 }}>No Requests</h3>
+                 <div style={{ textAlign: 'center', padding: '48px 20px', background: '#fff', borderRadius: T.radius, border: `1px dashed ${T.border}` }}>
+                    <PackageOpen size={32} color={T.txt3} style={{ margin: '0 auto 12px', opacity: 0.5 }} />
+                    <h3 style={{ margin: 0, color: T.ink, fontSize: '14px', fontWeight: 900 }}>No Pending Requests</h3>
                  </div>
                ) : (
                  transactions.filter(t => t.status === 'PENDING_STORE').map(tx => {
                    const sup = customers.find(c => c.id === tx.customerId);
                    return (
-                     <div key={tx.id} style={{ background: '#fff', borderRadius: '24px', padding: '20px', border: `1px solid ${T.border}`, boxShadow: T.shadow }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
+                     <motion.div key={tx.id} initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
+                       style={{ background: '#fff', borderRadius: '22px', padding: '14px', border: `1px solid ${T.border}`, boxShadow: T.shadow }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                              <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: tx.type === 'Return' ? 'rgba(244,63,94,0.1)' : 'rgba(16,185,129,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                 <ArrowRightLeft size={20} color={tx.type === 'Return' ? T.danger : T.success} />
+                              <div style={{ width: '36px', height: '36px', borderRadius: '12px', background: tx.type === 'Return' ? 'rgba(244,63,94,0.1)' : 'rgba(16,185,129,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                 <ArrowRightLeft size={16} color={tx.type === 'Return' ? T.danger : T.success} />
                               </div>
                               <div>
-                                 <div style={{ fontSize: '15px', fontWeight: 900, color: T.ink }}>{sup?.name || 'Unknown'}</div>
-                                 <div style={{ fontSize: '11px', fontWeight: 700, color: T.txt3 }}>{tx.type}</div>
+                                 <div style={{ fontSize: '14px', fontWeight: 800, color: T.ink }}>{sup?.name || 'Unknown'}</div>
+                                 <span style={{ fontSize: '9px', fontWeight: 800, padding: '2px 6px', borderRadius: '5px', background: tx.type === 'Return' ? '#fff1f2' : '#f0fdf4', color: tx.type === 'Return' ? T.danger : T.success, textTransform: 'uppercase' }}>{tx.type}</span>
                               </div>
                            </div>
                            <div style={{ textAlign: 'right' }}>
-                              <div style={{ fontSize: '18px', fontWeight: 900, color: T.ink }}>{tx.totalPrice}</div>
+                              <div style={{ fontSize: '16px', fontWeight: 900, color: T.ink }}>{fmt(tx.totalPrice)}</div>
+                              <div style={{ fontSize: '9px', fontWeight: 700, color: T.txt3 }}>{new Date(tx.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
                            </div>
                         </div>
                         <div style={{ display: 'flex', gap: '8px' }}>
                            <button onClick={() => updateTransactionStatus(tx.id, 'COMPLETED')}
-                             style={{ flex: 1, padding: '12px', borderRadius: '12px', border: 'none', background: T.success, color: '#fff', fontSize: '12px', fontWeight: 800 }}>
-                               Confirm
+                             style={{ flex: 1, padding: '10px', borderRadius: '12px', border: 'none', background: T.success, color: '#fff', fontSize: '11px', fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                               <CheckCircle2 size={14} /> Accept
                            </button>
                            <button onClick={() => updateTransactionStatus(tx.id, 'CANCELLED')}
-                             style={{ flex: 1, padding: '12px', borderRadius: '12px', border: `1px solid ${T.danger}`, background: '#fff', color: T.danger, fontSize: '12px', fontWeight: 800 }}>
-                               Reject
+                             style={{ flex: 1, padding: '10px', borderRadius: '12px', border: `1px solid ${T.danger}20`, background: `${T.danger}08`, color: T.danger, fontSize: '11px', fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                               <XCircle size={14} /> Reject
                            </button>
                         </div>
-                     </div>
+                     </motion.div>
                    );
                  })
                )}
             </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-               <div style={{ position: 'relative', marginBottom: '8px' }}>
-                  <Search size={18} color={T.txt3} style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)' }} />
-                  <input type="text" placeholder="Search customer..." value={searchCust} onChange={(e) => setSearchCust(e.target.value)}
-                    style={{ width: '100%', padding: '14px 16px 14px 44px', borderRadius: '16px', border: `1px solid ${T.border}`, background: '#fff', fontSize: '14px', fontWeight: 600, color: T.ink, outline: 'none' }} />
+            /* Assignment Tab */
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+               <div style={{ position: 'relative', marginBottom: '10px' }}>
+                  <Search size={16} color={T.txt3} style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)' }} />
+                  <input type="text" placeholder="Search customer name..." value={searchCust} onChange={(e) => setSearchCust(e.target.value)}
+                    style={{ width: '100%', padding: '12px 16px 12px 42px', borderRadius: '16px', border: `1.5px solid ${T.border}`, background: '#fff', fontSize: '13px', fontWeight: 600, color: T.ink, outline: 'none' }} />
                </div>
 
                {customers.filter(c => !suppliers.some(s => s.profile_id === c.profile_id))
                 .filter(c => (c.name || '').toLowerCase().includes(searchCust.toLowerCase()))
                 .map(cust => (
-                  <div key={cust.id} style={{ background: '#fff', borderRadius: '20px', padding: '16px', border: `1px solid ${T.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                     <div>
-                        <div style={{ fontSize: '14px', fontWeight: 800, color: T.ink }}>{cust.name || 'Unnamed'}</div>
-                        <div style={{ fontSize: '11px', color: T.txt3 }}>{cust.location || 'No Location'}</div>
+                  <div key={cust.id} style={{ background: '#fff', borderRadius: '20px', padding: '12px 14px', border: `1px solid ${T.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                     <div style={{ minWidth: 0, flex: 1 }}>
+                        <div style={{ fontSize: '13px', fontWeight: 800, color: T.ink, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{cust.name || 'Unnamed'}</div>
+                        <div style={{ fontSize: '10px', color: T.txt3, fontWeight: 700 }}>{cust.location || 'Local Business'}</div>
                      </div>
                      <select 
                        value={cust.assignedSupplierId || ''} 
                        onChange={(e) => updateCustomer({ ...cust, assignedSupplierId: e.target.value || undefined })}
-                       style={{ padding: '8px', borderRadius: '10px', border: `1.5px solid ${T.border}`, background: T.bg, fontSize: '12px', fontWeight: 700 }}>
+                       style={{ padding: '8px', borderRadius: '10px', border: `1.5px solid ${T.border}`, background: T.bg, fontSize: '11px', fontWeight: 800, color: T.ink, outline: 'none', maxWidth: '110px' }}>
                         <option value="">(None)</option>
                         {suppliers.map(s => (
                           <option key={s.id || s.profile_id} value={s.custId}>{s.full_name || 'Unnamed'}</option>
