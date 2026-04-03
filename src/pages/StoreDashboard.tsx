@@ -47,7 +47,11 @@ export const StoreDashboard: React.FC = () => {
       const now = new Date();
       setClockStr(now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
       const h = now.getHours();
-      setGreeting(h < 12 ? 'Good Morning' : h < 17 ? 'Good Afternoon' : 'Good Evening');
+      let g = '';
+      if (h < 12) g = 'Ina kwana (Good Morning)';
+      else if (h < 17) g = 'Barka da Rana (Good Afternoon)';
+      else g = 'Ina wuni (Good Evening)';
+      setGreeting(g);
     };
     tick();
     const id = setInterval(tick, 1000);
@@ -118,7 +122,7 @@ export const StoreDashboard: React.FC = () => {
                 </div>
                 <div>
                   <div style={{ fontSize: '11px', color: 'rgba(147,197,253,0.8)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em' }}>🏪 Storefront</div>
-                  <div style={{ fontSize: '18px', fontWeight: 900, color: '#fff', letterSpacing: '-0.03em' }}>{greeting}, {staffName.split(' ')[0]}!</div>
+                  <div style={{ fontSize: '18px', fontWeight: 900, color: '#fff', letterSpacing: '-0.03em' }}>{greeting}, {staffName.split(' ')[0]}</div>
                   <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', fontWeight: 700, fontVariantNumeric: 'tabular-nums', marginTop: '1px' }}>🕐 {clockStr}</div>
                 </div>
               </div>

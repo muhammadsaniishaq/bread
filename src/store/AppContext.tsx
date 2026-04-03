@@ -176,18 +176,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     await refreshData();
   };
 
+  /**
+   * MANAGE SALES & SUPPLIER REQUESTS
+   * --------------------------------------------------
+   * This handles both immediate sales (Cash/Debt) and 
+   * Supplier-initiated requests which start as 'PENDING_STORE'.
+   */
   const recordSale = async (tx: Transaction) => {
-    // 1. ALWAYS save transaction first
+    // 1. Primary persistence: Save to DB immediately
     await dbTransactions.setItem(tx.id, tx);
     setTransactions(prev => [tx, ...prev]);
 
-    // If it's PENDING, we stop here. Accounting/Stock only updates on confirmation.
+    // 2. Logic Gate: If status is PENDING, we stop here.
+    // Stock and Debt balances only update once a Store Keeper confirms.
     if (tx.status === 'PENDING_STORE') {
        await refreshData();
        return;
     }
 
-    // 3. Update company metrics
+    // 3. Update financial metrics (for immediate Cash sales)
     try {
       const metrics = { ...companyMetrics };
       if (tx.type === 'Cash') {
@@ -195,29 +202,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
       await dbCompanyMetrics.setItem('main', metrics);
       setCompanyMetrics(metrics);
-    } catch (e) { console.error('Metrics update failed', e); }
+    } catch (e) { console.error('AppContext: Metrics update failed', e); }
     
-    // 4. Update stock for each item in the sale
+    // 4. Update Inventory Stock levels
     try {
-      const items = tx.items?.length ? tx.items : (tx.productId ? [{ productId: tx.productId, quantity: tx.quantity || 0, unitPrice: 0 }] : []);
-      
+      const items = getTransactionItems(tx);
       const updatedProducts = [...products];
       for (const item of items) {
-        if (item.productId && item.quantity) {
-          const productIndex = updatedProducts.findIndex(p => p.id === item.productId);
-          if (productIndex !== -1) {
-            updatedProducts[productIndex] = {
-              ...updatedProducts[productIndex],
-              stock: Math.max(0, Number(updatedProducts[productIndex].stock || 0) - Number(item.quantity))
-            };
-            await dbProducts.setItem(updatedProducts[productIndex].id, updatedProducts[productIndex]);
-          }
+        const pIdx = updatedProducts.findIndex(p => p.id === item.productId);
+        if (pIdx !== -1) {
+          updatedProducts[pIdx] = {
+            ...updatedProducts[pIdx],
+            stock: Math.max(0, Number(updatedProducts[pIdx].stock || 0) - Number(item.quantity))
+          };
+          await dbProducts.setItem(updatedProducts[pIdx].id, updatedProducts[pIdx]);
         }
       }
       setProducts(updatedProducts);
-    } catch (e) { console.error('Stock update failed', e); }
+    } catch (e) { console.error('AppContext: Stock update failed', e); }
 
-    // 5. Update customer debt/points if applicable
+    // 5. Update Ledger Balances (Debt)
     try {
       if (tx.customerId) {
         const customer = customers.find(c => c.id === tx.customerId);
@@ -226,39 +230,39 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           if (tx.type === 'Debt') {
             updatedCustomer.debtBalance += tx.totalPrice;
           }
-          if (tx.pointsUsed) {
-            updatedCustomer.loyaltyPoints = Math.max(0, (updatedCustomer.loyaltyPoints || 0) - tx.pointsUsed);
-          }
-          if (tx.pointsEarned) {
-            updatedCustomer.loyaltyPoints = (updatedCustomer.loyaltyPoints || 0) + tx.pointsEarned;
-          }
-          await dbCustomers.setItem(customer.id, updatedCustomer);
+          await dbCustomers.setItem(updatedCustomer.id, updatedCustomer);
           setCustomers(prev => prev.map(c => c.id === customer.id ? updatedCustomer : c));
         }
       }
-    } catch (e) { console.error('Customer update failed', e); }
+    } catch (e) { console.error('AppContext: Customer update failed', e); }
     
-    // 6. Refresh full data from DB to ensure consistency (non-blocking)
-    refreshData().catch(e => console.error('refreshData failed', e));
+    await refreshData();
   };
 
-
+  /**
+   * CONFIRM/APPROVE SUPPLIER REQUESTS
+   * --------------------------------------------------
+   * This transitions a PENDING request to COMPLETED and
+   * finally applies the stock and financial changes.
+   */
   const updateTransactionStatus = async (id: string, status: 'COMPLETED' | 'CANCELLED') => {
     const tx = transactions.find(t => t.id === id);
     if (!tx || tx.status === status) return;
 
+    // 1. Mark status in DB
     const updatedTx = { ...tx, status };
     await dbTransactions.setItem(id, updatedTx);
 
+    // 2. If transitioning to COMPLETED, apply physical & financial effects
     if (status === 'COMPLETED') {
-      // Apply the effects that were skipped during initial recordSale
       
-      // A. Update Stock
+      // A. Adjust Inventory levels
       const items = getTransactionItems(tx);
       const updatedProducts = [...products];
       for (const item of items) {
         const pIdx = updatedProducts.findIndex(p => p.id === item.productId);
         if (pIdx !== -1) {
+          // If Return, we add to stock. If Debt, we subtract.
           const delta = tx.type === 'Return' ? item.quantity : -item.quantity;
           updatedProducts[pIdx] = {
             ...updatedProducts[pIdx],
@@ -268,12 +272,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
       }
 
-      // B. Update Customer Debt
+      // B. Adjust Ledger balance
       if (tx.customerId) {
         const customer = customers.find(c => c.id === tx.customerId);
         if (customer) {
+          // If Return, debt decreases. If Debt, debt increases.
           const delta = tx.type === 'Return' ? -tx.totalPrice : tx.totalPrice;
-          const updatedCustomer = { ...customer, debtBalance: customer.debtBalance + delta };
+          const updatedCustomer = { ...customer, debtBalance: (customer.debtBalance || 0) + delta };
           await dbCustomers.setItem(customer.id, updatedCustomer);
         }
       }

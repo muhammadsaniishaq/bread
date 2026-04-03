@@ -126,23 +126,23 @@ export default function StoreAccounting() {
              ))}
           </div>
 
-          {/* Compact Tabs */}
-          <div style={{ display: 'flex', background: 'rgba(0,0,0,0.03)', padding: '4px', borderRadius: '16px', marginBottom: '20px', backdropFilter: 'blur(10px)' }}>
+          {/* Clean Selection Tabs */}
+          <div style={{ display: 'flex', background: 'rgba(0,0,0,0.03)', padding: '5px', borderRadius: '18px', marginBottom: '24px', backdropFilter: 'blur(10px)' }}>
              {(['LEDGER', 'REQUESTS', 'CUSTOMERS'] as const).map(t => (
                <button key={t} onClick={() => setTab(t)}
-                 style={{ flex: 1, padding: '10px', borderRadius: '12px', border: 'none', background: tab === t ? '#fff' : 'transparent', color: tab === t ? T.primary : T.txt3, fontSize: '11px', fontWeight: 900, cursor: 'pointer', boxShadow: tab === t ? '0 2px 10px rgba(37,99,235,0.08)' : 'none', transition: 'all 0.2s' }}>
-                  {t === 'CUSTOMERS' ? 'Assign' : t.charAt(0) + t.slice(1).toLowerCase()}
+                 style={{ flex: 1, padding: '12px', borderRadius: '14px', border: 'none', background: tab === t ? '#fff' : 'transparent', color: tab === t ? T.primary : T.txt3, fontSize: '12px', fontWeight: 900, cursor: 'pointer', boxShadow: tab === t ? '0 4px 15px rgba(37,99,235,0.1)' : 'none', transition: 'all 0.3s' }}>
+                  {t === 'LEDGER' ? 'Littafin Bashi' : t === 'REQUESTS' ? 'Ayyukan Suplier' : 'Saka Mutum'}
                </button>
              ))}
           </div>
 
           {tab === 'LEDGER' ? (
             <>
-              {/* Compact Search */}
-              <div style={{ position: 'relative', marginBottom: '16px' }}>
-                <Search size={16} color={T.txt3} style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)' }} />
-                <input type="text" placeholder="Search Supplier..." value={searchSup} onChange={(e) => setSearchSup(e.target.value)}
-                  style={{ width: '100%', padding: '12px 16px 12px 42px', borderRadius: '16px', border: `1.5px solid ${T.border}`, background: '#fff', fontSize: '13px', fontWeight: 600, color: T.ink, outline: 'none' }} />
+              {/* Premium Search */}
+              <div style={{ position: 'relative', marginBottom: '18px' }}>
+                <Search size={18} color={T.txt3} style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)' }} />
+                <input type="text" placeholder="Bincika Suplier..." value={searchSup} onChange={(e) => setSearchSup(e.target.value)}
+                  style={{ width: '100%', padding: '14px 16px 14px 46px', borderRadius: '18px', border: `1.5px solid ${T.border}`, background: '#fff', fontSize: '14px', fontWeight: 600, color: T.ink, outline: 'none', boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.02)' }} />
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
@@ -200,12 +200,12 @@ export default function StoreAccounting() {
               </div>
             </>
           ) : tab === 'REQUESTS' ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                {myPendingRequests.length === 0 ? (
-                 <div style={{ textAlign: 'center', padding: '48px 20px', background: '#fff', borderRadius: T.radius, border: `1px dashed ${T.border}` }}>
-                    <PackageOpen size={32} color={T.txt3} style={{ margin: '0 auto 12px', opacity: 0.5 }} />
-                    <h3 style={{ margin: 0, color: T.ink, fontSize: '14px', fontWeight: 900 }}>No Pending Requests</h3>
-                    <p style={{ margin: '4px 0 0', fontSize: '11px', color: T.txt3, fontWeight: 600 }}>Requests assigned to you will appear here.</p>
+                 <div style={{ textAlign: 'center', padding: '54px 24px', background: '#fff', borderRadius: T.radius, border: `1px dashed ${T.border}`, boxShadow: T.shadow }}>
+                    <PackageOpen size={36} color={T.txt3} style={{ margin: '0 auto 16px', opacity: 0.4 }} />
+                    <h3 style={{ margin: 0, color: T.ink, fontSize: '15px', fontWeight: 900 }}>Babu Wani Aiki</h3>
+                    <p style={{ margin: '6px 0 0', fontSize: '12px', color: T.txt3, fontWeight: 700 }}>Duk bukatun da aka tura maka zasu bayyana anan.</p>
                  </div>
                ) : (
                  myPendingRequests.map(tx => {
