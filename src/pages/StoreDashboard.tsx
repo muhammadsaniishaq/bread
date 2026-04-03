@@ -5,7 +5,7 @@ import { useAuth } from '../store/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { getTransactionItems } from '../store/types';
 import {
-  Package, ShoppingCart, ClipboardList, LogOut,
+  Package, ShoppingCart, LogOut,
   TrendingUp, AlertTriangle, CheckCircle, ArrowRight,
   Zap, Clock, BarChart3
 } from 'lucide-react';
@@ -81,9 +81,13 @@ export const StoreDashboard: React.FC = () => {
       v: Math.round((totalSales > 0 ? totalSales : 15000) * f / 1000) * 1000,
     }));
 
-    return { totalSales, totalCash, totalDebt, unitsSold, stock, lowStock, received, breadMap, weekData,
+    const pendingRequestsCount = transactions.filter(t => 
+      t.status === 'PENDING_STORE' && (!t.storeKeeperId || t.storeKeeperId === user?.id)
+    ).length;
+
+    return { totalSales, totalCash, totalDebt, unitsSold, stock, lowStock, received, breadMap, weekData, pendingRequestsCount,
       recent: [...todaysTx].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 5) };
-  }, [transactions, products, inventoryLogs]);
+  }, [transactions, products, inventoryLogs, user]);
 
   const staffName = (user as any)?.user_metadata?.full_name || 'Store Keeper';
   const getCustomer = (id?: string) => customers.find(c => c.id === id)?.name || 'Walk-in';
@@ -185,14 +189,14 @@ export const StoreDashboard: React.FC = () => {
                 </div>
               </motion.button>
 
-              <motion.button whileTap={{ scale: 0.96 }} onClick={() => navigate('/store/records')}
-                style={{ flex: 1, padding: '12px 14px', borderRadius: '16px', background: T.white, border: `1px solid ${T.borderL}`, cursor: 'pointer', fontFamily: 'inherit', boxShadow: T.shadow, display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <div style={{ width: '34px', height: '34px', borderRadius: '10px', background: T.pLight, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <ClipboardList size={16} color={T.primary} />
+              <motion.button whileTap={{ scale: 0.96 }} onClick={() => navigate('/store/accounting')}
+                style={{ flex: 1, padding: '12px 14px', borderRadius: '16px', background: metrics.pendingRequestsCount > 0 ? '#fff7ed' : T.white, border: `1px solid ${metrics.pendingRequestsCount > 0 ? '#fdba74' : T.borderL}`, cursor: 'pointer', fontFamily: 'inherit', boxShadow: T.shadow, display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{ width: '34px', height: '34px', borderRadius: '10px', background: metrics.pendingRequestsCount > 0 ? '#ffedd5' : T.pLight, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <Clock size={16} color={metrics.pendingRequestsCount > 0 ? '#f97316' : T.primary} />
                 </div>
                 <div style={{ textAlign: 'left' }}>
-                  <div style={{ fontSize: '12px', fontWeight: 800, color: T.ink }}>Dispatch Log</div>
-                  <div style={{ fontSize: '10px', color: T.txt3 }}>{metrics.recent.length} today</div>
+                  <div style={{ fontSize: '12px', fontWeight: 800, color: T.ink }}>Pending</div>
+                  <div style={{ fontSize: '10px', color: metrics.pendingRequestsCount > 0 ? '#f97316' : T.txt3, fontWeight: 700 }}>{metrics.pendingRequestsCount} Requests</div>
                 </div>
               </motion.button>
             </div>

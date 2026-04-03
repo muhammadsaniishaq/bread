@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAppContext } from '../store/AppContext';
+import { useAuth } from '../store/AuthContext';
 import { 
   Users, Search, Clock, ArrowRightLeft, ShieldCheck, 
   CheckCircle2, XCircle, CreditCard, Wallet, PackageOpen
@@ -31,6 +32,7 @@ const T = {
 const fmt = (v: number) => "₦" + v.toLocaleString();
 
 export default function StoreAccounting() {
+  const { user } = useAuth();
   const { customers = [], transactions = [], debtPayments = [], updateTransactionStatus, updateCustomer } = useAppContext();
   const [suppliers, setSuppliers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -79,7 +81,11 @@ export default function StoreAccounting() {
     (String(s.full_name || '')).toLowerCase().includes(searchSup.toLowerCase())
   );
 
-  const pendingCount = transactions.filter(t => t.status === 'PENDING_STORE').length;
+  const myPendingRequests = transactions.filter(t => 
+    t.status === 'PENDING_STORE' && (!t.storeKeeperId || t.storeKeeperId === user?.id)
+  );
+
+  const pendingCount = myPendingRequests.length;
   const totalDebt = suppliers.reduce((s, sup) => s + sup.debt, 0);
   const totalPaid = suppliers.reduce((s, sup) => s + sup.paid, 0);
 
@@ -195,13 +201,14 @@ export default function StoreAccounting() {
             </>
           ) : tab === 'REQUESTS' ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-               {transactions.filter(t => t.status === 'PENDING_STORE').length === 0 ? (
+               {myPendingRequests.length === 0 ? (
                  <div style={{ textAlign: 'center', padding: '48px 20px', background: '#fff', borderRadius: T.radius, border: `1px dashed ${T.border}` }}>
                     <PackageOpen size={32} color={T.txt3} style={{ margin: '0 auto 12px', opacity: 0.5 }} />
                     <h3 style={{ margin: 0, color: T.ink, fontSize: '14px', fontWeight: 900 }}>No Pending Requests</h3>
+                    <p style={{ margin: '4px 0 0', fontSize: '11px', color: T.txt3, fontWeight: 600 }}>Requests assigned to you will appear here.</p>
                  </div>
                ) : (
-                 transactions.filter(t => t.status === 'PENDING_STORE').map(tx => {
+                 myPendingRequests.map(tx => {
                    const sup = customers.find(c => c.id === tx.customerId);
                    return (
                      <motion.div key={tx.id} initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}

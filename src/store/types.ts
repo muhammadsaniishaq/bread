@@ -43,6 +43,7 @@ export interface Transaction {
   totalPrice: number;
   discount?: number;
   customerId?: string; // For debt
+  storeKeeperId?: string; // Store Keeper responsible for the request
   pointsEarned?: number;
   pointsUsed?: number;
 }
