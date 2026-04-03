@@ -8,7 +8,7 @@ import { useTranslation } from '../store/LanguageContext';
 import {
   Package, ShoppingCart, LogOut,
   TrendingUp, AlertTriangle, CheckCircle, ArrowRight,
-  Zap, Clock, BarChart3
+  Zap, Clock, BarChart3, Wallet, ArrowUpRight, ArrowDownLeft
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ResponsiveContainer, AreaChart, Area, XAxis, Tooltip } from 'recharts';
@@ -37,7 +37,7 @@ const T = {
 const fmt = (v: number) => `₦${v.toLocaleString()}`;
 
 export const StoreDashboard: React.FC = () => {
-  const { products, transactions, customers, inventoryLogs } = useAppContext();
+  const { products, transactions, customers, inventoryLogs, updateTransactionStatus } = useAppContext();
   const { signOut, user } = useAuth();
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -90,11 +90,12 @@ export const StoreDashboard: React.FC = () => {
       v: Math.round((totalSales > 0 ? totalSales : 15000) * f / 1000) * 1000,
     }));
 
-    const pendingRequestsCount = transactions.filter(t => 
+    const pendingRequests = transactions.filter(t => 
       t.status === 'PENDING_STORE' && (!t.storeKeeperId || t.storeKeeperId === user?.id)
-    ).length;
+    );
+    const pendingRequestsCount = pendingRequests.length;
 
-    return { totalSales, totalCash, totalDebt, unitsSold, stock, lowStock, received, breadMap, weekData, pendingRequestsCount,
+    return { totalSales, totalCash, totalDebt, unitsSold, stock, lowStock, received, breadMap, weekData, pendingRequestsCount, pendingRequests,
       recent: [...todaysTx].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 5) };
   }, [transactions, products, inventoryLogs, user]);
 
@@ -338,6 +339,76 @@ export const StoreDashboard: React.FC = () => {
               </div>
             )}
           </div>
+
+          {/* ─── PENDING SUPPLIER REQUESTS (BOTTOM SECTION) ─── */}
+          {metrics.pendingRequests.length > 0 && (
+            <div style={{ background: T.white, borderRadius: T.radius, padding: '16px', boxShadow: T.shadow, border: `1.5px solid ${T.amberL}` }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px' }}>
+                <div style={{ width: '30px', height: '30px', borderRadius: '9px', background: T.amberL, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Clock size={14} color={T.amber} />
+                </div>
+                <span style={{ fontSize: '13px', fontWeight: 800, color: T.ink }}>{t('store.supplierRequests')}</span>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <AnimatePresence>
+                  {metrics.pendingRequests.map((tx) => {
+                    const sup = customers.find(c => c.id === tx.customerId);
+                    const txItems = getTransactionItems(tx);
+                    return (
+                      <motion.div key={tx.id} initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
+                        style={{ border: `1px solid ${T.borderL}`, borderRadius: '16px', padding: '12px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
+                          <div style={{ display: 'flex', gap: '10px' }}>
+                            <div style={{ width: '32px', height: '32px', borderRadius: '10px', background: tx.type === 'Return' ? T.roseL : tx.type === 'Payment' ? T.emeraldL : T.pLight, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              {tx.type === 'Return' ? <ArrowUpRight size={14} color={T.rose} /> : tx.type === 'Payment' ? <Wallet size={14} color={T.emerald} /> : <ArrowDownLeft size={14} color={T.primary} />}
+                            </div>
+                            <div>
+                              <div style={{ fontSize: '13px', fontWeight: 800, color: T.ink }}>{sup?.name || 'Supplier'}</div>
+                              <div style={{ fontSize: '10px', fontWeight: 700, color: tx.type === 'Return' ? T.rose : T.emerald }}>
+                                {tx.type === 'Return' ? t('inv.return') : tx.type === 'Payment' ? t('store.paymentRequest') : t('dash.receiveBread')}
+                              </div>
+                            </div>
+                          </div>
+                          <div style={{ textAlign: 'right' }}>
+                            <div style={{ fontSize: '14px', fontWeight: 900, color: T.ink }}>{fmt(tx.totalPrice)}</div>
+                          </div>
+                        </div>
+
+                        {tx.type !== 'Payment' && (
+                          <div style={{ background: T.bg, borderRadius: '10px', padding: '8px', marginBottom: '10px' }}>
+                            {txItems.map((it, i) => {
+                              const p = products.find(pr => pr.id === it.productId);
+                              const isShort = p && p.stock < it.quantity;
+                              return (
+                                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '11px', fontWeight: 700 }}>
+                                  <span style={{ color: T.txt2 }}>{p?.name}: {it.quantity} pcs</span>
+                                  <span style={{ color: isShort ? T.rose : T.emerald, background: isShort ? T.roseL : T.emeraldL, padding: '2px 6px', borderRadius: '4px', fontSize: '9px' }}>
+                                    {t('store.liveStock')}: {p?.stock || 0}
+                                  </span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                          <motion.button whileTap={{ scale: 0.95 }} onClick={() => updateTransactionStatus(tx.id, 'COMPLETED')}
+                            style={{ flex: 1, padding: '8px', borderRadius: '10px', border: 'none', background: T.emerald, color: '#fff', fontSize: '11px', fontWeight: 800, cursor: 'pointer' }}>
+                            {t('dash.accept')}
+                          </motion.button>
+                          <motion.button whileTap={{ scale: 0.95 }} onClick={() => updateTransactionStatus(tx.id, 'CANCELLED')}
+                            style={{ flex: 1, padding: '8px', borderRadius: '10px', border: `1px solid ${T.rose}20`, background: '#fff', color: T.rose, fontSize: '11px', fontWeight: 800, cursor: 'pointer' }}>
+                            {t('dash.reject')}
+                          </motion.button>
+                        </div>
+                      </motion.div>
+                    );
+                  })}
+                </AnimatePresence>
+              </div>
+            </div>
+          )}
 
         </div>
       </div>

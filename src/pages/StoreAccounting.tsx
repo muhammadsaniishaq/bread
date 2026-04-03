@@ -56,7 +56,8 @@ export default function StoreAccounting() {
         const supplierTransactions = transactions.filter(t => t.customerId === custRecord?.id && t.status === 'COMPLETED');
         const unitsTaken = supplierTransactions.reduce((sum, t) => {
            const items = getTransactionItems(t);
-           return sum + items.reduce((s: number, i: any) => s + i.quantity, 0);
+           const qty = items.reduce((s: number, i: any) => s + i.quantity, 0);
+           return sum + (t.type === 'Return' ? -qty : qty);
         }, 0);
 
         const paid = debtPayments

@@ -6,7 +6,7 @@ import { useTranslation } from '../store/LanguageContext';
 import { supabase } from '../lib/supabase';
 import { 
   ArrowDownLeft, ArrowUpRight, Clock, CheckCircle, Plus, History, X,
-  CreditCard, LogOut, RefreshCw
+  CreditCard, LogOut, RefreshCw, Package
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -123,6 +123,39 @@ export default function SupplierDashboard() {
         </div>
 
         <div style={{ padding: '0 16px', marginTop: '-24px' }}>
+
+          {/* Stock in Hand Section */}
+          <div style={{ marginBottom: '24px' }}>
+             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '10px', paddingLeft: '4px' }}>
+                <Package size={14} color={T.primary} />
+                <span style={{ fontSize: '11px', fontWeight: 900, color: T.ink, textTransform: 'uppercase' }}>{t('store.stockInHand')}</span>
+             </div>
+             <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px', scrollbarWidth: 'none' }}>
+                {products.filter(p => p.active).map(p => {
+                   const received = myTxs.filter(tx => tx.status === 'COMPLETED' && tx.type === 'Debt' && tx.items?.[0]?.productId === p.id)
+                      .reduce((sum, tx) => sum + (tx.items?.[0]?.quantity || 0), 0);
+                   const returned = myTxs.filter(tx => tx.status === 'COMPLETED' && tx.type === 'Return' && tx.items?.[0]?.productId === p.id)
+                      .reduce((sum, tx) => sum + (tx.items?.[0]?.quantity || 0), 0);
+                   const inHand = received - returned;
+
+                   if (inHand <= 0) return null;
+
+                   return (
+                      <div key={p.id} style={{ minWidth: '100px', background: '#fff', borderRadius: '16px', padding: '12px', border: `1px solid ${T.border}`, boxShadow: T.shadow, flexShrink: 0 }}>
+                         <div style={{ fontSize: '18px', fontWeight: 900, color: T.primary }}>{inHand}</div>
+                         <div style={{ fontSize: '10px', fontWeight: 700, color: T.txt3, marginTop: '2px' }}>{p.name}</div>
+                      </div>
+                   );
+                })}
+                {products.filter(p => p.active).every(p => {
+                   const received = myTxs.filter(tx => tx.status === 'COMPLETED' && tx.type === 'Debt' && tx.items?.[0]?.productId === p.id).reduce((s, tx) => s + (tx.items?.[0]?.quantity || 0), 0);
+                   const returned = myTxs.filter(tx => tx.status === 'COMPLETED' && tx.type === 'Return' && tx.items?.[0]?.productId === p.id).reduce((s, tx) => s + (tx.items?.[0]?.quantity || 0), 0);
+                   return (received - returned) <= 0;
+                }) && (
+                   <div style={{ padding: '12px', fontSize: '11px', color: T.txt3, fontWeight: 600 }}>{t('store.allStockOk')}</div>
+                )}
+             </div>
+          </div>
 
           {/* Compact Action Bar */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', marginBottom: '24px' }}>
