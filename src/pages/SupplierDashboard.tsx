@@ -54,7 +54,7 @@ export default function SupplierDashboard() {
     customers.find(c => c.profile_id === user?.id), [customers, user]);
 
   const myTxs = useMemo(() => 
-    transactions.filter(t => t.customerId === myAccount?.id), [transactions, myAccount]);
+    transactions.filter(t => t.customerId === myAccount?.id || t.sellerId === myAccount?.id), [transactions, myAccount]);
 
   const pendingTxs = myTxs.filter(t => t.status === 'PENDING_STORE');
   const completedTxs = myTxs.filter(t => t.status === 'COMPLETED')
@@ -133,11 +133,18 @@ export default function SupplierDashboard() {
              </div>
              <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px', scrollbarWidth: 'none' }}>
                 {products.filter(p => p.active).map(p => {
-                   const received = myTxs.filter(tx => tx.status === 'COMPLETED' && tx.type === 'Debt' && tx.items?.[0]?.productId === p.id)
-                      .reduce((sum, tx) => sum + (tx.items?.[0]?.quantity || 0), 0);
-                   const returned = myTxs.filter(tx => tx.status === 'COMPLETED' && tx.type === 'Return' && tx.items?.[0]?.productId === p.id)
-                      .reduce((sum, tx) => sum + (tx.items?.[0]?.quantity || 0), 0);
-                   const inHand = received - returned;
+                   const received = myTxs.filter(tx => tx.status === 'COMPLETED' && tx.type === 'Debt' && (tx.items?.[0]?.productId === p.id || tx.productId === p.id))
+                      .reduce((sum, tx) => sum + (tx.items?.[0]?.quantity || tx.quantity || 0), 0);
+                   const returned = myTxs.filter(tx => tx.status === 'COMPLETED' && tx.type === 'Return' && (tx.items?.[0]?.productId === p.id || tx.productId === p.id))
+                      .reduce((sum, tx) => sum + (tx.items?.[0]?.quantity || tx.quantity || 0), 0);
+                   const sold = myTxs.filter(tx => tx.origin === 'POS_SUPPLIER' && (tx.type === 'Cash' || tx.type === 'Debt'))
+                      .reduce((sum, tx) => {
+                         const item = tx.items?.find(i => i.productId === p.id);
+                         if (item) return sum + item.quantity;
+                         if (tx.productId === p.id) return sum + (tx.quantity || 0);
+                         return sum;
+                      }, 0);
+                   const inHand = received - returned - sold;
 
                    if (inHand <= 0) return null;
 
@@ -149,9 +156,15 @@ export default function SupplierDashboard() {
                    );
                 })}
                 {products.filter(p => p.active).every(p => {
-                   const received = myTxs.filter(tx => tx.status === 'COMPLETED' && tx.type === 'Debt' && tx.items?.[0]?.productId === p.id).reduce((s, tx) => s + (tx.items?.[0]?.quantity || 0), 0);
-                   const returned = myTxs.filter(tx => tx.status === 'COMPLETED' && tx.type === 'Return' && tx.items?.[0]?.productId === p.id).reduce((s, tx) => s + (tx.items?.[0]?.quantity || 0), 0);
-                   return (received - returned) <= 0;
+                   const received = myTxs.filter(tx => tx.status === 'COMPLETED' && tx.type === 'Debt' && (tx.items?.[0]?.productId === p.id || tx.productId === p.id)).reduce((s, tx) => s + (tx.items?.[0]?.quantity || tx.quantity || 0), 0);
+                   const returned = myTxs.filter(tx => tx.status === 'COMPLETED' && tx.type === 'Return' && (tx.items?.[0]?.productId === p.id || tx.productId === p.id)).reduce((s, tx) => s + (tx.items?.[0]?.quantity || tx.quantity || 0), 0);
+                   const sold = myTxs.filter(tx => tx.origin === 'POS_SUPPLIER' && (tx.type === 'Cash' || tx.type === 'Debt')).reduce((s, tx) => {
+                      const item = tx.items?.find(i => i.productId === p.id);
+                      if (item) return s + item.quantity;
+                      if (tx.productId === p.id) return s + (tx.quantity || 0);
+                      return s;
+                   }, 0);
+                   return (received - returned - sold) <= 0;
                 }) && (
                    <div style={{ padding: '12px', fontSize: '11px', color: T.txt3, fontWeight: 600 }}>{t('store.allStockOk')}</div>
                 )}
@@ -268,9 +281,15 @@ export default function SupplierDashboard() {
                                {products.map(p => {
                                   let avlText = '';
                                   if (showModal === 'RETURN') {
-                                     const received = myTxs.filter(tx => tx.status === 'COMPLETED' && tx.type === 'Debt' && tx.items?.[0]?.productId === p.id).reduce((sum, tx) => sum + (tx.items?.[0]?.quantity || 0), 0);
-                                     const returned = myTxs.filter(tx => tx.status === 'COMPLETED' && tx.type === 'Return' && tx.items?.[0]?.productId === p.id).reduce((sum, tx) => sum + (tx.items?.[0]?.quantity || 0), 0);
-                                     avlText = ` (Avl: ${Math.max(0, received - returned)})`;
+                                     const received = myTxs.filter(tx => tx.status === 'COMPLETED' && tx.type === 'Debt' && (tx.items?.[0]?.productId === p.id || tx.productId === p.id)).reduce((sum, tx) => sum + (tx.items?.[0]?.quantity || tx.quantity || 0), 0);
+                                     const returned = myTxs.filter(tx => tx.status === 'COMPLETED' && tx.type === 'Return' && (tx.items?.[0]?.productId === p.id || tx.productId === p.id)).reduce((sum, tx) => sum + (tx.items?.[0]?.quantity || tx.quantity || 0), 0);
+                                     const sold = myTxs.filter(tx => tx.origin === 'POS_SUPPLIER' && (tx.type === 'Cash' || tx.type === 'Debt')).reduce((s, tx) => {
+                                        const item = tx.items?.find(i => i.productId === p.id);
+                                        if (item) return s + item.quantity;
+                                        if (tx.productId === p.id) return s + (tx.quantity || 0);
+                                        return s;
+                                     }, 0);
+                                     avlText = ` (Avl: ${Math.max(0, received - returned - sold)})`;
                                   } else {
                                      avlText = ` (Avl: ${p.stock})`;
                                   }

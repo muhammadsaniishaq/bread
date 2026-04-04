@@ -7,7 +7,7 @@ import { AnimatedPage } from '../components/AnimatedPage';
 import { useNavigate, Link } from 'react-router-dom';
 import { useTranslation } from '../store/LanguageContext';
 
-import { Trash2, FileText, TrendingDown, TrendingUp, Package, ArrowDownCircle, ArrowUpCircle, Wallet, Clock } from 'lucide-react';
+import { Trash2, Package, ArrowDownCircle, ArrowUpCircle, Wallet, Clock, TrendingDown } from 'lucide-react';
 
 const T = {
   primary: '#2563eb',
@@ -63,6 +63,19 @@ export const Inventory: React.FC = () => {
   const categories = Array.from(new Set(products.map(p => p.category || 'Standard')));
   const filteredProducts = products
     .filter(p => selectedCategory === 'All' || (p.category || 'Standard') === selectedCategory)
+    .map(p => {
+       if (!isSupplier || !myAccount) return p;
+       const received = myTxs.filter(tx => tx.status === 'COMPLETED' && tx.type === 'Debt' && tx.origin === 'SUPPLIER' && (tx.items?.[0]?.productId === p.id || tx.productId === p.id)).reduce((sum, tx) => sum + (tx.items?.[0]?.quantity || tx.quantity || 0), 0);
+       const returned = myTxs.filter(tx => tx.status === 'COMPLETED' && tx.type === 'Return' && tx.origin === 'SUPPLIER' && (tx.items?.[0]?.productId === p.id || tx.productId === p.id)).reduce((sum, tx) => sum + (tx.items?.[0]?.quantity || tx.quantity || 0), 0);
+       const sold = myTxs.filter(tx => tx.origin === 'POS_SUPPLIER' && (tx.type === 'Cash' || tx.type === 'Debt')).reduce((sum, tx) => {
+          const item = tx.items?.find(i => i.productId === p.id);
+          if (item) return sum + item.quantity;
+          if (tx.productId === p.id) return sum + (tx.quantity || 0);
+          return sum;
+       }, 0);
+       return { ...p, stock: Math.max(0, received - returned - sold) };
+    })
+    .filter(p => !isSupplier || p.stock > 0)
     .sort((a, b) => {
       if (a.category !== b.category) return (a.category || '').localeCompare(b.category || '');
       return a.price - b.price;
@@ -467,7 +480,24 @@ export const Inventory: React.FC = () => {
             </form>
           </div>
           
-          {!isSupplier && (
+          {isSupplier ? (
+            <div style={{ marginTop: '24px' }}>
+              <h2 style={{ fontSize: '14px', fontWeight: 800, marginBottom: '12px' }}>{t('dash.history')}</h2>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {myTxs.filter(t => t.type === 'Payment').sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map(p => (
+                  <div key={p.id} style={{ background: T.white, borderRadius: '12px', padding: '12px', border: `1px solid ${T.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                      <div style={{ fontSize: '11px', fontWeight: 800 }}>Payment Sent</div>
+                      <div style={{ fontSize: '9px', color: T.txt3, fontWeight: 700 }}>{new Date(p.date).toLocaleDateString()} {p.status === 'PENDING_STORE' ? '• Pending' : '• Approved'}</div>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ fontSize: '12px', fontWeight: 900, color: T.success }}>+{fmt(p.totalPrice)}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
             <div style={{ marginTop: '24px' }}>
               <h2 style={{ fontSize: '14px', fontWeight: 800, marginBottom: '12px' }}>Payment History</h2>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -523,40 +553,73 @@ export const Inventory: React.FC = () => {
             ))}
           </div>
 
-          {!isSupplier && sortedBatchIds.length > 0 && (
-            <div>
+          {isSupplier ? (
+            <div style={{ marginTop: '24px' }}>
               <h2 style={{ fontSize: '14px', fontWeight: 800, marginBottom: '12px' }}>{t('inv.history')}</h2>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {sortedBatchIds.slice(0, 20).map(batchId => {
-                  const batch = groupedLogs[batchId];
-                  const first = batch[0];
-                  const isReceive = first.type !== 'Return';
-                  const totalItems = batch.reduce((sum, item) => sum + item.quantityReceived, 0);
-                  const totalValue = batch.reduce((sum, item) => sum + (item.quantityReceived * item.costPrice), 0);
-                  
+                {myTxs.filter(t => t.type === 'Debt' || t.type === 'Return').sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 20).map(tx => {
+                  const isReceive = tx.type !== 'Return';
+                  const qty = tx.items?.[0]?.quantity || tx.quantity || 0;
+                  const itemProd = products.find(p => p.id === (tx.items?.[0]?.productId || tx.productId));
                   return (
-                    <div key={batchId} onClick={() => navigate(`/inventory/receipt/${batchId}`)} style={{ background: T.white, borderRadius: '16px', padding: '12px', border: `1px solid ${T.border}`, borderLeftWidth: '4px', borderLeftColor: isReceive ? T.success : T.danger, display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}>
+                    <div key={tx.id} style={{ background: T.white, borderRadius: '16px', padding: '12px', border: `1px solid ${T.border}`, borderLeftWidth: '4px', borderLeftColor: isReceive ? T.success : T.danger, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                         <div style={{ padding: '8px', borderRadius: '10px', background: isReceive ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)', color: isReceive ? T.success : T.danger }}>
-                          {isReceive ? <TrendingUp size={16} /> : <TrendingDown size={16} />}
+                          <Package size={16} />
                         </div>
                         <div>
-                          <div style={{ fontSize: '11px', fontWeight: 800 }}>{isReceive ? 'Received Stock' : 'Returned Stock'}</div>
-                          <div style={{ fontSize: '9px', fontWeight: 700, color: T.txt3 }}>{new Date(first.date).toLocaleDateString()} {first.storeKeeper && `• ${first.storeKeeper}`}</div>
+                          <div style={{ fontSize: '12px', fontWeight: 800 }}>{isReceive ? t('dash.receiveBread') : t('inv.return')}</div>
+                          <div style={{ fontSize: '9px', fontWeight: 700, color: T.txt3, marginTop: '2px' }}>
+                            {new Date(tx.date).toLocaleDateString()} • {qty} pcs {itemProd?.name ? `(${itemProd.name})` : ''}
+                          </div>
                         </div>
                       </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <div style={{ textAlign: 'right' }}>
-                          <div style={{ fontSize: '12px', fontWeight: 800 }}>{fmt(totalValue)}</div>
-                          <div style={{ fontSize: '9px', fontWeight: 700, color: T.txt3 }}>{totalItems} items</div>
+                      <div style={{ textAlign: 'right' }}>
+                        <div style={{ fontSize: '12px', fontWeight: 900, color: isReceive ? T.success : T.danger }}>
+                           {tx.status === 'PENDING_STORE' ? 'PENDING' : 'COMPLETED'}
                         </div>
-                        <FileText size={16} color={T.txt3} />
                       </div>
                     </div>
                   );
                 })}
               </div>
             </div>
+          ) : (
+            sortedBatchIds.length > 0 && (
+              <div style={{ marginTop: '24px' }}>
+                <h2 style={{ fontSize: '14px', fontWeight: 800, marginBottom: '12px' }}>{t('inv.history')}</h2>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {sortedBatchIds.slice(0, 20).map(batchId => {
+                    const batch = groupedLogs[batchId];
+                    const first = batch[0];
+                    const isReceive = first.type !== 'Return';
+                    const totalItems = batch.reduce((sum, item) => sum + item.quantityReceived, 0);
+                    const totalValue = batch.reduce((sum, item) => sum + (item.quantityReceived * item.costPrice), 0);
+                    
+                    return (
+                      <div key={batchId} onClick={() => navigate(`/inventory/receipt/${batchId}`)} style={{ background: T.white, borderRadius: '16px', padding: '12px', border: `1px solid ${T.border}`, borderLeftWidth: '4px', borderLeftColor: isReceive ? T.success : T.danger, display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <div style={{ padding: '8px', borderRadius: '10px', background: isReceive ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)', color: isReceive ? T.success : T.danger }}>
+                            <Package size={16} />
+                          </div>
+                          <div>
+                            <div style={{ fontSize: '12px', fontWeight: 800 }}>{isReceive ? t('dash.receiveBread') : t('inv.return')}</div>
+                            <div style={{ fontSize: '9px', fontWeight: 700, color: T.txt3, marginTop: '2px' }}>
+                              {new Date(first.date).toLocaleDateString()} • {totalItems} items
+                            </div>
+                          </div>
+                        </div>
+                        <div style={{ textAlign: 'right' }}>
+                          <div style={{ fontSize: '12px', fontWeight: 900, color: isReceive ? T.success : T.danger }}>
+                            {isReceive ? '+' : '-'}{fmt(totalValue)}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )
           )}
         </>
       )}
