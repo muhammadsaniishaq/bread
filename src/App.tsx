@@ -25,9 +25,6 @@ import CustomerOrders from './pages/CustomerOrders';
 import CustomerHistory from './pages/CustomerHistory';
 import CustomerOfficialDocs from './pages/CustomerOfficialDocs';
 
-import SupplierDashboard from './pages/SupplierDashboard';
-import SupplierProfile from './pages/SupplierProfile';
-
 import RawMaterialsManager from './components/RawMaterialsManager';
 import UserManagement from './components/UserManagement';
 import { StockAssignment } from './pages/StockAssignment';
@@ -150,8 +147,7 @@ const AppContent: React.FC = () => {
             <Route path="/manager/staff-profiles" element={<RoleGuard allowedRoles={['MANAGER']}><ManagerStaffProfiles /></RoleGuard>} />
             <Route path="/manager/audit-history" element={<RoleGuard allowedRoles={['MANAGER']}><ManagerAuditHistory /></RoleGuard>} />
             
-            <Route path="/supplier" element={<RoleGuard allowedRoles={['SUPPLIER']}><SupplierDashboard /></RoleGuard>} />
-            <Route path="/supplier/profile" element={<RoleGuard allowedRoles={['SUPPLIER']}><SupplierProfile /></RoleGuard>} />
+            <Route path="/supplier" element={<RoleGuard allowedRoles={['SUPPLIER']}><Dashboard /></RoleGuard>} />
           </Route>
 
             <Route path="/store" element={<RoleGuard allowedRoles={['STORE_KEEPER']}><StoreDashboard /></RoleGuard>} />

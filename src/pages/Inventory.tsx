@@ -1,16 +1,35 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useAppContext } from '../store/AppContext';
+import { useAuth } from '../store/AuthContext';
+import { supabase } from '../lib/supabase';
 import type { InventoryLog } from '../store/types';
 import { AnimatedPage } from '../components/AnimatedPage';
 import { useNavigate, Link } from 'react-router-dom';
 import { useTranslation } from '../store/LanguageContext';
 
-import { Trash2, FileText, TrendingDown, TrendingUp, Package, ArrowDownCircle, ArrowUpCircle, Wallet } from 'lucide-react';
+import { Trash2, FileText, TrendingDown, TrendingUp, Package, ArrowDownCircle, ArrowUpCircle, Wallet, Clock, CheckCircle } from 'lucide-react';
+
+const T = {
+  primary: '#2563eb',
+  pLight: 'rgba(37,99,235,0.08)',
+  success: '#10b981',
+  danger: '#ef4444',
+  ink: '#0f172a',
+  txt: '#1e293b',
+  txt2: '#475569',
+  txt3: '#94a3b8',
+  bg: '#f8fafc',
+  white: '#ffffff',
+  border: 'rgba(0,0,0,0.06)',
+};
 
 export const Inventory: React.FC = () => {
-  const { products, companyMetrics, processInventoryBatch, inventoryLogs, recordBakeryPayment, bakeryPayments, transactions, expenses } = useAppContext();
+  const { user } = useAuth();
+  const { appSettings, products, companyMetrics, processInventoryBatch, inventoryLogs, recordBakeryPayment, bakeryPayments, transactions, expenses, customers, recordSale } = useAppContext();
   const { t } = useTranslation();
   const navigate = useNavigate();
+  
+  const isSupplier = appSettings?.role === 'SUPPLIER';
   
   const [activeTab, setActiveTab] = useState<'view' | 'receive' | 'return' | 'balance'>('view');
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
@@ -18,13 +37,24 @@ export const Inventory: React.FC = () => {
   const [productId, setProductId] = useState('');
   const [quantity, setQuantity] = useState('');
   const [costPrice, setCostPrice] = useState('');
-  const [storeKeeper, setStoreKeeper] = useState('');
+  
+  const [storeKeepers, setStoreKeepers] = useState<any[]>([]);
+  const [selectedSK, setSelectedSK] = useState('');
+  
   const [isProcessing, setIsProcessing] = useState(false);
   
   // Bakery Payment Form States
   const [paymentAmount, setPaymentAmount] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<'Cash' | 'Transfer'>('Cash');
   const [paymentReceiver, setPaymentReceiver] = useState('');
+
+  useEffect(() => {
+    if (isSupplier) {
+      supabase.from('profiles').select('*').eq('role', 'STORE_KEEPER').then(({ data }) => {
+        if (data) setStoreKeepers(data);
+      });
+    }
+  }, [isSupplier]);
 
   const activeProducts = products.filter(p => p.active);
   const categories = Array.from(new Set(products.map(p => p.category || 'Standard')));
@@ -36,15 +66,13 @@ export const Inventory: React.FC = () => {
     });
   
   const qty = parseInt(quantity) || 0;
-  const cost = parseInt(costPrice) || 0;
-
+  
   const handleTabChange = (tab: 'view' | 'receive' | 'return' | 'balance') => {
     setActiveTab(tab);
     setPendingItems([]);
     setProductId('');
     setQuantity('');
     setCostPrice('');
-    setStoreKeeper('');
     setPaymentAmount('');
     setPaymentMethod('Cash');
     setPaymentReceiver('');
@@ -52,12 +80,14 @@ export const Inventory: React.FC = () => {
 
   const handleAddItem = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!productId || qty <= 0 || cost <= 0) return;
+    const prod = products.find(p => p.id === productId);
+    if (!prod || qty <= 0) return;
     
-    if (activeTab === 'return') {
-      const product = products.find(p => p.id === productId);
+    const cost = parseInt(costPrice) || prod.price; // Default to prod price
+
+    if (activeTab === 'return' && !isSupplier) {
       const pendingQty = pendingItems.filter(i => i.productId === productId).reduce((s, i) => s + i.quantityReceived, 0);
-      if (!product || product.stock < qty + pendingQty) {
+      if (prod.stock < qty + pendingQty) {
         alert("Cannot return more stock than you currently have.");
         return;
       }
@@ -70,21 +100,46 @@ export const Inventory: React.FC = () => {
       productId,
       quantityReceived: qty,
       costPrice: cost,
-      storeKeeper: storeKeeper.trim() || undefined
+      storeKeeper: isSupplier ? selectedSK : paymentReceiver // Reuse field
     };
     
     setPendingItems([...pendingItems, log]);
     setProductId(''); setQuantity(''); setCostPrice('');
   };
 
+  const removeItem = (id: string) => {
+    setPendingItems(pendingItems.filter(i => i.id !== id));
+  };
+  
+  const myAccount = useMemo(() => customers.find(c => c.profile_id === user?.id), [customers, user]);
+
   const handleRecordPayment = async (e: React.FormEvent) => {
     e.preventDefault();
     const amountStr = parseInt(paymentAmount);
     if (!amountStr || amountStr <= 0) return;
     
-    // Calculate strict payment ceiling (Total Sales 90% minus already paid)
+    if (isSupplier) {
+      if (!selectedSK || !myAccount) return alert('Select Store Keeper');
+      setIsProcessing(true);
+      await recordSale({
+        id: Date.now().toString(),
+        date: new Date().toISOString(),
+        customerId: myAccount.id,
+        storeKeeperId: selectedSK,
+        type: 'Payment',
+        status: 'PENDING_STORE',
+        origin: 'SUPPLIER',
+        totalPrice: amountStr
+      });
+      setIsProcessing(false);
+      setPaymentAmount('');
+      setActiveTab('view');
+      alert('Payment Request Sent to Store Keeper');
+      return;
+    }
+
     const currentSales = transactions.reduce((sum, t) => sum + t.totalPrice, 0);
-    const companyOwed = currentSales - (currentSales * 0.1); // 90%
+    const companyOwed = currentSales - (currentSales * 0.1);
     const availableToPay = companyOwed - companyMetrics.totalMoneyPaid;
     
     if (amountStr > availableToPay) {
@@ -94,7 +149,6 @@ export const Inventory: React.FC = () => {
 
     setIsProcessing(true);
     const paymentId = Date.now().toString();
-    
     await recordBakeryPayment({
       id: paymentId,
       date: new Date().toISOString(),
@@ -104,43 +158,61 @@ export const Inventory: React.FC = () => {
     });
     
     setPaymentAmount('');
-    setPaymentReceiver('');
     setPaymentMethod('Cash');
     setIsProcessing(false);
-    
-    // Navigate straight to the receipt
     navigate(`/bakery-receipt/${paymentId}`);
-  };
-
-  const removeItem = (id: string) => {
-    setPendingItems(pendingItems.filter(i => i.id !== id));
   };
 
   const handleConfirmBatch = async () => {
     if (pendingItems.length === 0) return;
     setIsProcessing(true);
     
-    // Generate the batch ID here to guarantee we know it
+    if (isSupplier) {
+      if (!selectedSK || !myAccount) {
+        setIsProcessing(false);
+        return alert("Please select a Store Keeper");
+      }
+      
+      // Submit as PENDING_STORE transaction
+      for (const item of pendingItems) {
+        await recordSale({
+          id: Date.now().toString() + Math.random().toString(36).substring(5),
+          date: new Date().toISOString(),
+          customerId: myAccount.id,
+          storeKeeperId: selectedSK,
+          type: activeTab === 'receive' ? 'Debt' : 'Return',
+          status: 'PENDING_STORE',
+          origin: 'SUPPLIER',
+          items: [{ productId: item.productId, quantity: item.quantityReceived, unitPrice: item.costPrice }],
+          totalPrice: item.quantityReceived * item.costPrice
+        });
+      }
+      setPendingItems([]);
+      setIsProcessing(false);
+      setActiveTab('view');
+      alert(`Request sent to Store Keeper`);
+      return;
+    }
+
     const batchId = Date.now().toString();
     const itemsWithBatch = pendingItems.map(item => ({ ...item, batchId }));
     
     await processInventoryBatch(itemsWithBatch, activeTab === 'receive' ? 'Receive' : 'Return');
-    
     setPendingItems([]);
     setIsProcessing(false);
     navigate(`/inventory/receipt/${batchId}`);
   };
 
-  const remainingBalance = companyMetrics.totalValueReceived - companyMetrics.totalMoneyPaid;
+  const fmt = (v: number) => "₦" + (v || 0).toLocaleString();
 
+  const remainingBalance = companyMetrics.totalValueReceived - companyMetrics.totalMoneyPaid;
   const totalSales = transactions.reduce((sum, t) => sum + t.totalPrice, 0);
-  const totalGrossProfit = totalSales * 0.1; // Standard 10%
-  const companyShare = totalSales - totalGrossProfit; // 90% belongs to company
+  const totalGrossProfit = totalSales * 0.1;
+  const companyShare = totalSales - totalGrossProfit;
   const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
-  const totalNetProfit = totalGrossProfit - totalExpenses; // What's left for the owner
+  const totalNetProfit = totalGrossProfit - totalExpenses;
   const totalReturnsCost = inventoryLogs.filter(l => l.type === 'Return').reduce((sum, l) => sum + (l.quantityReceived * l.costPrice), 0);
 
-  // Group logs by batch for history
   const groupedLogs = inventoryLogs.reduce((acc, log) => {
     const key = log.batchId || log.id;
     if (!acc[key]) acc[key] = [];
@@ -148,370 +220,313 @@ export const Inventory: React.FC = () => {
     return acc;
   }, {} as Record<string, InventoryLog[]>);
   
-  const sortedBatchIds = Object.keys(groupedLogs).sort((a,b) => {
-    return new Date(groupedLogs[b][0].date).getTime() - new Date(groupedLogs[a][0].date).getTime();
-  });
+  const sortedBatchIds = Object.keys(groupedLogs).sort((a,b) => new Date(groupedLogs[b][0].date).getTime() - new Date(groupedLogs[a][0].date).getTime());
+
+  // Pending Txs for Supplier
+  const myPendingTxs = transactions.filter(t => t.customerId === myAccount?.id && t.status === 'PENDING_STORE');
 
   return (
     <AnimatedPage>
-      <div className="container">
-        <h1 className="text-2xl font-bold mb-6">{t('inv.title')}</h1>
-      
-      {/* Professional Company Balance Grid */}
-      <div className="card mb-6" style={{ background: 'var(--surface-color)', border: '1px solid var(--border-color)', padding: '1.5rem' }}>
-        <h2 className="text-sm font-bold mb-4 flex items-center gap-2" style={{ color: 'var(--primary-color)' }}>
-          <Wallet size={18} />
-          Professional Financial Balance
-        </h2>
+      <div className="container" style={{ paddingBottom: '90px' }}>
         
-        <div style={{ marginBottom: '1.5rem' }}>
-          <div className="text-xs uppercase font-bold text-secondary mb-1">Company Balance (What you Owe)</div>
-          {remainingBalance <= 0 ? (
-            <div className="text-3xl font-black text-success">No Debt</div>
-          ) : (
-            <div className="text-4xl font-black text-danger">₦{remainingBalance.toLocaleString()}</div>
-          )}
+        {/* Extreme Compact Header */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+          <h1 style={{ fontSize: '18px', fontWeight: 900, color: T.ink, margin: 0 }}>{isSupplier ? t('dash.supplierStock') || 'Supplier Stock' : t('inv.title')}</h1>
         </div>
-
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', borderTop: '1px solid var(--border-color)', paddingTop: '1rem', marginBottom: '1rem' }}>
-          <div>
-            <div className="text-xs text-secondary uppercase font-bold mb-1" style={{ fontSize: '10px' }}>Total Value Received</div>
-            <div className="text-lg font-bold">₦{companyMetrics.totalValueReceived.toLocaleString()}</div>
+      
+      {!isSupplier && (
+        <div style={{ background: T.white, borderRadius: '16px', padding: '16px', border: `1px solid ${T.border}`, marginBottom: '16px', boxShadow: '0 4px 14px rgba(0,0,0,0.03)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '12px' }}>
+            <Wallet size={14} color={T.primary} />
+            <span style={{ fontSize: '11px', fontWeight: 800, color: T.txt3, textTransform: 'uppercase' }}>Financial Balance</span>
           </div>
-          <div>
-            <div className="text-xs text-secondary uppercase font-bold mb-1" style={{ fontSize: '10px' }}>Total Money Paid</div>
-            <div className="text-lg font-bold text-success">₦{companyMetrics.totalMoneyPaid.toLocaleString()}</div>
+          <div style={{ marginBottom: '16px' }}>
+            <div style={{ fontSize: '10px', fontWeight: 800, color: T.txt2, textTransform: 'uppercase' }}>Company Balance (What you Owe)</div>
+            {remainingBalance <= 0 ? (
+              <div style={{ fontSize: '24px', fontWeight: 900, color: T.success }}>No Debt</div>
+            ) : (
+              <div style={{ fontSize: '24px', fontWeight: 900, color: T.danger }}>{fmt(remainingBalance)}</div>
+            )}
           </div>
-        </div>
-
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', borderTop: '1px solid var(--border-color)', paddingTop: '1rem' }}>
-          <div>
-            <div className="text-xs text-secondary uppercase font-bold mb-1" style={{ fontSize: '10px' }}>Total Sales</div>
-            <div className="text-xl font-bold" style={{ color: 'var(--primary-color)' }}>₦{totalSales.toLocaleString()}</div>
-          </div>
-          <div>
-            <div className="text-xs text-secondary uppercase font-bold mb-1" style={{ fontSize: '10px' }}>Total Returns</div>
-            <div className="text-xl font-bold text-warning">₦{totalReturnsCost.toLocaleString()}</div>
-          </div>
-          
-          <div style={{ gridColumn: '1 / -1', borderTop: '1px solid var(--border-color)', margin: '0.5rem 0', paddingTop: '1rem', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-             <div>
-               <div className="text-xs text-secondary uppercase font-bold mb-1" style={{ fontSize: '10px' }}>Company Share (90%)</div>
-               <div className="text-xl font-bold text-danger">₦{companyShare.toLocaleString()}</div>
-               <div className="text-xs text-secondary mt-1" style={{ fontSize: '10px' }}>Amount owed from sales</div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+             <div style={{ background: T.bg, padding: '10px', borderRadius: '10px' }}>
+                <div style={{ fontSize: '9px', fontWeight: 800, color: T.txt3, textTransform: 'uppercase' }}>Value Received</div>
+                <div style={{ fontSize: '13px', fontWeight: 800, color: T.ink }}>{fmt(companyMetrics.totalValueReceived)}</div>
              </div>
-             <div>
-               <div className="text-xs text-secondary uppercase font-bold mb-1" style={{ fontSize: '10px' }}>Local Gross Profit (10%)</div>
-               <div className="text-xl font-bold text-success">₦{totalGrossProfit.toLocaleString()}</div>
-               <div className="text-xs text-secondary mt-1" style={{ fontSize: '10px' }}>Amount retained from sales</div>
+             <div style={{ background: T.bg, padding: '10px', borderRadius: '10px' }}>
+                <div style={{ fontSize: '9px', fontWeight: 800, color: T.txt3, textTransform: 'uppercase' }}>Money Paid</div>
+                <div style={{ fontSize: '13px', fontWeight: 800, color: T.success }}>{fmt(companyMetrics.totalMoneyPaid)}</div>
+             </div>
+             <div style={{ background: T.bg, padding: '10px', borderRadius: '10px' }}>
+                <div style={{ fontSize: '9px', fontWeight: 800, color: T.txt3, textTransform: 'uppercase' }}>Sales / Returns</div>
+                <div style={{ fontSize: '13px', fontWeight: 800, color: T.ink }}>{fmt(totalSales)} / {fmt(totalReturnsCost)}</div>
+             </div>
+             <div style={{ background: 'rgba(16,185,129,0.1)', padding: '10px', borderRadius: '10px' }}>
+                <div style={{ fontSize: '9px', fontWeight: 800, color: T.txt3, textTransform: 'uppercase' }}>Final Net Profit</div>
+                <div style={{ fontSize: '13px', fontWeight: 800, color: T.success }}>{fmt(totalNetProfit)}</div>
              </div>
           </div>
-
-          <div style={{ gridColumn: '1 / -1', background: 'var(--background-color)', padding: '1rem', borderRadius: '12px', border: '1px solid var(--border-color)', marginTop: '0.5rem' }}>
-            <div className="text-xs text-secondary uppercase font-bold mb-1" style={{ fontSize: '11px' }}>Final Net Profit</div>
-            <div className="text-2xl font-black text-success">₦{totalNetProfit.toLocaleString()}</div>
-            <div className="text-xs text-secondary mt-1" style={{ fontSize: '10px' }}>Local Gross Profit (10%) minus Total Business Expenses</div>
-          </div>
         </div>
-      </div>
+      )}
 
-      <div className="flex gap-2 mb-4 overflow-x-auto pb-2 no-print hide-scrollbar">
-        <button 
-          className={`flex-shrink-0 px-3 py-1.5 rounded-full text-[11px] sm:text-xs font-bold transition-all flex items-center gap-1.5 ${activeTab === 'view' ? 'bg-primary text-white shadow-sm' : 'bg-[var(--surface-color)] text-secondary border border-transparent hover:border-primary/30 shadow-sm'}`}
-          onClick={() => handleTabChange('view')}
-        >
+      {isSupplier && myPendingTxs.length > 0 && activeTab === 'view' && (
+        <div style={{ marginBottom: '16px' }}>
+           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
+              <Clock size={14} color="#d97706" />
+              <span style={{ fontSize: '11px', fontWeight: 900, color: T.ink, textTransform: 'uppercase' }}>{t('dash.waitVerification')} ({myPendingTxs.length})</span>
+           </div>
+           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              {myPendingTxs.map(tx => (
+                <div key={tx.id} style={{ background: '#fff', borderRadius: '12px', padding: '10px', border: `1px solid rgba(217,119,6,0.3)`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                   <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                      <div style={{ fontSize: '11px', fontWeight: 800, color: T.ink }}>{tx.type === 'Payment' ? 'Cash Payment' : tx.type === 'Return' ? t('inv.return') : t('dash.receiveBread')}</div>
+                      <div style={{ fontSize: '10px', color: T.txt3, fontWeight: 700 }}>{tx.type !== 'Payment' ? tx.items?.[0]?.quantity + ' pcs' : fmt(tx.totalPrice)}</div>
+                   </div>
+                   <div style={{ color: '#d97706', fontSize: '9px', fontWeight: 900, padding: '3px 8px', borderRadius: '6px', background: 'rgba(217,119,6,0.1)' }}>PENDING</div>
+                </div>
+              ))}
+           </div>
+        </div>
+      )}
+
+      <div style={{ display: 'flex', gap: '6px', marginBottom: '16px', overflowX: 'auto', paddingBottom: '4px' }} className="hide-scrollbar no-print">
+        <button className={`flex-shrink-0 px-3 py-1.5 rounded-full text-[11px] font-bold transition-all flex items-center gap-1.5 ${activeTab === 'view' ? 'bg-primary text-white shadow-sm' : 'bg-white text-secondary border border-gray-200'}`} onClick={() => handleTabChange('view')}>
           <Package size={14} /> <span>Overview</span>
         </button>
-        <button 
-          className={`flex-shrink-0 px-3 py-1.5 rounded-full text-[11px] sm:text-xs font-bold transition-all flex items-center gap-1.5 ${activeTab === 'receive' ? 'bg-success text-white shadow-sm' : 'bg-[var(--surface-color)] text-secondary border border-transparent hover:border-success/30 shadow-sm'}`}
-          onClick={() => handleTabChange(activeTab === 'receive' ? 'view' : 'receive')}
-        >
-          <ArrowDownCircle size={14} /> <span>Receive</span>
+        <button className={`flex-shrink-0 px-3 py-1.5 rounded-full text-[11px] font-bold transition-all flex items-center gap-1.5 ${activeTab === 'receive' ? 'bg-success text-white shadow-sm' : 'bg-white text-secondary border border-gray-200'}`} onClick={() => handleTabChange('receive')}>
+          <ArrowDownCircle size={14} /> <span>{t('dash.receiveBreadShort') || 'Receive'}</span>
         </button>
-        <button 
-          className={`flex-shrink-0 px-3 py-1.5 rounded-full text-[11px] sm:text-xs font-bold transition-all flex items-center gap-1.5 ${activeTab === 'return' ? 'bg-danger text-white shadow-sm' : 'bg-[var(--surface-color)] text-secondary border border-transparent hover:border-danger/30 shadow-sm'}`}
-          onClick={() => handleTabChange(activeTab === 'return' ? 'view' : 'return')}
-        >
-          <ArrowUpCircle size={14} /> <span>Return</span>
+        <button className={`flex-shrink-0 px-3 py-1.5 rounded-full text-[11px] font-bold transition-all flex items-center gap-1.5 ${activeTab === 'return' ? 'bg-danger text-white shadow-sm' : 'bg-white text-secondary border border-gray-200'}`} onClick={() => handleTabChange('return')}>
+          <ArrowUpCircle size={14} /> <span>{t('dash.returnBreadShort') || 'Return'}</span>
         </button>
-        <button 
-          className={`flex-shrink-0 px-3 py-1.5 rounded-full text-[11px] sm:text-xs font-bold transition-all flex items-center gap-1.5 ${activeTab === 'balance' ? 'bg-primary text-white shadow-sm' : 'bg-[var(--surface-color)] text-secondary border border-transparent hover:border-primary/30 shadow-sm'}`}
-          onClick={() => handleTabChange(activeTab === 'balance' ? 'view' : 'balance')}
-        >
-          <Wallet size={14} /> <span>Balance</span>
+        <button className={`flex-shrink-0 px-3 py-1.5 rounded-full text-[11px] font-bold transition-all flex items-center gap-1.5 ${activeTab === 'balance' ? 'bg-primary text-white shadow-sm' : 'bg-white text-secondary border border-gray-200'}`} onClick={() => handleTabChange('balance')}>
+          <Wallet size={14} /> <span>{t('dash.payDebtShort') || 'Payment'}</span>
         </button>
       </div>
 
       {(activeTab === 'receive' || activeTab === 'return') && (
         <>
-          <form onSubmit={handleAddItem} className="card mb-4" style={{ borderColor: activeTab === 'receive' ? 'var(--success-color)' : 'var(--danger-color)', borderLeftWidth: '4px' }}>
-            <h3 className="text-md font-semibold mb-1">
-              {activeTab === 'receive' ? 'Receive New Stock' : 'Return Unsold Stock'}
+          <form onSubmit={handleAddItem} style={{ background: T.white, borderRadius: '16px', padding: '16px', border: `1px solid ${T.border}`, marginBottom: '12px', borderLeftWidth: '4px', borderLeftColor: activeTab === 'receive' ? T.success : T.danger }}>
+            <h3 style={{ margin: '0 0 12px', fontSize: '13px', fontWeight: 800, color: T.ink }}>
+              {activeTab === 'receive' ? t('dash.receiveBreadShort') : t('dash.returnBreadShort')}
             </h3>
-            <p className="text-secondary text-xs mb-4">
-              {activeTab === 'receive' ? 'Adds to your current inventory and increases supplier balance.' : 'Removes from your current inventory and decreases supplier balance.'}
-            </p>
             
-            <div className="form-group mb-3">
-              <label className="form-label">Bread Type</label>
-              <select className="form-select" value={productId} onChange={e => setProductId(e.target.value)} required>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '12px' }}>
+              <select value={productId} onChange={e => setProductId(e.target.value)} required style={{ width: '100%', padding: '12px', borderRadius: '10px', border: `1px solid ${T.border}`, background: T.bg, fontSize: '12px', fontWeight: 700, appearance: 'none' }}>
                 <option value="">-- Choose Bread --</option>
                 {activeProducts.map(p => {
-                  // Show adjusted stock for returns
                   const pendingQty = activeTab === 'return' ? pendingItems.filter(i => i.productId === p.id).reduce((s, i) => s + i.quantityReceived, 0) : 0;
                   const availableStock = p.stock - pendingQty;
-                  return (
-                    <option key={p.id} value={p.id}>{p.name} (Available: {activeTab === 'return' ? availableStock : p.stock})</option>
-                  );
+                  return <option key={p.id} value={p.id}>{p.name} (Avl: {activeTab === 'return' ? availableStock : p.stock})</option>;
                 })}
               </select>
             </div>
             
-            <div className="flex gap-4 mb-3">
-              <div className="form-group flex-1">
-                <label className="form-label">{t('inv.quantity')}</label>
-                <input type="number" className="form-input" min="1" value={quantity} onChange={e => setQuantity(e.target.value)} required />
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '12px' }}>
+              <div>
+                <label style={{ fontSize: '10px', fontWeight: 800, color: T.txt3 }}>{t('inv.quantity')}</label>
+                <input type="number" min="1" value={quantity} onChange={e => setQuantity(e.target.value)} required style={{ width: '100%', padding: '12px', borderRadius: '10px', border: `1px solid ${T.border}`, background: T.bg, fontSize: '12px', fontWeight: 700 }} />
               </div>
-              <div className="form-group flex-1">
-                <label className="form-label">{t('inv.costPrice')} (₦)</label>
-                <input type="number" className="form-input" min="1" value={costPrice} onChange={e => setCostPrice(e.target.value)} required />
-              </div>
+              {!isSupplier && (
+                <div>
+                  <label style={{ fontSize: '10px', fontWeight: 800, color: T.txt3 }}>{t('inv.costPrice')} (₦)</label>
+                  <input type="number" min="1" value={costPrice} onChange={e => setCostPrice(e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '10px', border: `1px solid ${T.border}`, background: T.bg, fontSize: '12px', fontWeight: 700 }} />
+                </div>
+              )}
             </div>
 
-            <div className="form-group mb-4">
-              <label className="form-label">Store Keeper (Optional)</label>
-              <input 
-                type="text" 
-                className="form-input" 
-                placeholder="Name of person supplying/receiving"
-                value={storeKeeper} 
-                onChange={e => setStoreKeeper(e.target.value)} 
-              />
-            </div>
+            {isSupplier ? (
+              <div style={{ marginBottom: '16px' }}>
+                <label style={{ fontSize: '10px', fontWeight: 800, color: T.txt3 }}>Store Keeper</label>
+                <select value={selectedSK} onChange={(e) => setSelectedSK(e.target.value)} required style={{ width: '100%', padding: '12px', borderRadius: '10px', border: `1px solid ${T.border}`, background: T.bg, fontSize: '12px', fontWeight: 700, appearance: 'none' }}>
+                   <option value="">Choose Store Keeper</option>
+                   {storeKeepers.map(sk => <option key={sk.id} value={sk.id}>{sk.full_name}</option>)}
+                </select>
+              </div>
+            ) : (
+              <div style={{ marginBottom: '16px' }}>
+                <label style={{ fontSize: '10px', fontWeight: 800, color: T.txt3 }}>Store Keeper</label>
+                <input type="text" placeholder="Name" value={paymentReceiver} onChange={e => setPaymentReceiver(e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '10px', border: `1px solid ${T.border}`, background: T.bg, fontSize: '12px', fontWeight: 700 }} />
+              </div>
+            )}
             
-            <button type="submit" className={`btn w-full btn-outline ${activeTab === 'return' ? 'text-danger border-danger' : 'text-success border-success'}`}>
+            <button type="submit" style={{ width: '100%', padding: '12px', borderRadius: '10px', border: `1px dashed ${activeTab === 'receive' ? T.success : T.danger}`, background: activeTab === 'receive' ? 'rgba(16,185,129,0.05)' : 'rgba(239,68,68,0.05)', color: activeTab === 'receive' ? T.success : T.danger, fontSize: '12px', fontWeight: 800, cursor: 'pointer' }}>
               + Add to List
             </button>
           </form>
 
           {pendingItems.length > 0 && (
-            <div className="card mb-6" style={{ background: 'var(--surface-color)' }}>
-              <h3 className="text-sm font-bold mb-3 flex items-center justify-between">
-                <span>Pending List ({pendingItems.length} items)</span>
-                <span className={`text-${activeTab === 'receive' ? 'success' : 'danger'}`}>
-                  Total: ₦{pendingItems.reduce((sum, item) => sum + (item.quantityReceived * item.costPrice), 0).toLocaleString()}
+            <div style={{ background: T.white, borderRadius: '16px', padding: '16px', border: `1px solid ${T.border}`, marginBottom: '24px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                <span style={{ fontSize: '12px', fontWeight: 800 }}>Pending List ({pendingItems.length})</span>
+                <span style={{ fontSize: '12px', fontWeight: 800, color: activeTab === 'receive' ? T.success : T.danger }}>
+                  {isSupplier ? pendingItems.reduce((sum, item) => sum + item.quantityReceived, 0) + ' pcs' : fmt(pendingItems.reduce((sum, item) => sum + (item.quantityReceived * item.costPrice), 0))}
                 </span>
-              </h3>
+              </div>
               
-              <div className="flex flex-col gap-2 mb-4">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px' }}>
                 {pendingItems.map((item) => (
-                  <div key={item.id} className="flex justify-between items-center bg-[var(--background-color)] p-2 rounded text-sm relative overflow-hidden">
+                  <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: T.bg, padding: '10px', borderRadius: '10px' }}>
                     <div>
-                      <div className="font-bold">{products.find(p => p.id === item.productId)?.name}</div>
-                      <div className="text-xs text-secondary">{item.quantityReceived} units @ ₦{item.costPrice}</div>
+                      <div style={{ fontSize: '11px', fontWeight: 800 }}>{products.find(p => p.id === item.productId)?.name}</div>
+                      <div style={{ fontSize: '10px', color: T.txt3, fontWeight: 600 }}>{item.quantityReceived} units {!isSupplier && `@ ₦${item.costPrice}`}</div>
                     </div>
-                    <div className="flex items-center gap-3 text-right">
-                      <div className="font-bold">₦{(item.quantityReceived * item.costPrice).toLocaleString()}</div>
-                      <button onClick={() => removeItem(item.id)} className="text-danger p-1 opacity-70 hover:opacity-100">
-                        <Trash2 size={16} />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      {!isSupplier && <div style={{ fontSize: '11px', fontWeight: 800 }}>{fmt(item.quantityReceived * item.costPrice)}</div>}
+                      <button onClick={() => removeItem(item.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px' }}>
+                        <Trash2 size={14} color={T.danger} />
                       </button>
                     </div>
                   </div>
                 ))}
               </div>
 
-              <button 
-                onClick={handleConfirmBatch}
-                disabled={isProcessing}
-                className={`btn w-full ${activeTab === 'return' ? 'btn-danger' : 'btn-success'}`}
-              >
-                {isProcessing ? 'Processing...' : (activeTab === 'return' ? 'Confirm Return Batch' : 'Confirm Receive Batch')}
+              <button onClick={handleConfirmBatch} disabled={isProcessing} style={{ width: '100%', padding: '14px', borderRadius: '12px', background: activeTab === 'receive' ? T.success : T.danger, color: '#fff', border: 'none', fontSize: '13px', fontWeight: 800, cursor: 'pointer' }}>
+                {isProcessing ? 'Processing...' : (isSupplier ? 'Submit Request to Store Keeper' : (activeTab === 'return' ? 'Confirm Return' : 'Confirm Receive'))}
               </button>
             </div>
           )}
         </>
       )}
-
-      <style>{`
-        .hide-scrollbar::-webkit-scrollbar { display: none; }
-        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-      `}</style>
-      
-      <div className="flex gap-2 overflow-x-auto pb-2 mb-4 hide-scrollbar">
-        <button 
-          type="button"
-          className={`flex-shrink-0 px-4 py-1.5 rounded-full text-xs font-bold transition-all ${selectedCategory === 'All' ? 'bg-primary text-white shadow-sm' : 'bg-[var(--surface-color)] text-secondary border border-transparent hover:border-primary/30 shadow-sm'}`}
-          onClick={() => setSelectedCategory('All')}
-        >
-          All
-        </button>
-        {categories.map(cat => (
-          <button 
-            key={cat}
-            type="button"
-            className={`flex-shrink-0 px-4 py-1.5 rounded-full text-xs font-bold transition-all ${selectedCategory === cat ? 'bg-primary text-white shadow-sm' : 'bg-[var(--surface-color)] text-secondary border border-transparent hover:border-primary/30 shadow-sm'}`}
-            onClick={() => setSelectedCategory(cat)}
-          >
-            {cat}
-          </button>
-        ))}
-      </div>
-
-      <div className="flex flex-col gap-3">
-        {filteredProducts.map(p => (
-          <div key={p.id} className="card flex justify-between items-center" style={{ marginBottom: 0 }}>
-            <div className="flex items-center gap-3">
-              {p.image ? (
-                <img src={p.image} style={{ width: '30px', height: '30px', objectFit: 'cover' }} className="rounded-full" alt="" />
-              ) : (
-                <div style={{ width: '30px', height: '30px' }} className="rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs">
-                  {p.name.charAt(1) === '₦' ? p.name.charAt(p.name.indexOf(' ') + 1) : p.name.charAt(1)}
-                </div>
-              )}
-              <div>
-                <div className="font-bold">{p.name}</div>
-                <div className={`text-xs mt-0.5 ${p.active ? 'text-success' : 'text-danger'}`}>
-                  {p.active ? 'Active' : 'Inactive'} • <span className="text-secondary">{p.category || 'Standard'}</span>
-                </div>
-              </div>
-            </div>
-            <div className="text-right">
-              <div className="text-xs text-secondary mb-1 uppercase tracking-wider font-bold">{t('inv.currentStock')}</div>
-              <div className="text-2xl font-bold text-accent">{p.stock}</div>
-            </div>
-          </div>
-        ))}
-      </div>
       
       {activeTab === 'balance' && (
-        <div className="mt-4">
-          <div className="card border-t-4 border-primary">
-            <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
-               <TrendingDown size={20} className="text-primary" /> Record Payment to Company
+        <div style={{ marginTop: '16px' }}>
+          <div style={{ background: T.white, borderRadius: '16px', padding: '16px', border: `1px solid ${T.border}`, borderTopWidth: '4px', borderTopColor: T.primary }}>
+            <h2 style={{ fontSize: '14px', fontWeight: 800, marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px', color: T.primary }}>
+               <TrendingDown size={16} /> {isSupplier ? 'Send Payment Request' : 'Record Payment to Company'}
             </h2>
             <form onSubmit={handleRecordPayment}>
-              <div className="form-group mb-3">
-                <label className="form-label text-xs">Amount Paid (₦) *</label>
-                <input 
-                  type="number" 
-                  className="form-input" 
-                  placeholder="e.g. 50000" 
-                  value={paymentAmount}
-                  onChange={e => setPaymentAmount(e.target.value)}
-                  max={companyShare - companyMetrics.totalMoneyPaid}
-                  required 
-                />
-                <div className="text-[10px] text-secondary mt-1">
-                  Available to pay: <strong className="text-primary">₦{(companyShare - companyMetrics.totalMoneyPaid).toLocaleString()}</strong>
-                </div>
+              <div style={{ marginBottom: '12px' }}>
+                <label style={{ fontSize: '10px', fontWeight: 800, color: T.txt3 }}>Amount Paid (₦) *</label>
+                <input type="number" required value={paymentAmount} onChange={e => setPaymentAmount(e.target.value)} max={!isSupplier ? (companyShare - companyMetrics.totalMoneyPaid) : undefined}
+                  style={{ width: '100%', padding: '12px', borderRadius: '10px', border: `1px solid ${T.border}`, background: T.bg, fontSize: '16px', fontWeight: 900 }} />
+                {!isSupplier && (
+                   <div style={{ fontSize: '9px', color: T.txt2, marginTop: '4px' }}>Available bounds: {fmt(companyShare - companyMetrics.totalMoneyPaid)}</div>
+                )}
               </div>
               
-              <div className="flex gap-3 mb-4">
-                <div className="form-group flex-1">
-                  <label className="form-label text-xs">Method</label>
-                  <select 
-                    className="form-select" 
-                    value={paymentMethod}
-                    onChange={e => setPaymentMethod(e.target.value as 'Cash' | 'Transfer')}
-                  >
-                    <option value="Cash">Cash (KudiHannu)</option>
-                    <option value="Transfer">Bank Transfer</option>
+              {isSupplier ? (
+                <div style={{ marginBottom: '16px' }}>
+                  <label style={{ fontSize: '10px', fontWeight: 800, color: T.txt3 }}>Store Keeper</label>
+                  <select value={selectedSK} onChange={(e) => setSelectedSK(e.target.value)} required style={{ width: '100%', padding: '12px', borderRadius: '10px', border: `1px solid ${T.border}`, background: T.bg, fontSize: '12px', fontWeight: 700, appearance: 'none' }}>
+                     <option value="">Choose Store Keeper</option>
+                     {storeKeepers.map(sk => <option key={sk.id} value={sk.id}>{sk.full_name}</option>)}
                   </select>
                 </div>
-                
-                <div className="form-group flex-1">
-                  <label className="form-label text-xs">Receiver Name</label>
-                  <input 
-                    type="text" 
-                    className="form-input" 
-                    placeholder="Who received it?" 
-                    value={paymentReceiver}
-                    onChange={e => setPaymentReceiver(e.target.value)}
-                  />
+              ) : (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '16px' }}>
+                  <div>
+                    <label style={{ fontSize: '10px', fontWeight: 800, color: T.txt3 }}>Method</label>
+                    <select value={paymentMethod} onChange={e => setPaymentMethod(e.target.value as 'Cash'|'Transfer')} style={{ width: '100%', padding: '12px', borderRadius: '10px', border: `1px solid ${T.border}`, background: T.bg, fontSize: '12px', fontWeight: 700, appearance: 'none' }}>
+                      <option value="Cash">Cash</option>
+                      <option value="Transfer">Transfer</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label style={{ fontSize: '10px', fontWeight: 800, color: T.txt3 }}>Receiver</label>
+                    <input type="text" value={paymentReceiver} onChange={e => setPaymentReceiver(e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '10px', border: `1px solid ${T.border}`, background: T.bg, fontSize: '12px', fontWeight: 700 }} />
+                  </div>
                 </div>
-              </div>
+              )}
 
-              <button 
-                type="submit" 
-                className="btn btn-primary w-full"
-                disabled={isProcessing}
-              >
-                {isProcessing ? 'Saving & Generating Receipt...' : 'Record Payment & Print Receipt'}
+              <button type="submit" disabled={isProcessing} style={{ width: '100%', padding: '14px', borderRadius: '12px', background: T.primary, color: '#fff', border: 'none', fontSize: '13px', fontWeight: 800, cursor: 'pointer' }}>
+                {isProcessing ? 'Processing...' : (isSupplier ? 'Request Verification' : 'Record & Print')}
               </button>
             </form>
           </div>
           
-          <h2 className="text-lg font-bold mt-8 mb-4">Payment History</h2>
-          <div className="flex flex-col gap-3">
-            {bakeryPayments.length === 0 ? (
-              <p className="text-center text-secondary py-4">No payments recorded yet.</p>
-            ) : (
-              [...bakeryPayments]
-              .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-              .map(payment => (
-                <div key={payment.id} className="card flex justify-between items-center" style={{ marginBottom: 0, padding: '1rem' }}>
-                  <div>
-                    <div className="font-bold text-sm">Payment Sent {payment.method ? `(${payment.method})` : ''}</div>
-                    <div className="text-xs text-secondary">
-                      {new Date(payment.date).toLocaleString()}
-                      {payment.receiver && ` • To: ${payment.receiver}`}
+          {!isSupplier && (
+            <div style={{ marginTop: '24px' }}>
+              <h2 style={{ fontSize: '14px', fontWeight: 800, marginBottom: '12px' }}>Payment History</h2>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {[...bakeryPayments].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map(p => (
+                  <div key={p.id} style={{ background: T.white, borderRadius: '12px', padding: '12px', border: `1px solid ${T.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                      <div style={{ fontSize: '11px', fontWeight: 800 }}>Payment {p.method ? `(${p.method})` : ''}</div>
+                      <div style={{ fontSize: '9px', color: T.txt3, fontWeight: 700 }}>{new Date(p.date).toLocaleDateString()} {p.receiver && `• To: ${p.receiver}`}</div>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ fontSize: '12px', fontWeight: 900, color: T.success }}>+{fmt(p.amount)}</div>
+                      <Link to={`/bakery-receipt/${p.id}`} style={{ fontSize: '9px', fontWeight: 800, color: T.primary, textDecoration: 'none' }}>Receipt</Link>
                     </div>
                   </div>
-                  <div className="flex flex-col items-end gap-2">
-                    <div className="font-bold text-success">+₦{payment.amount.toLocaleString()}</div>
-                    <Link to={`/bakery-receipt/${payment.id}`} className="btn btn-outline py-1 px-2 text-[10px] flex items-center gap-1">
-                      <FileText size={12} /> Receipt
-                    </Link>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
       
-      {activeTab === 'view' && sortedBatchIds.length > 0 && (
-        <div className="mt-8">
-          <h2 className="text-lg font-bold mb-4">{t('inv.history')}</h2>
-          <div className="flex flex-col gap-3">
-            {sortedBatchIds.slice(0, 20).map(batchId => {
-              const batch = groupedLogs[batchId];
-              const first = batch[0];
-              const isReceive = first.type !== 'Return';
-              const totalItems = batch.reduce((sum, item) => sum + item.quantityReceived, 0);
-              const totalValue = batch.reduce((sum, item) => sum + (item.quantityReceived * item.costPrice), 0);
-              
-              return (
-                <div 
-                  key={batchId} 
-                  className="card flex items-center justify-between cursor-pointer hover:bg-black/5 dark:hover:bg-white/5" 
-                  style={{ marginBottom: 0, padding: '1rem', borderLeftWidth: '4px', borderColor: isReceive ? 'var(--success-color)' : 'var(--danger-color)' }}
-                  onClick={() => navigate(`/inventory/receipt/${batchId}`)}
-                >
-                  <div className="flex items-center gap-3">
-                    <div className={`p-2 rounded-full ${isReceive ? 'bg-success/10 text-success' : 'bg-danger/10 text-danger'}`}>
-                      {isReceive ? <TrendingUp size={20} /> : <TrendingDown size={20} />}
+      {activeTab === 'view' && (
+        <>
+          <style>{`.hide-scrollbar::-webkit-scrollbar { display: none; } .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }`}</style>
+          <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '8px', marginBottom: '8px' }} className="hide-scrollbar">
+            <button className={`flex-shrink-0 px-4 py-1.5 rounded-full text-[10px] font-bold transition-all ${selectedCategory === 'All' ? 'bg-primary text-white shadow-sm' : 'bg-white text-secondary'}`} onClick={() => setSelectedCategory('All')}>All</button>
+            {categories.map(cat => (
+              <button key={cat} className={`flex-shrink-0 px-4 py-1.5 rounded-full text-[10px] font-bold transition-all ${selectedCategory === cat ? 'bg-primary text-white shadow-sm' : 'bg-white text-secondary border border-gray-100'}`} onClick={() => setSelectedCategory(cat)}>{cat}</button>
+            ))}
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '24px' }}>
+            {filteredProducts.map(p => (
+              <div key={p.id} style={{ background: T.white, borderRadius: '16px', padding: '12px', border: `1px solid ${T.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  {p.image ? (
+                    <img src={p.image} style={{ width: '32px', height: '32px', objectFit: 'cover', borderRadius: '8px' }} alt="" />
+                  ) : (
+                    <div style={{ width: '32px', height: '32px', background: T.pLight, borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.primary, fontSize: '12px', fontWeight: 900 }}>
+                      {p.name.charAt(1) === '₦' ? p.name.charAt(p.name.indexOf(' ') + 1) : p.name.charAt(1)}
                     </div>
-                    <div>
-                      <div className="font-bold text-sm">{isReceive ? 'Received Stock' : 'Returned Stock'}</div>
-                      <div className="text-xs text-secondary">
-                        {new Date(first.date).toLocaleString()}
-                        {first.storeKeeper && ` • Keeper: ${first.storeKeeper}`}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="text-right flex items-center gap-3">
-                    <div>
-                      <div className="font-bold">₦{totalValue.toLocaleString()}</div>
-                      <div className="text-xs text-secondary">{totalItems} items</div>
-                    </div>
-                    <FileText size={18} className="text-secondary opacity-50" />
+                  )}
+                  <div>
+                    <div style={{ fontSize: '12px', fontWeight: 800 }}>{p.name}</div>
+                    <div style={{ fontSize: '9px', fontWeight: 700, color: p.active ? T.success : T.danger, marginTop: '2px' }}>{p.active ? 'Active' : 'Inactive'} • {p.category || 'Standard'}</div>
                   </div>
                 </div>
-              );
-            })}
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ fontSize: '9px', fontWeight: 800, color: T.txt3, textTransform: 'uppercase' }}>{t('inv.currentStock')}</div>
+                  <div style={{ fontSize: '18px', fontWeight: 900, color: T.ink }}>{p.stock}</div>
+                </div>
+              </div>
+            ))}
           </div>
-        </div>
+
+          {!isSupplier && sortedBatchIds.length > 0 && (
+            <div>
+              <h2 style={{ fontSize: '14px', fontWeight: 800, marginBottom: '12px' }}>{t('inv.history')}</h2>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {sortedBatchIds.slice(0, 20).map(batchId => {
+                  const batch = groupedLogs[batchId];
+                  const first = batch[0];
+                  const isReceive = first.type !== 'Return';
+                  const totalItems = batch.reduce((sum, item) => sum + item.quantityReceived, 0);
+                  const totalValue = batch.reduce((sum, item) => sum + (item.quantityReceived * item.costPrice), 0);
+                  
+                  return (
+                    <div key={batchId} onClick={() => navigate(`/inventory/receipt/${batchId}`)} style={{ background: T.white, borderRadius: '16px', padding: '12px', border: `1px solid ${T.border}`, borderLeftWidth: '4px', borderLeftColor: isReceive ? T.success : T.danger, display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <div style={{ padding: '8px', borderRadius: '10px', background: isReceive ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)', color: isReceive ? T.success : T.danger }}>
+                          {isReceive ? <TrendingUp size={16} /> : <TrendingDown size={16} />}
+                        </div>
+                        <div>
+                          <div style={{ fontSize: '11px', fontWeight: 800 }}>{isReceive ? 'Received Stock' : 'Returned Stock'}</div>
+                          <div style={{ fontSize: '9px', fontWeight: 700, color: T.txt3 }}>{new Date(first.date).toLocaleDateString()} {first.storeKeeper && `• ${first.storeKeeper}`}</div>
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <div style={{ textAlign: 'right' }}>
+                          <div style={{ fontSize: '12px', fontWeight: 800 }}>{fmt(totalValue)}</div>
+                          <div style={{ fontSize: '9px', fontWeight: 700, color: T.txt3 }}>{totalItems} items</div>
+                        </div>
+                        <FileText size={16} color={T.txt3} />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </>
       )}
 
       </div>
