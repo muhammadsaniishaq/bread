@@ -9,6 +9,7 @@ import {
   CreditCard, LogOut, RefreshCw, Package
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import SupplierBottomNav from '../components/SupplierBottomNav';
 
 const T = {
   bg:      '#f8fafc',
@@ -284,6 +285,7 @@ export default function SupplierDashboard() {
         </AnimatePresence>
 
       </div>
+      <SupplierBottomNav />
     </AnimatedPage>
   );
 }
