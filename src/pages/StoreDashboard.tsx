@@ -5,8 +5,9 @@ import { useAuth } from '../store/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { getTransactionItems } from '../store/types';
 import { useTranslation } from '../store/LanguageContext';
+import { supabase } from '../lib/supabase';
 import {
-  Package, ShoppingCart, LogOut,
+  Package, LogOut,
   TrendingUp, AlertTriangle, CheckCircle, ArrowRight,
   Zap, Clock, BarChart3, Wallet, ArrowUpRight, ArrowDownLeft
 } from 'lucide-react';
@@ -49,7 +50,7 @@ export const StoreDashboard: React.FC = () => {
     const fetchSuppliers = async () => {
       const { data } = await supabase.from('profiles').select('id').eq('role', 'SUPPLIER');
       if (data) {
-        const pIds = data.map(d => d.id);
+        const pIds = data.map((d: any) => d.id);
         const sups = customers.filter(c => pIds.includes(c.profile_id));
         setSupplierIds(new Set(sups.map(c => c.id)));
         setTotalSupplierDebt(sups.reduce((sum, c) => sum + (c.debtBalance || 0), 0));
