@@ -7,7 +7,7 @@ import { AnimatedPage } from '../components/AnimatedPage';
 import { useNavigate, Link } from 'react-router-dom';
 import { useTranslation } from '../store/LanguageContext';
 
-import { Trash2, FileText, TrendingDown, TrendingUp, Package, ArrowDownCircle, ArrowUpCircle, Wallet, Clock, CheckCircle } from 'lucide-react';
+import { Trash2, FileText, TrendingDown, TrendingUp, Package, ArrowDownCircle, ArrowUpCircle, Wallet, Clock } from 'lucide-react';
 
 const T = {
   primary: '#2563eb',
