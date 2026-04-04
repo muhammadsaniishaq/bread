@@ -50,7 +50,7 @@ export const Inventory: React.FC = () => {
 
   useEffect(() => {
     if (isSupplier) {
-      supabase.from('profiles').select('*').eq('role', 'STORE_KEEPER').then(({ data }) => {
+      supabase.from('profiles').select('*').in('role', ['STORE_KEEPER', 'MANAGER']).then(({ data }) => {
         if (data) setStoreKeepers(data);
       });
     }
@@ -337,10 +337,10 @@ export const Inventory: React.FC = () => {
 
             {isSupplier ? (
               <div style={{ marginBottom: '16px' }}>
-                <label style={{ fontSize: '10px', fontWeight: 800, color: T.txt3 }}>Store Keeper</label>
+                <label style={{ fontSize: '10px', fontWeight: 800, color: T.txt3 }}>Store / Manager</label>
                 <select value={selectedSK} onChange={(e) => setSelectedSK(e.target.value)} required style={{ width: '100%', padding: '12px', borderRadius: '10px', border: `1px solid ${T.border}`, background: T.bg, fontSize: '12px', fontWeight: 700, appearance: 'none' }}>
-                   <option value="">Choose Store Keeper</option>
-                   {storeKeepers.map(sk => <option key={sk.id} value={sk.id}>{sk.full_name}</option>)}
+                   <option value="">Choose Store / Manager</option>
+                   {storeKeepers.map(sk => <option key={sk.id} value={sk.id}>{sk.full_name} ({sk.role === 'MANAGER' ? 'Manager' : 'Store'})</option>)}
                 </select>
               </div>
             ) : (
@@ -400,17 +400,22 @@ export const Inventory: React.FC = () => {
                 <label style={{ fontSize: '10px', fontWeight: 800, color: T.txt3 }}>Amount Paid (₦) *</label>
                 <input type="number" required value={paymentAmount} onChange={e => setPaymentAmount(e.target.value)} max={!isSupplier ? (companyShare - companyMetrics.totalMoneyPaid) : undefined}
                   style={{ width: '100%', padding: '12px', borderRadius: '10px', border: `1px solid ${T.border}`, background: T.bg, fontSize: '16px', fontWeight: 900 }} />
-                {!isSupplier && (
+                {!isSupplier ? (
                    <div style={{ fontSize: '9px', color: T.txt2, marginTop: '4px' }}>Available bounds: {fmt(companyShare - companyMetrics.totalMoneyPaid)}</div>
+                ) : (
+                   <div style={{ fontSize: '10px', marginTop: '6px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ color: T.txt3, textTransform: 'uppercase', fontWeight: 800 }}>Remaining Debt</span>
+                      <span style={{ color: T.danger, fontWeight: 900, background: 'rgba(239,68,68,0.1)', padding: '4px 8px', borderRadius: '6px' }}>{fmt(myAccount?.debtBalance)}</span>
+                   </div>
                 )}
               </div>
               
               {isSupplier ? (
                 <div style={{ marginBottom: '16px' }}>
-                  <label style={{ fontSize: '10px', fontWeight: 800, color: T.txt3 }}>Store Keeper</label>
+                  <label style={{ fontSize: '10px', fontWeight: 800, color: T.txt3 }}>Store / Manager</label>
                   <select value={selectedSK} onChange={(e) => setSelectedSK(e.target.value)} required style={{ width: '100%', padding: '12px', borderRadius: '10px', border: `1px solid ${T.border}`, background: T.bg, fontSize: '12px', fontWeight: 700, appearance: 'none' }}>
-                     <option value="">Choose Store Keeper</option>
-                     {storeKeepers.map(sk => <option key={sk.id} value={sk.id}>{sk.full_name}</option>)}
+                     <option value="">Choose Store / Manager</option>
+                     {storeKeepers.map(sk => <option key={sk.id} value={sk.id}>{sk.full_name} ({sk.role === 'MANAGER' ? 'Manager' : 'Store'})</option>)}
                   </select>
                 </div>
               ) : (
