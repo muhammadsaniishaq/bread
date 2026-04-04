@@ -405,7 +405,7 @@ export const Inventory: React.FC = () => {
                 ) : (
                    <div style={{ fontSize: '10px', marginTop: '6px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <span style={{ color: T.txt3, textTransform: 'uppercase', fontWeight: 800 }}>Remaining Debt</span>
-                      <span style={{ color: T.danger, fontWeight: 900, background: 'rgba(239,68,68,0.1)', padding: '4px 8px', borderRadius: '6px' }}>{fmt(myAccount?.debtBalance)}</span>
+                      <span style={{ color: T.danger, fontWeight: 900, background: 'rgba(239,68,68,0.1)', padding: '4px 8px', borderRadius: '6px' }}>{fmt(myAccount?.debtBalance || 0)}</span>
                    </div>
                 )}
               </div>
