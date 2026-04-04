@@ -8,8 +8,8 @@ import { useAuth } from '../store/AuthContext';
 import { QRScanner } from '../components/QRScanner';
 
 export const Sales: React.FC = () => {
-  const { customers, products, transactions, recordSale, appSettings } = useAppContext();
-  const { user } = useAuth();
+  const { customers, products, transactions, recordSale } = useAppContext();
+  const { user, role } = useAuth();
   const { t } = useTranslation();
   const navigate = useNavigate();
   
@@ -33,7 +33,7 @@ export const Sales: React.FC = () => {
     else if (customers.find(c => c.id === decodedId)) setCustomerId(decodedId);
   };
 
-  const isSupplier = appSettings?.role === 'SUPPLIER';
+  const isSupplier = role === 'SUPPLIER';
   const myAccount = useMemo(() => customers.find(c => c.profile_id === user?.id), [customers, user]);
   const myTxs = useMemo(() => transactions.filter(t => t.customerId === myAccount?.id || t.sellerId === myAccount?.id), [transactions, myAccount]);
 

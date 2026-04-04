@@ -28,14 +28,14 @@ const itemVariants: any = {
 };
 
 export const Dashboard: React.FC = () => {
-  const { transactions, products, customers, expenses, appSettings } = useAppContext();
-  const { signOut, user } = useAuth();
+  const { transactions, products, customers, expenses } = useAppContext();
+  const { signOut, user, role } = useAuth();
   const { t } = useTranslation();
   const navigate = useNavigate();
   
   const [searchQuery, setSearchQuery] = useState('');
   
-  const isSupplier = appSettings?.role === 'SUPPLIER';
+  const isSupplier = role === 'SUPPLIER';
   const myAccount = useMemo(() => customers.find(c => c.profile_id === user?.id), [customers, user]);
   const myTxs = useMemo(() => transactions.filter(t => t.customerId === myAccount?.id || t.sellerId === myAccount?.id), [transactions, myAccount]);
 

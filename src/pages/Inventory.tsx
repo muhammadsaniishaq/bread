@@ -24,12 +24,12 @@ const T = {
 };
 
 export const Inventory: React.FC = () => {
-  const { user } = useAuth();
-  const { appSettings, products, companyMetrics, processInventoryBatch, inventoryLogs, recordBakeryPayment, bakeryPayments, transactions, expenses, customers, recordSale } = useAppContext();
+  const { user, role } = useAuth();
+  const { products, companyMetrics, processInventoryBatch, inventoryLogs, recordBakeryPayment, bakeryPayments, transactions, expenses, customers, recordSale } = useAppContext();
   const { t } = useTranslation();
   const navigate = useNavigate();
   
-  const isSupplier = appSettings?.role === 'SUPPLIER';
+  const isSupplier = role === 'SUPPLIER';
   
   const [activeTab, setActiveTab] = useState<'view' | 'receive' | 'return' | 'balance'>('view');
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
