@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Package, ShoppingCart, ClipboardList, MoreHorizontal } from 'lucide-react';
+import { LayoutDashboard, LogOut, FileText, ClipboardList, MoreHorizontal } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 const T = {
@@ -13,10 +13,10 @@ const T = {
 
 const tabs = [
   { label: 'Dash',      icon: LayoutDashboard, path: '/store' },
-  { label: 'Dispatch',  icon: ShoppingCart,    path: '/store/dispatch' },
-  { label: 'Orders',    icon: Package,          path: '/store/orders' },
-  { label: 'Stock',     icon: ClipboardList,    path: '/store/inventory' },
-  { label: 'More',      icon: MoreHorizontal,   path: '/store/more' },
+  { label: 'Dispatch',  icon: LogOut,          path: '/store/dispatch' },
+  { label: 'Ledger',    icon: FileText,        path: '/store/accounting' },
+  { label: 'Stock',     icon: ClipboardList,   path: '/store/inventory' },
+  { label: 'More',      icon: MoreHorizontal,  path: '/store/more' },
 ];
 
 const StoreBottomNav: React.FC = () => {

@@ -42,6 +42,21 @@ export const StoreDashboard: React.FC = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [clockStr, setClockStr] = useState('');
+  const [supplierIds, setSupplierIds] = useState<Set<string>>(new Set());
+  const [totalSupplierDebt, setTotalSupplierDebt] = useState(0);
+
+  useEffect(() => {
+    const fetchSuppliers = async () => {
+      const { data } = await supabase.from('profiles').select('id').eq('role', 'SUPPLIER');
+      if (data) {
+        const pIds = data.map(d => d.id);
+        const sups = customers.filter(c => pIds.includes(c.profile_id));
+        setSupplierIds(new Set(sups.map(c => c.id)));
+        setTotalSupplierDebt(sups.reduce((sum, c) => sum + (c.debtBalance || 0), 0));
+      }
+    };
+    if (customers.length > 0) fetchSuppliers();
+  }, [customers]);
 
   useEffect(() => {
     const tick = () => {
@@ -65,7 +80,7 @@ export const StoreDashboard: React.FC = () => {
 
   const metrics = React.useMemo(() => {
     const today = new Date().toISOString().split('T')[0];
-    const todaysTx = transactions.filter(t => t.date.startsWith(today));
+    const todaysTx = transactions.filter(t => t.date.startsWith(today) && supplierIds.has(t.customerId || ''));
 
     let totalSales = 0, totalCash = 0, totalDebt = 0, unitsSold = 0;
     const breadMap: Record<string, number> = {};
@@ -97,7 +112,7 @@ export const StoreDashboard: React.FC = () => {
 
     return { totalSales, totalCash, totalDebt, unitsSold, stock, lowStock, received, breadMap, weekData, pendingRequestsCount, pendingRequests,
       recent: [...todaysTx].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 5) };
-  }, [transactions, products, inventoryLogs, user]);
+  }, [transactions, products, inventoryLogs, user, supplierIds]);
 
   const staffName = (user as any)?.user_metadata?.full_name || 'Store Keeper';
   const getCustomer = (id?: string) => customers.find(c => c.id === id)?.name || 'Walk-in';
@@ -145,8 +160,8 @@ export const StoreDashboard: React.FC = () => {
                   <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.5)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '4px' }}>{t('store.dispatched')}</div>
                   <div style={{ fontSize: '28px', fontWeight: 900, color: '#93c5fd', letterSpacing: '-0.04em' }}>{fmt(metrics.totalSales)}</div>
                   <div style={{ display: 'flex', gap: '14px', marginTop: '6px' }}>
-                    <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.45)', fontWeight: 600 }}>{t('store.cashShort')}: {fmt(metrics.totalCash)}</span>
-                    <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.45)', fontWeight: 600 }}>{t('store.debtShort')}: {fmt(metrics.totalDebt)}</span>
+                    <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.45)', fontWeight: 600 }}>{t('store.supplierPayments')}: {fmt(metrics.totalCash)}</span>
+                    <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.45)', fontWeight: 600 }}>{t('store.totalOwedToSuppliers')}: {fmt(totalSupplierDebt)}</span>
                   </div>
                 </div>
                 <div style={{ textAlign: 'right' }}>
@@ -176,14 +191,14 @@ export const StoreDashboard: React.FC = () => {
 
           {/* ─── QUICK ACTION BUTTONS ─── */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-            <motion.button whileTap={{ scale: 0.96 }} onClick={() => navigate('/sales')}
+            <motion.button whileTap={{ scale: 0.96 }} onClick={() => navigate('/store/accounting')}
               style={{ padding: '18px 16px', borderRadius: T.radius, background: `linear-gradient(135deg, ${T.primary}, #3b82f6)`, border: 'none', color: '#fff', cursor: 'pointer', fontFamily: 'inherit', boxShadow: T.shadowLg, display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '10px', textAlign: 'left' }}>
               <div style={{ width: '36px', height: '36px', borderRadius: '11px', background: 'rgba(255,255,255,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <ShoppingCart size={18} color="#fff" />
+                <Wallet size={18} color="#fff" />
               </div>
               <div>
-                <div style={{ fontSize: '14px', fontWeight: 900, lineHeight: 1.2 }}>{t('store.dispatchStock').split(' ')[0]}<br/>{t('store.dispatchStock').split(' ')[1] || ''}</div>
-                <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.65)', marginTop: '3px' }}>{t('store.openPOS')}</div>
+                <div style={{ fontSize: '14px', fontWeight: 900, lineHeight: 1.2 }}>{t('store.supplierLedger').split(' ')[0]}<br/>{t('store.supplierLedger').split(' ')[1] || 'Ledger'}</div>
+                <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.65)', marginTop: '3px' }}>{t('store.pureSupplierLabel')}</div>
               </div>
             </motion.button>
 
@@ -215,7 +230,7 @@ export const StoreDashboard: React.FC = () => {
           {/* ─── STAT TILES ─── */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
             {[
-              { label: t('rep.cashSales'), value: fmt(metrics.totalCash), color: T.emerald, bg: T.emeraldL, icon: TrendingUp },
+              { label: t('store.supplierPayments'), value: fmt(metrics.totalCash), color: T.emerald, bg: T.emeraldL, icon: TrendingUp },
               { label: t('inv.receive'), value: `${metrics.received}`, color: T.amber, bg: T.amberL, icon: Package },
               { label: t('rep.debtIssued'), value: fmt(metrics.totalDebt), color: T.rose, bg: T.roseL, icon: AlertTriangle },
             ].map((s, i) => (
