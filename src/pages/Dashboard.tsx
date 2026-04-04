@@ -28,12 +28,34 @@ const itemVariants: any = {
 };
 
 export const Dashboard: React.FC = () => {
-  const { transactions, products, customers, expenses } = useAppContext();
-  const { signOut } = useAuth();
+  const { transactions, products, customers, expenses, appSettings } = useAppContext();
+  const { signOut, user } = useAuth();
   const { t } = useTranslation();
   const navigate = useNavigate();
   
   const [searchQuery, setSearchQuery] = useState('');
+  
+  const isSupplier = appSettings?.role === 'SUPPLIER';
+  const myAccount = useMemo(() => customers.find(c => c.profile_id === user?.id), [customers, user]);
+  const myTxs = useMemo(() => transactions.filter(t => t.customerId === myAccount?.id || t.sellerId === myAccount?.id), [transactions, myAccount]);
+
+  const displayProducts = useMemo(() => {
+    if (!isSupplier || !myAccount) return products;
+    return products.map(p => {
+      const received = myTxs.filter(tx => tx.status === 'COMPLETED' && tx.type === 'Debt' && tx.origin === 'SUPPLIER' && (tx.items?.[0]?.productId === p.id || tx.productId === p.id))
+        .reduce((sum, tx) => sum + ((tx.items?.[0]?.quantity || tx.quantity) || 0), 0);
+      const returned = myTxs.filter(tx => tx.status === 'COMPLETED' && tx.type === 'Return' && tx.origin === 'SUPPLIER' && (tx.items?.[0]?.productId === p.id || tx.productId === p.id))
+        .reduce((sum, tx) => sum + ((tx.items?.[0]?.quantity || tx.quantity) || 0), 0);
+      const sold = myTxs.filter(tx => tx.origin === 'POS_SUPPLIER' && (tx.type === 'Cash' || tx.type === 'Debt'))
+        .reduce((sum, tx) => {
+          const item = tx.items?.find(i => i.productId === p.id);
+          if (item) return sum + item.quantity;
+          if (tx.productId === p.id) return sum + (tx.quantity || 0);
+          return sum;
+        }, 0);
+      return { ...p, stock: Math.max(0, received - returned - sold) };
+    });
+  }, [products, isSupplier, myAccount, myTxs]);
 
   const metrics = useMemo(() => {
     const today = new Date().toISOString().split('T')[0];
@@ -63,7 +85,7 @@ export const Dashboard: React.FC = () => {
     const netProfit = profit - totalExpenses;
     
     const outstandingDebt = customers.reduce((sum, c) => sum + c.debtBalance, 0);
-    const stockRemaining = products.reduce((sum, p) => sum + p.stock, 0);
+    const stockRemaining = displayProducts.reduce((sum, p) => sum + p.stock, 0);
     
     return {
       totalSales,
@@ -75,10 +97,10 @@ export const Dashboard: React.FC = () => {
       outstandingDebt,
       stockRemaining,
       breadSoldMap,
-      lowStockProducts: products.filter(p => p.stock > 0 && p.stock < 20),
+      lowStockProducts: displayProducts.filter(p => p.stock > 0 && p.stock < 20),
       recentActivity: transactions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 5)
     };
-  }, [transactions, products, customers, expenses]);
+  }, [transactions, displayProducts, customers, expenses]);
 
   const greetingObj = useMemo(() => {
     const hour = new Date().getHours();
@@ -96,13 +118,13 @@ export const Dashboard: React.FC = () => {
       (c.phone && c.phone.includes(q))
     );
     
-    const matchedProducts = products.filter(p => 
+    const matchedProducts = displayProducts.filter(p => 
       p.name.toLowerCase().includes(q) || 
       (p.category && p.category.toLowerCase().includes(q))
     );
     
     return { customers: matchedCustomers, products: matchedProducts };
-  }, [searchQuery, customers, products]);
+  }, [searchQuery, customers, displayProducts]);
 
   const getCustomerName = (id?: string) => customers.find(c => c.id === id)?.name || 'Walk-in';
 
@@ -114,7 +136,7 @@ export const Dashboard: React.FC = () => {
     Object.entries(metrics.breadSoldMap).forEach(([id, count]) => {
       if (count > maxSold) {
         maxSold = count;
-        topProduct = products.find(p => p.id === id)?.name || 'Product';
+        topProduct = displayProducts.find(p => p.id === id)?.name || 'Product';
       }
     });
 
@@ -126,7 +148,7 @@ export const Dashboard: React.FC = () => {
     }
     
     return t('dash.insightPlaceholder');
-  }, [metrics, products, t]);
+  }, [metrics, displayProducts, t]);
 
   return (
     <AnimatedPage>
@@ -382,7 +404,7 @@ export const Dashboard: React.FC = () => {
               </div>
               <div style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: '0.75rem' }}>{metrics.breadSold} <span className="text-secondary" style={{ fontSize: '0.875rem', fontWeight: 500 }}>units</span></div>
               <div className="flex flex-col" style={{ gap: '0.5rem' }}>
-                {products.map(p => {
+                {displayProducts.map(p => {
                   const sold = metrics.breadSoldMap[p.id] || 0;
                   if (sold === 0) return null;
                   return (
@@ -403,7 +425,7 @@ export const Dashboard: React.FC = () => {
               </div>
               <div style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: '0.75rem' }}>{metrics.stockRemaining} <span className="text-secondary" style={{ fontSize: '0.875rem', fontWeight: 500 }}>units</span></div>
               <div className="flex flex-col" style={{ gap: '0.5rem' }}>
-                {products.filter(p => p.active).map(p => (
+                {displayProducts.filter(p => p.active).map(p => (
                   <div key={p.id} className="flex justify-between items-center" style={{ background: 'rgba(0,0,0,0.02)', padding: '0.5rem', borderRadius: '8px' }}>
                     <span style={{ fontSize: '0.875rem', fontWeight: 500 }}>{p.name}</span>
                     <span style={{ fontSize: '0.75rem', fontWeight: 700, color: p.stock < 20 ? 'white' : 'inherit', background: p.stock < 20 ? 'var(--danger-color)' : 'rgba(0,0,0,0.05)', padding: '0.125rem 0.375rem', borderRadius: '4px' }}>{p.stock}</span>

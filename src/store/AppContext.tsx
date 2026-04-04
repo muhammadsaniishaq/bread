@@ -204,22 +204,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setCompanyMetrics(metrics);
     } catch (e) { console.error('AppContext: Metrics update failed', e); }
     
-    // 4. Update Inventory Stock levels
-    try {
-      const items = getTransactionItems(tx);
-      const updatedProducts = [...products];
-      for (const item of items) {
-        const pIdx = updatedProducts.findIndex(p => p.id === item.productId);
-        if (pIdx !== -1) {
-          updatedProducts[pIdx] = {
-            ...updatedProducts[pIdx],
-            stock: Math.max(0, Number(updatedProducts[pIdx].stock || 0) - Number(item.quantity))
-          };
-          await dbProducts.setItem(updatedProducts[pIdx].id, updatedProducts[pIdx]);
+    // 4. Update Inventory Stock levels (ONLY if not from a POS Supplier)
+    // POS Suppliers sell their own 'In Hand' stock, which was already deducted from Global Stock earlier.
+    if (tx.origin !== 'POS_SUPPLIER') {
+      try {
+        const items = getTransactionItems(tx);
+        const updatedProducts = [...products];
+        for (const item of items) {
+          const pIdx = updatedProducts.findIndex(p => p.id === item.productId);
+          if (pIdx !== -1) {
+            updatedProducts[pIdx] = {
+              ...updatedProducts[pIdx],
+              stock: Math.max(0, Number(updatedProducts[pIdx].stock || 0) - Number(item.quantity))
+            };
+            await dbProducts.setItem(updatedProducts[pIdx].id, updatedProducts[pIdx]);
+          }
         }
-      }
-      setProducts(updatedProducts);
-    } catch (e) { console.error('AppContext: Stock update failed', e); }
+        setProducts(updatedProducts);
+      } catch (e) { console.error('AppContext: Stock update failed', e); }
+    }
 
     // 5. Update Ledger Balances (Debt)
     try {

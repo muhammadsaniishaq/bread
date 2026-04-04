@@ -36,13 +36,14 @@ export interface Transaction {
   date: string;
   type: 'Cash' | 'Debt' | 'Return' | 'Payment'; // Added Return and Payment
   status?: 'PENDING_SUPPLIER' | 'PENDING_STORE' | 'COMPLETED' | 'CANCELLED'; // Added statuses
-  origin?: 'STORE' | 'SUPPLIER'; // Where the transaction was initiated
+  origin?: 'STORE' | 'SUPPLIER' | 'POS_SUPPLIER'; // Where the transaction was initiated
   items?: TransactionItem[]; // V3 Shopping Cart
   productId?: string;        // Legacy
   quantity?: number;         // Legacy
   totalPrice: number;
   discount?: number;
   customerId?: string; // For debt
+  sellerId?: string; // ID of the profile that made the sale (for Suppliers)
   storeKeeperId?: string; // Store Keeper responsible for the request
   pointsEarned?: number;
   pointsUsed?: number;

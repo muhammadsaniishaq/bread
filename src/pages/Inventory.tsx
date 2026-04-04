@@ -56,6 +56,9 @@ export const Inventory: React.FC = () => {
     }
   }, [isSupplier]);
 
+  const myAccount = useMemo(() => customers.find(c => c.profile_id === user?.id), [customers, user]);
+  const myTxs = useMemo(() => transactions.filter(t => t.customerId === myAccount?.id || t.sellerId === myAccount?.id), [transactions, myAccount]);
+
   const activeProducts = products.filter(p => p.active);
   const categories = Array.from(new Set(products.map(p => p.category || 'Standard')));
   const filteredProducts = products
@@ -85,10 +88,23 @@ export const Inventory: React.FC = () => {
     
     const cost = parseInt(costPrice) || prod.price; // Default to prod price
 
-    if (activeTab === 'return' && !isSupplier) {
+    if (activeTab === 'return') {
       const pendingQty = pendingItems.filter(i => i.productId === productId).reduce((s, i) => s + i.quantityReceived, 0);
-      if (prod.stock < qty + pendingQty) {
-        alert("Cannot return more stock than you currently have.");
+      let avlTarget = prod.stock;
+      if (isSupplier) {
+         const received = myTxs.filter(tx => tx.status === 'COMPLETED' && tx.type === 'Debt' && tx.origin === 'SUPPLIER' && (tx.items?.[0]?.productId === productId || tx.productId === productId)).reduce((sum, tx) => sum + ((tx.items?.[0]?.quantity || tx.quantity) || 0), 0);
+         const returned = myTxs.filter(tx => tx.status === 'COMPLETED' && tx.type === 'Return' && tx.origin === 'SUPPLIER' && (tx.items?.[0]?.productId === productId || tx.productId === productId)).reduce((sum, tx) => sum + ((tx.items?.[0]?.quantity || tx.quantity) || 0), 0);
+         const sold = myTxs.filter(tx => tx.origin === 'POS_SUPPLIER' && (tx.type === 'Cash' || tx.type === 'Debt')).reduce((sum, tx) => {
+            const it = tx.items?.find(i => i.productId === productId);
+            if (it) return sum + it.quantity;
+            if (tx.productId === productId) return sum + (tx.quantity || 0);
+            return sum;
+         }, 0);
+         avlTarget = Math.max(0, received - returned - sold);
+      }
+      
+      if (avlTarget < qty + pendingQty) {
+        alert(`Cannot return more stock than you currently have (${avlTarget}).`);
         return;
       }
     }
@@ -111,8 +127,6 @@ export const Inventory: React.FC = () => {
     setPendingItems(pendingItems.filter(i => i.id !== id));
   };
   
-  const myAccount = useMemo(() => customers.find(c => c.profile_id === user?.id), [customers, user]);
-
   const handleRecordPayment = async (e: React.FormEvent) => {
     e.preventDefault();
     const amountStr = parseInt(paymentAmount);
@@ -316,7 +330,20 @@ export const Inventory: React.FC = () => {
                 <option value="">-- Choose Bread --</option>
                 {activeProducts.map(p => {
                   const pendingQty = activeTab === 'return' ? pendingItems.filter(i => i.productId === p.id).reduce((s, i) => s + i.quantityReceived, 0) : 0;
-                  const availableStock = p.stock - pendingQty;
+                  let supStock = p.stock;
+                  if (isSupplier && activeTab === 'return') {
+                     const received = myTxs.filter(tx => tx.status === 'COMPLETED' && tx.type === 'Debt' && tx.origin === 'SUPPLIER' && (tx.items?.[0]?.productId === p.id || tx.productId === p.id)).reduce((sum, tx) => sum + ((tx.items?.[0]?.quantity || tx.quantity) || 0), 0);
+                     const returned = myTxs.filter(tx => tx.status === 'COMPLETED' && tx.type === 'Return' && tx.origin === 'SUPPLIER' && (tx.items?.[0]?.productId === p.id || tx.productId === p.id)).reduce((sum, tx) => sum + ((tx.items?.[0]?.quantity || tx.quantity) || 0), 0);
+                     const sold = myTxs.filter(tx => tx.origin === 'POS_SUPPLIER' && (tx.type === 'Cash' || tx.type === 'Debt')).reduce((sum, tx) => {
+                        const item = tx.items?.find(i => i.productId === p.id);
+                        if (item) return sum + item.quantity;
+                        if (tx.productId === p.id) return sum + (tx.quantity || 0);
+                        return sum;
+                     }, 0);
+                     supStock = Math.max(0, received - returned - sold);
+                  }
+                  
+                  const availableStock = supStock - pendingQty;
                   return <option key={p.id} value={p.id}>{p.name} (Avl: {activeTab === 'return' ? availableStock : p.stock})</option>;
                 })}
               </select>

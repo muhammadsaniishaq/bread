@@ -4,10 +4,12 @@ import type { Transaction, TransactionItem } from '../store/types';
 import { useNavigate } from 'react-router-dom';
 import { ShoppingCart, Trash2, Camera } from 'lucide-react';
 import { useTranslation } from '../store/LanguageContext';
+import { useAuth } from '../store/AuthContext';
 import { QRScanner } from '../components/QRScanner';
 
 export const Sales: React.FC = () => {
-  const { customers, products, transactions, recordSale } = useAppContext();
+  const { customers, products, transactions, recordSale, appSettings } = useAppContext();
+  const { user } = useAuth();
   const { t } = useTranslation();
   const navigate = useNavigate();
   
@@ -31,7 +33,34 @@ export const Sales: React.FC = () => {
     else if (customers.find(c => c.id === decodedId)) setCustomerId(decodedId);
   };
 
-  const activeProducts = products.filter(p => p.active);
+  const isSupplier = appSettings?.role === 'SUPPLIER';
+  const myAccount = useMemo(() => customers.find(c => c.profile_id === user?.id), [customers, user]);
+  const myTxs = useMemo(() => transactions.filter(t => t.customerId === myAccount?.id || t.sellerId === myAccount?.id), [transactions, myAccount]);
+
+  const activeProducts = useMemo(() => {
+    let prods = products.filter(p => p.active);
+    if (isSupplier && myAccount) {
+      prods = prods.map(p => {
+        // Received stock (Supplier requested from Store)
+        const received = myTxs.filter(tx => tx.status === 'COMPLETED' && tx.type === 'Debt' && tx.origin === 'SUPPLIER' && (tx.items?.[0]?.productId === p.id || tx.productId === p.id))
+          .reduce((sum, tx) => sum + ((tx.items?.[0]?.quantity || tx.quantity) || 0), 0);
+        // Returned stock (Supplier returned to Store)
+        const returned = myTxs.filter(tx => tx.status === 'COMPLETED' && tx.type === 'Return' && tx.origin === 'SUPPLIER' && (tx.items?.[0]?.productId === p.id || tx.productId === p.id))
+          .reduce((sum, tx) => sum + ((tx.items?.[0]?.quantity || tx.quantity) || 0), 0);
+        // POS Sales (Supplier sold to customer)
+        const sold = myTxs.filter(tx => tx.origin === 'POS_SUPPLIER' && (tx.type === 'Cash' || tx.type === 'Debt'))
+          .reduce((sum, tx) => {
+            const item = tx.items?.find(i => i.productId === p.id);
+            if (item) return sum + item.quantity;
+            if (tx.productId === p.id) return sum + (tx.quantity || 0);
+            return sum;
+          }, 0);
+        return { ...p, stock: Math.max(0, received - returned - sold) };
+      });
+    }
+    return prods;
+  }, [products, isSupplier, myAccount, myTxs]);
+
   const categories = Array.from(new Set(activeProducts.map(p => p.category || 'Standard')));
   const filteredProducts = activeProducts
     .filter(p => selectedCategory === 'All' || (p.category || 'Standard') === selectedCategory)
@@ -140,6 +169,8 @@ export const Sales: React.FC = () => {
       discount: totalDiscount > 0 ? totalDiscount : undefined,
       pointsEarned: pointsEarned > 0 ? pointsEarned : undefined,
       pointsUsed: redeemPoints ? maxPointsToUse : undefined,
+      origin: isSupplier ? 'POS_SUPPLIER' : undefined,
+      sellerId: isSupplier ? myAccount?.id : undefined
     };
     
     await recordSale(tx);
