@@ -44,7 +44,7 @@ export default function SupplierDashboard() {
 
   useEffect(() => {
     const fetchSKs = async () => {
-      const { data } = await supabase.from('profiles').select('id, full_name, role').in('role', ['STORE_KEEPER', 'MANAGER']);
+      const { data } = await supabase.from('profiles').select('id, full_name').eq('role', 'STORE_KEEPER');
       setStoreKeepers(data || []);
     };
     fetchSKs();
@@ -54,7 +54,7 @@ export default function SupplierDashboard() {
     customers.find(c => c.profile_id === user?.id), [customers, user]);
 
   const myTxs = useMemo(() => 
-    transactions.filter(t => t.customerId === myAccount?.id || t.sellerId === myAccount?.id), [transactions, myAccount]);
+    transactions.filter(t => t.customerId === myAccount?.id), [transactions, myAccount]);
 
   const pendingTxs = myTxs.filter(t => t.status === 'PENDING_STORE');
   const completedTxs = myTxs.filter(t => t.status === 'COMPLETED')
@@ -133,18 +133,11 @@ export default function SupplierDashboard() {
              </div>
              <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px', scrollbarWidth: 'none' }}>
                 {products.filter(p => p.active).map(p => {
-                   const received = myTxs.filter(tx => tx.status === 'COMPLETED' && tx.type === 'Debt' && tx.origin === 'SUPPLIER' && (tx.items?.[0]?.productId === p.id || tx.productId === p.id))
-                      .reduce((sum, tx) => sum + (tx.items?.[0]?.quantity || tx.quantity || 0), 0);
-                   const returned = myTxs.filter(tx => tx.status === 'COMPLETED' && tx.type === 'Return' && tx.origin === 'SUPPLIER' && (tx.items?.[0]?.productId === p.id || tx.productId === p.id))
-                      .reduce((sum, tx) => sum + (tx.items?.[0]?.quantity || tx.quantity || 0), 0);
-                   const sold = myTxs.filter(tx => tx.origin === 'POS_SUPPLIER' && (tx.type === 'Cash' || tx.type === 'Debt'))
-                      .reduce((sum, tx) => {
-                         const item = tx.items?.find(i => i.productId === p.id);
-                         if (item) return sum + item.quantity;
-                         if (tx.productId === p.id) return sum + (tx.quantity || 0);
-                         return sum;
-                      }, 0);
-                   const inHand = received - returned - sold;
+                   const received = myTxs.filter(tx => tx.status === 'COMPLETED' && tx.type === 'Debt' && tx.items?.[0]?.productId === p.id)
+                      .reduce((sum, tx) => sum + (tx.items?.[0]?.quantity || 0), 0);
+                   const returned = myTxs.filter(tx => tx.status === 'COMPLETED' && tx.type === 'Return' && tx.items?.[0]?.productId === p.id)
+                      .reduce((sum, tx) => sum + (tx.items?.[0]?.quantity || 0), 0);
+                   const inHand = received - returned;
 
                    if (inHand <= 0) return null;
 
@@ -156,15 +149,9 @@ export default function SupplierDashboard() {
                    );
                 })}
                 {products.filter(p => p.active).every(p => {
-                   const received = myTxs.filter(tx => tx.status === 'COMPLETED' && tx.type === 'Debt' && tx.origin === 'SUPPLIER' && (tx.items?.[0]?.productId === p.id || tx.productId === p.id)).reduce((s, tx) => s + (tx.items?.[0]?.quantity || tx.quantity || 0), 0);
-                   const returned = myTxs.filter(tx => tx.status === 'COMPLETED' && tx.type === 'Return' && tx.origin === 'SUPPLIER' && (tx.items?.[0]?.productId === p.id || tx.productId === p.id)).reduce((s, tx) => s + (tx.items?.[0]?.quantity || tx.quantity || 0), 0);
-                   const sold = myTxs.filter(tx => tx.origin === 'POS_SUPPLIER' && (tx.type === 'Cash' || tx.type === 'Debt')).reduce((s, tx) => {
-                      const item = tx.items?.find(i => i.productId === p.id);
-                      if (item) return s + item.quantity;
-                      if (tx.productId === p.id) return s + (tx.quantity || 0);
-                      return s;
-                   }, 0);
-                   return (received - returned - sold) <= 0;
+                   const received = myTxs.filter(tx => tx.status === 'COMPLETED' && tx.type === 'Debt' && tx.items?.[0]?.productId === p.id).reduce((s, tx) => s + (tx.items?.[0]?.quantity || 0), 0);
+                   const returned = myTxs.filter(tx => tx.status === 'COMPLETED' && tx.type === 'Return' && tx.items?.[0]?.productId === p.id).reduce((s, tx) => s + (tx.items?.[0]?.quantity || 0), 0);
+                   return (received - returned) <= 0;
                 }) && (
                    <div style={{ padding: '12px', fontSize: '11px', color: T.txt3, fontWeight: 600 }}>{t('store.allStockOk')}</div>
                 )}
@@ -258,7 +245,7 @@ export default function SupplierDashboard() {
                           <select value={selectedSK} onChange={(e) => setSelectedSK(e.target.value)}
                             style={{ width: '100%', padding: '14px', borderRadius: '14px', border: `1px solid ${T.border}`, background: '#f8fafc', fontSize: '14px', fontWeight: 700, appearance: 'none' }}>
                              <option value="">{t('dash.selectStoreKeeper')}</option>
-                             {storeKeepers.map(sk => <option key={sk.id} value={sk.id}>{sk.full_name} ({sk.role === 'MANAGER' ? 'Manager' : 'Store'})</option>)}
+                             {storeKeepers.map(sk => <option key={sk.id} value={sk.id}>{sk.full_name}</option>)}
                           </select>
                           <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '16px', border: `1px solid ${T.border}` }}>
                              <label style={{ fontSize: '10px', fontWeight: 800, color: T.txt3, textTransform: 'uppercase', marginBottom: '8px', display: 'block' }}>{t('dash.amountToPay')}</label>
@@ -272,7 +259,7 @@ export default function SupplierDashboard() {
                             <select value={selectedSK} onChange={(e) => setSelectedSK(e.target.value)}
                               style={{ width: '100%', padding: '14px', borderRadius: '14px', border: `1px solid ${T.border}`, background: '#f8fafc', fontSize: '14px', fontWeight: 700, appearance: 'none' }}>
                                <option value="">{t('dash.selectStoreKeeper')}</option>
-                               {storeKeepers.map(sk => <option key={sk.id} value={sk.id}>{sk.full_name} ({sk.role === 'MANAGER' ? 'Manager' : 'Store'})</option>)}
+                               {storeKeepers.map(sk => <option key={sk.id} value={sk.id}>{sk.full_name}</option>)}
                             </select>
 
                             <select value={selectedProd} onChange={(e) => setSelectedProd(e.target.value)}
@@ -281,15 +268,9 @@ export default function SupplierDashboard() {
                                {products.map(p => {
                                   let avlText = '';
                                   if (showModal === 'RETURN') {
-                                     const received = myTxs.filter(tx => tx.status === 'COMPLETED' && tx.type === 'Debt' && tx.origin === 'SUPPLIER' && (tx.items?.[0]?.productId === p.id || tx.productId === p.id)).reduce((sum, tx) => sum + (tx.items?.[0]?.quantity || tx.quantity || 0), 0);
-                                     const returned = myTxs.filter(tx => tx.status === 'COMPLETED' && tx.type === 'Return' && tx.origin === 'SUPPLIER' && (tx.items?.[0]?.productId === p.id || tx.productId === p.id)).reduce((sum, tx) => sum + (tx.items?.[0]?.quantity || tx.quantity || 0), 0);
-                                     const sold = myTxs.filter(tx => tx.origin === 'POS_SUPPLIER' && (tx.type === 'Cash' || tx.type === 'Debt')).reduce((s, tx) => {
-                                        const item = tx.items?.find(i => i.productId === p.id);
-                                        if (item) return s + item.quantity;
-                                        if (tx.productId === p.id) return s + (tx.quantity || 0);
-                                        return s;
-                                     }, 0);
-                                     avlText = ` (Avl: ${Math.max(0, received - returned - sold)})`;
+                                     const received = myTxs.filter(tx => tx.status === 'COMPLETED' && tx.type === 'Debt' && tx.items?.[0]?.productId === p.id).reduce((sum, tx) => sum + (tx.items?.[0]?.quantity || 0), 0);
+                                     const returned = myTxs.filter(tx => tx.status === 'COMPLETED' && tx.type === 'Return' && tx.items?.[0]?.productId === p.id).reduce((sum, tx) => sum + (tx.items?.[0]?.quantity || 0), 0);
+                                     avlText = ` (Avl: ${Math.max(0, received - returned)})`;
                                   } else {
                                      avlText = ` (Avl: ${p.stock})`;
                                   }
