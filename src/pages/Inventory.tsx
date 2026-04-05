@@ -65,19 +65,8 @@ export const Inventory: React.FC = () => {
     .filter(p => selectedCategory === 'All' || (p.category || 'Standard') === selectedCategory)
     .map(p => {
        if (!isSupplier || !myAccount) return p;
-        const received = myTxs.filter(tx => tx.status === 'COMPLETED' && tx.type === 'Debt' && (tx.items?.[0]?.productId === p.id || tx.productId === p.id)).reduce((sum, tx) => sum + (tx.items?.[0]?.quantity || tx.quantity || 0), 0);
-        const returned = myTxs.filter(tx => tx.status === 'COMPLETED' && tx.type === 'Return' && (tx.items?.[0]?.productId === p.id || tx.productId === p.id)).reduce((sum, tx) => sum + (tx.items?.[0]?.quantity || tx.quantity || 0), 0);
-        
-        const legacyReceived = inventoryLogs.filter(l => l.productId === p.id && l.type !== 'Return').reduce((sum, l) => sum + l.quantityReceived, 0);
-        const legacyReturned = inventoryLogs.filter(l => l.productId === p.id && l.type === 'Return').reduce((sum, l) => sum + l.quantityReceived, 0);
-
-        const sold = myTxs.filter(tx => tx.origin === 'POS_SUPPLIER' && (tx.type === 'Cash' || tx.type === 'Debt')).reduce((sum, tx) => {
-           const item = tx.items?.find(i => i.productId === p.id);
-           if (item) return sum + item.quantity;
-           if (tx.productId === p.id) return sum + (tx.quantity || 0);
-           return sum;
-        }, 0);
-        return { ...p, stock: Math.max(0, (received + legacyReceived) - (returned + legacyReturned) - sold) };
+        // Using direct database stock as requested ("ba lissafin ne")
+        return { ...p, stock: p.stock };
      })
     .filter(p => !isSupplier || p.stock > 0)
     .sort((a, b) => {
@@ -107,22 +96,7 @@ export const Inventory: React.FC = () => {
 
     if (activeTab === 'return') {
       const pendingQty = pendingItems.filter(i => i.productId === productId).reduce((s, i) => s + i.quantityReceived, 0);
-      let avlTarget = prod.stock;
-      if (isSupplier) {
-          const received = myTxs.filter(tx => tx.status === 'COMPLETED' && tx.type === 'Debt' && (tx.items?.[0]?.productId === productId || tx.productId === productId)).reduce((sum, tx) => sum + ((tx.items?.[0]?.quantity || tx.quantity) || 0), 0);
-          const returned = myTxs.filter(tx => tx.status === 'COMPLETED' && tx.type === 'Return' && (tx.items?.[0]?.productId === productId || tx.productId === productId)).reduce((sum, tx) => sum + ((tx.items?.[0]?.quantity || tx.quantity) || 0), 0);
-          
-          const legacyReceived = inventoryLogs.filter(l => l.productId === productId && l.type !== 'Return').reduce((sum, l) => sum + l.quantityReceived, 0);
-          const legacyReturned = inventoryLogs.filter(l => l.productId === productId && l.type === 'Return').reduce((sum, l) => sum + l.quantityReceived, 0);
-
-          const sold = myTxs.filter(tx => tx.origin === 'POS_SUPPLIER' && (tx.type === 'Cash' || tx.type === 'Debt')).reduce((sum, tx) => {
-             const it = tx.items?.find(i => i.productId === productId);
-             if (it) return sum + it.quantity;
-             if (tx.productId === productId) return sum + (tx.quantity || 0);
-             return sum;
-          }, 0);
-          avlTarget = Math.max(0, (received + legacyReceived) - (returned + legacyReturned) - sold);
-      }
+      let avlTarget = prod.stock; // Use direct stock from DB
       
       if (avlTarget < qty + pendingQty) {
         alert(`Cannot return more stock than you currently have (${avlTarget}).`);
@@ -203,9 +177,14 @@ export const Inventory: React.FC = () => {
     setIsProcessing(true);
     
     if (isSupplier) {
-      if (!selectedSK || selectedSK === "" || !myAccount) {
+      if (!myAccount) {
         setIsProcessing(false);
-        alert("Please select a Store Keeper");
+        alert("User Profile Error: Your account is not linked as a Customer. Please contact the manager.");
+        return;
+      }
+      if (!selectedSK || selectedSK === "") {
+        setIsProcessing(false);
+        alert("Please select a Store Keeper / Manager before submitting.");
         return;
       }
       
@@ -354,19 +333,8 @@ export const Inventory: React.FC = () => {
                   const pendingQty = activeTab === 'return' ? pendingItems.filter(i => i.productId === p.id).reduce((s, i) => s + i.quantityReceived, 0) : 0;
                   let supStock = p.stock;
                   if (isSupplier && activeTab === 'return') {
-                      const received = myTxs.filter(tx => tx.status === 'COMPLETED' && tx.type === 'Debt' && (tx.items?.[0]?.productId === p.id || tx.productId === p.id)).reduce((sum, tx) => sum + ((tx.items?.[0]?.quantity || tx.quantity) || 0), 0);
-                      const returned = myTxs.filter(tx => tx.status === 'COMPLETED' && tx.type === 'Return' && (tx.items?.[0]?.productId === p.id || tx.productId === p.id)).reduce((sum, tx) => sum + ((tx.items?.[0]?.quantity || tx.quantity) || 0), 0);
-                      
-                      const legacyReceived = inventoryLogs.filter(l => l.productId === p.id && l.type !== 'Return').reduce((sum, l) => sum + l.quantityReceived, 0);
-                      const legacyReturned = inventoryLogs.filter(l => l.productId === p.id && l.type === 'Return').reduce((sum, l) => sum + l.quantityReceived, 0);
-
-                      const sold = myTxs.filter(tx => tx.origin === 'POS_SUPPLIER' && (tx.type === 'Cash' || tx.type === 'Debt')).reduce((sum, tx) => {
-                         const item = tx.items?.find(i => i.productId === p.id);
-                         if (item) return sum + item.quantity;
-                         if (tx.productId === p.id) return sum + (tx.quantity || 0);
-                         return sum;
-                      }, 0);
-                      supStock = Math.max(0, (received + legacyReceived) - (returned + legacyReturned) - sold);
+                      // Using direct database stock as requested ("ba lissafin ne")
+                      supStock = p.stock;
                    }
                   
                   const availableStock = supStock - pendingQty;
