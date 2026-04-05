@@ -37,7 +37,8 @@ export const Dashboard: React.FC = () => {
   
   const isSupplier = role === 'SUPPLIER';
   const myAccount = useMemo(() => customers.find(c => c.profile_id === user?.id), [customers, user]);
-  const myTxs = useMemo(() => transactions.filter(t => t.customerId === myAccount?.id || t.sellerId === myAccount?.id), [transactions, myAccount]);
+  const myAuthId = myAccount?.id || user?.id;
+  const myTxs = useMemo(() => transactions.filter(t => t.customerId === myAuthId || t.sellerId === myAuthId), [transactions, myAuthId]);
 
   const displayProducts = useMemo(() => {
     if (!isSupplier || !myAccount) return products;
@@ -59,7 +60,7 @@ export const Dashboard: React.FC = () => {
 
   const metrics = useMemo(() => {
     const today = new Date().toISOString().split('T')[0];
-    const todaysTransactions = transactions.filter(t => t.date.startsWith(today));
+    const todaysTransactions = transactions.filter(t => t.date.startsWith(today) && t.status === 'COMPLETED' && t.origin !== 'SUPPLIER');
     
     let totalSales = 0;
     let totalCash = 0;
@@ -81,7 +82,7 @@ export const Dashboard: React.FC = () => {
     const todaysExpenses = expenses.filter(e => e.date.startsWith(today));
     const totalExpenses = todaysExpenses.reduce((sum, e) => sum + e.amount, 0);
     
-    const profit = totalSales * 0.1; // 10% gross profit
+    const profit = totalSales * 0.1; // 10% gross profit on CUSTOMER SALES
     const netProfit = profit - totalExpenses;
     
     const outstandingDebt = customers.reduce((sum, c) => sum + c.debtBalance, 0);

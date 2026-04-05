@@ -227,12 +227,18 @@ export const Inventory: React.FC = () => {
   const fmt = (v: number) => "₦" + (v || 0).toLocaleString();
 
   const remainingBalance = companyMetrics.totalValueReceived - companyMetrics.totalMoneyPaid;
-  const totalSales = transactions.reduce((sum, t) => sum + t.totalPrice, 0);
+  const isSale = (t: any) => t.status === 'COMPLETED' && t.origin !== 'SUPPLIER';
+  const totalSales = transactions.filter(isSale).reduce((sum, t) => sum + t.totalPrice, 0);
   const totalGrossProfit = totalSales * 0.1;
   const companyShare = totalSales - totalGrossProfit;
   const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
   const totalNetProfit = totalGrossProfit - totalExpenses;
   const totalReturnsCost = inventoryLogs.filter(l => l.type === 'Return').reduce((sum, l) => sum + (l.quantityReceived * l.costPrice), 0);
+
+  // Supplier individual balance
+  const personalDebt = myTxs.filter(t => t.status === 'COMPLETED' && t.origin === 'SUPPLIER' && t.type === 'Debt').reduce((sum, tx) => sum + tx.totalPrice, 0)
+                     - myTxs.filter(t => t.status === 'COMPLETED' && t.origin === 'SUPPLIER' && t.type === 'Return').reduce((sum, tx) => sum + tx.totalPrice, 0)
+                     - myTxs.filter(t => t.status === 'COMPLETED' && t.type === 'Payment').reduce((sum, tx) => sum + tx.totalPrice, 0);
 
   const groupedLogs = inventoryLogs.reduce((acc, log) => {
     const key = log.batchId || log.id;
@@ -440,7 +446,7 @@ export const Inventory: React.FC = () => {
                     <div style={{ marginTop: '6px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
                        <div style={{ fontSize: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                           <span style={{ color: T.txt3, textTransform: 'uppercase', fontWeight: 800 }}>Remaining Debt</span>
-                          <span style={{ color: T.danger, fontWeight: 900, background: 'rgba(239,68,68,0.1)', padding: '4px 8px', borderRadius: '6px' }}>{fmt(companyShare - companyMetrics.totalMoneyPaid)}</span>
+                          <span style={{ color: T.danger, fontWeight: 900, background: 'rgba(239,68,68,0.1)', padding: '4px 8px', borderRadius: '6px' }}>{fmt(personalDebt)}</span>
                        </div>
                        {myTxs.filter(t => t.status === 'PENDING_STORE' && t.type === 'Return').length > 0 && (
                           <div style={{ fontSize: '9px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

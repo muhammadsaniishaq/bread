@@ -25,7 +25,7 @@ export const DashboardChart: React.FC = () => {
     // Aggregate data
     days.forEach(day => {
       const daySales = transactions
-        .filter(t => t.date.startsWith(day.date))
+        .filter(t => t.date.startsWith(day.date) && t.status === 'COMPLETED' && t.origin !== 'SUPPLIER')
         .reduce((sum, t) => sum + t.totalPrice, 0);
         
       const dayExpenses = expenses
