@@ -57,14 +57,17 @@ export const Inventory: React.FC = () => {
   }, [isSupplier]);
 
   const myAccount = useMemo(() => customers.find(c => c.profile_id === user?.id), [customers, user]);
-  const myTxs = useMemo(() => transactions.filter(t => t.customerId === myAccount?.id || t.sellerId === myAccount?.id), [transactions, myAccount]);
+  const myTxs = useMemo(() => {
+    const id = myAccount?.id || user?.id;
+    return transactions.filter(t => t.customerId === id || t.sellerId === id);
+  }, [transactions, myAccount, user]);
 
   const activeProducts = products.filter(p => p.active);
   const categories = Array.from(new Set(products.map(p => p.category || 'Standard')));
   const filteredProducts = products
     .filter(p => selectedCategory === 'All' || (p.category || 'Standard') === selectedCategory)
     .map(p => {
-       if (!isSupplier || !myAccount) return p;
+       if (!isSupplier || !user?.id) return p;
         // Using direct database stock as requested ("ba lissafin ne")
         return { ...p, stock: p.stock };
      })
@@ -128,12 +131,14 @@ export const Inventory: React.FC = () => {
     if (!amountStr || amountStr <= 0) return;
     
     if (isSupplier) {
-      if (!selectedSK || !myAccount) return alert('Select Store Keeper');
+      if (!user?.id) return alert('Profile not identified');
+      if (!selectedSK || selectedSK === "") return alert('Select Store Keeper');
+      const myId = myAccount?.id || user.id;
       setIsProcessing(true);
       await recordSale({
         id: Date.now().toString(),
         date: new Date().toISOString(),
-        customerId: myAccount.id,
+        customerId: myId,
         storeKeeperId: selectedSK,
         type: 'Payment',
         status: 'PENDING_STORE',
@@ -177,11 +182,12 @@ export const Inventory: React.FC = () => {
     setIsProcessing(true);
     
     if (isSupplier) {
-      if (!myAccount) {
+      if (!user?.id) {
         setIsProcessing(false);
-        alert("User Profile Error: Your account is not linked as a Customer. Please contact the manager.");
+        alert("System Error: Your profile could not be identified. Please log in again.");
         return;
       }
+      const myId = myAccount?.id || user.id;
       if (!selectedSK || selectedSK === "") {
         setIsProcessing(false);
         alert("Please select a Store Keeper / Manager before submitting.");
@@ -193,7 +199,7 @@ export const Inventory: React.FC = () => {
         await recordSale({
           id: Date.now().toString() + Math.random().toString(36).substring(5),
           date: new Date().toISOString(),
-          customerId: myAccount.id,
+          customerId: myId,
           storeKeeperId: selectedSK,
           type: activeTab === 'receive' ? 'Debt' : 'Return',
           status: 'PENDING_STORE',
