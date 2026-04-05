@@ -65,16 +65,20 @@ export const Inventory: React.FC = () => {
     .filter(p => selectedCategory === 'All' || (p.category || 'Standard') === selectedCategory)
     .map(p => {
        if (!isSupplier || !myAccount) return p;
-       const received = myTxs.filter(tx => tx.status === 'COMPLETED' && tx.type === 'Debt' && (tx.items?.[0]?.productId === p.id || tx.productId === p.id)).reduce((sum, tx) => sum + (tx.items?.[0]?.quantity || tx.quantity || 0), 0);
-       const returned = myTxs.filter(tx => tx.status === 'COMPLETED' && tx.type === 'Return' && (tx.items?.[0]?.productId === p.id || tx.productId === p.id)).reduce((sum, tx) => sum + (tx.items?.[0]?.quantity || tx.quantity || 0), 0);
-       const sold = myTxs.filter(tx => tx.origin === 'POS_SUPPLIER' && (tx.type === 'Cash' || tx.type === 'Debt')).reduce((sum, tx) => {
-          const item = tx.items?.find(i => i.productId === p.id);
-          if (item) return sum + item.quantity;
-          if (tx.productId === p.id) return sum + (tx.quantity || 0);
-          return sum;
-       }, 0);
-       return { ...p, stock: Math.max(0, received - returned - sold) };
-    })
+        const received = myTxs.filter(tx => tx.status === 'COMPLETED' && tx.type === 'Debt' && (tx.items?.[0]?.productId === p.id || tx.productId === p.id)).reduce((sum, tx) => sum + (tx.items?.[0]?.quantity || tx.quantity || 0), 0);
+        const returned = myTxs.filter(tx => tx.status === 'COMPLETED' && tx.type === 'Return' && (tx.items?.[0]?.productId === p.id || tx.productId === p.id)).reduce((sum, tx) => sum + (tx.items?.[0]?.quantity || tx.quantity || 0), 0);
+        
+        const legacyReceived = inventoryLogs.filter(l => l.productId === p.id && l.type !== 'Return').reduce((sum, l) => sum + l.quantityReceived, 0);
+        const legacyReturned = inventoryLogs.filter(l => l.productId === p.id && l.type === 'Return').reduce((sum, l) => sum + l.quantityReceived, 0);
+
+        const sold = myTxs.filter(tx => tx.origin === 'POS_SUPPLIER' && (tx.type === 'Cash' || tx.type === 'Debt')).reduce((sum, tx) => {
+           const item = tx.items?.find(i => i.productId === p.id);
+           if (item) return sum + item.quantity;
+           if (tx.productId === p.id) return sum + (tx.quantity || 0);
+           return sum;
+        }, 0);
+        return { ...p, stock: Math.max(0, (received + legacyReceived) - (returned + legacyReturned) - sold) };
+     })
     .filter(p => !isSupplier || p.stock > 0)
     .sort((a, b) => {
       if (a.category !== b.category) return (a.category || '').localeCompare(b.category || '');
@@ -105,15 +109,19 @@ export const Inventory: React.FC = () => {
       const pendingQty = pendingItems.filter(i => i.productId === productId).reduce((s, i) => s + i.quantityReceived, 0);
       let avlTarget = prod.stock;
       if (isSupplier) {
-         const received = myTxs.filter(tx => tx.status === 'COMPLETED' && tx.type === 'Debt' && tx.origin === 'SUPPLIER' && (tx.items?.[0]?.productId === productId || tx.productId === productId)).reduce((sum, tx) => sum + ((tx.items?.[0]?.quantity || tx.quantity) || 0), 0);
-         const returned = myTxs.filter(tx => tx.status === 'COMPLETED' && tx.type === 'Return' && tx.origin === 'SUPPLIER' && (tx.items?.[0]?.productId === productId || tx.productId === productId)).reduce((sum, tx) => sum + ((tx.items?.[0]?.quantity || tx.quantity) || 0), 0);
-         const sold = myTxs.filter(tx => tx.origin === 'POS_SUPPLIER' && (tx.type === 'Cash' || tx.type === 'Debt')).reduce((sum, tx) => {
-            const it = tx.items?.find(i => i.productId === productId);
-            if (it) return sum + it.quantity;
-            if (tx.productId === productId) return sum + (tx.quantity || 0);
-            return sum;
-         }, 0);
-         avlTarget = Math.max(0, received - returned - sold);
+          const received = myTxs.filter(tx => tx.status === 'COMPLETED' && tx.type === 'Debt' && (tx.items?.[0]?.productId === productId || tx.productId === productId)).reduce((sum, tx) => sum + ((tx.items?.[0]?.quantity || tx.quantity) || 0), 0);
+          const returned = myTxs.filter(tx => tx.status === 'COMPLETED' && tx.type === 'Return' && (tx.items?.[0]?.productId === productId || tx.productId === productId)).reduce((sum, tx) => sum + ((tx.items?.[0]?.quantity || tx.quantity) || 0), 0);
+          
+          const legacyReceived = inventoryLogs.filter(l => l.productId === productId && l.type !== 'Return').reduce((sum, l) => sum + l.quantityReceived, 0);
+          const legacyReturned = inventoryLogs.filter(l => l.productId === productId && l.type === 'Return').reduce((sum, l) => sum + l.quantityReceived, 0);
+
+          const sold = myTxs.filter(tx => tx.origin === 'POS_SUPPLIER' && (tx.type === 'Cash' || tx.type === 'Debt')).reduce((sum, tx) => {
+             const it = tx.items?.find(i => i.productId === productId);
+             if (it) return sum + it.quantity;
+             if (tx.productId === productId) return sum + (tx.quantity || 0);
+             return sum;
+          }, 0);
+          avlTarget = Math.max(0, (received + legacyReceived) - (returned + legacyReturned) - sold);
       }
       
       if (avlTarget < qty + pendingQty) {
@@ -195,9 +203,10 @@ export const Inventory: React.FC = () => {
     setIsProcessing(true);
     
     if (isSupplier) {
-      if (!selectedSK || !myAccount) {
+      if (!selectedSK || selectedSK === "" || !myAccount) {
         setIsProcessing(false);
-        return alert("Please select a Store Keeper");
+        alert("Please select a Store Keeper");
+        return;
       }
       
       // Submit as PENDING_STORE transaction
@@ -345,16 +354,20 @@ export const Inventory: React.FC = () => {
                   const pendingQty = activeTab === 'return' ? pendingItems.filter(i => i.productId === p.id).reduce((s, i) => s + i.quantityReceived, 0) : 0;
                   let supStock = p.stock;
                   if (isSupplier && activeTab === 'return') {
-                     const received = myTxs.filter(tx => tx.status === 'COMPLETED' && tx.type === 'Debt' && (tx.items?.[0]?.productId === p.id || tx.productId === p.id)).reduce((sum, tx) => sum + ((tx.items?.[0]?.quantity || tx.quantity) || 0), 0);
-                     const returned = myTxs.filter(tx => tx.status === 'COMPLETED' && tx.type === 'Return' && (tx.items?.[0]?.productId === p.id || tx.productId === p.id)).reduce((sum, tx) => sum + ((tx.items?.[0]?.quantity || tx.quantity) || 0), 0);
-                     const sold = myTxs.filter(tx => tx.origin === 'POS_SUPPLIER' && (tx.type === 'Cash' || tx.type === 'Debt')).reduce((sum, tx) => {
-                        const item = tx.items?.find(i => i.productId === p.id);
-                        if (item) return sum + item.quantity;
-                        if (tx.productId === p.id) return sum + (tx.quantity || 0);
-                        return sum;
-                     }, 0);
-                     supStock = Math.max(0, received - returned - sold);
-                  }
+                      const received = myTxs.filter(tx => tx.status === 'COMPLETED' && tx.type === 'Debt' && (tx.items?.[0]?.productId === p.id || tx.productId === p.id)).reduce((sum, tx) => sum + ((tx.items?.[0]?.quantity || tx.quantity) || 0), 0);
+                      const returned = myTxs.filter(tx => tx.status === 'COMPLETED' && tx.type === 'Return' && (tx.items?.[0]?.productId === p.id || tx.productId === p.id)).reduce((sum, tx) => sum + ((tx.items?.[0]?.quantity || tx.quantity) || 0), 0);
+                      
+                      const legacyReceived = inventoryLogs.filter(l => l.productId === p.id && l.type !== 'Return').reduce((sum, l) => sum + l.quantityReceived, 0);
+                      const legacyReturned = inventoryLogs.filter(l => l.productId === p.id && l.type === 'Return').reduce((sum, l) => sum + l.quantityReceived, 0);
+
+                      const sold = myTxs.filter(tx => tx.origin === 'POS_SUPPLIER' && (tx.type === 'Cash' || tx.type === 'Debt')).reduce((sum, tx) => {
+                         const item = tx.items?.find(i => i.productId === p.id);
+                         if (item) return sum + item.quantity;
+                         if (tx.productId === p.id) return sum + (tx.quantity || 0);
+                         return sum;
+                      }, 0);
+                      supStock = Math.max(0, (received + legacyReceived) - (returned + legacyReturned) - sold);
+                   }
                   
                   const availableStock = supStock - pendingQty;
                   return <option key={p.id} value={p.id}>{p.name} (Avl: {activeTab === 'return' ? availableStock : p.stock})</option>;
@@ -453,7 +466,7 @@ export const Inventory: React.FC = () => {
                     <div style={{ marginTop: '6px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
                        <div style={{ fontSize: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                           <span style={{ color: T.txt3, textTransform: 'uppercase', fontWeight: 800 }}>Remaining Debt</span>
-                          <span style={{ color: T.danger, fontWeight: 900, background: 'rgba(239,68,68,0.1)', padding: '4px 8px', borderRadius: '6px' }}>{fmt(myAccount?.debtBalance || 0)}</span>
+                          <span style={{ color: T.danger, fontWeight: 900, background: 'rgba(239,68,68,0.1)', padding: '4px 8px', borderRadius: '6px' }}>{fmt(companyShare - companyMetrics.totalMoneyPaid)}</span>
                        </div>
                        {myTxs.filter(t => t.status === 'PENDING_STORE' && t.type === 'Return').length > 0 && (
                           <div style={{ fontSize: '9px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -512,7 +525,7 @@ export const Inventory: React.FC = () => {
                 ))}
                 
                 {[...bakeryPayments].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 10).map(p => (
-                  <div key={p.id} style={{ background: T.white, borderRadius: '12px', padding: '12px', border: `1px dashed ${T.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', opacity: 0.8 }}>
+                  <div key={p.id} onClick={() => navigate(`/bakery-receipt/${p.id}`)} style={{ cursor: 'pointer', background: T.white, borderRadius: '12px', padding: '12px', border: `1px dashed ${T.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', opacity: 0.8 }}>
                     <div>
                       <div style={{ fontSize: '11px', fontWeight: 800 }}>Legacy Payment {p.method ? `(${p.method})` : ''}</div>
                       <div style={{ fontSize: '9px', color: T.txt3, fontWeight: 700 }}>{new Date(p.date).toLocaleDateString()} {p.receiver && `• To: ${p.receiver}`}</div>
@@ -589,10 +602,11 @@ export const Inventory: React.FC = () => {
                   const isPayment = tx.type === 'Payment';
                   const qty = tx.items?.[0]?.quantity || tx.quantity || 0;
                   const itemProd = products.find(p => p.id === (tx.items?.[0]?.productId || tx.productId));
+                  const skName = storeKeepers.find(sk => sk.id === tx.storeKeeperId)?.full_name || '...';
                   
                   if (isPayment) {
                     return (
-                      <div key={tx.id} style={{ background: T.white, borderRadius: '16px', padding: '12px', border: `1px solid ${T.border}`, borderLeftWidth: '4px', borderLeftColor: T.success, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div key={tx.id} onClick={() => navigate(`/receipt/${tx.id}`)} style={{ cursor: 'pointer', background: T.white, borderRadius: '16px', padding: '12px', border: `1px solid ${T.border}`, borderLeftWidth: '4px', borderLeftColor: T.success, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                           <div style={{ padding: '8px', borderRadius: '10px', background: 'rgba(16,185,129,0.1)', color: T.success }}>
                             <Wallet size={16} />
@@ -613,7 +627,7 @@ export const Inventory: React.FC = () => {
                   }
 
                   return (
-                    <div key={tx.id} style={{ background: T.white, borderRadius: '16px', padding: '12px', border: `1px solid ${T.border}`, borderLeftWidth: '4px', borderLeftColor: isReceive ? T.success : T.danger, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div key={tx.id} onClick={() => navigate(`/receipt/${tx.id}`)} style={{ cursor: 'pointer', background: T.white, borderRadius: '16px', padding: '12px', border: `1px solid ${T.border}`, borderLeftWidth: '4px', borderLeftColor: isReceive ? T.success : T.danger, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                         <div style={{ padding: '8px', borderRadius: '10px', background: isReceive ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)', color: isReceive ? T.success : T.danger }}>
                           <Package size={16} />
@@ -622,6 +636,9 @@ export const Inventory: React.FC = () => {
                           <div style={{ fontSize: '12px', fontWeight: 800 }}>{isReceive ? t('dash.receiveBread') : t('inv.return')}</div>
                           <div style={{ fontSize: '9px', fontWeight: 700, color: T.txt3, marginTop: '2px' }}>
                             {new Date(tx.date).toLocaleDateString()} • {qty} pcs {itemProd?.name ? `(${itemProd.name})` : ''}
+                          </div>
+                          <div style={{ fontSize: '9px', fontWeight: 800, color: T.primary, marginTop: '2px' }}>
+                            {isReceive ? 'Request from' : 'Return to'}: {skName}
                           </div>
                         </div>
                       </div>

@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAppContext } from '../store/AppContext';
+import { supabase } from '../lib/supabase';
 import { getTransactionItems } from '../store/types';
 import { Printer, ArrowLeft, Share2, Download, FileText } from 'lucide-react';
 import html2canvas from 'html2canvas';
@@ -17,9 +18,17 @@ export const Receipt: React.FC = () => {
   const [isExporting, setIsExporting] = useState(false);
   
   const [tx, setTx] = useState(transactions.find(t => t.id === id));
-
+  const [keeperName, setKeeperName] = useState<string | null>(null);
+ 
   useEffect(() => {
-    setTx(transactions.find(t => t.id === id));
+    const transaction = transactions.find(t => t.id === id);
+    setTx(transaction);
+    
+    if (transaction?.storeKeeperId) {
+       supabase.from('profiles').select('full_name').eq('id', transaction.storeKeeperId).single().then(({ data }) => {
+          if (data) setKeeperName(data.full_name);
+       });
+    }
   }, [id, transactions]);
 
   if (!tx) {
@@ -322,6 +331,11 @@ export const Receipt: React.FC = () => {
           <div className="text-sm font-bold mb-1">Customer:</div>
           <div className="text-lg">{customer?.name || 'Unknown'}</div>
           {customer?.phone && <div className="text-sm">{customer.phone}</div>}
+          {keeperName && (
+             <div className="text-xs mt-2 border-t pt-1" style={{ borderColor: '#e5e7eb' }}>
+                <strong>Staff:</strong> {keeperName}
+             </div>
+          )}
         </div>
 
         <div className="text-sm opacity-80 mb-4">{new Date(tx.date).toLocaleString()}</div>
