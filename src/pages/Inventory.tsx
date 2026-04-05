@@ -65,8 +65,8 @@ export const Inventory: React.FC = () => {
     .filter(p => selectedCategory === 'All' || (p.category || 'Standard') === selectedCategory)
     .map(p => {
        if (!isSupplier || !myAccount) return p;
-       const received = myTxs.filter(tx => tx.status === 'COMPLETED' && tx.type === 'Debt' && tx.origin === 'SUPPLIER' && (tx.items?.[0]?.productId === p.id || tx.productId === p.id)).reduce((sum, tx) => sum + (tx.items?.[0]?.quantity || tx.quantity || 0), 0);
-       const returned = myTxs.filter(tx => tx.status === 'COMPLETED' && tx.type === 'Return' && tx.origin === 'SUPPLIER' && (tx.items?.[0]?.productId === p.id || tx.productId === p.id)).reduce((sum, tx) => sum + (tx.items?.[0]?.quantity || tx.quantity || 0), 0);
+       const received = myTxs.filter(tx => tx.status === 'COMPLETED' && tx.type === 'Debt' && (tx.items?.[0]?.productId === p.id || tx.productId === p.id)).reduce((sum, tx) => sum + (tx.items?.[0]?.quantity || tx.quantity || 0), 0);
+       const returned = myTxs.filter(tx => tx.status === 'COMPLETED' && tx.type === 'Return' && (tx.items?.[0]?.productId === p.id || tx.productId === p.id)).reduce((sum, tx) => sum + (tx.items?.[0]?.quantity || tx.quantity || 0), 0);
        const sold = myTxs.filter(tx => tx.origin === 'POS_SUPPLIER' && (tx.type === 'Cash' || tx.type === 'Debt')).reduce((sum, tx) => {
           const item = tx.items?.find(i => i.productId === p.id);
           if (item) return sum + item.quantity;
@@ -345,8 +345,8 @@ export const Inventory: React.FC = () => {
                   const pendingQty = activeTab === 'return' ? pendingItems.filter(i => i.productId === p.id).reduce((s, i) => s + i.quantityReceived, 0) : 0;
                   let supStock = p.stock;
                   if (isSupplier && activeTab === 'return') {
-                     const received = myTxs.filter(tx => tx.status === 'COMPLETED' && tx.type === 'Debt' && tx.origin === 'SUPPLIER' && (tx.items?.[0]?.productId === p.id || tx.productId === p.id)).reduce((sum, tx) => sum + ((tx.items?.[0]?.quantity || tx.quantity) || 0), 0);
-                     const returned = myTxs.filter(tx => tx.status === 'COMPLETED' && tx.type === 'Return' && tx.origin === 'SUPPLIER' && (tx.items?.[0]?.productId === p.id || tx.productId === p.id)).reduce((sum, tx) => sum + ((tx.items?.[0]?.quantity || tx.quantity) || 0), 0);
+                     const received = myTxs.filter(tx => tx.status === 'COMPLETED' && tx.type === 'Debt' && (tx.items?.[0]?.productId === p.id || tx.productId === p.id)).reduce((sum, tx) => sum + ((tx.items?.[0]?.quantity || tx.quantity) || 0), 0);
+                     const returned = myTxs.filter(tx => tx.status === 'COMPLETED' && tx.type === 'Return' && (tx.items?.[0]?.productId === p.id || tx.productId === p.id)).reduce((sum, tx) => sum + ((tx.items?.[0]?.quantity || tx.quantity) || 0), 0);
                      const sold = myTxs.filter(tx => tx.origin === 'POS_SUPPLIER' && (tx.type === 'Cash' || tx.type === 'Debt')).reduce((sum, tx) => {
                         const item = tx.items?.find(i => i.productId === p.id);
                         if (item) return sum + item.quantity;
@@ -399,8 +399,15 @@ export const Inventory: React.FC = () => {
             <div style={{ background: T.white, borderRadius: '16px', padding: '16px', border: `1px solid ${T.border}`, marginBottom: '24px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                 <span style={{ fontSize: '12px', fontWeight: 800 }}>Pending List ({pendingItems.length})</span>
-                <span style={{ fontSize: '12px', fontWeight: 800, color: activeTab === 'receive' ? T.success : T.danger }}>
-                  {isSupplier ? pendingItems.reduce((sum, item) => sum + item.quantityReceived, 0) + ' pcs' : fmt(pendingItems.reduce((sum, item) => sum + (item.quantityReceived * item.costPrice), 0))}
+                <span style={{ fontSize: '12px', fontWeight: 800, color: activeTab === 'receive' ? T.success : T.danger, textAlign: 'right' }}>
+                  {isSupplier ? (
+                     <>
+                        <div>{pendingItems.reduce((sum, item) => sum + item.quantityReceived, 0)} pcs</div>
+                        <div style={{ fontSize: '10px', color: T.txt3 }}>{fmt(pendingItems.reduce((sum, item) => sum + (item.quantityReceived * item.costPrice), 0))}</div>
+                     </>
+                  ) : (
+                     fmt(pendingItems.reduce((sum, item) => sum + (item.quantityReceived * item.costPrice), 0))
+                  )}
                 </span>
               </div>
               
@@ -557,10 +564,34 @@ export const Inventory: React.FC = () => {
             <div style={{ marginTop: '24px' }}>
               <h2 style={{ fontSize: '14px', fontWeight: 800, marginBottom: '12px' }}>{t('inv.history')}</h2>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {myTxs.filter(t => t.type === 'Debt' || t.type === 'Return').sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 20).map(tx => {
+                {myTxs.filter(t => t.type === 'Debt' || t.type === 'Return' || t.type === 'Payment').sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 20).map(tx => {
                   const isReceive = tx.type !== 'Return';
+                  const isPayment = tx.type === 'Payment';
                   const qty = tx.items?.[0]?.quantity || tx.quantity || 0;
                   const itemProd = products.find(p => p.id === (tx.items?.[0]?.productId || tx.productId));
+                  
+                  if (isPayment) {
+                    return (
+                      <div key={tx.id} style={{ background: T.white, borderRadius: '16px', padding: '12px', border: `1px solid ${T.border}`, borderLeftWidth: '4px', borderLeftColor: T.success, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <div style={{ padding: '8px', borderRadius: '10px', background: 'rgba(16,185,129,0.1)', color: T.success }}>
+                            <Wallet size={16} />
+                          </div>
+                          <div>
+                            <div style={{ fontSize: '12px', fontWeight: 800 }}>Payment Sent</div>
+                            <div style={{ fontSize: '9px', fontWeight: 700, color: T.txt3, marginTop: '2px' }}>
+                              {new Date(tx.date).toLocaleDateString()}
+                            </div>
+                          </div>
+                        </div>
+                        <div style={{ textAlign: 'right' }}>
+                          <div style={{ fontSize: '12px', fontWeight: 900, color: T.success }}>+{fmt(tx.totalPrice)}</div>
+                          <div style={{ fontSize: '9px', fontWeight: 800, color: T.txt3 }}>{tx.status === 'PENDING_STORE' ? 'PENDING' : 'COMPLETED'}</div>
+                        </div>
+                      </div>
+                    );
+                  }
+
                   return (
                     <div key={tx.id} style={{ background: T.white, borderRadius: '16px', padding: '12px', border: `1px solid ${T.border}`, borderLeftWidth: '4px', borderLeftColor: isReceive ? T.success : T.danger, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
