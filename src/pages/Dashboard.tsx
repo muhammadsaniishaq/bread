@@ -28,7 +28,7 @@ const itemVariants: any = {
 };
 
 export const Dashboard: React.FC = () => {
-  const { transactions, products, customers, expenses } = useAppContext();
+  const { transactions, products, customers, expenses, inventoryLogs } = useAppContext();
   const { signOut, user, role } = useAuth();
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -37,26 +37,34 @@ export const Dashboard: React.FC = () => {
   
   const isSupplier = role === 'SUPPLIER';
   const myAccount = useMemo(() => customers.find(c => c.profile_id === user?.id), [customers, user]);
-  const myAuthId = myAccount?.id || user?.id;
-  const myTxs = useMemo(() => transactions.filter(t => t.customerId === myAuthId || t.sellerId === myAuthId), [transactions, myAuthId]);
 
   const displayProducts = useMemo(() => {
     if (!isSupplier || !myAccount) return products;
     return products.map(p => {
-      const received = myTxs.filter(tx => tx.status === 'COMPLETED' && tx.type === 'Debt' && tx.origin === 'SUPPLIER' && (tx.items?.[0]?.productId === p.id || tx.productId === p.id))
-        .reduce((sum, tx) => sum + ((tx.items?.[0]?.quantity || tx.quantity) || 0), 0);
-      const returned = myTxs.filter(tx => tx.status === 'COMPLETED' && tx.type === 'Return' && tx.origin === 'SUPPLIER' && (tx.items?.[0]?.productId === p.id || tx.productId === p.id))
-        .reduce((sum, tx) => sum + ((tx.items?.[0]?.quantity || tx.quantity) || 0), 0);
-      const sold = myTxs.filter(tx => tx.origin === 'POS_SUPPLIER' && (tx.type === 'Cash' || tx.type === 'Debt'))
-        .reduce((sum, tx) => {
-          const item = tx.items?.find(i => i.productId === p.id);
-          if (item) return sum + item.quantity;
-          if (tx.productId === p.id) return sum + (tx.quantity || 0);
+      const mid = myAccount?.id || user?.id;
+      
+      // Received = Debt (Completed) + Legacy
+      const rec = transactions.filter(t => t.status === 'COMPLETED' && t.type === 'Debt' && t.customerId === mid && (t.items?.[0]?.productId === p.id || t.productId === p.id))
+        .reduce((sum, t) => sum + (t.items?.[0]?.quantity || t.quantity || 0), 0);
+      const lr = inventoryLogs.filter(l => l.productId === p.id && l.type !== 'Return').reduce((sum, l) => sum + l.quantityReceived, 0);
+
+      // Returned = Return (Completed) + Legacy
+      const ret = transactions.filter(t => t.status === 'COMPLETED' && t.type === 'Return' && t.customerId === mid && (t.items?.[0]?.productId === p.id || t.productId === p.id))
+        .reduce((sum, t) => sum + (t.items?.[0]?.quantity || t.quantity || 0), 0);
+      const lret = inventoryLogs.filter(l => l.productId === p.id && l.type === 'Return').reduce((sum, l) => sum + l.quantityReceived, 0);
+
+      // Sold = POS_SUPPLIER
+      const sold = transactions.filter(t => t.status === 'COMPLETED' && t.origin === 'POS_SUPPLIER' && t.sellerId === mid)
+        .reduce((sum, t) => {
+          const it = t.items?.find(i => i.productId === p.id);
+          if (it) return sum + it.quantity;
+          if (t.productId === p.id) return sum + (t.quantity || 0);
           return sum;
         }, 0);
-      return { ...p, stock: Math.max(0, received - returned - sold) };
+      
+      return { ...p, stock: Math.max(0, (rec + lr) - (ret + lret) - sold) };
     });
-  }, [products, isSupplier, myAccount, myTxs]);
+  }, [products, isSupplier, myAccount, transactions, inventoryLogs, user]);
 
   const metrics = useMemo(() => {
     const today = new Date().toISOString().split('T')[0];
@@ -85,7 +93,14 @@ export const Dashboard: React.FC = () => {
     const profit = totalSales * 0.1; // 10% gross profit on CUSTOMER SALES
     const netProfit = profit - totalExpenses;
     
-    const outstandingDebt = customers.reduce((sum, c) => sum + c.debtBalance, 0);
+    // Total Debt: For Suppliers, it's their personal ledger balance from customers table.
+    let outstandingDebt = 0;
+    if (isSupplier) {
+      outstandingDebt = myAccount?.debtBalance || 0;
+    } else {
+      outstandingDebt = customers.reduce((sum, c) => sum + (c.debtBalance || 0), 0);
+    }
+
     const stockRemaining = displayProducts.reduce((sum, p) => sum + p.stock, 0);
     
     return {
@@ -101,7 +116,7 @@ export const Dashboard: React.FC = () => {
       lowStockProducts: displayProducts.filter(p => p.stock > 0 && p.stock < 20),
       recentActivity: transactions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 5)
     };
-  }, [transactions, displayProducts, customers, expenses]);
+  }, [transactions, displayProducts, customers, expenses, isSupplier, myAccount, user]);
 
   const greetingObj = useMemo(() => {
     const hour = new Date().getHours();

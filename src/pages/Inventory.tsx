@@ -57,19 +57,16 @@ export const Inventory: React.FC = () => {
   }, [isSupplier]);
 
   const myAccount = useMemo(() => customers.find(c => c.profile_id === user?.id), [customers, user]);
-  const myTxs = useMemo(() => {
-    const id = myAccount?.id || user?.id;
-    return transactions.filter(t => t.customerId === id || t.sellerId === id);
-  }, [transactions, myAccount, user]);
+  const myId = myAccount?.id || user?.id;
+  const myTxs = useMemo(() => transactions.filter(t => t.customerId === myId || t.sellerId === myId), [transactions, myId]);
 
   const activeProducts = products.filter(p => p.active);
   const categories = Array.from(new Set(products.map(p => p.category || 'Standard')));
   const filteredProducts = products
     .filter(p => selectedCategory === 'All' || (p.category || 'Standard') === selectedCategory)
-    .map(p => {
-       if (!isSupplier || !user?.id) return p;
-        // Using direct database stock as requested ("ba lissafin ne")
-        return { ...p, stock: p.stock };
+     .map(p => {
+        if (!isSupplier || !user?.id) return p;
+        return { ...p, stock: getPersonalStock(p.id) };
      })
     .filter(p => !isSupplier || p.stock > 0)
     .sort((a, b) => {
@@ -224,21 +221,49 @@ export const Inventory: React.FC = () => {
     navigate(`/inventory/receipt/${batchId}`);
   };
 
+  const remainingBalance = companyMetrics.totalValueReceived - companyMetrics.totalMoneyPaid;
   const fmt = (v: number) => "₦" + (v || 0).toLocaleString();
 
-  const remainingBalance = companyMetrics.totalValueReceived - companyMetrics.totalMoneyPaid;
-  const isSale = (t: any) => t.status === 'COMPLETED' && t.origin !== 'SUPPLIER';
-  const totalSales = transactions.filter(isSale).reduce((sum, t) => sum + t.totalPrice, 0);
+  // Supplier individual balance
+  // myAccount.debtBalance is updated in real-time by AppContext when transactions are completed.
+  const personalDebt = myAccount?.debtBalance || 0;
+
+  // Profit should ONLY be calculated on POS sales (origin STORE or POS_SUPPLIER)
+  // origin: SUPPLIER refers to internal warehouse movements.
+  const onlySalesTxs = transactions.filter(t => t.status === 'COMPLETED' && t.origin !== 'SUPPLIER');
+  const totalSales = onlySalesTxs.reduce((sum, t) => sum + t.totalPrice, 0);
   const totalGrossProfit = totalSales * 0.1;
   const companyShare = totalSales - totalGrossProfit;
   const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
   const totalNetProfit = totalGrossProfit - totalExpenses;
   const totalReturnsCost = inventoryLogs.filter(l => l.type === 'Return').reduce((sum, l) => sum + (l.quantityReceived * l.costPrice), 0);
 
-  // Supplier individual balance
-  const personalDebt = myTxs.filter(t => t.status === 'COMPLETED' && t.origin === 'SUPPLIER' && t.type === 'Debt').reduce((sum, tx) => sum + tx.totalPrice, 0)
-                     - myTxs.filter(t => t.status === 'COMPLETED' && t.origin === 'SUPPLIER' && t.type === 'Return').reduce((sum, tx) => sum + tx.totalPrice, 0)
-                     - myTxs.filter(t => t.status === 'COMPLETED' && t.type === 'Payment').reduce((sum, tx) => sum + tx.totalPrice, 0);
+  // Centralized Stock Helper for Suppliers
+  const getPersonalStock = (pId: string) => {
+    if (!isSupplier) return products.find(p => p.id === pId)?.stock || 0;
+    const mid = myAccount?.id || user?.id;
+    
+    // Received = Debt (Completed) + Legacy
+    const rec = transactions.filter(t => t.status === 'COMPLETED' && t.type === 'Debt' && t.customerId === mid && (t.items?.[0]?.productId === pId || t.productId === pId))
+      .reduce((sum, t) => sum + (t.items?.[0]?.quantity || t.quantity || 0), 0);
+    const lr = inventoryLogs.filter(l => l.productId === pId && l.type !== 'Return').reduce((sum, l) => sum + l.quantityReceived, 0);
+
+    // Returned = Return (Completed) + Legacy
+    const ret = transactions.filter(t => t.status === 'COMPLETED' && t.type === 'Return' && t.customerId === mid && (t.items?.[0]?.productId === pId || t.productId === pId))
+      .reduce((sum, t) => sum + (t.items?.[0]?.quantity || t.quantity || 0), 0);
+    const lret = inventoryLogs.filter(l => l.productId === pId && l.type === 'Return').reduce((sum, l) => sum + l.quantityReceived, 0);
+
+    // Sold = POS_SUPPLIER
+    const sold = transactions.filter(t => t.status === 'COMPLETED' && t.origin === 'POS_SUPPLIER' && t.sellerId === mid)
+      .reduce((sum, t) => {
+        const it = t.items?.find(i => i.productId === pId);
+        if (it) return sum + it.quantity;
+        if (t.productId === pId) return sum + (t.quantity || 0);
+        return sum;
+      }, 0);
+    
+    return Math.max(0, (rec + lr) - (ret + lret) - sold);
+  };
 
   const groupedLogs = inventoryLogs.reduce((acc, log) => {
     const key = log.batchId || log.id;
@@ -342,13 +367,8 @@ export const Inventory: React.FC = () => {
               <select value={productId} onChange={e => setProductId(e.target.value)} required style={{ width: '100%', padding: '12px', borderRadius: '10px', border: `1px solid ${T.border}`, background: T.bg, fontSize: '12px', fontWeight: 700, appearance: 'none' }}>
                 <option value="">-- Choose Bread --</option>
                 {activeProducts.map(p => {
+                  let supStock = getPersonalStock(p.id);
                   const pendingQty = activeTab === 'return' ? pendingItems.filter(i => i.productId === p.id).reduce((s, i) => s + i.quantityReceived, 0) : 0;
-                  let supStock = p.stock;
-                  if (isSupplier && activeTab === 'return') {
-                      // Using direct database stock as requested ("ba lissafin ne")
-                      supStock = p.stock;
-                   }
-                  
                   const availableStock = supStock - pendingQty;
                   return <option key={p.id} value={p.id}>{p.name} (Avl: {activeTab === 'return' ? availableStock : p.stock})</option>;
                 })}
@@ -448,10 +468,10 @@ export const Inventory: React.FC = () => {
                           <span style={{ color: T.txt3, textTransform: 'uppercase', fontWeight: 800 }}>Remaining Debt</span>
                           <span style={{ color: T.danger, fontWeight: 900, background: 'rgba(239,68,68,0.1)', padding: '4px 8px', borderRadius: '6px' }}>{fmt(personalDebt)}</span>
                        </div>
-                       {myTxs.filter(t => t.status === 'PENDING_STORE' && t.type === 'Return').length > 0 && (
+                       {transactions.filter(t => (t.customerId === myId && t.status === 'PENDING_STORE' && t.type === 'Return')).length > 0 && (
                           <div style={{ fontSize: '9px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                             <span style={{ color: T.txt3, fontWeight: 700 }}>Pending Returns (Not applied yet)</span>
-                             <span style={{ color: '#f59e0b', fontWeight: 900 }}>{fmt(myTxs.filter(t => t.status === 'PENDING_STORE' && t.type === 'Return').reduce((sum, tx) => sum + tx.totalPrice, 0))}</span>
+                             <span style={{ color: T.txt2 }}>Pending Returns</span>
+                             <span style={{ color: T.danger, fontWeight: 700 }}>-{fmt(transactions.filter(t => (t.customerId === myId && t.status === 'PENDING_STORE' && t.type === 'Return')).reduce((sum: number, tx: any) => sum + tx.totalPrice, 0))}</span>
                           </div>
                        )}
                     </div>
@@ -491,8 +511,8 @@ export const Inventory: React.FC = () => {
           {isSupplier ? (
             <div style={{ marginTop: '24px' }}>
               <h2 style={{ fontSize: '14px', fontWeight: 800, marginBottom: '12px' }}>{t('dash.history')}</h2>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {myTxs.filter(t => t.type === 'Payment').sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map(p => (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                {myTxs.filter(t => t.type === 'Payment').sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime()).map(p => (
                   <div key={p.id} style={{ background: T.white, borderRadius: '12px', padding: '12px', border: `1px solid ${T.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div>
                       <div style={{ fontSize: '11px', fontWeight: 800 }}>Payment Sent</div>
