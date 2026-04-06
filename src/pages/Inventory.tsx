@@ -2,7 +2,8 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useAppContext } from '../store/AppContext';
 import { useAuth } from '../store/AuthContext';
 import { supabase } from '../lib/supabase';
-import type { InventoryLog } from '../store/types';
+import { getTransactionItems } from '../store/types';
+import type { InventoryLog, TransactionItem } from '../store/types';
 import { AnimatedPage } from '../components/AnimatedPage';
 import { useNavigate, Link } from 'react-router-dom';
 import { useTranslation } from '../store/LanguageContext';
@@ -25,7 +26,7 @@ const T = {
 
 export const Inventory: React.FC = () => {
   const { user, role } = useAuth();
-  const { products, companyMetrics, processInventoryBatch, inventoryLogs, recordBakeryPayment, bakeryPayments, transactions, expenses, customers, recordSale } = useAppContext();
+  const { products, companyMetrics, processInventoryBatch, inventoryLogs, recordBakeryPayment, bakeryPayments, transactions, expenses, customers, recordSale, loading } = useAppContext();
   const { t } = useTranslation();
   const navigate = useNavigate();
   
@@ -56,13 +57,45 @@ export const Inventory: React.FC = () => {
     }
   }, [isSupplier]);
 
-  const myAccount = useMemo(() => customers.find(c => c.profile_id === user?.id), [customers, user]);
+  const myAccount = useMemo(() => (customers || []).find(c => c.profile_id === user?.id), [customers, user]);
   const myId = myAccount?.id || user?.id;
-  const myTxs = useMemo(() => transactions.filter(t => t.customerId === myId || t.sellerId === myId), [transactions, myId]);
+  const myTxs = useMemo(() => (transactions || []).filter(t => t.customerId === myId || t.sellerId === myId), [transactions, myId]);
 
-  const activeProducts = products.filter(p => p.active);
-  const categories = Array.from(new Set(products.map(p => p.category || 'Standard')));
-  const filteredProducts = products
+  // Centralized Stock Helper for Suppliers (Moved up for use in products map)
+  const getPersonalStock = (pId: string) => {
+    if (!isSupplier) return (products || []).find(p => p.id === pId)?.stock || 0;
+    const mid = myAccount?.id || user?.id;
+    if (!mid) return 0;
+    
+    // Received = Debt (Completed) + Legacy
+    const rec = (transactions || []).filter(t => t.status === 'COMPLETED' && t.type === 'Debt' && t.customerId === mid)
+      .reduce((sum, t) => {
+         const it = getTransactionItems(t).find((i: TransactionItem) => i.productId === pId);
+         return sum + (it?.quantity || 0);
+      }, 0);
+    const lr = (inventoryLogs || []).filter(l => l.productId === pId && l.type !== 'Return').reduce((sum, l) => sum + (l.quantityReceived || 0), 0);
+
+    // Returned = Return (Completed) + Legacy
+    const ret = (transactions || []).filter(t => t.status === 'COMPLETED' && t.type === 'Return' && t.customerId === mid)
+      .reduce((sum, t) => {
+         const it = getTransactionItems(t).find((i: TransactionItem) => i.productId === pId);
+         return sum + (it?.quantity || 0);
+      }, 0);
+    const lret = (inventoryLogs || []).filter(l => l.productId === pId && l.type === 'Return').reduce((sum, l) => sum + (l.quantityReceived || 0), 0);
+
+    // Sold = POS_SUPPLIER
+    const sold = (transactions || []).filter(t => t.status === 'COMPLETED' && t.origin === 'POS_SUPPLIER' && t.sellerId === mid)
+      .reduce((sum, t) => {
+        const it = getTransactionItems(t).find((i: TransactionItem) => i.productId === pId);
+        return sum + (it?.quantity || 0);
+      }, 0);
+    
+    return Math.max(0, (rec + lr) - (ret + lret) - sold);
+  };
+
+  const activeProducts = (products || []).filter(p => p.active);
+  const categories = Array.from(new Set((products || []).map(p => p.category || 'Standard')));
+  const filteredProducts = (products || [])
     .filter(p => selectedCategory === 'All' || (p.category || 'Standard') === selectedCategory)
      .map(p => {
         if (!isSupplier || !user?.id) return p;
@@ -74,6 +107,16 @@ export const Inventory: React.FC = () => {
       return a.price - b.price;
     });
   
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '80vh', gap: '16px' }}>
+         <div style={{ width: '40px', height: '40px', border: '4px solid #f3f3f3', borderTop: '4px solid #2563eb', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
+         <div style={{ fontSize: '14px', fontWeight: 800, color: '#64748b' }}>Refreshing Ledger...</div>
+         <style>{`@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}</style>
+      </div>
+    );
+  }
+
   const qty = parseInt(quantity) || 0;
   
   const handleTabChange = (tab: 'view' | 'receive' | 'return' | 'balance') => {
@@ -89,14 +132,14 @@ export const Inventory: React.FC = () => {
 
   const handleAddItem = (e: React.FormEvent) => {
     e.preventDefault();
-    const prod = products.find(p => p.id === productId);
+    const prod = (products || []).find(p => p.id === productId);
     if (!prod || qty <= 0) return;
     
-    const cost = parseInt(costPrice) || prod.price; // Default to prod price
+    const cost = parseInt(costPrice) || prod.price; 
 
     if (activeTab === 'return') {
-      const pendingQty = pendingItems.filter(i => i.productId === productId).reduce((s, i) => s + i.quantityReceived, 0);
-      let avlTarget = prod.stock; // Use direct stock from DB
+      const pendingQty = pendingItems.filter(i => i.productId === productId).reduce((s, i) => s + (i.quantityReceived || 0), 0);
+      let avlTarget = prod.stock; 
       
       if (avlTarget < qty + pendingQty) {
         alert(`Cannot return more stock than you currently have (${avlTarget}).`);
@@ -111,7 +154,7 @@ export const Inventory: React.FC = () => {
       productId,
       quantityReceived: qty,
       costPrice: cost,
-      storeKeeper: isSupplier ? selectedSK : paymentReceiver // Reuse field
+      storeKeeper: isSupplier ? selectedSK : paymentReceiver
     };
     
     setPendingItems([...pendingItems, log]);
@@ -130,12 +173,12 @@ export const Inventory: React.FC = () => {
     if (isSupplier) {
       if (!user?.id) return alert('Profile not identified');
       if (!selectedSK || selectedSK === "") return alert('Select Store Keeper');
-      const myId = myAccount?.id || user.id;
+      const mid = myAccount?.id || user.id;
       setIsProcessing(true);
       await recordSale({
         id: Date.now().toString(),
         date: new Date().toISOString(),
-        customerId: myId,
+        customerId: mid,
         storeKeeperId: selectedSK,
         type: 'Payment',
         status: 'PENDING_STORE',
@@ -149,9 +192,9 @@ export const Inventory: React.FC = () => {
       return;
     }
 
-    const currentSales = transactions.reduce((sum, t) => sum + t.totalPrice, 0);
+    const currentSales = (transactions || []).reduce((sum, t) => sum + (t.totalPrice || 0), 0);
     const companyOwed = currentSales - (currentSales * 0.1);
-    const availableToPay = companyOwed - companyMetrics.totalMoneyPaid;
+    const availableToPay = companyOwed - (companyMetrics?.totalMoneyPaid || 0);
     
     if (amountStr > availableToPay) {
       alert(`Cannot pay more than the available Company Share (₦${availableToPay.toLocaleString()})`);
@@ -181,28 +224,27 @@ export const Inventory: React.FC = () => {
     if (isSupplier) {
       if (!user?.id) {
         setIsProcessing(false);
-        alert("System Error: Your profile could not be identified. Please log in again.");
+        alert("System Error: Your profile could not be identified.");
         return;
       }
-      const myId = myAccount?.id || user.id;
+      const mid = myAccount?.id || user.id;
       if (!selectedSK || selectedSK === "") {
         setIsProcessing(false);
-        alert("Please select a Store Keeper / Manager before submitting.");
+        alert("Please select a Store Keeper / Manager.");
         return;
       }
       
-      // Submit as PENDING_STORE transaction
       for (const item of pendingItems) {
         await recordSale({
           id: Date.now().toString() + Math.random().toString(36).substring(5),
           date: new Date().toISOString(),
-          customerId: myId,
+          customerId: mid,
           storeKeeperId: selectedSK,
           type: activeTab === 'receive' ? 'Debt' : 'Return',
           status: 'PENDING_STORE',
           origin: 'SUPPLIER',
           items: [{ productId: item.productId, quantity: item.quantityReceived, unitPrice: item.costPrice }],
-          totalPrice: item.quantityReceived * item.costPrice
+          totalPrice: (item.quantityReceived || 0) * (item.costPrice || 0)
         });
       }
       setPendingItems([]);
@@ -221,52 +263,25 @@ export const Inventory: React.FC = () => {
     navigate(`/inventory/receipt/${batchId}`);
   };
 
-  const remainingBalance = companyMetrics.totalValueReceived - companyMetrics.totalMoneyPaid;
+  const remainingBalance = (companyMetrics?.totalValueReceived || 0) - (companyMetrics?.totalMoneyPaid || 0);
   const fmt = (v: number) => "₦" + (v || 0).toLocaleString();
 
   // Supplier individual balance: (Total Sales * 90%) - (Total Payments Made)
-  const personalSalesTotal = transactions.filter(t => t.status === 'COMPLETED' && t.origin === 'POS_SUPPLIER' && t.sellerId === myId).reduce((sum, t) => sum + t.totalPrice, 0);
-  const personalPaymentsTotal = transactions.filter(t => t.status === 'COMPLETED' && t.type === 'Payment' && t.customerId === myId).reduce((sum, t) => sum + t.totalPrice, 0);
+  const personalSalesTotal = (transactions || []).filter(t => t.status === 'COMPLETED' && t.origin === 'POS_SUPPLIER' && t.sellerId === myId).reduce((sum, t) => sum + (t.totalPrice || 0), 0);
+  const personalPaymentsTotal = (transactions || []).filter(t => t.status === 'COMPLETED' && t.type === 'Payment' && t.customerId === myId).reduce((sum, t) => sum + (t.totalPrice || 0), 0);
   
   const personalDebt = (personalSalesTotal * 0.9) - personalPaymentsTotal;
 
-  // Profit should ONLY be calculated on POS sales (origin STORE or POS_SUPPLIER)
-  const onlySalesTxs = transactions.filter(t => t.status === 'COMPLETED' && t.origin !== 'SUPPLIER');
-  const totalSales = onlySalesTxs.reduce((sum, t) => sum + t.totalPrice, 0);
+  // Profit calculations
+  const onlySalesTxs = (transactions || []).filter(t => t.status === 'COMPLETED' && t.origin !== 'SUPPLIER');
+  const totalSales = onlySalesTxs.reduce((sum, t) => sum + (t.totalPrice || 0), 0);
   const totalGrossProfit = totalSales * 0.1;
   const companyShare = totalSales - totalGrossProfit;
-  const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
+  const totalExpenses = (expenses || []).reduce((sum, e) => sum + (e.amount || 0), 0);
   const totalNetProfit = totalGrossProfit - totalExpenses;
-  const totalReturnsCost = inventoryLogs.filter(l => l.type === 'Return').reduce((sum, l) => sum + (l.quantityReceived * l.costPrice), 0);
+  const totalReturnsCost = (inventoryLogs || []).filter(l => l.type === 'Return').reduce((sum, l) => sum + ((l.quantityReceived || 0) * (l.costPrice || 0)), 0);
 
-  // Centralized Stock Helper for Suppliers
-  const getPersonalStock = (pId: string) => {
-    if (!isSupplier) return products.find(p => p.id === pId)?.stock || 0;
-    const mid = myAccount?.id || user?.id;
-    
-    // Received = Debt (Completed) + Legacy
-    const rec = transactions.filter(t => t.status === 'COMPLETED' && t.type === 'Debt' && t.customerId === mid && (t.items?.[0]?.productId === pId || t.productId === pId))
-      .reduce((sum, t) => sum + (t.items?.[0]?.quantity || t.quantity || 0), 0);
-    const lr = inventoryLogs.filter(l => l.productId === pId && l.type !== 'Return').reduce((sum, l) => sum + l.quantityReceived, 0);
-
-    // Returned = Return (Completed) + Legacy
-    const ret = transactions.filter(t => t.status === 'COMPLETED' && t.type === 'Return' && t.customerId === mid && (t.items?.[0]?.productId === pId || t.productId === pId))
-      .reduce((sum, t) => sum + (t.items?.[0]?.quantity || t.quantity || 0), 0);
-    const lret = inventoryLogs.filter(l => l.productId === pId && l.type === 'Return').reduce((sum, l) => sum + l.quantityReceived, 0);
-
-    // Sold = POS_SUPPLIER
-    const sold = transactions.filter(t => t.status === 'COMPLETED' && t.origin === 'POS_SUPPLIER' && t.sellerId === mid)
-      .reduce((sum, t) => {
-        const it = t.items?.find(i => i.productId === pId);
-        if (it) return sum + it.quantity;
-        if (t.productId === pId) return sum + (t.quantity || 0);
-        return sum;
-      }, 0);
-    
-    return Math.max(0, (rec + lr) - (ret + lret) - sold);
-  };
-
-  const groupedLogs = inventoryLogs.reduce((acc, log) => {
+  const groupedLogs = (inventoryLogs || []).reduce((acc, log) => {
     const key = log.batchId || log.id;
     if (!acc[key]) acc[key] = [];
     acc[key].push(log);
@@ -276,7 +291,7 @@ export const Inventory: React.FC = () => {
   const sortedBatchIds = Object.keys(groupedLogs).sort((a,b) => new Date(groupedLogs[b][0].date).getTime() - new Date(groupedLogs[a][0].date).getTime());
 
   // Pending Txs for Supplier
-  const myPendingTxs = transactions.filter(t => t.customerId === myAccount?.id && t.status === 'PENDING_STORE');
+  const myPendingTxs = (transactions || []).filter(t => t.customerId === myAccount?.id && t.status === 'PENDING_STORE');
 
   return (
     <AnimatedPage>
