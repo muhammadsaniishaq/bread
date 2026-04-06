@@ -224,12 +224,13 @@ export const Inventory: React.FC = () => {
   const remainingBalance = companyMetrics.totalValueReceived - companyMetrics.totalMoneyPaid;
   const fmt = (v: number) => "₦" + (v || 0).toLocaleString();
 
-  // Supplier individual balance
-  // myAccount.debtBalance is updated in real-time by AppContext when transactions are completed.
-  const personalDebt = myAccount?.debtBalance || 0;
+  // Supplier individual balance: (Total Sales * 90%) - (Total Payments Made)
+  const personalSalesTotal = transactions.filter(t => t.status === 'COMPLETED' && t.origin === 'POS_SUPPLIER' && t.sellerId === myId).reduce((sum, t) => sum + t.totalPrice, 0);
+  const personalPaymentsTotal = transactions.filter(t => t.status === 'COMPLETED' && t.type === 'Payment' && t.customerId === myId).reduce((sum, t) => sum + t.totalPrice, 0);
+  
+  const personalDebt = (personalSalesTotal * 0.9) - personalPaymentsTotal;
 
   // Profit should ONLY be calculated on POS sales (origin STORE or POS_SUPPLIER)
-  // origin: SUPPLIER refers to internal warehouse movements.
   const onlySalesTxs = transactions.filter(t => t.status === 'COMPLETED' && t.origin !== 'SUPPLIER');
   const totalSales = onlySalesTxs.reduce((sum, t) => sum + t.totalPrice, 0);
   const totalGrossProfit = totalSales * 0.1;

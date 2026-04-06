@@ -226,12 +226,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     // 5. Update Ledger Balances (Debt)
     try {
-      if (tx.customerId) {
-        const customer = customers.find(c => c.id === tx.customerId);
+      if (tx.customerId || tx.sellerId) {
+        // For POS_SUPPLIER, the 'debtor' is the supplier themselves (they owe the bakery 90% of the sale)
+        const targetId = tx.origin === 'POS_SUPPLIER' ? tx.sellerId : tx.customerId;
+        const customer = customers.find(c => c.id === targetId);
+        
         if (customer) {
           const updatedCustomer = { ...customer };
-          if (tx.type === 'Debt') {
-            updatedCustomer.debtBalance += tx.totalPrice;
+          if (tx.type === 'Debt' || tx.type === 'Cash') {
+            // If it's a supplier sale, they owe 90% to the bakery.
+            // If it's a normal customer debt, they owe 100%.
+            const debtDelta = tx.origin === 'POS_SUPPLIER' ? tx.totalPrice * 0.9 : (tx.type === 'Debt' ? tx.totalPrice : 0);
+            updatedCustomer.debtBalance = (updatedCustomer.debtBalance || 0) + debtDelta;
           }
           await dbCustomers.setItem(updatedCustomer.id, updatedCustomer);
           setCustomers(prev => prev.map(c => c.id === customer.id ? updatedCustomer : c));
@@ -275,30 +281,41 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
       }
 
-      // B. Adjust Ledger balance
+      // B. Adjust Ledger balance (ONLY for Payments if it's a Supplier warehouse movement)
       if (tx.customerId) {
         const customer = customers.find(c => c.id === tx.customerId);
         if (customer) {
-          // If Return, debt decreases. If Debt, debt increases. If Payment, debt decreases.
           let delta = 0;
-          if (tx.type === 'Return' || tx.type === 'Payment') {
-            delta = -tx.totalPrice;
-          } else {
-            delta = tx.totalPrice;
-          }
-          const updatedCustomer = { ...customer, debtBalance: (customer.debtBalance || 0) + delta };
-          await dbCustomers.setItem(customer.id, updatedCustomer);
+          const isWarehouseMovement = tx.origin === 'SUPPLIER';
           
-          // C. Update Metrics for Payments
           if (tx.type === 'Payment') {
-            try {
-              const metrics = { ...companyMetrics };
-              metrics.totalValueReceived += tx.totalPrice;
-              await dbCompanyMetrics.setItem('main', metrics);
-            } catch (e) {
-              console.error('AppContext: Metrics update failed during payment approval', e);
-            }
+            delta = -tx.totalPrice;
+          } else if (isWarehouseMovement) {
+            // IMPORTANT: Receiving/Returning inventory no longer creates financial debt.
+            // Debt is only created when the item is SOLD to a customer (handled in recordSale).
+            delta = 0; 
+          } else {
+            // Normal Customer Debt
+            delta = tx.type === 'Return' ? -tx.totalPrice : tx.totalPrice;
           }
+          
+          if (delta !== 0) {
+            const updatedCustomer = { ...customer, debtBalance: (customer.debtBalance || 0) + delta };
+            await dbCustomers.setItem(customer.id, updatedCustomer);
+            setCustomers(prev => prev.map(c => c.id === customer.id ? updatedCustomer : c));
+          }
+        }
+      }
+          
+      // C. Update Metrics for Payments
+      if (tx.type === 'Payment') {
+        try {
+          const metrics = { ...companyMetrics };
+          metrics.totalValueReceived += tx.totalPrice;
+          await dbCompanyMetrics.setItem('main', metrics);
+          setCompanyMetrics(metrics);
+        } catch (e) {
+          console.error('AppContext: Metrics update failed during payment approval', e);
         }
       }
     }
