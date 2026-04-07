@@ -61,12 +61,14 @@ interface AppContextType {
   addExpense: (expense: Expense) => Promise<void>;
   appSettings: AppSettings;
   updateSettings: (settings: AppSettings) => Promise<void>;
+  syncDataWithCloud: () => Promise<{ success: boolean; message: string }>;
+  isSyncing: boolean;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user, role } = useAuth();
+  const { user } = useAuth();
   const [products, setProducts] = useState<Product[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -84,7 +86,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     adminPassword: '12,Abumafhal'
   });
   const [loading, setLoading] = useState(true);
-  
+  const [isSyncing, setIsSyncing] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   const refreshData = async () => {
@@ -101,134 +103,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const metrics = await dbCompanyMetrics.getItem<CompanyMetrics>('main');
       const settings = await dbSettings.getItem<AppSettings>('app');
 
-      // MASTER SYNC: Pull official data from Supabase for Suppliers to restore ledger and stock
-      // This transition moves all phone-based data to a Cloud-First model for Muhammad Sani's account.
-      const userId = user?.id;
-      if (userId && (role === 'SUPPLIER' || user?.email === 'muhammadsaniisyaku3@gmail.com')) {
-        try {
-          // 1. Sync Official Debt Balance
-          const { data: remoteCust } = await supabase.from('customers').select('*').eq('profile_id', userId).maybeSingle();
-          if (remoteCust) {
-            const mappedCust: Customer = { 
-               ...remoteCust, 
-               debtBalance: remoteCust.debt_balance 
-            };
-            await dbCustomers.setItem(mappedCust.id, mappedCust);
-            const idx = storedCustomers.findIndex(c => c.id === mappedCust.id);
-            if (idx !== -1) storedCustomers[idx] = mappedCust;
-            else storedCustomers.push(mappedCust);
-          }
-
-          // 2. Sync Inventory Logs (The 'Receive/Return' History)
-          const { data: remoteLogs } = await supabase.from('inventory_logs')
-            .select('*').eq('profile_id', userId).order('date', { ascending: false }).limit(500);
-          if (remoteLogs) {
-            for (const rLog of remoteLogs) {
-              const finalLog: InventoryLog = {
-                ...rLog,
-                quantityReceived: rLog.quantity_received,
-                costPrice: rLog.cost_price,
-                storeKeeper: rLog.store_keeper
-              };
-              await dbInventoryLogs.setItem(finalLog.id, finalLog);
-              if (!storedInventoryLogs.find(l => l.id === finalLog.id)) {
-                 storedInventoryLogs.push(finalLog);
-              }
-            }
-          }
-
-          // 3. Sync & MIGRATION: Transactions (The 'Sales' History)
-          // We fetch sales (sellerId) and historical warehouse movements (customerId)
-          const { data: remoteTxs } = await supabase.from('transactions')
-            .select('*').or(`seller_id.eq.${userId},customer_id.eq.${userId}`).order('date', { ascending: false }).limit(500);
-          
-          if (remoteTxs) {
-            // A. Sync Cloud-to-Local
-            for (const rTx of remoteTxs) {
-              const finalTx: Transaction = {
-                ...rTx,
-                totalPrice: rTx.total_price,
-                customerId: rTx.customer_id,
-                sellerId: rTx.seller_id,
-                storeKeeperId: rTx.store_keeper_id,
-                items: rTx.items
-              };
-              await dbTransactions.setItem(finalTx.id, finalTx);
-              const exists = storedTransactions.findIndex(t => t.id === finalTx.id);
-              if (exists !== -1) storedTransactions[exists] = finalTx;
-              else storedTransactions.push(finalTx);
-            }
-
-            // B. MIGRATION: Sync Local-to-Cloud (Muhammad Sani Edition)
-            const missingFromCloud = storedTransactions.filter(lt => !remoteTxs.find(rt => rt.id === lt.id));
-            if (missingFromCloud.length > 0) {
-              for (const lTx of missingFromCloud) {
-                await supabase.from('transactions').insert({
-                  id: lTx.id,
-                  date: lTx.date,
-                  type: lTx.type,
-                  status: lTx.status,
-                  origin: lTx.origin,
-                  total_price: lTx.totalPrice,
-                  customer_id: lTx.customerId,
-                  seller_id: lTx.sellerId,
-                  store_keeper_id: lTx.storeKeeperId,
-                  items: lTx.items
-                });
-              }
-            }
-          }
-
-          // 4. Sync & MIGRATION: Expenses
-          const { data: remoteExpenses } = await supabase.from('expenses')
-             .select('*').eq('profile_id', userId).limit(500);
-          
-          if (remoteExpenses) {
-            // A. Sync Cloud-to-Local
-            for (const rExp of remoteExpenses) {
-              const finalExp: Expense = { ...rExp, profileId: rExp.profile_id };
-              await dbExpenses.setItem(finalExp.id, finalExp);
-              if (!storedExpenses.find(e => e.id === finalExp.id)) {
-                 storedExpenses.push(finalExp);
-              }
-            }
-
-            // B. MIGRATION: Sync Local-to-Cloud
-            const missingExp = storedExpenses.filter(le => !remoteExpenses.find(re => re.id === le.id));
-            for (const lExp of missingExp) {
-              await supabase.from('expenses').insert({
-                id: lExp.id,
-                date: lExp.date,
-                description: lExp.description,
-                amount: lExp.amount,
-                type: lExp.type,
-                profile_id: userId
-              });
-            }
-          }
-
-          // 5. MIGRATION: Inventory Logs (Muhammad Sani Edition)
-          if (remoteLogs) {
-             const missingLogs = storedInventoryLogs.filter(ll => !remoteLogs.find(rl => rl.id === ll.id));
-             for (const lLog of missingLogs) {
-                await supabase.from('inventory_logs').insert({
-                  id: lLog.id,
-                  batch_id: lLog.batchId,
-                  date: lLog.date,
-                  type: lLog.type,
-                  product_id: lLog.productId,
-                  quantity_received: lLog.quantityReceived,
-                  cost_price: lLog.costPrice,
-                  store_keeper: lLog.storeKeeper,
-                  profile_id: userId
-                });
-             }
-          }
-        } catch (syncErr) {
-          console.error("MasterSync: Failed to sync", syncErr);
-        }
-      }
-
       setProducts(storedProducts);
       setCustomers(storedCustomers);
       setTransactions(storedTransactions);
@@ -244,6 +118,81 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       console.error('Failed to load local data', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const syncDataWithCloud = async () => {
+    if (!user?.id) return { success: false, message: "User not identified" };
+    setIsSyncing(true);
+    try {
+      const storedTxs = await getItems<Transaction>(dbTransactions as any);
+      const storedLogs = await getItems<InventoryLog>(dbInventoryLogs as any);
+      const storedExps = await getItems<Expense>(dbExpenses as any);
+      const storedCusts = await getItems<Customer>(dbCustomers as any);
+
+      // 1. Sync Customers (Debt)
+      for (const c of storedCusts) {
+        await supabase.from('customers').upsert({
+          id: c.id,
+          name: c.name,
+          phone: c.phone || '',
+          email: c.email || '',
+          profile_id: c.profile_id || '',
+          debt_balance: c.debtBalance || 0,
+          notes: c.notes || ''
+        });
+      }
+
+      // 2. Sync Transactions
+      for (const tx of storedTxs) {
+        await supabase.from('transactions').upsert({
+          id: tx.id,
+          date: tx.date,
+          type: tx.type,
+          status: tx.status || 'COMPLETED',
+          origin: tx.origin || 'STORE',
+          total_price: tx.totalPrice,
+          customer_id: tx.customerId,
+          seller_id: tx.sellerId,
+          store_keeper_id: tx.storeKeeperId,
+          items: tx.items
+        });
+      }
+
+      // 3. Sync Inventory Logs
+      for (const log of storedLogs) {
+        await supabase.from('inventory_logs').upsert({
+          id: log.id,
+          batch_id: log.batchId,
+          date: log.date,
+          type: log.type || 'Receive',
+          product_id: log.productId,
+          quantity_received: log.quantityReceived,
+          cost_price: log.costPrice,
+          store_keeper: log.storeKeeper,
+          profile_id: log.profile_id || user.id
+        });
+      }
+
+      // 4. Sync Expenses
+      for (const exp of storedExps) {
+        await supabase.from('expenses').upsert({
+          id: exp.id,
+          date: exp.date,
+          description: exp.description,
+          amount: exp.amount,
+          type: exp.type || 'SUPPLIER',
+          profile_id: user.id
+        });
+      }
+
+      await refreshData();
+      return { success: true, message: "Sync Successful! All your phone data is now permanently in the Bakery Database." };
+    } catch (err: any) {
+      console.error("Manual Sync Failed", err);
+      return { success: false, message: "Sync Failed: " + (err.message || "Unknown Error") };
+    } finally {
+      setIsSyncing(false);
     }
   };
 
@@ -657,7 +606,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       products, customers, transactions, debtPayments, inventoryLogs, bakeryPayments, companyMetrics, expenses, loading, refreshData,
       isAuthenticated, login, logout, updatePin,
       addProduct, updateProduct, deleteProduct, addCustomer, updateCustomer, deleteCustomer, recordSale, updateTransactionStatus, recordDebtPayment, addInventory, returnInventory, processInventoryBatch, recordBakeryPayment, addExpense,
-      appSettings, updateSettings
+      appSettings, updateSettings, syncDataWithCloud, isSyncing
     }}>
       {children}
     </AppContext.Provider>

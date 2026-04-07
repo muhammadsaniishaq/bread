@@ -6,7 +6,7 @@ import { DashboardChart } from '../components/DashboardChart';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from '../store/LanguageContext';
 import { useAuth } from '../store/AuthContext';
-import { TrendingUp, Wallet, Package, Users, PlusCircle, UserPlus, Activity, AlertTriangle, Clock, Search, X, Zap, ArrowRight, TrendingDown, LogOut } from 'lucide-react';
+import { TrendingUp, Wallet, Package, Users, PlusCircle, UserPlus, Activity, AlertTriangle, Clock, Search, X, Zap, ArrowRight, TrendingDown, LogOut, CloudUpload, CheckCircle, RefreshCw } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const containerVariants = {
@@ -28,15 +28,24 @@ const itemVariants: any = {
 };
 
 export const Dashboard: React.FC = () => {
-  const { transactions, products, customers, expenses, inventoryLogs } = useAppContext();
+  const { transactions, products, customers, expenses, inventoryLogs, syncDataWithCloud, isSyncing } = useAppContext();
   const { signOut, user, role } = useAuth();
   const { t } = useTranslation();
   const navigate = useNavigate();
   
   const [searchQuery, setSearchQuery] = useState('');
+  const [syncStatus, setSyncStatus] = useState<{ success?: boolean; message?: string } | null>(null);
   
   const isSupplier = role === 'SUPPLIER';
   const myAccount = useMemo(() => customers.find(c => c.profile_id === user?.id), [customers, user]);
+
+  const handleManualSync = async () => {
+    const result = await syncDataWithCloud();
+    setSyncStatus(result);
+    if (result.success) {
+      setTimeout(() => setSyncStatus(null), 5000);
+    }
+  };
 
   const displayProducts = useMemo(() => {
     if (!isSupplier || !myAccount) return products;
@@ -227,66 +236,123 @@ export const Dashboard: React.FC = () => {
           >
              <LogOut size={16} />
           </button>
-
-          {/* Search Dropdown */}
-          <AnimatePresence>
-            {searchResults && (searchResults.customers.length > 0 || searchResults.products.length > 0) && (
-              <motion.div 
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 10 }}
-                style={{ 
-                  position: 'absolute', top: '100%', right: 0, marginTop: '0.5rem', width: '100%', minWidth: '300px',
-                  background: 'var(--surface-color)', border: '1px solid var(--border-color)', backdropFilter: 'blur(20px)',
-                  borderRadius: '16px', boxShadow: 'var(--shadow-lg)', overflowY: 'auto', overflowX: 'hidden', maxHeight: '50vh', zIndex: 50 
-                }}
-              >
-                {/* Search Results Content */}
-                {searchResults.customers.length > 0 && (
-                  <div style={{ padding: '0.5rem 0' }}>
-                    <div style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', padding: '0.5rem 1.25rem' }}>Customers</div>
-                    {searchResults.customers.map(c => (
-                       <div key={c.id} onClick={() => { setSearchQuery(''); navigate(`/customers/${c.id}`); }} className="flex items-center justify-between" style={{ padding: '0.75rem 1.25rem', cursor: 'pointer', borderBottom: '1px solid var(--border-color)' }}>
-                         <div>
-                           <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>{c.name}</div>
-                           <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '0.125rem' }}>{c.phone || 'No phone'}</div>
-                         </div>
-                         <div style={{ fontSize: '0.7rem', fontWeight: 'bold', fontFamily: 'monospace' }}>
-                           {c.debtBalance > 0 ? <span className="text-danger flex items-center gap-1" style={{ background: 'rgba(var(--danger-rgb), 0.1)', padding: '0.25rem 0.5rem', borderRadius: '8px' }}><AlertTriangle size={10}/> ₦{c.debtBalance.toLocaleString()}</span> : <span className="text-success" style={{ background: 'rgba(var(--success-rgb), 0.1)', padding: '0.25rem 0.5rem', borderRadius: '8px' }}>Clean</span>}
-                         </div>
-                       </div>
-                    ))}
-                  </div>
-                )}
-                {searchResults.products.length > 0 && (
-                  <div style={{ padding: '0.5rem 0', borderTop: '1px solid var(--border-color)' }}>
-                    <div style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', padding: '0.5rem 1.25rem' }}>Products</div>
-                    {searchResults.products.map(p => (
-                       <div key={p.id} onClick={() => { setSearchQuery(''); navigate('/inventory'); }} className="flex items-center justify-between" style={{ padding: '0.75rem 1.25rem', cursor: 'pointer', borderBottom: '1px solid var(--border-color)' }}>
-                         <div className="flex items-center" style={{ gap: '0.75rem' }}>
-                           {p.image ? (
-                             <img src={p.image} style={{ width: '2rem', height: '2rem', borderRadius: '6px', objectFit: 'cover' }} alt="" />
-                           ) : (
-                             <div className="text-primary" style={{ width: '2rem', height: '2rem', borderRadius: '6px', background: 'rgba(var(--primary-rgb), 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '0.8rem' }}>
-                               {p.name.charAt(1) === '₦' ? p.name.charAt(p.name.indexOf(' ') + 1) : p.name.charAt(1)}
-                             </div>
-                           )}
-                           <div>
-                             <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>{p.name}</div>
-                             <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '0.125rem' }}>{p.category || 'Standard'} • ₦{p.price}</div>
-                           </div>
-                         </div>
-                         <div className={p.stock > 0 ? 'text-success' : 'text-danger'} style={{ fontSize: '0.65rem', fontWeight: 'bold', textTransform: 'uppercase', background: p.stock > 0 ? 'rgba(var(--success-rgb), 0.1)' : 'rgba(var(--danger-rgb), 0.1)', padding: '0.2rem 0.4rem', borderRadius: '6px' }}>
-                           {p.stock} in stock
-                         </div>
-                       </div>
-                    ))}
-                  </div>
-                )}
-              </motion.div>
-            )}
-          </AnimatePresence>
         </motion.div>
+
+        {/* Search Dropdown - Absolute position relative to container */}
+        <AnimatePresence>
+          {searchResults && (searchResults.customers.length > 0 || searchResults.products.length > 0) && (
+            <motion.div 
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 10 }}
+              style={{ 
+                position: 'absolute', top: '70px', right: '1.25rem', width: 'calc(100% - 2.5rem)', maxWidth: '400px',
+                background: 'var(--surface-color)', border: '1px solid var(--border-color)', backdropFilter: 'blur(20px)',
+                borderRadius: '24px', boxShadow: 'var(--shadow-lg)', overflowY: 'auto', overflowX: 'hidden', maxHeight: '50vh', zIndex: 100 
+              }}
+            >
+              {/* Search Results Content */}
+              {searchResults.customers.length > 0 && (
+                <div style={{ padding: '0.5rem 0' }}>
+                  <div style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', padding: '0.5rem 1.25rem' }}>Customers</div>
+                  {searchResults.customers.map(c => (
+                     <div key={c.id} onClick={() => { setSearchQuery(''); navigate(`/customers/${c.id}`); }} className="flex items-center justify-between" style={{ padding: '0.75rem 1.25rem', cursor: 'pointer', borderBottom: '1px solid var(--border-color)' }}>
+                       <div>
+                         <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>{c.name}</div>
+                         <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '0.125rem' }}>{c.phone || 'No phone'}</div>
+                       </div>
+                       <div style={{ fontSize: '0.7rem', fontWeight: 'bold', fontFamily: 'monospace' }}>
+                         {c.debtBalance > 0 ? <span className="text-danger flex items-center gap-1" style={{ background: 'rgba(var(--danger-rgb), 0.1)', padding: '0.25rem 0.5rem', borderRadius: '8px' }}><AlertTriangle size={10}/> ₦{c.debtBalance.toLocaleString()}</span> : <span className="text-success" style={{ background: 'rgba(var(--success-rgb), 0.1)', padding: '0.25rem 0.5rem', borderRadius: '8px' }}>Clean</span>}
+                       </div>
+                     </div>
+                  ))}
+                </div>
+              )}
+              {searchResults.products.length > 0 && (
+                <div style={{ padding: '0.5rem 0', borderTop: '1px solid var(--border-color)' }}>
+                  <div style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', padding: '0.5rem 1.25rem' }}>Products</div>
+                  {searchResults.products.map(p => (
+                     <div key={p.id} onClick={() => { setSearchQuery(''); navigate('/inventory'); }} className="flex items-center justify-between" style={{ padding: '0.75rem 1.25rem', cursor: 'pointer', borderBottom: '1px solid var(--border-color)' }}>
+                       <div className="flex items-center" style={{ gap: '0.75rem' }}>
+                         {p.image ? (
+                           <img src={p.image} style={{ width: '2rem', height: '2rem', borderRadius: '6px', objectFit: 'cover' }} alt="" />
+                         ) : (
+                           <div className="text-primary" style={{ width: '2rem', height: '2rem', borderRadius: '6px', background: 'rgba(var(--primary-rgb), 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '0.8rem' }}>
+                             {p.name.charAt(1) === '₦' ? p.name.charAt(p.name.indexOf(' ') + 1) : p.name.charAt(1)}
+                           </div>
+                         )}
+                         <div>
+                           <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>{p.name}</div>
+                           <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '0.125rem' }}>{p.category || 'Standard'} • ₦{p.price}</div>
+                         </div>
+                       </div>
+                       <div className={p.stock > 0 ? 'text-success' : 'text-danger'} style={{ fontSize: '0.65rem', fontWeight: 'bold', textTransform: 'uppercase', background: p.stock > 0 ? 'rgba(var(--success-rgb), 0.1)' : 'rgba(var(--danger-rgb), 0.1)', padding: '0.2rem 0.4rem', borderRadius: '6px' }}>
+                         {p.stock} in stock
+                       </div>
+                     </div>
+                  ))}
+                </div>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* MASTER CLOUD SYNC BANNER - For Muhammad Sani / Suppliers */}
+        {isSupplier && (
+          <motion.div variants={itemVariants} style={{ marginBottom: '1.5rem' }}>
+            <div style={{
+              background: syncStatus?.success ? 'rgba(34, 197, 94, 0.08)' : 'rgba(var(--primary-rgb), 0.06)',
+              border: `1px solid ${syncStatus?.success ? 'rgba(34, 197, 94, 0.2)' : 'rgba(var(--primary-rgb), 0.15)'}`,
+              borderRadius: '24px', padding: '1.25rem', position: 'relative', overflow: 'hidden'
+            }}>
+              <div className="flex items-center justify-between" style={{ gap: '1rem', position: 'relative', zIndex: 1 }}>
+                <div className="flex items-center" style={{ gap: '1rem' }}>
+                  <div style={{
+                    width: '45px', height: '45px', borderRadius: '15px',
+                    background: syncStatus?.success ? 'rgba(34, 197, 94, 0.1)' : 'rgba(var(--primary-rgb), 0.1)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
+                  }}>
+                    {isSyncing ? (
+                      <RefreshCw size={22} className="text-primary animate-spin" />
+                    ) : syncStatus?.success ? (
+                      <CheckCircle size={22} style={{ color: '#22c55e' }} />
+                    ) : (
+                      <CloudUpload size={22} className="text-primary" />
+                    )}
+                  </div>
+                  <div>
+                    <h3 style={{ fontSize: '1rem', fontWeight: 800, marginBottom: '0.1rem', color: 'var(--text-primary)' }}>
+                      {syncStatus?.success ? 'Data Fully Backed Up!' : 'Cloud Data Migration'}
+                    </h3>
+                    <p className="text-secondary" style={{ fontSize: '0.75rem', fontWeight: 500, lineHeight: 1.4 }}>
+                      {syncStatus?.message || 'Ina son ka dauke wannan aikin dake kan wayarka ka maida sa a kan Supabase don lissafinka ya zauna lami-lafiya.'}
+                    </p>
+                  </div>
+                </div>
+                
+                <button
+                  disabled={isSyncing}
+                  onClick={handleManualSync}
+                  style={{
+                    background: syncStatus?.success ? '#22c55e' : 'var(--primary-color)',
+                    color: 'white', border: 'none', borderRadius: '14px', padding: '0.6rem 1rem',
+                    fontSize: '0.8rem', fontWeight: 700, cursor: isSyncing ? 'not-allowed' : 'pointer',
+                    boxShadow: '0 4px 12px rgba(var(--primary-rgb), 0.2)', opacity: isSyncing ? 0.7 : 1,
+                    transition: 'all 0.3s', flexShrink: 0
+                  }}
+                >
+                  {isSyncing ? 'Processing...' : syncStatus?.success ? 'Synced ✓' : 'Fara Sync Yanzu'}
+                </button>
+              </div>
+              
+              {/* Decorative Background Icon */}
+              <CloudUpload size={120} style={{
+                position: 'absolute', right: '-20px', bottom: '-30px',
+                opacity: 0.03, color: 'var(--primary-color)', transform: 'rotate(-15deg)'
+              }} />
+            </div>
+          </motion.div>
+        )}
 
         {/* Quick Actions - Floating Pills */}
         <motion.div variants={itemVariants} className="flex mb-6" style={{ gap: '0.5rem', overflowX: 'auto', paddingBottom: '0.5rem', scrollbarWidth: 'none', margin: '0 -1.25rem', padding: '0 1.25rem' }}>
