@@ -266,11 +266,9 @@ export const Inventory: React.FC = () => {
   const remainingBalance = (companyMetrics?.totalValueReceived || 0) - (companyMetrics?.totalMoneyPaid || 0);
   const fmt = (v: number) => "₦" + (v || 0).toLocaleString();
 
-  // Supplier individual balance: (Total Sales * 90%) - (Total Payments Made)
-  const personalSalesTotal = (transactions || []).filter(t => t.status === 'COMPLETED' && t.origin === 'POS_SUPPLIER' && t.sellerId === myId).reduce((sum, t) => sum + (t.totalPrice || 0), 0);
-  const personalPaymentsTotal = (transactions || []).filter(t => t.status === 'COMPLETED' && t.type === 'Payment' && t.customerId === myId).reduce((sum, t) => sum + (t.totalPrice || 0), 0);
-  
-  const personalDebt = (personalSalesTotal * 0.9) - personalPaymentsTotal;
+  // Supplier individual balance: Use the stored debtBalance from the database for historical accuracy.
+  // This 'Restores' the user's original ledger and ensures legacy debt is visible.
+  const personalDebt = myAccount?.debtBalance || 0;
 
   // Profit calculations
   const onlySalesTxs = (transactions || []).filter(t => t.status === 'COMPLETED' && t.origin !== 'SUPPLIER');
@@ -382,9 +380,11 @@ export const Inventory: React.FC = () => {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '12px' }}>
               <select value={productId} onChange={e => setProductId(e.target.value)} required style={{ width: '100%', padding: '12px', borderRadius: '10px', border: `1px solid ${T.border}`, background: T.bg, fontSize: '12px', fontWeight: 700, appearance: 'none' }}>
                 <option value="">-- Choose Bread --</option>
-                {activeProducts.map(p => {
+                {activeProducts
+                  .filter(p => activeTab === 'receive' || getPersonalStock(p.id) > 0)
+                  .map(p => {
                   let supStock = getPersonalStock(p.id);
-                  const pendingQty = activeTab === 'return' ? pendingItems.filter(i => i.productId === p.id).reduce((s, i) => s + i.quantityReceived, 0) : 0;
+                  const pendingQty = activeTab === 'return' ? pendingItems.filter(i => i.productId === p.id).reduce((s, i) => s + (i.quantityReceived || 0), 0) : 0;
                   const availableStock = supStock - pendingQty;
                   return <option key={p.id} value={p.id}>{p.name} (Avl: {activeTab === 'return' ? availableStock : p.stock})</option>;
                 })}

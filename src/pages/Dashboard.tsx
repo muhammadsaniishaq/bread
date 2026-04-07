@@ -93,13 +93,10 @@ export const Dashboard: React.FC = () => {
     const profit = totalSales * 0.1; // 10% gross profit on CUSTOMER SALES
     const netProfit = profit - totalExpenses;
     
-    // Total Debt: For Suppliers, it's (Sales * 90%) - Payments.
+    // Total Debt: Use the stored debtBalance for accuracy and historical continuity.
     let outstandingDebt = 0;
     if (isSupplier) {
-      const myId = myAccount?.id || user?.id;
-      const salesTotal = transactions.filter(t => t.status === 'COMPLETED' && t.origin === 'POS_SUPPLIER' && t.sellerId === myId).reduce((sum, t) => sum + t.totalPrice, 0);
-      const paymentsTotal = transactions.filter(t => t.status === 'COMPLETED' && t.type === 'Payment' && t.customerId === myId).reduce((sum, t) => sum + t.totalPrice, 0);
-      outstandingDebt = (salesTotal * 0.9) - paymentsTotal;
+      outstandingDebt = myAccount?.debtBalance || 0;
     } else {
       outstandingDebt = customers.reduce((sum, c) => sum + (c.debtBalance || 0), 0);
     }
