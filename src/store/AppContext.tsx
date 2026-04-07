@@ -22,6 +22,8 @@ import {
   getItems, 
   initializeDB 
 } from './database';
+import { useAuth } from './AuthContext';
+import { supabase } from '../lib/supabase';
 
 interface AppContextType {
   products: Product[];
@@ -64,6 +66,7 @@ interface AppContextType {
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { user, role } = useAuth();
   const [products, setProducts] = useState<Product[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -97,6 +100,48 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       
       const metrics = await dbCompanyMetrics.getItem<CompanyMetrics>('main');
       const settings = await dbSettings.getItem<AppSettings>('app');
+
+      // MASTER SYNC: Pull official data from Supabase for Suppliers to restore ledger and stock
+      // This is required to move away from local-only data which was causing historical losses.
+      const userId = user?.id;
+      if (userId && role === 'SUPPLIER') {
+        try {
+          // 1. Sync Official Debt Balance
+          const { data: remoteCust } = await supabase.from('customers').select('*').eq('profile_id', userId).maybeSingle();
+          if (remoteCust) {
+            const mappedCust: Customer = { 
+               ...remoteCust, 
+               debtBalance: remoteCust.debt_balance // Map snake_case to camelCase if needed
+            };
+            await dbCustomers.setItem(mappedCust.id, mappedCust);
+            // Replace in current set
+            const idx = storedCustomers.findIndex(c => c.id === mappedCust.id);
+            if (idx !== -1) storedCustomers[idx] = mappedCust;
+            else storedCustomers.push(mappedCust);
+          }
+
+          // 2. Sync Inventory Logs (The 'Receive' History)
+          // We fetch the last 1000 logs for safety
+          const { data: remoteLogs } = await supabase.from('inventory_logs')
+            .select('*').eq('profile_id', userId).order('date', { ascending: false }).limit(1000);
+          if (remoteLogs) {
+            for (const rLog of remoteLogs) {
+              const finalLog: InventoryLog = {
+                ...rLog,
+                quantityReceived: rLog.quantity_received, // Map snake_case
+                costPrice: rLog.cost_price,
+                storeKeeper: rLog.store_keeper
+              };
+              await dbInventoryLogs.setItem(finalLog.id, finalLog);
+              if (!storedInventoryLogs.find(l => l.id === finalLog.id)) {
+                 storedInventoryLogs.push(finalLog);
+              }
+            }
+          }
+        } catch (syncErr) {
+          console.error("MasterSync: Failed to pull remote data", syncErr);
+        }
+      }
 
       setProducts(storedProducts);
       setCustomers(storedCustomers);
