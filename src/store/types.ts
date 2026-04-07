@@ -70,6 +70,7 @@ export interface DebtPayment {
   customerId: string;
   amount: number;
   method?: 'Cash' | 'Transfer';
+  note?: string;
 }
 
 export interface BakeryPayment {

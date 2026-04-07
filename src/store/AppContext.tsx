@@ -102,33 +102,31 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const settings = await dbSettings.getItem<AppSettings>('app');
 
       // MASTER SYNC: Pull official data from Supabase for Suppliers to restore ledger and stock
-      // This is required to move away from local-only data which was causing historical losses.
+      // This transition moves all phone-based data to a Cloud-First model for Muhammad Sani's account.
       const userId = user?.id;
-      if (userId && role === 'SUPPLIER') {
+      if (userId && (role === 'SUPPLIER' || user?.email === 'muhammadsaniisyaku3@gmail.com')) {
         try {
           // 1. Sync Official Debt Balance
           const { data: remoteCust } = await supabase.from('customers').select('*').eq('profile_id', userId).maybeSingle();
           if (remoteCust) {
             const mappedCust: Customer = { 
                ...remoteCust, 
-               debtBalance: remoteCust.debt_balance // Map snake_case to camelCase if needed
+               debtBalance: remoteCust.debt_balance 
             };
             await dbCustomers.setItem(mappedCust.id, mappedCust);
-            // Replace in current set
             const idx = storedCustomers.findIndex(c => c.id === mappedCust.id);
             if (idx !== -1) storedCustomers[idx] = mappedCust;
             else storedCustomers.push(mappedCust);
           }
 
-          // 2. Sync Inventory Logs (The 'Receive' History)
-          // We fetch the last 1000 logs for safety
+          // 2. Sync Inventory Logs (The 'Receive/Return' History)
           const { data: remoteLogs } = await supabase.from('inventory_logs')
-            .select('*').eq('profile_id', userId).order('date', { ascending: false }).limit(1000);
+            .select('*').eq('profile_id', userId).order('date', { ascending: false }).limit(500);
           if (remoteLogs) {
             for (const rLog of remoteLogs) {
               const finalLog: InventoryLog = {
                 ...rLog,
-                quantityReceived: rLog.quantity_received, // Map snake_case
+                quantityReceived: rLog.quantity_received,
                 costPrice: rLog.cost_price,
                 storeKeeper: rLog.store_keeper
               };
@@ -138,8 +136,96 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               }
             }
           }
+
+          // 3. Sync & MIGRATION: Transactions (The 'Sales' History)
+          // We fetch sales (sellerId) and historical warehouse movements (customerId)
+          const { data: remoteTxs } = await supabase.from('transactions')
+            .select('*').or(`seller_id.eq.${userId},customer_id.eq.${userId}`).order('date', { ascending: false }).limit(500);
+          
+          if (remoteTxs) {
+            // A. Sync Cloud-to-Local
+            for (const rTx of remoteTxs) {
+              const finalTx: Transaction = {
+                ...rTx,
+                totalPrice: rTx.total_price,
+                customerId: rTx.customer_id,
+                sellerId: rTx.seller_id,
+                storeKeeperId: rTx.store_keeper_id,
+                items: rTx.items
+              };
+              await dbTransactions.setItem(finalTx.id, finalTx);
+              const exists = storedTransactions.findIndex(t => t.id === finalTx.id);
+              if (exists !== -1) storedTransactions[exists] = finalTx;
+              else storedTransactions.push(finalTx);
+            }
+
+            // B. MIGRATION: Sync Local-to-Cloud (Muhammad Sani Edition)
+            const missingFromCloud = storedTransactions.filter(lt => !remoteTxs.find(rt => rt.id === lt.id));
+            if (missingFromCloud.length > 0) {
+              for (const lTx of missingFromCloud) {
+                await supabase.from('transactions').insert({
+                  id: lTx.id,
+                  date: lTx.date,
+                  type: lTx.type,
+                  status: lTx.status,
+                  origin: lTx.origin,
+                  total_price: lTx.totalPrice,
+                  customer_id: lTx.customerId,
+                  seller_id: lTx.sellerId,
+                  store_keeper_id: lTx.storeKeeperId,
+                  items: lTx.items
+                });
+              }
+            }
+          }
+
+          // 4. Sync & MIGRATION: Expenses
+          const { data: remoteExpenses } = await supabase.from('expenses')
+             .select('*').eq('profile_id', userId).limit(500);
+          
+          if (remoteExpenses) {
+            // A. Sync Cloud-to-Local
+            for (const rExp of remoteExpenses) {
+              const finalExp: Expense = { ...rExp, profileId: rExp.profile_id };
+              await dbExpenses.setItem(finalExp.id, finalExp);
+              if (!storedExpenses.find(e => e.id === finalExp.id)) {
+                 storedExpenses.push(finalExp);
+              }
+            }
+
+            // B. MIGRATION: Sync Local-to-Cloud
+            const missingExp = storedExpenses.filter(le => !remoteExpenses.find(re => re.id === le.id));
+            for (const lExp of missingExp) {
+              await supabase.from('expenses').insert({
+                id: lExp.id,
+                date: lExp.date,
+                description: lExp.description,
+                amount: lExp.amount,
+                type: lExp.type,
+                profile_id: userId
+              });
+            }
+          }
+
+          // 5. MIGRATION: Inventory Logs (Muhammad Sani Edition)
+          if (remoteLogs) {
+             const missingLogs = storedInventoryLogs.filter(ll => !remoteLogs.find(rl => rl.id === ll.id));
+             for (const lLog of missingLogs) {
+                await supabase.from('inventory_logs').insert({
+                  id: lLog.id,
+                  batch_id: lLog.batchId,
+                  date: lLog.date,
+                  type: lLog.type,
+                  product_id: lLog.productId,
+                  quantity_received: lLog.quantityReceived,
+                  cost_price: lLog.costPrice,
+                  store_keeper: lLog.storeKeeper,
+                  profile_id: userId
+                });
+             }
+          }
         } catch (syncErr) {
-          console.error("MasterSync: Failed to pull remote data", syncErr);
+          console.error("MasterSync: Failed to sync", syncErr);
         }
       }
 
@@ -227,12 +313,30 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
    * Supplier-initiated requests which start as 'PENDING_STORE'.
    */
   const recordSale = async (tx: Transaction) => {
-    // 1. Primary persistence: Save to DB immediately
+    // 1. Primary persistence: Save to DB immediately (Local & Cloud)
     await dbTransactions.setItem(tx.id, tx);
     setTransactions(prev => [tx, ...prev]);
 
+    if (user?.id) {
+      try {
+        await supabase.from('transactions').insert({
+          id: tx.id,
+          date: tx.date,
+          type: tx.type,
+          status: tx.status || 'COMPLETED',
+          origin: tx.origin || 'STORE',
+          total_price: tx.totalPrice,
+          customer_id: tx.customerId,
+          seller_id: tx.sellerId,
+          store_keeper_id: tx.storeKeeperId,
+          items: tx.items // JSONB
+        });
+      } catch (err) {
+        console.error("Cloud Sync Error: Sale failed", err);
+      }
+    }
+
     // 2. Logic Gate: If status is PENDING, we stop here.
-    // Stock and Debt balances only update once a Store Keeper confirms.
     if (tx.status === 'PENDING_STORE') {
        await refreshData();
        return;
@@ -247,43 +351,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       await dbCompanyMetrics.setItem('main', metrics);
       setCompanyMetrics(metrics);
     } catch (e) { console.error('AppContext: Metrics update failed', e); }
-    
-    // 4. Update Inventory Stock levels (ONLY if not from a POS Supplier)
-    // POS Suppliers sell their own 'In Hand' stock, which was already deducted from Global Stock earlier.
-    if (tx.origin !== 'POS_SUPPLIER') {
-      try {
-        const items = getTransactionItems(tx);
-        const updatedProducts = [...products];
-        for (const item of items) {
-          const pIdx = updatedProducts.findIndex(p => p.id === item.productId);
-          if (pIdx !== -1) {
-            updatedProducts[pIdx] = {
-              ...updatedProducts[pIdx],
-              stock: Math.max(0, Number(updatedProducts[pIdx].stock || 0) - Number(item.quantity))
-            };
-            await dbProducts.setItem(updatedProducts[pIdx].id, updatedProducts[pIdx]);
-          }
-        }
-        setProducts(updatedProducts);
-      } catch (e) { console.error('AppContext: Stock update failed', e); }
-    }
 
-    // 5. Update Ledger Balances (Debt)
+    // 4. Update Ledger Balances (Debt)
     try {
       if (tx.customerId || tx.sellerId) {
-        // For POS_SUPPLIER, the 'debtor' is the supplier themselves (they owe the bakery 90% of the sale)
         const targetId = tx.origin === 'POS_SUPPLIER' ? tx.sellerId : tx.customerId;
-        const customer = customers.find(c => c.id === targetId);
+        const customer = (customers || []).find(c => c.id === targetId);
         
         if (customer) {
           const updatedCustomer = { ...customer };
           if (tx.type === 'Debt' || tx.type === 'Cash') {
-            // If it's a supplier sale, they owe 90% to the bakery.
-            // If it's a normal customer debt, they owe 100%.
             const debtDelta = tx.origin === 'POS_SUPPLIER' ? tx.totalPrice * 0.9 : (tx.type === 'Debt' ? tx.totalPrice : 0);
             updatedCustomer.debtBalance = (updatedCustomer.debtBalance || 0) + debtDelta;
           }
           await dbCustomers.setItem(updatedCustomer.id, updatedCustomer);
+          
+          if (user?.id) {
+             await supabase.from('customers').update({ debt_balance: updatedCustomer.debtBalance }).eq('id', updatedCustomer.id);
+          }
           setCustomers(prev => prev.map(c => c.id === customer.id ? updatedCustomer : c));
         }
       }
@@ -302,9 +387,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const tx = transactions.find(t => t.id === id);
     if (!tx || tx.status === status) return;
 
-    // 1. Mark status in DB
+    // 1. Mark status in DB (Local & Cloud)
     const updatedTx = { ...tx, status };
     await dbTransactions.setItem(id, updatedTx);
+    
+    if (user?.id) {
+       await supabase.from('transactions').update({ status }).eq('id', id);
+    }
 
     // 2. If transitioning to COMPLETED, apply physical & financial effects
     if (status === 'COMPLETED') {
@@ -383,18 +472,31 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const recordDebtPayment = async (payment: DebtPayment) => {
-    // 1. Save payment record
+    // 1. Save payment record (Local & Cloud)
     await dbDebtPayments.setItem(payment.id, payment);
+    if (user?.id) {
+       await supabase.from('debt_payments').insert({
+         id: payment.id,
+         date: payment.date,
+         amount: payment.amount,
+         customer_id: payment.customerId,
+         method: payment.method,
+         note: payment.note
+       });
+    }
     setDebtPayments(prev => [payment, ...prev]);
     
     // 2. Reduce supplier debt balance
-    const customer = customers.find(c => c.id === payment.customerId);
+    const customer = (customers || []).find(c => c.id === payment.customerId);
     if (customer) {
       const updatedCustomer = { ...customer, debtBalance: (customer.debtBalance || 0) - payment.amount };
       await dbCustomers.setItem(customer.id, updatedCustomer);
+      if (user?.id) {
+         await supabase.from('customers').update({ debt_balance: updatedCustomer.debtBalance }).eq('id', updatedCustomer.id);
+      }
     }
     
-    // 3. Update financial metrics (Value Received)
+    // 3. Update financial metrics
     try {
       const metrics = { ...companyMetrics };
       metrics.totalValueReceived += payment.amount;
@@ -458,12 +560,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const processInventoryBatch = async (logs: InventoryLog[], action: 'Receive' | 'Return') => {
     let totalValueDelta = 0;
     const updatedProducts = [...products];
-    const batchId = Date.now().toString(); // Generate single batchId for the entire cart
+    const batchId = Date.now().toString(); 
     
     for (const log of logs) {
-      const finalLog = { ...log, type: action, batchId }; // Attach batchId to each record
+      const finalLog = { ...log, type: action, batchId }; 
       await dbInventoryLogs.setItem(finalLog.id, finalLog);
       
+      if (user?.id) {
+         await supabase.from('inventory_logs').insert({
+           id: finalLog.id,
+           batch_id: finalLog.batchId,
+           date: finalLog.date,
+           type: finalLog.type,
+           product_id: finalLog.productId,
+           quantity_received: finalLog.quantityReceived,
+           cost_price: finalLog.costPrice,
+           store_keeper: finalLog.storeKeeper,
+           profile_id: finalLog.profile_id || user.id
+         });
+      }
+
       const productIndex = updatedProducts.findIndex(p => p.id === finalLog.productId);
       if (productIndex !== -1) {
         if (action === 'Receive') {
@@ -479,17 +595,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
         await dbProducts.setItem(updatedProducts[productIndex].id, updatedProducts[productIndex]);
       }
-      
       totalValueDelta += (finalLog.quantityReceived * finalLog.costPrice);
     }
     
-    // Update company metrics
-    let newTotalReceived = companyMetrics.totalValueReceived;
-    if (action === 'Receive') {
-      newTotalReceived += totalValueDelta;
-    } else {
-      newTotalReceived = Math.max(0, newTotalReceived - totalValueDelta);
-    }
+    const newTotalReceived = action === 'Receive' 
+      ? companyMetrics.totalValueReceived + totalValueDelta 
+      : Math.max(0, companyMetrics.totalValueReceived - totalValueDelta);
     
     const newMetrics = { ...companyMetrics, totalValueReceived: newTotalReceived };
     await dbCompanyMetrics.setItem('main', newMetrics);
@@ -500,6 +611,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const recordBakeryPayment = async (payment: BakeryPayment) => {
     await dbBakeryPayments.setItem(payment.id, payment);
     
+    if (user?.id) {
+       await supabase.from('bakery_payments').insert({
+         id: payment.id,
+         date: payment.date,
+         amount: payment.amount,
+         method: payment.method,
+         receiver: payment.receiver
+       });
+    }
+
     // Increase total money paid to company
     const newMetrics = { 
       ...companyMetrics, 
@@ -512,7 +633,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   
   const addExpense = async (expense: Expense) => {
     await dbExpenses.setItem(expense.id, expense);
+    if (user?.id) {
+       await supabase.from('expenses').insert({
+         id: expense.id,
+         date: expense.date,
+         description: expense.description,
+         amount: expense.amount,
+         type: expense.type,
+         profile_id: user.id
+       });
+    }
     setExpenses([...expenses, expense]);
+    await refreshData();
   };
 
   const updateSettings = async (settings: AppSettings) => {
