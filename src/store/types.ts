@@ -89,6 +89,7 @@ export interface InventoryLog {
   quantityReceived: number; // For returns, this represents the quantity returned
   costPrice: number;
   storeKeeper?: string; // Who gave or received the items
+  profile_id?: string; // ID of the person who initiated this log (Supplier or SK)
 }
 
 export interface CompanyMetrics {

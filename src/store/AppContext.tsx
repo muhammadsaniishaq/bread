@@ -264,13 +264,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // 2. If transitioning to COMPLETED, apply physical & financial effects
     if (status === 'COMPLETED') {
       
-      // A. Adjust Inventory levels
+      // A. Adjust Inventory levels and Create Logs
       const items = getTransactionItems(tx);
       const updatedProducts = [...products];
       for (const item of items) {
+        // 1. Physical Stock Update (Global)
         const pIdx = updatedProducts.findIndex(p => p.id === item.productId);
         if (pIdx !== -1) {
-          // If Return, we add to stock. If Debt, we subtract.
           const delta = tx.type === 'Return' ? item.quantity : -item.quantity;
           updatedProducts[pIdx] = {
             ...updatedProducts[pIdx],
@@ -278,9 +278,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           };
           await dbProducts.setItem(updatedProducts[pIdx].id, updatedProducts[pIdx]);
         }
+
+        // 2. Create Inventory Log for Supplier Tracking
+        if (tx.origin === 'SUPPLIER') {
+           const log: InventoryLog = {
+             id: Date.now().toString() + Math.random().toString(36).substring(7),
+             date: new Date().toISOString(),
+             type: tx.type === 'Return' ? 'Return' : 'Receive',
+             productId: item.productId,
+             quantityReceived: item.quantity,
+             costPrice: item.unitPrice || 0,
+             storeKeeper: tx.storeKeeperId,
+             profile_id: tx.customerId // Crucial for filtering 'Personal Stock'
+           };
+           await dbInventoryLogs.setItem(log.id, log);
+        }
       }
 
-      // B. Adjust Ledger balance (ONLY for Payments if it's a Supplier warehouse movement)
+      // B. Adjust Ledger balance
       if (tx.customerId) {
         const customer = customers.find(c => c.id === tx.customerId);
         if (customer) {

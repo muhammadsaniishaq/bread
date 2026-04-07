@@ -50,11 +50,17 @@ export const Inventory: React.FC = () => {
   const [paymentReceiver, setPaymentReceiver] = useState('');
 
   useEffect(() => {
-    if (isSupplier) {
-      supabase.from('profiles').select('*').in('role', ['STORE_KEEPER', 'MANAGER']).then(({ data }) => {
+    const fetchSKs = async () => {
+      if (!isSupplier) return;
+      try {
+        const { data, error } = await supabase.from('profiles').select('id, full_name, role').in('role', ['STORE_KEEPER', 'MANAGER']);
+        if (error) throw error;
         if (data) setStoreKeepers(data);
-      });
-    }
+      } catch (err) {
+        console.error("Failed to load Store Keepers", err);
+      }
+    };
+    fetchSKs();
   }, [isSupplier]);
 
   const myAccount = useMemo(() => (customers || []).find(c => c.profile_id === user?.id), [customers, user]);
@@ -67,21 +73,21 @@ export const Inventory: React.FC = () => {
     const mid = myAccount?.id || user?.id;
     if (!mid) return 0;
     
-    // Received = Debt (Completed) + Legacy
+    // Received = Debt (Completed) + Legacy (Filtered by Supplier)
     const rec = (transactions || []).filter(t => t.status === 'COMPLETED' && t.type === 'Debt' && t.customerId === mid)
       .reduce((sum, t) => {
          const it = getTransactionItems(t).find((i: TransactionItem) => i.productId === pId);
          return sum + (it?.quantity || 0);
       }, 0);
-    const lr = (inventoryLogs || []).filter(l => l.productId === pId && l.type !== 'Return').reduce((sum, l) => sum + (l.quantityReceived || 0), 0);
+    const lr = (inventoryLogs || []).filter(l => l.productId === pId && l.type !== 'Return' && l.profile_id === mid).reduce((sum, l) => sum + (l.quantityReceived || 0), 0);
 
-    // Returned = Return (Completed) + Legacy
+    // Returned = Return (Completed) + Legacy (Filtered by Supplier)
     const ret = (transactions || []).filter(t => t.status === 'COMPLETED' && t.type === 'Return' && t.customerId === mid)
       .reduce((sum, t) => {
          const it = getTransactionItems(t).find((i: TransactionItem) => i.productId === pId);
          return sum + (it?.quantity || 0);
       }, 0);
-    const lret = (inventoryLogs || []).filter(l => l.productId === pId && l.type === 'Return').reduce((sum, l) => sum + (l.quantityReceived || 0), 0);
+    const lret = (inventoryLogs || []).filter(l => l.productId === pId && l.type === 'Return' && l.profile_id === mid).reduce((sum, l) => sum + (l.quantityReceived || 0), 0);
 
     // Sold = POS_SUPPLIER
     const sold = (transactions || []).filter(t => t.status === 'COMPLETED' && t.origin === 'POS_SUPPLIER' && t.sellerId === mid)
@@ -230,7 +236,7 @@ export const Inventory: React.FC = () => {
       const mid = myAccount?.id || user.id;
       if (!selectedSK || selectedSK === "") {
         setIsProcessing(false);
-        alert("Please select a Store Keeper / Manager.");
+        alert("Please Select a Store / Manager from the list. If the list is empty, refresh the page.");
         return;
       }
       

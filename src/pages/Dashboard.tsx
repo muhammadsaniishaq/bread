@@ -43,20 +43,20 @@ export const Dashboard: React.FC = () => {
     return products.map(p => {
       const mid = myAccount?.id || user?.id;
       
-      // Received = Debt (Completed) + Legacy
-      const rec = transactions.filter(t => t.status === 'COMPLETED' && t.type === 'Debt' && t.customerId === mid && (t.items?.[0]?.productId === p.id || t.productId === p.id))
+      // Received = Debt (Completed) + Legacy (Filtered by Supplier)
+      const rec = (transactions || []).filter(t => t.status === 'COMPLETED' && t.type === 'Debt' && t.customerId === mid && (t.items?.[0]?.productId === p.id || t.productId === p.id))
         .reduce((sum, t) => sum + (t.items?.[0]?.quantity || t.quantity || 0), 0);
-      const lr = inventoryLogs.filter(l => l.productId === p.id && l.type !== 'Return').reduce((sum, l) => sum + l.quantityReceived, 0);
+      const lr = (inventoryLogs || []).filter(l => l.productId === p.id && l.type !== 'Return' && l.profile_id === mid).reduce((sum, l) => sum + (l.quantityReceived || 0), 0);
 
-      // Returned = Return (Completed) + Legacy
-      const ret = transactions.filter(t => t.status === 'COMPLETED' && t.type === 'Return' && t.customerId === mid && (t.items?.[0]?.productId === p.id || t.productId === p.id))
+      // Returned = Return (Completed) + Legacy (Filtered by Supplier)
+      const ret = (transactions || []).filter(t => t.status === 'COMPLETED' && t.type === 'Return' && t.customerId === mid && (t.items?.[0]?.productId === p.id || t.productId === p.id))
         .reduce((sum, t) => sum + (t.items?.[0]?.quantity || t.quantity || 0), 0);
-      const lret = inventoryLogs.filter(l => l.productId === p.id && l.type === 'Return').reduce((sum, l) => sum + l.quantityReceived, 0);
+      const lret = (inventoryLogs || []).filter(l => l.productId === p.id && l.type === 'Return' && l.profile_id === mid).reduce((sum, l) => sum + (l.quantityReceived || 0), 0);
 
       // Sold = POS_SUPPLIER
-      const sold = transactions.filter(t => t.status === 'COMPLETED' && t.origin === 'POS_SUPPLIER' && t.sellerId === mid)
+      const sold = (transactions || []).filter(t => t.status === 'COMPLETED' && t.origin === 'POS_SUPPLIER' && t.sellerId === mid)
         .reduce((sum, t) => {
-          const it = t.items?.find(i => i.productId === p.id);
+          const it = (t.items || []).find(i => i.productId === p.id);
           if (it) return sum + it.quantity;
           if (t.productId === p.id) return sum + (t.quantity || 0);
           return sum;
