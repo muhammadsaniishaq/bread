@@ -1,418 +1,323 @@
 import React, { useState, useRef, useMemo } from 'react';
 import { AnimatedPage } from '../components/AnimatedPage';
-import { PackageSearch, ArrowLeft, Plus, Edit2, Archive, CheckCircle2, Image as ImageIcon, Search, X, UploadCloud, Layers } from 'lucide-react';
+import {
+  PackageSearch, ArrowLeft, Plus, Edit2, Archive,
+  CheckCircle2, Image as ImageIcon, Search, X,
+  UploadCloud, Layers, Tag, ToggleLeft, ToggleRight
+} from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../store/AppContext';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, type Variants } from 'framer-motion';
 import type { Product } from '../store/types';
+
+const stagger: Variants = {
+  hidden: { opacity: 0 },
+  show: { opacity: 1, transition: { staggerChildren: 0.05 } },
+};
+const card: Variants = {
+  hidden: { opacity: 0, y: 20, scale: 0.95 },
+  show: { opacity: 1, y: 0, scale: 1, transition: { type: 'spring', stiffness: 300, damping: 24 } },
+};
+
+const CATEGORIES = ['Bread', 'Pastry', 'Snacks', 'Drinks', 'Other'];
 
 export const ManagerProducts: React.FC = () => {
   const navigate = useNavigate();
   const { products, addProduct, updateProduct } = useAppContext();
-  
-  const [isAdding, setIsAdding] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  
-  const [name, setName] = useState('');
-  const [price, setPrice] = useState('');
-  const [category, setCategory] = useState('Bread');
-  const [newImage, setNewImage] = useState<string | undefined>(undefined);
-  const [searchQuery, setSearchQuery] = useState('');
-  
+
+  const [isAdding, setIsAdding]     = useState(false);
+  const [editingId, setEditingId]   = useState<string | null>(null);
+  const [name,     setName]         = useState('');
+  const [price,    setPrice]        = useState('');
+  const [category, setCategory]     = useState('Bread');
+  const [newImage, setNewImage]     = useState<string | undefined>(undefined);
+  const [search,   setSearch]       = useState('');
+  const [saving,   setSaving]       = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleProductImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     if (file.size > 1.5 * 1024 * 1024) {
-      alert("Please select an image smaller than 1.5MB to preserve cloud sync speed.");
+      alert('Please select an image smaller than 1.5MB.');
       return;
     }
     const reader = new FileReader();
-    reader.onload = async (event) => {
-      setNewImage(event.target?.result as string);
-    };
+    reader.onload = (ev) => setNewImage(ev.target?.result as string);
     reader.readAsDataURL(file);
   };
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name || !price) return;
-    
-    if (editingId) {
-      const existing = products.find(p => p.id === editingId);
-      if (existing) {
-        await updateProduct({
-          ...existing,
-          name,
-          price: parseFloat(price),
-          category,
-          image: newImage !== undefined ? newImage : existing.image
-        });
+    setSaving(true);
+    try {
+      if (editingId) {
+        const existing = products.find(p => p.id === editingId);
+        if (existing) await updateProduct({ ...existing, name, price: parseFloat(price), category, image: newImage !== undefined ? newImage : existing.image });
+      } else {
+        await addProduct({ id: Date.now().toString(), name, price: parseFloat(price), stock: 0, active: true, category, image: newImage });
       }
-    } else {
-      await addProduct({
-        id: Date.now().toString(),
-        name,
-        price: parseFloat(price),
-        stock: 0,
-        active: true,
-        category,
-        image: newImage
-      });
+      resetForm();
+    } finally {
+      setSaving(false);
     }
-    resetForm();
   };
 
   const startEdit = (p: Product) => {
-    setName(p.name);
-    setPrice(p.price.toString());
-    setCategory(p.category || 'Bread');
-    setNewImage(p.image);
-    setEditingId(p.id);
-    setIsAdding(true);
+    setName(p.name); setPrice(p.price.toString());
+    setCategory(p.category || 'Bread'); setNewImage(p.image);
+    setEditingId(p.id); setIsAdding(true);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const resetForm = () => {
-    setName('');
-    setPrice('');
-    setCategory('Bread');
-    setNewImage(undefined);
-    setEditingId(null);
-    setIsAdding(false);
+    setName(''); setPrice(''); setCategory('Bread');
+    setNewImage(undefined); setEditingId(null); setIsAdding(false);
   };
 
-  const toggleActive = async (p: Product) => {
-    await updateProduct({ ...p, active: !p.active });
-  };
+  const toggleActive = async (p: Product) => updateProduct({ ...p, active: !p.active });
 
-  const filteredProducts = useMemo(() => {
-    if (!searchQuery) return products;
-    return products.filter(p => 
-      p.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-      (p.category && p.category.toLowerCase().includes(searchQuery.toLowerCase()))
+  const filtered = useMemo(() => {
+    if (!search) return products;
+    const q = search.toLowerCase();
+    return products.filter(p =>
+      p.name.toLowerCase().includes(q) ||
+      (p.category && p.category.toLowerCase().includes(q))
     );
-  }, [products, searchQuery]);
+  }, [products, search]);
 
-  const activeProducts = filteredProducts.filter(p => p.active).length;
-  const categories = Array.from(new Set(products.map(p => p.category)));
-
-  // Animation variants
-  const containerVariants: any = {
-    hidden: { opacity: 0 },
-    show: {
-      opacity: 1,
-      transition: { staggerChildren: 0.1 }
-    }
-  };
-
-  const itemVariants: any = {
-    hidden: { opacity: 0, scale: 0.8, y: 30 },
-    show: { opacity: 1, scale: 1, y: 0, transition: { type: "spring" as any, stiffness: 400, damping: 25 } }
-  };
+  const activeCount   = products.filter(p => p.active).length;
+  const archivedCount = products.filter(p => !p.active).length;
+  const totalValue    = products.filter(p => p.active).reduce((s, p) => s + p.price, 0);
 
   return (
     <AnimatedPage>
-      <div style={{ minHeight: '100vh', background: 'var(--bg-color)', paddingBottom: '6rem' }}>
-        <div className="container relative z-10 max-w-7xl mx-auto pt-6 px-4">
-          
-          {/* Header */}
-          <div className="flex items-center gap-4 mb-8">
-            <motion.button 
-               whileHover={{ scale: 1.1 }}
-               whileTap={{ scale: 0.9 }}
-               onClick={() => navigate(-1)} 
-               className="w-12 h-12 bg-white/70 dark:bg-zinc-800/70 backdrop-blur-xl border border-white/50 dark:border-white/10 rounded-full shadow-[0_8px_20px_rgba(0,0,0,0.04)] flex items-center justify-center text-primary"
-            >
-              <ArrowLeft size={20} />
-            </motion.button>
-            <div>
-              <h1 className="text-3xl font-black text-primary flex items-center gap-2 tracking-tight">
-                Product <span className="text-amber-500">Suite</span>
-              </h1>
-              <p className="text-sm font-bold text-secondary opacity-70 mt-0.5 tracking-wide">Orchestrate your global catalog.</p>
+      <div style={{ minHeight: '100vh', background: '#f0f2f8', fontFamily: "'Inter', system-ui, sans-serif", paddingBottom: '40px' }}>
+
+        {/* ── Hero Header ── */}
+        <div style={{ background: 'linear-gradient(158deg,#1a0533 0%,#3b0764 40%,#4f46e5 100%)', padding: '48px 20px 72px', position: 'relative', overflow: 'hidden' }}>
+          <div style={{ position: 'absolute', top: '-60px', right: '-40px', width: '260px', height: '260px', borderRadius: '50%', background: 'radial-gradient(circle,rgba(139,92,246,0.3) 0%,transparent 70%)', pointerEvents: 'none' }} />
+          <div style={{ position: 'relative', zIndex: 10 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '20px' }}>
+              <motion.button whileTap={{ scale: 0.88 }} onClick={() => navigate(-1)}
+                style={{ width: '40px', height: '40px', borderRadius: '13px', background: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                <ArrowLeft size={18} color="#fff" />
+              </motion.button>
+              <div>
+                <h1 style={{ fontSize: '22px', fontWeight: 900, color: '#fff', margin: 0, letterSpacing: '-0.02em' }}>
+                  Product <span style={{ color: '#fbbf24' }}>Catalog</span>
+                </h1>
+                <p style={{ margin: 0, fontSize: '11px', fontWeight: 600, color: 'rgba(255,255,255,0.45)' }}>
+                  Manage all bakery products
+                </p>
+              </div>
+            </div>
+
+            {/* 3 stat pills */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '10px' }}>
+              {[
+                { label: 'Active',    val: activeCount,   color: '#34d399', bg: 'rgba(16,185,129,0.15)',  icon: CheckCircle2 },
+                { label: 'Total',     val: products.length, color: '#a5b4fc', bg: 'rgba(99,102,241,0.2)',  icon: Layers       },
+                { label: 'Archived',  val: archivedCount, color: '#fca5a5', bg: 'rgba(239,68,68,0.15)',  icon: Archive      },
+              ].map((s, i) => (
+                <div key={i} style={{ background: s.bg, border: `1px solid ${s.color}20`, borderRadius: '16px', padding: '12px 10px', textAlign: 'center' }}>
+                  <div style={{ fontSize: '22px', fontWeight: 900, color: s.color, letterSpacing: '-0.02em' }}>{s.val}</div>
+                  <div style={{ fontSize: '10px', fontWeight: 700, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.06em', marginTop: '2px' }}>{s.label}</div>
+                </div>
+              ))}
             </div>
           </div>
+        </div>
 
-          {/* Ultra Premium Metrics Row */}
-          <div className="grid grid-cols-3 gap-4 sm:gap-6 mb-10">
-             <motion.div 
-               whileHover={{ y: -2 }}
-               style={{ background: 'var(--surface-color)', border: '1px solid var(--border-color)', borderRadius: '18px', padding: '16px', position: 'relative', overflow: 'hidden' }}
-             >
-               <div className="absolute -right-6 -top-6 w-24 h-24 bg-amber-500/10 rounded-full blur-2xl group-hover:bg-amber-500/20 transition-colors"></div>
-               <div className="w-10 h-10 rounded-[14px] bg-amber-500/10 flex items-center justify-center mb-3">
-                 <PackageSearch size={20} className="text-amber-500" />
-               </div>
-               <div className="text-[10px] sm:text-[11px] font-black text-secondary uppercase tracking-widest mb-1">Active Assets</div>
-               <div className="text-3xl sm:text-4xl font-black text-primary tracking-tighter">{activeProducts}</div>
-             </motion.div>
+        {/* ── Main Content ── */}
+        <div style={{ padding: '0 16px', marginTop: '-32px', position: 'relative', zIndex: 20 }}>
 
-             <motion.div 
-               whileHover={{ y: -2 }}
-               style={{ background: 'var(--surface-color)', border: '1px solid var(--border-color)', borderRadius: '18px', padding: '16px', position: 'relative', overflow: 'hidden' }}
-             >
-               <div className="absolute -right-6 -top-6 w-24 h-24 bg-blue-500/10 rounded-full blur-2xl group-hover:bg-blue-500/20 transition-colors"></div>
-               <div className="w-10 h-10 rounded-[14px] bg-blue-500/10 flex items-center justify-center mb-3">
-                 <Layers size={20} className="text-blue-500" />
-               </div>
-               <div className="text-[10px] sm:text-[11px] font-black text-secondary uppercase tracking-widest mb-1">Total Catalog</div>
-               <div className="text-3xl sm:text-4xl font-black text-primary tracking-tighter">{products.length}</div>
-             </motion.div>
-
-             <motion.div 
-               whileHover={{ y: -2 }}
-               style={{ background: 'var(--surface-color)', border: '1px solid var(--border-color)', borderRadius: '18px', padding: '16px', position: 'relative', overflow: 'hidden' }}
-             >
-               <div className="absolute -right-6 -top-6 w-24 h-24 bg-rose-500/10 rounded-full blur-2xl group-hover:bg-rose-500/20 transition-colors"></div>
-               <div className="w-10 h-10 rounded-[14px] bg-rose-500/10 flex items-center justify-center mb-3">
-                 <Search size={20} className="text-rose-500" />
-               </div>
-               <div className="text-[10px] sm:text-[11px] font-black text-secondary uppercase tracking-widest mb-1">Categories</div>
-               <div className="text-3xl sm:text-4xl font-black text-primary tracking-tighter">{categories.length}</div>
-             </motion.div>
-          </div>
-
+          {/* ── Add / Edit Form ── */}
           <AnimatePresence mode="wait">
             {isAdding ? (
-              <motion.div 
-                initial={{ opacity: 0, y: 20, filter: "blur(10px)" }}
-                animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-                exit={{ opacity: 0, y: -20, filter: "blur(10px)" }}
-                transition={{ type: "spring", stiffness: 300, damping: 25 }}
-                style={{ background: 'var(--surface-color)', border: '1px solid var(--border-color)', borderRadius: '18px', padding: '24px', marginBottom: '2.5rem', position: 'relative', overflow: 'hidden' }}
+              <motion.div key="form"
+                initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                style={{ background: '#fff', borderRadius: '24px', padding: '20px', boxShadow: '0 8px 40px rgba(0,0,0,0.1)', border: '1px solid rgba(0,0,0,0.06)', marginBottom: '14px' }}
               >
-                {/* Internal Glow */}
-                <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-amber-500/5 rounded-full blur-[80px] pointer-events-none"></div>
-
-                <div className="flex justify-between items-center mb-8 relative z-10 border-b border-gray-100 dark:border-gray-800 pb-6">
-                   <h2 className="text-2xl font-black flex items-center gap-3 text-primary">
-                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 text-white flex items-center justify-center shadow-lg shadow-amber-500/30">
-                         <Plus size={20} />
-                      </div>
-                      {editingId ? 'Edit Asset Configuration' : 'Create New Asset'}
-                   </h2>
-                   <motion.button 
-                     whileHover={{ scale: 1.1, rotate: 90 }}
-                     whileTap={{ scale: 0.9 }}
-                     onClick={resetForm} 
-                     className="w-10 h-10 rounded-full bg-black/5 dark:bg-white/5 flex items-center justify-center text-primary"
-                   >
-                     <X size={20} />
-                   </motion.button>
+                {/* Form header */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px', paddingBottom: '16px', borderBottom: '1px solid rgba(0,0,0,0.06)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div style={{ width: '36px', height: '36px', borderRadius: '11px', background: editingId ? 'rgba(16,185,129,0.1)' : 'rgba(79,70,229,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: editingId ? '#10b981' : '#4f46e5' }}>
+                      {editingId ? <Edit2 size={17} /> : <Plus size={17} />}
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '14px', fontWeight: 900, color: '#0f172a' }}>{editingId ? 'Edit Product' : 'New Product'}</div>
+                      <div style={{ fontSize: '10px', fontWeight: 600, color: '#94a3b8' }}>{editingId ? 'Update product details' : 'Add to catalog'}</div>
+                    </div>
+                  </div>
+                  <motion.button whileTap={{ scale: 0.88 }} onClick={resetForm}
+                    style={{ width: '34px', height: '34px', borderRadius: '10px', background: '#f1f5f9', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#64748b' }}>
+                    <X size={16} />
+                  </motion.button>
                 </div>
-                
-                <form onSubmit={handleSave} className="grid md:grid-cols-[200px_1fr] gap-8 md:gap-10 relative z-10">
-                  {/* Photo Studio Area */}
-                  <div className="flex flex-col gap-3">
-                     <label className="text-xs font-black text-secondary uppercase tracking-widest pl-2">Asset Studio</label>
-                     <motion.div 
-                       whileHover={{ scale: 1.02 }}
-                       whileTap={{ scale: 0.98 }}
-                       className="w-full aspect-[4/3] md:aspect-square rounded-[2rem] border-2 border-dashed border-amber-500/30 bg-gradient-to-br from-amber-50 to-orange-50/50 dark:from-zinc-800/50 dark:to-zinc-900/50 flex flex-col items-center justify-center cursor-pointer hover:border-amber-500 hover:shadow-xl transition-all overflow-hidden relative group"
-                       onClick={() => fileInputRef.current?.click()}
-                     >
-                       {newImage ? (
-                         <>
-                            <img src={newImage} alt="Preview" className="w-full h-full object-cover" />
-                            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center transition-all backdrop-blur-sm">
-                               <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center mb-2">
-                                  <UploadCloud className="text-white" size={24} />
-                               </div>
-                               <span className="text-[10px] font-black text-white uppercase tracking-widest">Replace</span>
-                            </div>
-                         </>
-                       ) : (
-                         <div className="flex flex-col items-center text-amber-600 dark:text-amber-500">
-                            <div className="w-14 h-14 bg-amber-500/10 rounded-[1rem] flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
-                              <ImageIcon size={28} />
-                            </div>
-                            <span className="text-[10px] font-black uppercase tracking-widest opacity-80">Upload Photo</span>
-                         </div>
-                       )}
-                       <input type="file" accept="image/*" ref={fileInputRef} className="hidden" onChange={handleProductImageUpload} />
-                     </motion.div>
+
+                <form onSubmit={handleSave}>
+                  {/* Image upload */}
+                  <div style={{ marginBottom: '16px' }}>
+                    <label style={{ fontSize: '10px', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: '8px' }}>Product Photo</label>
+                    <motion.div whileTap={{ scale: 0.98 }} onClick={() => fileInputRef.current?.click()}
+                      style={{ width: '100%', height: '140px', borderRadius: '16px', border: '2px dashed rgba(79,70,229,0.25)', background: 'rgba(79,70,229,0.03)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', overflow: 'hidden', position: 'relative' }}>
+                      {newImage ? (
+                        <>
+                          <img src={newImage} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
+                            <UploadCloud size={22} color="#fff" />
+                            <span style={{ fontSize: '11px', fontWeight: 800, color: '#fff', textTransform: 'uppercase' }}>Change</span>
+                          </div>
+                        </>
+                      ) : (
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', color: '#4f46e5' }}>
+                          <div style={{ width: '48px', height: '48px', borderRadius: '14px', background: 'rgba(79,70,229,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <ImageIcon size={22} />
+                          </div>
+                          <span style={{ fontSize: '11px', fontWeight: 800, color: '#94a3b8' }}>Tap to upload photo</span>
+                        </div>
+                      )}
+                    </motion.div>
+                    <input type="file" accept="image/*" ref={fileInputRef} style={{ display: 'none' }} onChange={handleImageUpload} />
                   </div>
 
-                  <div className="flex flex-col justify-center gap-6">
-                     <div className="grid gap-6 sm:grid-cols-2">
-                       <div className="flex flex-col gap-2">
-                          <label className="text-[11px] font-black text-secondary uppercase tracking-widest pl-2">Product Name <span className="text-amber-500">*</span></label>
-                          <input 
-                            type="text" 
-                            style={{ width: '100%', background: 'var(--bg-color)', border: '1px solid var(--border-color)', borderRadius: '12px', padding: '14px 16px', fontSize: '16px', fontWeight: 700, color: 'var(--text-color)', outline: 'none' }}
-                            placeholder="e.g. Premium Butter Loaf" 
-                            value={name}
-                            onChange={e => setName(e.target.value)}
-                            required 
-                          />
-                       </div>
-                       <div className="flex flex-col gap-2">
-                          <label className="text-[11px] font-black text-secondary uppercase tracking-widest pl-2">Retail Price (₦) <span className="text-amber-500">*</span></label>
-                          <div className="relative">
-                            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-secondary font-black">₦</span>
-                            <input 
-                              type="number" 
-                              style={{ width: '100%', background: 'var(--bg-color)', border: '1px solid var(--border-color)', borderRadius: '12px', padding: '14px 16px 14px 34px', fontSize: '16px', fontWeight: 900, color: '#d97706', outline: 'none' }}
-                              placeholder="1000" 
-                              value={price}
-                              onChange={e => setPrice(e.target.value)}
-                              required 
-                            />
-                          </div>
-                       </div>
-                     </div>
+                  {/* Name */}
+                  <div style={{ marginBottom: '12px' }}>
+                    <label style={{ fontSize: '10px', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: '6px' }}>Product Name *</label>
+                    <input type="text" placeholder="e.g. ₦500 Bread" value={name} onChange={e => setName(e.target.value)} required
+                      style={{ width: '100%', background: '#f8fafc', border: '1px solid rgba(0,0,0,0.08)', borderRadius: '14px', padding: '14px 16px', fontSize: '15px', fontWeight: 700, color: '#0f172a', outline: 'none', boxSizing: 'border-box' }} />
+                  </div>
 
-                     <div className="flex flex-col gap-2">
-                        <label className="text-[11px] font-black text-secondary uppercase tracking-widest pl-2">Category Group</label>
-                        <input 
-                          type="text" 
-                          style={{ width: '100%', background: 'var(--bg-color)', border: '1px solid var(--border-color)', borderRadius: '12px', padding: '14px 16px', fontSize: '16px', fontWeight: 700, color: 'var(--text-color)', outline: 'none' }}
-                          placeholder="e.g. Pastries & Snacks" 
-                          value={category}
-                          onChange={e => setCategory(e.target.value)}
-                        />
-                     </div>
+                  {/* Price + Category row */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '16px' }}>
+                    <div>
+                      <label style={{ fontSize: '10px', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: '6px' }}>Price (₦) *</label>
+                      <div style={{ position: 'relative' }}>
+                        <span style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', fontWeight: 900, color: '#f59e0b', fontSize: '15px' }}>₦</span>
+                        <input type="number" placeholder="500" value={price} onChange={e => setPrice(e.target.value)} required
+                          style={{ width: '100%', background: '#f8fafc', border: '1px solid rgba(0,0,0,0.08)', borderRadius: '14px', padding: '14px 14px 14px 32px', fontSize: '15px', fontWeight: 900, color: '#f59e0b', outline: 'none', boxSizing: 'border-box' }} />
+                      </div>
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '10px', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: '6px' }}>Category</label>
+                      <select value={category} onChange={e => setCategory(e.target.value)}
+                        style={{ width: '100%', background: '#f8fafc', border: '1px solid rgba(0,0,0,0.08)', borderRadius: '14px', padding: '14px 12px', fontSize: '14px', fontWeight: 700, color: '#0f172a', outline: 'none', boxSizing: 'border-box', appearance: 'none' }}>
+                        {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                      </select>
+                    </div>
+                  </div>
 
-                     <div className="mt-4 flex gap-4 pt-4 border-t border-gray-100 dark:border-gray-800">
-                       <motion.button 
-                         whileHover={{ scale: 1.02 }}
-                         whileTap={{ scale: 0.98 }}
-                         type="button" 
-                         onClick={resetForm}
-                         style={{ flex: 1, padding: '14px', background: 'var(--bg-color)', color: 'var(--text-secondary)', border: '1px solid var(--border-color)', borderRadius: '12px', fontWeight: 700 }}
-                       >
-                         Cancel
-                       </motion.button>
-                       <motion.button 
-                         whileHover={{ scale: 1.02 }}
-                         whileTap={{ scale: 0.98 }}
-                         type="submit" 
-                         className="flex items-center justify-center gap-2"
-                         style={{ flex: 2, padding: '14px', background: '#4f46e5', color: '#fff', border: 'none', borderRadius: '12px', fontWeight: 800 }}
-                       >
-                         <CheckCircle2 size={20} />
-                         {editingId ? 'Update Asset' : 'Deploy Product'}
-                       </motion.button>
-                     </div>
+                  {/* Buttons */}
+                  <div style={{ display: 'flex', gap: '10px' }}>
+                    <button type="button" onClick={resetForm}
+                      style={{ flex: 1, padding: '14px', border: '1px solid rgba(0,0,0,0.08)', background: '#f8fafc', borderRadius: '14px', fontSize: '13px', fontWeight: 700, color: '#64748b', cursor: 'pointer' }}>
+                      Cancel
+                    </button>
+                    <motion.button whileTap={{ scale: 0.97 }} type="submit" disabled={saving}
+                      style={{ flex: 2, padding: '14px', border: 'none', background: saving ? '#a5b4fc' : 'linear-gradient(135deg,#4f46e5,#6366f1)', borderRadius: '14px', fontSize: '13px', fontWeight: 900, color: '#fff', cursor: saving ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', boxShadow: '0 8px 20px rgba(79,70,229,0.3)' }}>
+                      <CheckCircle2 size={16} />
+                      {saving ? 'Saving...' : editingId ? 'Update Product' : 'Add Product'}
+                    </motion.button>
                   </div>
                 </form>
               </motion.div>
             ) : (
-              <motion.div 
-                initial={{ opacity: 0 }} 
-                animate={{ opacity: 1 }} 
-                exit={{ opacity: 0 }}
-                className="mb-10 flex flex-col md:flex-row gap-4 justify-between"
-              >
-                 <div className="relative w-full md:max-w-md group">
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-secondary group-focus-within:text-amber-500 transition-colors" size={20} />
-                    <input 
-                      type="text" 
-                      placeholder="Search inventory..." 
-                      style={{ width: '100%', background: 'var(--surface-color)', border: '1px solid var(--border-color)', borderRadius: '14px', padding: '14px 16px 14px 44px', fontSize: '15px', fontWeight: 600, color: 'var(--text-color)', outline: 'none' }}
-                      value={searchQuery}
-                      onChange={e => setSearchQuery(e.target.value)}
-                    />
-                 </div>
-
-                 <motion.button 
-                   whileHover={{ scale: 1.05 }}
-                   whileTap={{ scale: 0.95 }}
-                   style={{ background: '#4f46e5', color: '#fff', border: 'none', borderRadius: '12px', padding: '12px 24px', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '8px' }}
-                   onClick={() => setIsAdding(true)}
-                 >
-                   <Plus size={20} /> Add Product
-                 </motion.button>
+              /* Search + Add row */
+              <motion.div key="search" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                style={{ display: 'flex', gap: '10px', marginBottom: '14px' }}>
+                <div style={{ flex: 1, position: 'relative' }}>
+                  <Search size={16} color="#94a3b8" style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
+                  <input type="text" placeholder="Search products..." value={search} onChange={e => setSearch(e.target.value)}
+                    style={{ width: '100%', background: '#fff', border: '1px solid rgba(0,0,0,0.06)', borderRadius: '16px', padding: '13px 14px 13px 40px', fontSize: '14px', fontWeight: 600, color: '#0f172a', outline: 'none', boxSizing: 'border-box', boxShadow: '0 4px 16px rgba(0,0,0,0.06)' }} />
+                  {search && (
+                    <button onClick={() => setSearch('')} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
+                      <X size={14} color="#94a3b8" />
+                    </button>
+                  )}
+                </div>
+                <motion.button whileTap={{ scale: 0.94 }} onClick={() => setIsAdding(true)}
+                  style={{ padding: '13px 18px', background: 'linear-gradient(135deg,#4f46e5,#6366f1)', border: 'none', borderRadius: '16px', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', boxShadow: '0 8px 20px rgba(79,70,229,0.3)', flexShrink: 0 }}>
+                  <Plus size={18} color="#fff" />
+                  <span style={{ fontSize: '13px', fontWeight: 900, color: '#fff' }}>Add</span>
+                </motion.button>
               </motion.div>
             )}
           </AnimatePresence>
 
-          {/* Ultra-Premium E-Commerce Grid */}
-          <motion.div 
-              variants={containerVariants}
-              initial="hidden"
-              animate="show"
-              className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-5"
-          >
-            {filteredProducts.map(p => (
-              <motion.div 
-                 variants={itemVariants} 
-                 key={p.id} 
-                 className="group flex flex-col transition-all duration-300 hover:-translate-y-1"
-                 style={{ background: 'var(--surface-color)', border: '1px solid var(--border-color)', borderRadius: '18px', padding: '14px', cursor: 'pointer', opacity: p.active ? 1 : 0.5, filter: p.active ? 'none' : 'grayscale(100%)' }}
-              >
-                 {/* Breathtaking Image Area */}
-                 <div style={{ position: 'relative', width: '100%', aspectRatio: '1/1', background: 'var(--bg-color)', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', marginBottom: '12px' }}>
-                   {p.image ? (
-                     <img src={p.image} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" alt={p.name} />
-                   ) : (
-                     <div className="font-black text-secondary/20 text-5xl select-none">{p.name.charAt(0)}</div>
-                   )}
-                   
-                   {/* Float Overlay */}
-                   <div className="absolute top-3 left-3 z-10">
-                     <span className={`${p.active ? 'bg-black/80 dark:bg-white/90 text-white dark:text-black' : 'bg-gray-400 dark:bg-zinc-600 text-white'} text-[9px] font-black uppercase tracking-widest px-3 py-1.5 rounded-full backdrop-blur-md shadow-lg`}>
-                       {p.active ? 'Active' : 'Archived'}
-                     </span>
-                   </div>
+          {/* ── Product Grid ── */}
+          <motion.div variants={stagger} initial="hidden" animate="show"
+            style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: '12px' }}>
 
-                   {/* Quick Action Overlay on Hover - Frost Effect */}
-                   <div className="absolute inset-0 bg-black/5 opacity-0 group-hover:opacity-100 flex items-center justify-center gap-3 transition-opacity duration-300 backdrop-blur-[2px] z-10 hidden lg:flex">
-                      <motion.button 
-                         whileHover={{ scale: 1.1 }}
-                         whileTap={{ scale: 0.9 }}
-                         onClick={() => startEdit(p)} 
-                         className="w-12 h-12 rounded-full bg-white/95 dark:bg-zinc-800/95 text-primary shadow-xl flex items-center justify-center hover:text-amber-500 transition-colors"
-                         title="Edit Asset"
-                      >
-                         <Edit2 size={16} />
-                      </motion.button>
-                      <motion.button 
-                         whileHover={{ scale: 1.1 }}
-                         whileTap={{ scale: 0.9 }}
-                         onClick={() => toggleActive(p)} 
-                         className={`w-12 h-12 rounded-full shadow-xl flex items-center justify-center transition-colors bg-white/95 dark:bg-zinc-800/95 ${p.active ? 'text-danger hover:text-white hover:bg-danger' : 'text-success hover:text-white hover:bg-success'}`}
-                         title={p.active ? "Archive Asset" : "Restore Asset"}
-                      >
-                         {p.active ? <Archive size={16} /> : <CheckCircle2 size={16} />}
-                      </motion.button>
-                   </div>
-                 </div>
+            {filtered.map(p => (
+              <motion.div key={p.id} variants={card}
+                style={{ background: '#fff', borderRadius: '20px', overflow: 'hidden', boxShadow: '0 4px 16px rgba(0,0,0,0.06)', border: '1px solid rgba(0,0,0,0.05)', opacity: p.active ? 1 : 0.55 }}>
 
-                 {/* Mobile Quick Actions (Visible only on small devices below image) */}
-                 <div className="lg:hidden flex items-center justify-between px-2 mb-2">
-                    <button onClick={() => startEdit(p)} className="w-8 h-8 rounded-full bg-black/5 dark:bg-white/5 text-primary flex items-center justify-center"><Edit2 size={12} /></button>
-                    <button onClick={() => toggleActive(p)} className={`w-8 h-8 rounded-full flex items-center justify-center ${p.active ? 'bg-danger/10 text-danger' : 'bg-success/10 text-success'}`}>
-                      {p.active ? <Archive size={12} /> : <CheckCircle2 size={12} />}
-                    </button>
-                 </div>
+                {/* Product image */}
+                <div style={{ width: '100%', aspectRatio: '4/3', background: '#f8fafc', position: 'relative', overflow: 'hidden' }}>
+                  {p.image ? (
+                    <img src={p.image} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  ) : (
+                    <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '36px', fontWeight: 900, color: '#e2e8f0' }}>
+                      🍞
+                    </div>
+                  )}
+                  {/* Active badge */}
+                  <div style={{ position: 'absolute', top: '8px', left: '8px', background: p.active ? 'rgba(16,185,129,0.9)' : 'rgba(100,116,139,0.85)', backdropFilter: 'blur(8px)', borderRadius: '8px', padding: '3px 8px' }}>
+                    <span style={{ fontSize: '9px', fontWeight: 800, color: '#fff', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{p.active ? 'Active' : 'Archived'}</span>
+                  </div>
+                  {/* Stock badge */}
+                  <div style={{ position: 'absolute', top: '8px', right: '8px', background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(8px)', borderRadius: '8px', padding: '3px 8px' }}>
+                    <span style={{ fontSize: '9px', fontWeight: 800, color: '#fff' }}>{p.stock} units</span>
+                  </div>
+                </div>
 
-                 {/* Premium Content Typography */}
-                 <div className="px-2 pb-3 flex flex-col flex-grow">
-                   <div className="text-[10px] font-black uppercase tracking-widest text-amber-500 mb-1 truncate">{p.category || 'Bakery'}</div>
-                   <h4 className="font-bold text-[14px] sm:text-[15px] text-primary mb-2 line-clamp-2 leading-snug">{p.name}</h4>
-                   <div className="mt-auto">
-                     <div className="font-black text-xl sm:text-2xl text-primary tracking-tighter">
-                       <span className="text-[12px] sm:text-[14px] font-bold text-secondary mr-0.5 opacity-60">₦</span>
-                       {p.price.toLocaleString()}
-                     </div>
-                   </div>
-                 </div>
+                {/* Product info */}
+                <div style={{ padding: '12px 14px' }}>
+                  <div style={{ fontSize: '10px', fontWeight: 700, color: '#f59e0b', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '3px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <Tag size={9} /> {p.category || 'Bread'}
+                  </div>
+                  <div style={{ fontSize: '14px', fontWeight: 900, color: '#0f172a', marginBottom: '8px', lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</div>
+                  <div style={{ fontSize: '18px', fontWeight: 900, color: '#4f46e5', letterSpacing: '-0.02em', marginBottom: '10px' }}>
+                    ₦{p.price.toLocaleString()}
+                  </div>
+
+                  {/* Action buttons */}
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <motion.button whileTap={{ scale: 0.92 }} onClick={() => startEdit(p)}
+                      style={{ flex: 1, padding: '9px', borderRadius: '10px', border: '1px solid rgba(79,70,229,0.15)', background: 'rgba(79,70,229,0.06)', color: '#4f46e5', fontSize: '11px', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
+                      <Edit2 size={12} /> Edit
+                    </motion.button>
+                    <motion.button whileTap={{ scale: 0.92 }} onClick={() => toggleActive(p)}
+                      style={{ flex: 1, padding: '9px', borderRadius: '10px', border: `1px solid ${p.active ? 'rgba(239,68,68,0.15)' : 'rgba(16,185,129,0.15)'}`, background: p.active ? 'rgba(239,68,68,0.06)' : 'rgba(16,185,129,0.06)', color: p.active ? '#ef4444' : '#10b981', fontSize: '11px', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
+                      {p.active ? <><ToggleLeft size={12} /> Hide</> : <><ToggleRight size={12} /> Show</>}
+                    </motion.button>
+                  </div>
+                </div>
               </motion.div>
             ))}
-            
-            {filteredProducts.length === 0 && (
-               <motion.div variants={itemVariants} className="col-span-full py-24 text-center">
-                  <div className="w-24 h-24 rounded-full bg-black/5 dark:bg-white/5 mx-auto flex items-center justify-center mb-6 shadow-inner">
-                    <PackageSearch size={40} className="text-secondary opacity-40" />
-                  </div>
-                  <h4 className="font-black text-2xl text-primary mb-2">No Assets Found</h4>
-                  <p className="text-base font-bold text-secondary opacity-70 max-w-sm mx-auto">Your orchestrator array is empty. Setup an asset profile to populate the catalog.</p>
-               </motion.div>
+
+            {filtered.length === 0 && (
+              <motion.div variants={card} style={{ gridColumn: '1/-1', padding: '48px 20px', textAlign: 'center', background: '#fff', borderRadius: '20px', border: '1px solid rgba(0,0,0,0.05)' }}>
+                <div style={{ width: '60px', height: '60px', borderRadius: '20px', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px' }}>
+                  <PackageSearch size={28} color="#cbd5e1" />
+                </div>
+                <div style={{ fontSize: '16px', fontWeight: 900, color: '#0f172a', marginBottom: '6px' }}>No Products Found</div>
+                <div style={{ fontSize: '13px', fontWeight: 600, color: '#94a3b8' }}>
+                  {search ? `No results for "${search}"` : 'Click "Add" to create your first product'}
+                </div>
+              </motion.div>
             )}
           </motion.div>
+
+          {/* Footer summary */}
+          {products.length > 0 && (
+            <div style={{ textAlign: 'center', marginTop: '20px', fontSize: '11px', fontWeight: 700, color: '#94a3b8' }}>
+              {activeCount} active · {archivedCount} archived · avg ₦{products.length ? Math.round(totalValue / (activeCount || 1)).toLocaleString() : 0}
+            </div>
+          )}
         </div>
       </div>
     </AnimatedPage>
