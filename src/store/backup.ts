@@ -1,25 +1,30 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import {
-  dbProducts, dbCustomers, dbTransactions, 
-  dbDebtPayments, dbInventoryLogs, dbExpenses, dbCompanyMetrics, getItems
-} from './database';
+import { supabase } from '../lib/supabase';
 
-export const exportData = async () => {
+export const exportData = async (): Promise<boolean> => {
   try {
-    const data = {
-      products: await getItems(dbProducts as any),
-      customers: await getItems(dbCustomers as any),
-      transactions: await getItems(dbTransactions as any),
-      debtPayments: await getItems(dbDebtPayments as any),
-      inventoryLogs: await getItems(dbInventoryLogs as any),
-      expenses: await getItems(dbExpenses as any),
-      companyMetrics: await dbCompanyMetrics.getItem('main') || { totalValueReceived: 0, totalMoneyPaid: 0 },
-      appPin: localStorage.getItem('appPin') || '1234',
-      exportDate: new Date().toISOString(),
-      version: '2.0'
-    };
+    const [
+      { data: products },   { data: customers },    { data: transactions },
+      { data: debtPayments }, { data: inventoryLogs }, { data: expenses },
+      { data: bakeryPayments },
+    ] = await Promise.all([
+      supabase.from('products').select('*'),
+      supabase.from('customers').select('*'),
+      supabase.from('transactions').select('*'),
+      supabase.from('debt_payments').select('*'),
+      supabase.from('inventory_logs').select('*'),
+      supabase.from('expenses').select('*'),
+      supabase.from('bakery_payments').select('*'),
+    ]);
 
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const blob = new Blob([JSON.stringify({
+      products: products || [], customers: customers || [],
+      transactions: transactions || [], debtPayments: debtPayments || [],
+      inventoryLogs: inventoryLogs || [], expenses: expenses || [],
+      bakeryPayments: bakeryPayments || [],
+      exportDate: new Date().toISOString(), version: '3.0',
+    }, null, 2)], { type: 'application/json' });
+
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -28,7 +33,6 @@ export const exportData = async () => {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-    
     return true;
   } catch (err) {
     console.error('Export failed:', err);
@@ -41,35 +45,19 @@ export const importData = async (file: File): Promise<boolean> => {
     const reader = new FileReader();
     reader.onload = async (e) => {
       try {
-        const content = e.target?.result as string;
-        const data = JSON.parse(content);
-        
-        if (!data.version || !data.products) {
-          throw new Error('Invalid backup file format');
-        }
+        const data = JSON.parse(e.target?.result as string);
+        if (!data.version || !data.products) throw new Error('Invalid backup file format');
 
-        // Clear existing DBs
-        await Promise.all([
-          dbProducts.clear(), dbCustomers.clear(), dbTransactions.clear(),
-          dbDebtPayments.clear(), dbInventoryLogs.clear(), dbExpenses.clear(), dbCompanyMetrics.clear()
-        ]);
-
-        // Restore Items
-        for (const p of data.products) await dbProducts.setItem(p.id, p);
-        for (const c of data.customers) await dbCustomers.setItem(c.id, c);
-        for (const t of data.transactions) await dbTransactions.setItem(t.id, t);
-        for (const dp of data.debtPayments) await dbDebtPayments.setItem(dp.id, dp);
-        for (const il of data.inventoryLogs) await dbInventoryLogs.setItem(il.id, il);
-        for (const exp of data.expenses) await dbExpenses.setItem(exp.id, exp);
-        
-        await dbCompanyMetrics.setItem('main', data.companyMetrics);
-        localStorage.setItem('appPin', data.appPin || '1234');
+        if (data.products?.length)      await supabase.from('products').upsert(data.products);
+        if (data.customers?.length)     await supabase.from('customers').upsert(data.customers);
+        if (data.transactions?.length)  await supabase.from('transactions').upsert(data.transactions);
+        if (data.debtPayments?.length)  await supabase.from('debt_payments').upsert(data.debtPayments);
+        if (data.inventoryLogs?.length) await supabase.from('inventory_logs').upsert(data.inventoryLogs);
+        if (data.expenses?.length)      await supabase.from('expenses').upsert(data.expenses);
+        if (data.bakeryPayments?.length)await supabase.from('bakery_payments').upsert(data.bakeryPayments);
 
         resolve(true);
-      } catch (err) {
-        console.error('Import failed:', err);
-        reject(err);
-      }
+      } catch (err) { console.error('Import failed:', err); reject(err); }
     };
     reader.onerror = () => reject(new Error('File reading failed'));
     reader.readAsText(file);

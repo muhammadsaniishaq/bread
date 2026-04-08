@@ -1,27 +1,9 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { 
-  getTransactionItems 
-} from './types';
-import type { 
+import { getTransactionItems } from './types';
+import type {
   Product, Customer, Transaction, DebtPayment, InventoryLog,
-  CompanyMetrics,
-  Expense,
-  AppSettings,
-  BakeryPayment
+  CompanyMetrics, Expense, AppSettings, BakeryPayment
 } from './types';
-import { 
-  dbProducts, 
-  dbCustomers, 
-  dbTransactions, 
-  dbDebtPayments, 
-  dbInventoryLogs, 
-  dbCompanyMetrics,
-  dbBakeryPayments,
-  dbExpenses,
-  dbSettings,
-  getItems, 
-  initializeDB 
-} from './database';
 import { useAuth } from './AuthContext';
 import { supabase } from '../lib/supabase';
 
@@ -36,21 +18,16 @@ interface AppContextType {
   expenses: Expense[];
   loading: boolean;
   refreshData: () => Promise<void>;
-  
   isAuthenticated: boolean;
   login: (pin: string) => boolean;
   logout: () => void;
   updatePin: (newPin: string) => Promise<void>;
-  
-  // Mutations
   addProduct: (product: Product) => Promise<void>;
   updateProduct: (product: Product) => Promise<void>;
   deleteProduct: (id: string) => Promise<void>;
-  
   addCustomer: (customer: Customer) => Promise<void>;
   updateCustomer: (customer: Customer) => Promise<void>;
   deleteCustomer: (id: string) => Promise<void>;
-  
   recordSale: (transaction: Transaction) => Promise<void>;
   updateTransactionStatus: (id: string, status: 'COMPLETED' | 'CANCELLED') => Promise<void>;
   recordDebtPayment: (payment: DebtPayment) => Promise<void>;
@@ -61,586 +38,339 @@ interface AppContextType {
   addExpense: (expense: Expense) => Promise<void>;
   appSettings: AppSettings;
   updateSettings: (settings: AppSettings) => Promise<void>;
-  syncDataWithCloud: () => Promise<{ success: boolean; message: string }>;
-  isSyncing: boolean;
 }
 
+// ─── Supabase row → App type mappers ─────────────────────────────────────────
+const mapProduct = (r: any): Product => ({
+  id: r.id, name: r.name, price: r.price, active: r.active,
+  stock: r.stock || 0, category: r.category, image: r.image,
+});
+
+const mapCustomer = (r: any): Customer => ({
+  id: r.id, name: r.name, phone: r.phone || '', email: r.email || '',
+  username: r.username || '', location: r.location || '', notes: r.notes || '',
+  debtBalance: r.debt_balance || 0, loyaltyPoints: r.loyalty_points || 0,
+  image: r.image, assignedSupplierId: r.assigned_supplier_id,
+  pin: r.pin, password: r.password, profile_id: r.profile_id,
+});
+
+const mapTransaction = (r: any): Transaction => ({
+  id: r.id, date: r.date, type: r.type, status: r.status, origin: r.origin,
+  items: r.items || [], productId: r.product_id, quantity: r.quantity,
+  totalPrice: r.total_price, discount: r.discount || 0,
+  customerId: r.customer_id, sellerId: r.seller_id,
+  storeKeeperId: r.store_keeper_id,
+});
+
+const mapDebtPay = (r: any): DebtPayment => ({
+  id: r.id, date: r.date, customerId: r.customer_id,
+  amount: r.amount, method: r.method, note: r.note,
+});
+
+const mapInvLog = (r: any): InventoryLog => ({
+  id: r.id, batchId: r.batch_id, date: r.date, type: r.type,
+  productId: r.product_id, quantityReceived: r.quantity_received,
+  costPrice: r.cost_price, storeKeeper: r.store_keeper, profile_id: r.profile_id,
+});
+
+const mapBakeryPay = (r: any): BakeryPayment => ({
+  id: r.id, date: r.date, amount: r.amount, method: r.method, receiver: r.receiver,
+});
+
+const mapExpense = (r: any): Expense => ({
+  id: r.id, date: r.date, description: r.description, amount: r.amount, type: r.type,
+});
+
+// ─── App type → Supabase row helpers ─────────────────────────────────────────
+const customerRow = (c: Customer) => ({
+  id: c.id, name: c.name, phone: c.phone || '', email: c.email || '',
+  username: c.username || '', location: c.location || '', notes: c.notes || '',
+  profile_id: c.profile_id || null, debt_balance: c.debtBalance || 0,
+  assigned_supplier_id: c.assignedSupplierId || null,
+  pin: c.pin || null, password: c.password || null,
+});
+
+// ─── Settings (localStorage only — it is config, not data) ───────────────────
+const DEFAULT_SETTINGS: AppSettings = {
+  companyName: 'THE BEST SPECIAL BREAD', adminPin: '0018', cashierPin: '0000',
+  receiptFooter: 'Thank you for your patronage!',
+  adminEmail: 'muhammadsaniisyaku3@gmail.com', adminPassword: '12,Abumafhal',
+};
+
+const loadSettings = (): AppSettings => {
+  try {
+    const s = localStorage.getItem('appSettings');
+    return s ? { ...DEFAULT_SETTINGS, ...JSON.parse(s) } : DEFAULT_SETTINGS;
+  } catch { return DEFAULT_SETTINGS; }
+};
+
+// ─── Context ──────────────────────────────────────────────────────────────────
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user } = useAuth();
-  const [products, setProducts] = useState<Product[]>([]);
-  const [customers, setCustomers] = useState<Customer[]>([]);
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [debtPayments, setDebtPayments] = useState<DebtPayment[]>([]);
-  const [inventoryLogs, setInventoryLogs] = useState<InventoryLog[]>([]);
-  const [bakeryPayments, setBakeryPayments] = useState<BakeryPayment[]>([]);
-  const [expenses, setExpenses] = useState<Expense[]>([]);
-  const [companyMetrics, setCompanyMetrics] = useState<CompanyMetrics>({ totalValueReceived: 0, totalMoneyPaid: 0 });
-  const [appSettings, setAppSettings] = useState<AppSettings>({ 
-    companyName: 'THE BEST SPECIAL BREAD', 
-    adminPin: '0018', 
-    cashierPin: '0000', 
-    receiptFooter: 'Thank you for your patronage!',
-    adminEmail: 'muhammadsaniisyaku3@gmail.com',
-    adminPassword: '12,Abumafhal'
-  });
-  const [loading, setLoading] = useState(true);
-  const [isSyncing, setIsSyncing] = useState(false);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
+  const [products,       setProducts]       = useState<Product[]>([]);
+  const [customers,      setCustomers]      = useState<Customer[]>([]);
+  const [transactions,   setTransactions]   = useState<Transaction[]>([]);
+  const [debtPayments,   setDebtPayments]   = useState<DebtPayment[]>([]);
+  const [inventoryLogs,  setInventoryLogs]  = useState<InventoryLog[]>([]);
+  const [bakeryPayments, setBakeryPayments] = useState<BakeryPayment[]>([]);
+  const [expenses,       setExpenses]       = useState<Expense[]>([]);
+  const [companyMetrics, setCompanyMetrics] = useState<CompanyMetrics>({ totalValueReceived: 0, totalMoneyPaid: 0 });
+  const [appSettings,    setAppSettings]    = useState<AppSettings>(loadSettings);
+  const [loading,        setLoading]        = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(() => sessionStorage.getItem('isAuthenticated') === 'true');
+
+  // ─── Fetch all data from Supabase ──────────────────────────────────────────
   const refreshData = async () => {
     setLoading(true);
     try {
-      const storedProducts = await getItems<Product>(dbProducts as any);
-      const storedCustomers = await getItems<Customer>(dbCustomers as any);
-      const storedTransactions = await getItems<Transaction>(dbTransactions as any);
-      const storedDebtPayments = await getItems<DebtPayment>(dbDebtPayments as any);
-      const storedInventoryLogs = await getItems<InventoryLog>(dbInventoryLogs as any);
-      const storedBakeryPayments = await getItems<BakeryPayment>(dbBakeryPayments as any);
-      const storedExpenses = await getItems<Expense>(dbExpenses as any);
-      
-      const metrics = await dbCompanyMetrics.getItem<CompanyMetrics>('main');
-      const settings = await dbSettings.getItem<AppSettings>('app');
+      const [
+        { data: prod }, { data: cust }, { data: txns },
+        { data: dPay }, { data: invL }, { data: bPay }, { data: exps },
+      ] = await Promise.all([
+        supabase.from('products').select('*').order('name'),
+        supabase.from('customers').select('*').order('name'),
+        supabase.from('transactions').select('*').order('date', { ascending: false }),
+        supabase.from('debt_payments').select('*').order('date', { ascending: false }),
+        supabase.from('inventory_logs').select('*').order('date', { ascending: false }),
+        supabase.from('bakery_payments').select('*').order('date', { ascending: false }),
+        supabase.from('expenses').select('*').order('date', { ascending: false }),
+      ]);
 
-      setProducts(storedProducts);
-      setCustomers(storedCustomers);
-      setTransactions(storedTransactions);
-      setDebtPayments(storedDebtPayments);
-      setInventoryLogs(storedInventoryLogs);
-      setBakeryPayments(storedBakeryPayments);
-      setExpenses(storedExpenses);
-      if (metrics) setCompanyMetrics(metrics);
-      if (settings) {
-        setAppSettings(prev => ({ ...prev, ...settings }));
-      }
-    } catch (error) {
-      console.error('Failed to load local data', error);
+      const loadedTxns = (txns || []).map(mapTransaction);
+      const loadedDPay = (dPay || []).map(mapDebtPay);
+      const loadedBPay = (bPay || []).map(mapBakeryPay);
+
+      setProducts      ((prod || []).map(mapProduct));
+      setCustomers     ((cust || []).map(mapCustomer));
+      setTransactions  (loadedTxns);
+      setDebtPayments  (loadedDPay);
+      setInventoryLogs ((invL || []).map(mapInvLog));
+      setBakeryPayments(loadedBPay);
+      setExpenses      ((exps || []).map(mapExpense));
+
+      // Derive company metrics from live Supabase data
+      const totalValueReceived =
+        loadedTxns.filter(t => t.status === 'COMPLETED' && t.type === 'Cash').reduce((s, t) => s + t.totalPrice, 0) +
+        loadedDPay.reduce((s, p) => s + p.amount, 0);
+      const totalMoneyPaid = loadedBPay.reduce((s, p) => s + p.amount, 0);
+      setCompanyMetrics({ totalValueReceived, totalMoneyPaid });
+    } catch (err) {
+      console.error('refreshData failed:', err);
     } finally {
       setLoading(false);
     }
   };
 
-  const syncDataWithCloud = async () => {
-    if (!user?.id) return { success: false, message: "User not identified" };
-    setIsSyncing(true);
-    try {
-      const storedTxs = await getItems<Transaction>(dbTransactions as any);
-      const storedLogs = await getItems<InventoryLog>(dbInventoryLogs as any);
-      const storedExps = await getItems<Expense>(dbExpenses as any);
-      const storedCusts = await getItems<Customer>(dbCustomers as any);
+  useEffect(() => { refreshData(); }, [user]);
 
-      // 1. Sync Customers (Debt)
-      for (const c of storedCusts) {
-        await supabase.from('customers').upsert({
-          id: c.id,
-          name: c.name,
-          phone: c.phone || '',
-          email: c.email || '',
-          profile_id: c.profile_id || '',
-          debt_balance: c.debtBalance || 0,
-          notes: c.notes || ''
-        });
-      }
-
-      // 2. Sync Transactions
-      for (const tx of storedTxs) {
-        await supabase.from('transactions').upsert({
-          id: tx.id,
-          date: tx.date,
-          type: tx.type,
-          status: tx.status || 'COMPLETED',
-          origin: tx.origin || 'STORE',
-          total_price: tx.totalPrice,
-          customer_id: tx.customerId,
-          seller_id: tx.sellerId,
-          store_keeper_id: tx.storeKeeperId,
-          items: tx.items
-        });
-      }
-
-      // 3. Sync Inventory Logs
-      for (const log of storedLogs) {
-        await supabase.from('inventory_logs').upsert({
-          id: log.id,
-          batch_id: log.batchId,
-          date: log.date,
-          type: log.type || 'Receive',
-          product_id: log.productId,
-          quantity_received: log.quantityReceived,
-          cost_price: log.costPrice,
-          store_keeper: log.storeKeeper,
-          profile_id: log.profile_id || user.id
-        });
-      }
-
-      // 4. Sync Expenses
-      for (const exp of storedExps) {
-        await supabase.from('expenses').upsert({
-          id: exp.id,
-          date: exp.date,
-          description: exp.description,
-          amount: exp.amount,
-          type: exp.type || 'SUPPLIER',
-          profile_id: user.id
-        });
-      }
-
-      await refreshData();
-      return { success: true, message: "Sync Successful! All your phone data is now permanently in the Bakery Database." };
-    } catch (err: any) {
-      console.error("Manual Sync Failed", err);
-      return { success: false, message: "Sync Failed: " + (err.message || "Unknown Error") };
-    } finally {
-      setIsSyncing(false);
-    }
-  };
-
-  useEffect(() => {
-    if (sessionStorage.getItem('isAuthenticated') === 'true') {
-      setIsAuthenticated(true);
-    }
-
-    initializeDB().then(refreshData);
-  }, []);
-
-  const login = (pin: string) => {
-    const adminPin = appSettings.adminPin || '0018';
-
-    if (pin === adminPin) {
+  // ─── Legacy PIN auth ────────────────────────────────────────────────────────
+  const login = (pin: string): boolean => {
+    if (pin === (appSettings.adminPin || '0018')) {
       setIsAuthenticated(true);
       sessionStorage.setItem('isAuthenticated', 'true');
       return true;
     }
     return false;
   };
+  const logout = () => { setIsAuthenticated(false); sessionStorage.removeItem('isAuthenticated'); };
+  const updatePin = async (newPin: string) => updateSettings({ ...appSettings, adminPin: newPin });
 
-  const logout = () => {
-    setIsAuthenticated(false);
-    sessionStorage.removeItem('isAuthenticated');
-  };
-  
-  const updatePin = async (newPin: string) => {
-    const updated = { ...appSettings, adminPin: newPin };
-    await updateSettings(updated);
+  // ─── Settings ───────────────────────────────────────────────────────────────
+  const updateSettings = async (settings: AppSettings) => {
+    localStorage.setItem('appSettings', JSON.stringify(settings));
+    setAppSettings(settings);
   };
 
-  const addProduct = async (product: Product) => {
-    await dbProducts.setItem(product.id, product);
+  // ─── Products ───────────────────────────────────────────────────────────────
+  const addProduct = async (p: Product) => {
+    await supabase.from('products').upsert({
+      id: p.id, name: p.name, price: p.price, active: p.active,
+      stock: p.stock, category: p.category || null, image: p.image || null,
+    });
     await refreshData();
   };
 
-  const updateProduct = async (product: Product) => {
-    await dbProducts.setItem(product.id, product);
+  const updateProduct = async (p: Product) => {
+    await supabase.from('products').update({
+      name: p.name, price: p.price, active: p.active,
+      stock: p.stock, category: p.category || null, image: p.image || null,
+    }).eq('id', p.id);
     await refreshData();
   };
 
   const deleteProduct = async (id: string) => {
-    await dbProducts.removeItem(id);
+    await supabase.from('products').delete().eq('id', id);
     await refreshData();
   };
 
-  const addCustomer = async (customer: Customer) => {
-    await dbCustomers.setItem(customer.id, customer);
-    if (user?.id) {
-      try {
-        await supabase.from('customers').upsert({
-          id: customer.id,
-          name: customer.name,
-          phone: customer.phone || '',
-          email: customer.email || '',
-          location: customer.location || '',
-          notes: customer.notes || '',
-          profile_id: customer.profile_id || '',
-          debt_balance: customer.debtBalance || 0,
-          assigned_supplier_id: customer.assignedSupplierId || null,
-        });
-      } catch (err) {
-        console.error('Cloud Sync Error: addCustomer failed', err);
-      }
-    }
-    await refreshData();
-  };
+  // ─── Customers ──────────────────────────────────────────────────────────────
+  const addCustomer    = async (c: Customer) => { await supabase.from('customers').upsert(customerRow(c)); await refreshData(); };
+  const updateCustomer = async (c: Customer) => { await supabase.from('customers').update(customerRow(c)).eq('id', c.id); await refreshData(); };
+  const deleteCustomer = async (id: string)  => { await supabase.from('customers').delete().eq('id', id); await refreshData(); };
 
-  const updateCustomer = async (customer: Customer) => {
-    await dbCustomers.setItem(customer.id, customer);
-    if (user?.id) {
-      try {
-        await supabase.from('customers').upsert({
-          id: customer.id,
-          name: customer.name,
-          phone: customer.phone || '',
-          email: customer.email || '',
-          location: customer.location || '',
-          notes: customer.notes || '',
-          profile_id: customer.profile_id || '',
-          debt_balance: customer.debtBalance || 0,
-          assigned_supplier_id: customer.assignedSupplierId || null,
-        });
-      } catch (err) {
-        console.error('Cloud Sync Error: updateCustomer failed', err);
-      }
-    }
-    await refreshData();
-  };
-
-  const deleteCustomer = async (id: string) => {
-    await dbCustomers.removeItem(id);
-    await refreshData();
-  };
-
-  /**
-   * MANAGE SALES & SUPPLIER REQUESTS
-   * --------------------------------------------------
-   * This handles both immediate sales (Cash/Debt) and 
-   * Supplier-initiated requests which start as 'PENDING_STORE'.
-   */
+  // ─── Record Sale ─────────────────────────────────────────────────────────────
   const recordSale = async (tx: Transaction) => {
-    // 1. Primary persistence: Save to DB immediately (Local & Cloud)
-    await dbTransactions.setItem(tx.id, tx);
-    setTransactions(prev => [tx, ...prev]);
+    await supabase.from('transactions').insert({
+      id: tx.id, date: tx.date, type: tx.type, status: tx.status || 'COMPLETED',
+      origin: tx.origin || 'STORE', total_price: tx.totalPrice,
+      customer_id: tx.customerId || null, seller_id: tx.sellerId || null,
+      store_keeper_id: tx.storeKeeperId || null,
+      items: tx.items || null, discount: tx.discount || 0,
+    });
 
-    if (user?.id) {
-      try {
-        await supabase.from('transactions').insert({
-          id: tx.id,
-          date: tx.date,
-          type: tx.type,
-          status: tx.status || 'COMPLETED',
-          origin: tx.origin || 'STORE',
-          total_price: tx.totalPrice,
-          customer_id: tx.customerId,
-          seller_id: tx.sellerId,
-          store_keeper_id: tx.storeKeeperId,
-          items: tx.items // JSONB
-        });
-      } catch (err) {
-        console.error("Cloud Sync Error: Sale failed", err);
+    if (tx.status === 'PENDING_STORE') { await refreshData(); return; }
+
+    // Update customer debt balance
+    const targetId = tx.origin === 'POS_SUPPLIER' ? tx.sellerId : tx.customerId;
+    const customer = customers.find(c => c.id === targetId);
+    if (customer && (tx.type === 'Debt' || tx.origin === 'POS_SUPPLIER')) {
+      const debtDelta = tx.origin === 'POS_SUPPLIER' ? tx.totalPrice * 0.9 : tx.totalPrice;
+      await supabase.from('customers')
+        .update({ debt_balance: (customer.debtBalance || 0) + debtDelta })
+        .eq('id', customer.id);
+    }
+
+    // Update product stock for immediate (non-pending) sales
+    const items = getTransactionItems(tx);
+    for (const item of items) {
+      const product = products.find(p => p.id === item.productId);
+      if (product) {
+        await supabase.from('products')
+          .update({ stock: Math.max(0, (product.stock || 0) - item.quantity) })
+          .eq('id', item.productId);
       }
     }
 
-    // 2. Logic Gate: If status is PENDING, we stop here.
-    if (tx.status === 'PENDING_STORE') {
-       await refreshData();
-       return;
-    }
-
-    // 3. Update financial metrics (for immediate Cash sales)
-    try {
-      const metrics = { ...companyMetrics };
-      if (tx.type === 'Cash') {
-        metrics.totalValueReceived += tx.totalPrice;
-      }
-      await dbCompanyMetrics.setItem('main', metrics);
-      setCompanyMetrics(metrics);
-    } catch (e) { console.error('AppContext: Metrics update failed', e); }
-
-    // 4. Update Ledger Balances (Debt)
-    try {
-      if (tx.customerId || tx.sellerId) {
-        const targetId = tx.origin === 'POS_SUPPLIER' ? tx.sellerId : tx.customerId;
-        const customer = (customers || []).find(c => c.id === targetId);
-        
-        if (customer) {
-          const updatedCustomer = { ...customer };
-          if (tx.type === 'Debt' || tx.type === 'Cash') {
-            const debtDelta = tx.origin === 'POS_SUPPLIER' ? tx.totalPrice * 0.9 : (tx.type === 'Debt' ? tx.totalPrice : 0);
-            updatedCustomer.debtBalance = (updatedCustomer.debtBalance || 0) + debtDelta;
-          }
-          await dbCustomers.setItem(updatedCustomer.id, updatedCustomer);
-          
-          if (user?.id) {
-             await supabase.from('customers').update({ debt_balance: updatedCustomer.debtBalance }).eq('id', updatedCustomer.id);
-          }
-          setCustomers(prev => prev.map(c => c.id === customer.id ? updatedCustomer : c));
-        }
-      }
-    } catch (e) { console.error('AppContext: Customer update failed', e); }
-    
     await refreshData();
   };
 
-  /**
-   * CONFIRM/APPROVE SUPPLIER REQUESTS
-   * --------------------------------------------------
-   * This transitions a PENDING request to COMPLETED and
-   * finally applies the stock and financial changes.
-   */
+  // ─── Approve / Cancel Supplier Request ───────────────────────────────────────
   const updateTransactionStatus = async (id: string, status: 'COMPLETED' | 'CANCELLED') => {
     const tx = transactions.find(t => t.id === id);
     if (!tx || tx.status === status) return;
 
-    // 1. Mark status in DB (Local & Cloud)
-    const updatedTx = { ...tx, status };
-    await dbTransactions.setItem(id, updatedTx);
-    
-    if (user?.id) {
-       await supabase.from('transactions').update({ status }).eq('id', id);
-    }
+    await supabase.from('transactions').update({ status }).eq('id', id);
 
-    // 2. If transitioning to COMPLETED, apply physical & financial effects
     if (status === 'COMPLETED') {
-      
-      // A. Adjust Inventory levels and Create Logs
       const items = getTransactionItems(tx);
-      const updatedProducts = [...products];
+
       for (const item of items) {
-        // 1. Physical Stock Update (Global)
-        const pIdx = updatedProducts.findIndex(p => p.id === item.productId);
-        if (pIdx !== -1) {
+        // Update product stock
+        const product = products.find(p => p.id === item.productId);
+        if (product) {
           const delta = tx.type === 'Return' ? item.quantity : -item.quantity;
-          updatedProducts[pIdx] = {
-            ...updatedProducts[pIdx],
-            stock: Math.max(0, Number(updatedProducts[pIdx].stock || 0) + delta)
-          };
-          await dbProducts.setItem(updatedProducts[pIdx].id, updatedProducts[pIdx]);
+          await supabase.from('products')
+            .update({ stock: Math.max(0, (product.stock || 0) + delta) })
+            .eq('id', item.productId);
         }
 
-        // 2. Create Inventory Log for Supplier Tracking
+        // Create inventory log for SUPPLIER-origin transactions
         if (tx.origin === 'SUPPLIER') {
-           const log: InventoryLog = {
-             id: Date.now().toString() + Math.random().toString(36).substring(7),
-             date: new Date().toISOString(),
-             type: tx.type === 'Return' ? 'Return' : 'Receive',
-             productId: item.productId,
-             quantityReceived: item.quantity,
-             costPrice: item.unitPrice || 0,
-             storeKeeper: tx.storeKeeperId,
-             profile_id: tx.customerId // Crucial for filtering 'Personal Stock'
-           };
-           await dbInventoryLogs.setItem(log.id, log);
+          await supabase.from('inventory_logs').insert({
+            id: `${Date.now()}${Math.random().toString(36).slice(2)}`,
+            batch_id: null, date: new Date().toISOString(),
+            type: tx.type === 'Return' ? 'Return' : 'Receive',
+            product_id: item.productId, quantity_received: item.quantity,
+            cost_price: item.unitPrice || 0,
+            store_keeper: tx.storeKeeperId || null,
+            profile_id: tx.customerId || null,
+          });
         }
       }
 
-      // B. Adjust Ledger balance
+      // Update customer ledger
       if (tx.customerId) {
         const customer = customers.find(c => c.id === tx.customerId);
         if (customer) {
           let delta = 0;
-          const isWarehouseMovement = tx.origin === 'SUPPLIER';
-          
-          if (tx.type === 'Payment') {
-            delta = -tx.totalPrice;
-          } else if (isWarehouseMovement) {
-            // IMPORTANT: Receiving/Returning inventory no longer creates financial debt.
-            // Debt is only created when the item is SOLD to a customer (handled in recordSale).
-            delta = 0; 
-          } else {
-            // Normal Customer Debt
-            delta = tx.type === 'Return' ? -tx.totalPrice : tx.totalPrice;
-          }
-          
+          if (tx.type === 'Payment') delta = -tx.totalPrice;
+          else if (tx.origin !== 'SUPPLIER') delta = tx.type === 'Return' ? -tx.totalPrice : tx.totalPrice;
           if (delta !== 0) {
-            const updatedCustomer = { ...customer, debtBalance: (customer.debtBalance || 0) + delta };
-            await dbCustomers.setItem(customer.id, updatedCustomer);
-            setCustomers(prev => prev.map(c => c.id === customer.id ? updatedCustomer : c));
+            await supabase.from('customers')
+              .update({ debt_balance: (customer.debtBalance || 0) + delta })
+              .eq('id', customer.id);
           }
         }
       }
-          
-      // C. Update Metrics for Payments
-      if (tx.type === 'Payment') {
-        try {
-          const metrics = { ...companyMetrics };
-          metrics.totalValueReceived += tx.totalPrice;
-          await dbCompanyMetrics.setItem('main', metrics);
-          setCompanyMetrics(metrics);
-        } catch (e) {
-          console.error('AppContext: Metrics update failed during payment approval', e);
-        }
-      }
     }
 
     await refreshData();
   };
 
+  // ─── Debt Payment ─────────────────────────────────────────────────────────────
   const recordDebtPayment = async (payment: DebtPayment) => {
-    // 1. Save payment record (Local & Cloud)
-    await dbDebtPayments.setItem(payment.id, payment);
-    if (user?.id) {
-       await supabase.from('debt_payments').insert({
-         id: payment.id,
-         date: payment.date,
-         amount: payment.amount,
-         customer_id: payment.customerId,
-         method: payment.method,
-         note: payment.note
-       });
-    }
-    setDebtPayments(prev => [payment, ...prev]);
-    
-    // 2. Reduce supplier debt balance
-    const customer = (customers || []).find(c => c.id === payment.customerId);
+    await supabase.from('debt_payments').insert({
+      id: payment.id, date: payment.date, amount: payment.amount,
+      customer_id: payment.customerId, method: payment.method || null, note: payment.note || null,
+    });
+    const customer = customers.find(c => c.id === payment.customerId);
     if (customer) {
-      const updatedCustomer = { ...customer, debtBalance: (customer.debtBalance || 0) - payment.amount };
-      await dbCustomers.setItem(customer.id, updatedCustomer);
-      if (user?.id) {
-         await supabase.from('customers').update({ debt_balance: updatedCustomer.debtBalance }).eq('id', updatedCustomer.id);
-      }
+      await supabase.from('customers')
+        .update({ debt_balance: (customer.debtBalance || 0) - payment.amount })
+        .eq('id', customer.id);
     }
-    
-    // 3. Update financial metrics
-    try {
-      const metrics = { ...companyMetrics };
-      metrics.totalValueReceived += payment.amount;
-      await dbCompanyMetrics.setItem('main', metrics);
-      setCompanyMetrics(metrics);
-    } catch (e) { console.error('AppContext: Metrics update during payment failed', e); }
-
     await refreshData();
   };
 
-  const addInventory = async (log: InventoryLog) => {
-    // Ensure legacy logs or implicitly added logs have type 'Receive'
-    const finalLog = { ...log, type: log.type || 'Receive' as const };
-    await dbInventoryLogs.setItem(finalLog.id, finalLog);
-    
-    // Add to stock
-    const product = products.find(p => p.id === finalLog.productId);
+  // ─── Inventory ────────────────────────────────────────────────────────────────
+  const _insertInventoryLog = async (log: InventoryLog, type: 'Receive' | 'Return', batchId?: string) => {
+    await supabase.from('inventory_logs').insert({
+      id: log.id, batch_id: batchId || log.batchId || null,
+      date: log.date, type,
+      product_id: log.productId, quantity_received: log.quantityReceived,
+      cost_price: log.costPrice, store_keeper: log.storeKeeper || null,
+      profile_id: log.profile_id || user?.id || null,
+    });
+    const product = products.find(p => p.id === log.productId);
     if (product) {
-       const updatedProduct = { ...product, stock: Number(product.stock || 0) + Number(finalLog.quantityReceived) };
-       await dbProducts.setItem(product.id, updatedProduct);
+      const newStock = type === 'Receive'
+        ? (product.stock || 0) + log.quantityReceived
+        : Math.max(0, (product.stock || 0) - log.quantityReceived);
+      await supabase.from('products').update({ stock: newStock }).eq('id', log.productId);
     }
-    
-    // Update company metrics (increase liability)
-    const totalValue = finalLog.quantityReceived * finalLog.costPrice;
-    const newMetrics = { 
-      ...companyMetrics, 
-      totalValueReceived: companyMetrics.totalValueReceived + totalValue 
-    };
-    await dbCompanyMetrics.setItem('main', newMetrics);
-    
-    await refreshData();
   };
-  
-  const returnInventory = async (log: InventoryLog) => {
-    // Force type to return
-    const finalLog = { ...log, type: 'Return' as const };
-    await dbInventoryLogs.setItem(finalLog.id, finalLog);
-    
-    // Subtract from stock (preventing negative stock)
-    const product = products.find(p => p.id === finalLog.productId);
-    if (product) {
-       const updatedProduct = { 
-         ...product, 
-         stock: Math.max(0, Number(product.stock || 0) - Number(finalLog.quantityReceived)) 
-       };
-       await dbProducts.setItem(product.id, updatedProduct);
-    }
-    
-    // Update company metrics (decrease liability)
-    const totalValue = finalLog.quantityReceived * finalLog.costPrice;
-    const newMetrics = { 
-      ...companyMetrics, 
-      // Ensure we don't accidentally drive total value received negative if data is corrupted
-      totalValueReceived: Math.max(0, companyMetrics.totalValueReceived - totalValue)
-    };
-    await dbCompanyMetrics.setItem('main', newMetrics);
-    
-    await refreshData();
-  };
-  
+
+  const addInventory    = async (log: InventoryLog) => { await _insertInventoryLog(log, 'Receive'); await refreshData(); };
+  const returnInventory = async (log: InventoryLog) => { await _insertInventoryLog(log, 'Return');  await refreshData(); };
+
   const processInventoryBatch = async (logs: InventoryLog[], action: 'Receive' | 'Return') => {
-    let totalValueDelta = 0;
-    const updatedProducts = [...products];
-    const batchId = Date.now().toString(); 
-    
-    for (const log of logs) {
-      const finalLog = { ...log, type: action, batchId }; 
-      await dbInventoryLogs.setItem(finalLog.id, finalLog);
-      
-      if (user?.id) {
-         await supabase.from('inventory_logs').insert({
-           id: finalLog.id,
-           batch_id: finalLog.batchId,
-           date: finalLog.date,
-           type: finalLog.type,
-           product_id: finalLog.productId,
-           quantity_received: finalLog.quantityReceived,
-           cost_price: finalLog.costPrice,
-           store_keeper: finalLog.storeKeeper,
-           profile_id: finalLog.profile_id || user.id
-         });
-      }
-
-      const productIndex = updatedProducts.findIndex(p => p.id === finalLog.productId);
-      if (productIndex !== -1) {
-        if (action === 'Receive') {
-          updatedProducts[productIndex] = {
-            ...updatedProducts[productIndex],
-            stock: Number(updatedProducts[productIndex].stock || 0) + Number(finalLog.quantityReceived)
-          };
-        } else {
-          updatedProducts[productIndex] = {
-            ...updatedProducts[productIndex],
-            stock: Math.max(0, Number(updatedProducts[productIndex].stock || 0) - Number(finalLog.quantityReceived))
-          };
-        }
-        await dbProducts.setItem(updatedProducts[productIndex].id, updatedProducts[productIndex]);
-      }
-      totalValueDelta += (finalLog.quantityReceived * finalLog.costPrice);
-    }
-    
-    const newTotalReceived = action === 'Receive' 
-      ? companyMetrics.totalValueReceived + totalValueDelta 
-      : Math.max(0, companyMetrics.totalValueReceived - totalValueDelta);
-    
-    const newMetrics = { ...companyMetrics, totalValueReceived: newTotalReceived };
-    await dbCompanyMetrics.setItem('main', newMetrics);
-    
+    const batchId = Date.now().toString();
+    for (const log of logs) await _insertInventoryLog(log, action, batchId);
     await refreshData();
   };
-  
+
+  // ─── Bakery Payments & Expenses ───────────────────────────────────────────────
   const recordBakeryPayment = async (payment: BakeryPayment) => {
-    await dbBakeryPayments.setItem(payment.id, payment);
-    
-    if (user?.id) {
-       await supabase.from('bakery_payments').insert({
-         id: payment.id,
-         date: payment.date,
-         amount: payment.amount,
-         method: payment.method,
-         receiver: payment.receiver
-       });
-    }
-
-    // Increase total money paid to company
-    const newMetrics = { 
-      ...companyMetrics, 
-      totalMoneyPaid: (companyMetrics.totalMoneyPaid || 0) + payment.amount 
-    };
-    await dbCompanyMetrics.setItem('main', newMetrics);
-    
+    await supabase.from('bakery_payments').insert({
+      id: payment.id, date: payment.date, amount: payment.amount,
+      method: payment.method || null, receiver: payment.receiver || null,
+    });
     await refreshData();
   };
-  
+
   const addExpense = async (expense: Expense) => {
-    await dbExpenses.setItem(expense.id, expense);
-    if (user?.id) {
-       await supabase.from('expenses').insert({
-         id: expense.id,
-         date: expense.date,
-         description: expense.description,
-         amount: expense.amount,
-         type: expense.type,
-         profile_id: user.id
-       });
-    }
-    setExpenses([...expenses, expense]);
+    await supabase.from('expenses').insert({
+      id: expense.id, date: expense.date, description: expense.description,
+      amount: expense.amount, type: expense.type || 'SUPPLIER',
+      profile_id: user?.id || null,
+    });
     await refreshData();
-  };
-
-  const updateSettings = async (settings: AppSettings) => {
-    await dbSettings.setItem('app', settings);
-    setAppSettings(settings);
   };
 
   return (
     <AppContext.Provider value={{
-      products, customers, transactions, debtPayments, inventoryLogs, bakeryPayments, companyMetrics, expenses, loading, refreshData,
+      products, customers, transactions, debtPayments, inventoryLogs,
+      bakeryPayments, companyMetrics, expenses, loading, refreshData,
       isAuthenticated, login, logout, updatePin,
-      addProduct, updateProduct, deleteProduct, addCustomer, updateCustomer, deleteCustomer, recordSale, updateTransactionStatus, recordDebtPayment, addInventory, returnInventory, processInventoryBatch, recordBakeryPayment, addExpense,
-      appSettings, updateSettings, syncDataWithCloud, isSyncing
+      addProduct, updateProduct, deleteProduct,
+      addCustomer, updateCustomer, deleteCustomer,
+      recordSale, updateTransactionStatus, recordDebtPayment,
+      addInventory, returnInventory, processInventoryBatch,
+      recordBakeryPayment, addExpense,
+      appSettings, updateSettings,
     }}>
       {children}
     </AppContext.Provider>
@@ -649,8 +379,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
 export const useAppContext = () => {
   const context = useContext(AppContext);
-  if (context === undefined) {
-    throw new Error('useAppContext must be used within an AppProvider');
-  }
+  if (context === undefined) throw new Error('useAppContext must be used within an AppProvider');
   return context;
 };
