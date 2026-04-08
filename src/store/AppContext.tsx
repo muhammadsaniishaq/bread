@@ -242,11 +242,45 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const addCustomer = async (customer: Customer) => {
     await dbCustomers.setItem(customer.id, customer);
+    if (user?.id) {
+      try {
+        await supabase.from('customers').upsert({
+          id: customer.id,
+          name: customer.name,
+          phone: customer.phone || '',
+          email: customer.email || '',
+          location: customer.location || '',
+          notes: customer.notes || '',
+          profile_id: customer.profile_id || '',
+          debt_balance: customer.debtBalance || 0,
+          assigned_supplier_id: customer.assignedSupplierId || null,
+        });
+      } catch (err) {
+        console.error('Cloud Sync Error: addCustomer failed', err);
+      }
+    }
     await refreshData();
   };
 
   const updateCustomer = async (customer: Customer) => {
     await dbCustomers.setItem(customer.id, customer);
+    if (user?.id) {
+      try {
+        await supabase.from('customers').upsert({
+          id: customer.id,
+          name: customer.name,
+          phone: customer.phone || '',
+          email: customer.email || '',
+          location: customer.location || '',
+          notes: customer.notes || '',
+          profile_id: customer.profile_id || '',
+          debt_balance: customer.debtBalance || 0,
+          assigned_supplier_id: customer.assignedSupplierId || null,
+        });
+      } catch (err) {
+        console.error('Cloud Sync Error: updateCustomer failed', err);
+      }
+    }
     await refreshData();
   };
 
