@@ -144,11 +144,21 @@ export const Inventory: React.FC = () => {
     const cost = parseInt(costPrice) || prod.price; 
 
     if (activeTab === 'return') {
+      // Return: Check against Supplier's own personal stock
       const pendingQty = pendingItems.filter(i => i.productId === productId).reduce((s, i) => s + (i.quantityReceived || 0), 0);
-      let avlTarget = prod.stock; 
-      
-      if (avlTarget < qty + pendingQty) {
-        alert(`Cannot return more stock than you currently have (${avlTarget}).`);
+      const myStock = getPersonalStock(productId);
+      if (myStock < qty + pendingQty) {
+        alert(`⚠️ Cannot return more than your current stock.\n\nYour stock: ${myStock} units\nYou are trying to return: ${qty + pendingQty} units`);
+        return;
+      }
+    }
+
+    if (activeTab === 'receive' && isSupplier) {
+      // Receive: Check against STORE's available stock (prod.stock from products table)
+      const storeStock = prod.stock || 0;
+      const alreadyPending = pendingItems.filter(i => i.productId === productId).reduce((s, i) => s + (i.quantityReceived || 0), 0);
+      if (storeStock < qty + alreadyPending) {
+        alert(`⚠️ Not enough bread in store!\n\nStore available: ${storeStock} units\nYou requested: ${qty + alreadyPending} units\n\nThe Store Manager must receive more bread before you can request this many.`);
         return;
       }
     }
