@@ -55,6 +55,7 @@ export const ManagerCustomers: React.FC = () => {
   const [isAdding, setIsAdding]       = useState(false);
   const [suppliers, setSuppliers]     = useState<{id:string; full_name:string}[]>([]);
   const [loading, setLoading]         = useState(false);
+  const [createdCreds, setCreatedCreds] = useState<{name:string; login:string; password:string}|null>(null);
 
   // Avatar / Cropping
   const [showCropper, setShowCropper] = useState(false);
@@ -212,7 +213,14 @@ export const ManagerCustomers: React.FC = () => {
        if (upErr) throw upErr;
 
        setFName(''); setFPhone(''); setFEmail(''); setFUsername(''); setFPassword(''); setFLocation(''); setFSup(''); setFPin(''); setFNote(''); setIsAdding(false);
-       alert("Success! Customer linked to Portal.");
+
+       // Show credentials modal
+       const loginId = fUsername || fEmail || fPhone;
+       if (loginId && fPassword) {
+         setCreatedCreds({ name: fName, login: loginId, password: fPassword });
+       } else {
+         setCreatedCreds({ name: fName, login: fUsername || fEmail || fPhone || '—', password: fPassword || '(no password set)' });
+       }
      } catch (err: any) {
         console.error(err);
         alert("Sync Error: " + (err.message || JSON.stringify(err)));
@@ -601,6 +609,54 @@ export const ManagerCustomers: React.FC = () => {
           onClose={() => setShowCropper(false)}
           onCropCompleteAction={handleCropComplete}
         />
+
+        {/* ═══ CREDENTIALS MODAL ═══ */}
+        <AnimatePresence>
+          {createdCreds && (
+            <motion.div key="creds-modal"
+              initial={{ opacity:0 }} animate={{ opacity:1 }} exit={{ opacity:0 }}
+              style={{ position:'fixed', inset:0, background:'rgba(15,23,42,0.6)', backdropFilter:'blur(10px)', zIndex:100, display:'flex', alignItems:'center', justifyContent:'center', padding:'20px' }}>
+              <motion.div initial={{ scale:0.9, y:20 }} animate={{ scale:1, y:0 }} exit={{ scale:0.9, opacity:0 }}
+                style={{ background:'#fff', borderRadius:'28px', padding:'28px', maxWidth:'360px', width:'100%', boxShadow:'0 24px 80px rgba(0,0,0,0.2)' }}>
+                {/* Header */}
+                <div style={{ textAlign:'center', marginBottom:'24px' }}>
+                  <div style={{ width:'64px', height:'64px', borderRadius:'20px', background:'rgba(16,185,129,0.1)', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 14px' }}>
+                    <span style={{ fontSize:'28px' }}>✅</span>
+                  </div>
+                  <div style={{ fontSize:'18px', fontWeight:900, color:'#0f172a' }}>Customer Created!</div>
+                  <div style={{ fontSize:'12px', fontWeight:600, color:'#94a3b8', marginTop:'4px' }}>{createdCreds.name} can now login to the portal</div>
+                </div>
+
+                {/* Credentials Box */}
+                <div style={{ background:'linear-gradient(135deg,#f8f7ff,#eef2ff)', border:'1.5px solid rgba(79,70,229,0.15)', borderRadius:'18px', padding:'18px', marginBottom:'20px' }}>
+                  <div style={{ fontSize:'10px', fontWeight:800, color:'#4f46e5', textTransform:'uppercase', letterSpacing:'0.1em', marginBottom:'14px' }}>🔐 Login Credentials</div>
+
+                  {[
+                    { label: 'URL', value: window.location.origin + '/login' },
+                    { label: 'Username / Email / Phone', value: createdCreds.login },
+                    { label: 'Password', value: createdCreds.password },
+                  ].map((row, i) => (
+                    <div key={i} style={{ marginBottom: i < 2 ? '12px' : 0 }}>
+                      <div style={{ fontSize:'10px', fontWeight:700, color:'#94a3b8', textTransform:'uppercase', marginBottom:'3px' }}>{row.label}</div>
+                      <div style={{ fontSize:'13px', fontWeight:800, color:'#0f172a', background:'#fff', borderRadius:'10px', padding:'8px 12px', border:'1px solid rgba(0,0,0,0.07)', fontFamily: i === 2 ? 'monospace' : 'inherit', letterSpacing: i === 2 ? '0.05em' : 'normal', wordBreak:'break-all' }}>
+                        {row.value}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div style={{ fontSize:'11px', fontWeight:600, color:'#94a3b8', textAlign:'center', marginBottom:'16px' }}>
+                  📋 Screenshot or write these down and give to the customer
+                </div>
+
+                <button onClick={() => setCreatedCreds(null)}
+                  style={{ width:'100%', background:'linear-gradient(135deg,#4f46e5,#6366f1)', color:'#fff', border:'none', borderRadius:'14px', padding:'14px', fontSize:'14px', fontWeight:900, cursor:'pointer', boxShadow:'0 6px 20px rgba(79,70,229,0.3)' }}>
+                  Done ✓
+                </button>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </AnimatedPage>
   );

@@ -97,7 +97,8 @@ export const CustomerDashboard: React.FC = () => {
   const fetchData = async (id: string) => {
     setLoading(true);
     try {
-      const { data: prof } = await supabase.from('profiles').select('*').eq('id', id).single();
+      // 1. Fetch profile
+      const { data: prof } = await supabase.from('profiles').select('*').eq('id', id).maybeSingle();
       if (prof) {
         if (!prof.full_name && user?.user_metadata?.full_name) {
           prof.full_name = user.user_metadata.full_name;
@@ -105,19 +106,56 @@ export const CustomerDashboard: React.FC = () => {
         }
         setProfile(prof);
       }
-      let { data: cust } = await supabase.from('customers').select('*').eq('profile_id', id).maybeSingle();
-      if (!cust && user?.email) {
-        const { data: byEmail } = await supabase.from('customers').select('*').eq('email', user.email).maybeSingle();
-        if (byEmail) { await supabase.from('customers').update({ profile_id: id }).eq('id', byEmail.id); cust = byEmail; }
+
+      // 2. Find customer record — try profile_id first, then direct id, then email
+      let cust: any = null;
+
+      const { data: byProfile } = await supabase.from('customers').select('*').eq('profile_id', id).maybeSingle();
+      if (byProfile) {
+        cust = byProfile;
+      } else {
+        // Legacy customers created by manager have customer.id === user.id
+        const { data: byId } = await supabase.from('customers').select('*').eq('id', id).maybeSingle();
+        if (byId) {
+          cust = byId;
+          // Link profile_id for future lookups
+          if (!byId.profile_id) await supabase.from('customers').update({ profile_id: id }).eq('id', id);
+        } else if (user?.email) {
+          const { data: byEmail } = await supabase.from('customers').select('*').eq('email', user.email).maybeSingle();
+          if (byEmail) {
+            cust = byEmail;
+            await supabase.from('customers').update({ profile_id: id }).eq('id', byEmail.id);
+          }
+        }
       }
+
       if (cust) {
         setCustomer(cust);
-        const { data: allOrds } = await supabase.from('orders').select('*').eq('customer_id', cust.id).order('created_at', { ascending: false });
-        if (allOrds) { setOrders(allOrds.slice(0, 6)); setTotalBought(allOrds.reduce((s, o) => s + (o.total_price || 0), 0)); }
+
+        // 3. Fetch transactions (not orders) — this is what the app uses
+        const { data: txns } = await supabase
+          .from('transactions')
+          .select('*')
+          .eq('customer_id', cust.id)
+          .order('date', { ascending: false });
+
+        if (txns && txns.length > 0) {
+          const mapped = txns.map((t: any) => ({
+            ...t,
+            total_price: t.total_price,
+            created_at:  t.date,
+            status:      t.status || 'COMPLETED',
+          }));
+          setOrders(mapped.slice(0, 6));
+          setTotalBought(txns.filter((t:any) => t.type !== 'Return').reduce((s:number,t:any)=>s+(t.total_price||0),0));
+        }
       } else {
+        // Auto-create customer record for brand-new users
         const { data: newCust } = await supabase.from('customers').insert({
-          name: prof?.full_name || user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Member',
-          email: user?.email, profile_id: id, debt_balance: 0
+          name:         prof?.full_name || user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Member',
+          email:        user?.email,
+          profile_id:   id,
+          debt_balance: 0,
         }).select().single();
         if (newCust) setCustomer(newCust);
       }
