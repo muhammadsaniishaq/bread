@@ -202,7 +202,7 @@ export const ManagerCustomers: React.FC = () => {
           notes: c.notes || null,
           debt_balance: c.debtBalance,
           loyalty_points: c.loyaltyPoints,
-          assignedSupplierId: c.assignedSupplierId || null,
+          assigned_supplier_id: c.assignedSupplierId || null,
           pin: c.pin || null,
           profile_id: c.profile_id || null,
           image: c.image || null
@@ -261,7 +261,7 @@ export const ManagerCustomers: React.FC = () => {
           notes: c.notes || null,
           debt_balance: c.debtBalance,
           loyalty_points: c.loyaltyPoints,
-          assignedSupplierId: c.assignedSupplierId || null,
+          assigned_supplier_id: c.assignedSupplierId || null,
           pin: c.pin || null,
           profile_id: c.profile_id || null,
           image: c.image || null

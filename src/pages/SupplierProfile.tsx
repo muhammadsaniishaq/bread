@@ -7,8 +7,8 @@ import {
   User, Mail, Phone, ShieldCheck, Languages, LogOut, AlertTriangle,
   Package, CreditCard, TrendingUp, MessageSquare, HelpCircle,
   ChevronRight, Star, Activity, Building2, Edit2, Check,
-  Banknote, Truck, Users, CircleDollarSign, Landmark, Clock, Sparkles,
-  CopyCheck
+  Banknote, Truck, Users, CircleDollarSign, Landmark, Clock,
+  CopyCheck, Zap
 } from 'lucide-react';
 import { AnimatedPage } from '../components/AnimatedPage';
 import SupplierBottomNav from '../components/SupplierBottomNav';
@@ -65,10 +65,10 @@ export default function SupplierProfile() {
     transactions.filter(t => t.customerId === myAccount?.id || t.sellerId === user?.id),
     [transactions, myAccount, user]);
 
-  // ── Customers assigned to ME only ─────────────────────────────────────────
+  // ── Customers assigned to ME only (manager stores profile_id in assigned_supplier_id) ─────
   const myCustomers = useMemo(() =>
-    customers.filter(c => c.assignedSupplierId === myAccount?.id),
-    [customers, myAccount]);
+    customers.filter(c => c.assignedSupplierId === user?.id),
+    [customers, user]);
 
   // Detect "recently assigned" — customers added in last 7 days based on transactions
   const recentlyAssigned = useMemo(() => {
@@ -379,7 +379,7 @@ export default function SupplierProfile() {
                     <div style={{ background: 'linear-gradient(135deg,rgba(245,158,11,0.08),rgba(251,191,36,0.12))', border: '1.5px solid rgba(245,158,11,0.2)', borderRadius: '20px', padding: '16px 20px', marginBottom: '14px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
                         <div style={{ width: '34px', height: '34px', borderRadius: '11px', background: 'rgba(245,158,11,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#d97706' }}>
-                          <Sparkles size={17} />
+                          <Zap size={17} />
                         </div>
                         <div>
                           <div style={{ fontSize: '13px', fontWeight: 900, color: '#92400e' }}>New Assignments!</div>
@@ -544,7 +544,7 @@ export default function SupplierProfile() {
                           <div style={{ fontSize: '11px', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Assigned Customers</div>
                           {recentlyAssigned.length > 0 && (
                             <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '3px 8px', borderRadius: '8px', background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.2)' }}>
-                              <Sparkles size={10} color="#f59e0b" />
+                              <Zap size={10} color="#f59e0b" />
                               <span style={{ fontSize: '10px', fontWeight: 800, color: '#d97706' }}>{recentlyAssigned.length} new</span>
                             </div>
                           )}
