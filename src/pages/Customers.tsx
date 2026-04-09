@@ -5,6 +5,7 @@ import { AnimatedPage } from '../components/AnimatedPage';
 import { ImageCropper } from '../components/ImageCropper';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from '../store/LanguageContext';
+import { useAuth } from '../store/AuthContext';
 import { Award, Star, Crown, Medal, MessageCircle, X, Camera, Search, UserPlus, ChevronRight, Phone, MapPin, BadgeCheck, CreditCard, Check, QrCode } from 'lucide-react';
 import { QRScanner } from '../components/QRScanner';
 
@@ -37,8 +38,25 @@ const lbl:React.CSSProperties={fontSize:'11px',fontWeight:700,color:T.txt3,textT
 
 export const Customers: React.FC = () => {
   const { customers, addCustomer, recordDebtPayment } = useAppContext();
+  const { user, role } = useAuth();
   const { t } = useTranslation();
   const navigate = useNavigate();
+
+  const isSupplier = role === 'SUPPLIER';
+
+  // ── For suppliers: find their customer record to get their ID ─────────────
+  const mySupplierAccount = useMemo(() =>
+    customers.find(c => c.profile_id === user?.id),
+    [customers, user]);
+
+  // ── Base list: suppliers only see THEIR assigned customers ────────────────
+  const baseCustomers = useMemo(() => {
+    if (!isSupplier) return customers;
+    return customers.filter(c =>
+      (user?.id && c.assignedSupplierId === user.id) ||
+      (mySupplierAccount?.id && c.assignedSupplierId === mySupplierAccount.id)
+    );
+  }, [customers, isSupplier, user, mySupplierAccount]);
 
   const [isAdding, setIsAdding]       = useState(false);
   const [search, setSearch]           = useState('');
@@ -65,14 +83,14 @@ export const Customers: React.FC = () => {
   const [paymentMethod, setPaymentMethod]         = useState<'Cash'|'Transfer'>('Cash');
 
   const filteredCustomers = useMemo(() =>
-    customers.filter(c =>
+    baseCustomers.filter(c =>
       c.name.toLowerCase().includes(search.toLowerCase()) ||
-      c.location.toLowerCase().includes(search.toLowerCase())
+      (c.location || '').toLowerCase().includes(search.toLowerCase())
     ),
-  [customers, search]);
+  [baseCustomers, search]);
 
-  const totalDebt   = customers.reduce((s,c) => s+(c.debtBalance||0), 0);
-  const debtorCount = customers.filter(c => c.debtBalance > 0).length;
+  const totalDebt   = baseCustomers.reduce((s,c) => s+(c.debtBalance||0), 0);
+  const debtorCount = baseCustomers.filter(c => c.debtBalance > 0).length;
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -116,9 +134,9 @@ export const Customers: React.FC = () => {
             <div style={{position:'absolute',top:'-50px',right:'-50px',width:'180px',height:'180px',background:'rgba(255,255,255,0.07)',borderRadius:'50%',pointerEvents:'none'}}/>
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:'20px',position:'relative',zIndex:1}}>
               <div>
-                <p style={{color:'rgba(255,255,255,0.6)',fontSize:'11px',fontWeight:700,letterSpacing:'0.12em',textTransform:'uppercase',margin:'0 0 4px'}}>{t('cust.title')}</p>
+                <p style={{color:'rgba(255,255,255,0.6)',fontSize:'11px',fontWeight:700,letterSpacing:'0.12em',textTransform:'uppercase',margin:'0 0 4px'}}>{isSupplier ? 'My Clients' : t('cust.title')}</p>
                 <div style={{display:'flex',alignItems:'flex-end',gap:'10px'}}>
-                  <span style={{fontSize:'48px',fontWeight:900,color:'#fff',lineHeight:1,letterSpacing:'-0.04em'}}>{customers.length}</span>
+                  <span style={{fontSize:'48px',fontWeight:900,color:'#fff',lineHeight:1,letterSpacing:'-0.04em'}}>{baseCustomers.length}</span>
                   <span style={{fontSize:'13px',color:'rgba(255,255,255,0.6)',fontWeight:700,marginBottom:'8px'}}>clients</span>
                 </div>
               </div>
@@ -129,12 +147,14 @@ export const Customers: React.FC = () => {
               </div>
             </div>
             <div style={{display:'flex',gap:'10px',position:'relative',zIndex:1}}>
-              <button onClick={()=>setIsAdding(!isAdding)}
-                style={{flex:1,display:'flex',alignItems:'center',justifyContent:'center',gap:'7px',background:'rgba(255,255,255,0.15)',border:'1px solid rgba(255,255,255,0.2)',color:'#fff',borderRadius:'14px',padding:'12px',fontWeight:700,fontSize:'13px',cursor:'pointer'}}>
-                {isAdding?<X size={16}/>:<UserPlus size={16}/>} {isAdding?'Cancel':'Add Client'}
-              </button>
+              {!isSupplier && (
+                <button onClick={()=>setIsAdding(!isAdding)}
+                  style={{flex:1,display:'flex',alignItems:'center',justifyContent:'center',gap:'7px',background:'rgba(255,255,255,0.15)',border:'1px solid rgba(255,255,255,0.2)',color:'#fff',borderRadius:'14px',padding:'12px',fontWeight:700,fontSize:'13px',cursor:'pointer'}}>
+                  {isAdding?<X size={16}/>:<UserPlus size={16}/>} {isAdding?'Cancel':'Add Client'}
+                </button>
+              )}
               <button onClick={()=>setShowScanner(true)}
-                style={{display:'flex',alignItems:'center',gap:'7px',background:'rgba(255,255,255,0.92)',color:T.accent,border:'none',borderRadius:'14px',padding:'12px 18px',fontWeight:700,fontSize:'13px',cursor:'pointer',boxShadow:'0 4px 12px rgba(0,0,0,0.15)'}}>
+                style={{flex:isSupplier?1:undefined,display:'flex',alignItems:'center',gap:'7px',background:'rgba(255,255,255,0.92)',color:T.accent,border:'none',borderRadius:'14px',padding:'12px 18px',fontWeight:700,fontSize:'13px',cursor:'pointer',boxShadow:'0 4px 12px rgba(0,0,0,0.15)'}}>
                 <QrCode size={16}/> Scan ID
               </button>
             </div>

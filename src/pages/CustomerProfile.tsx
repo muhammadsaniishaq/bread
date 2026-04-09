@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAppContext } from '../store/AppContext';
+import { useAuth } from '../store/AuthContext';
 import { getTransactionItems } from '../store/types';
 import { AnimatedPage } from '../components/AnimatedPage';
 import { ImageCropper } from '../components/ImageCropper';
@@ -29,7 +30,21 @@ export const CustomerProfile: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { customers, transactions, debtPayments, products, recordDebtPayment, updateCustomer, deleteCustomer } = useAppContext();
+  const { user, role } = useAuth();
+  const isSupplier = role === 'SUPPLIER';
   const customer = customers.find(c => c.id === id);
+
+  // Supplier access guard — can only view their own assigned customers
+  if (isSupplier && customer) {
+    const myAccount = customers.find(c => c.profile_id === user?.id);
+    const isAssigned =
+      (user?.id && customer.assignedSupplierId === user.id) ||
+      (myAccount?.id && customer.assignedSupplierId === myAccount.id);
+    if (!isAssigned) {
+      navigate('/customers');
+      return null;
+    }
+  }
 
   const [amount, setAmount] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<'Cash'|'Transfer'>('Cash');
@@ -105,15 +120,19 @@ export const CustomerProfile: React.FC = () => {
                 <ArrowLeft size={18} color="#fff"/>
               </button>
               <div style={{display:'flex',gap:'8px'}}>
-                <button onClick={()=>setIsEditing(true)} style={{display:'flex',alignItems:'center',gap:'6px',background:'rgba(255,255,255,0.15)',border:'1px solid rgba(255,255,255,0.2)',color:'#fff',borderRadius:'10px',padding:'8px 14px',fontSize:'12px',fontWeight:700,cursor:'pointer'}}>
-                  <Edit2 size={13}/> Edit
-                </button>
-                <button onClick={()=>navigate(`/customer-docs/${customer.id}`)} style={{display:'flex',alignItems:'center',gap:'6px',background:'rgba(255,255,255,0.15)',border:'1px solid rgba(255,255,255,0.2)',color:'#fff',borderRadius:'10px',padding:'8px 14px',fontSize:'12px',fontWeight:700,cursor:'pointer'}}>
-                  <FileText size={13}/> Docs
-                </button>
-                <button onClick={handleDelete} style={{background:'rgba(239,68,68,0.25)',border:'1px solid rgba(239,68,68,0.3)',color:'#fca5a5',borderRadius:'10px',padding:'8px 12px',fontSize:'12px',fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center'}}>
-                  <Trash2 size={14}/>
-                </button>
+                {!isSupplier && (
+                  <>
+                    <button onClick={()=>setIsEditing(true)} style={{display:'flex',alignItems:'center',gap:'6px',background:'rgba(255,255,255,0.15)',border:'1px solid rgba(255,255,255,0.2)',color:'#fff',borderRadius:'10px',padding:'8px 14px',fontSize:'12px',fontWeight:700,cursor:'pointer'}}>
+                      <Edit2 size={13}/> Edit
+                    </button>
+                    <button onClick={()=>navigate(`/customer-docs/${customer.id}`)} style={{display:'flex',alignItems:'center',gap:'6px',background:'rgba(255,255,255,0.15)',border:'1px solid rgba(255,255,255,0.2)',color:'#fff',borderRadius:'10px',padding:'8px 14px',fontSize:'12px',fontWeight:700,cursor:'pointer'}}>
+                      <FileText size={13}/> Docs
+                    </button>
+                    <button onClick={handleDelete} style={{background:'rgba(239,68,68,0.25)',border:'1px solid rgba(239,68,68,0.3)',color:'#fca5a5',borderRadius:'10px',padding:'8px 12px',fontSize:'12px',fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center'}}>
+                      <Trash2 size={14}/>
+                    </button>
+                  </>
+                )}
               </div>
             </div>
             <div style={{display:'flex',alignItems:'center',gap:'16px',position:'relative',zIndex:1}}>

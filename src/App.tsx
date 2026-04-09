@@ -149,11 +149,11 @@ const AppContent: React.FC = () => {
             <Route path="/manager/company" element={<RoleGuard allowedRoles={['MANAGER']}><ManagerCompanyInfo /></RoleGuard>} />
             <Route path="/manager/staff-profiles" element={<RoleGuard allowedRoles={['MANAGER']}><ManagerStaffProfiles /></RoleGuard>} />
             <Route path="/manager/audit-history" element={<RoleGuard allowedRoles={['MANAGER']}><ManagerAuditHistory /></RoleGuard>} />
-          </Route>
 
-          {/* Supplier routes — self-contained with their own SupplierBottomNav */}
-          <Route path="/supplier" element={<RoleGuard allowedRoles={['SUPPLIER']}><SupplierDashboard /></RoleGuard>} />
-          <Route path="/supplier/profile" element={<RoleGuard allowedRoles={['SUPPLIER']}><SupplierProfile /></RoleGuard>} />
+            {/* Supplier routes — inside Layout so SupplierBottomNav renders */}
+            <Route path="/supplier" element={<RoleGuard allowedRoles={['SUPPLIER']}><SupplierDashboard /></RoleGuard>} />
+            <Route path="/supplier/profile" element={<RoleGuard allowedRoles={['SUPPLIER']}><SupplierProfile /></RoleGuard>} />
+          </Route>
 
             <Route path="/store" element={<RoleGuard allowedRoles={['STORE_KEEPER']}><StoreDashboard /></RoleGuard>} />
             <Route path="/store/dispatch" element={<RoleGuard allowedRoles={['STORE_KEEPER']}><StoreDispatch /></RoleGuard>} />
