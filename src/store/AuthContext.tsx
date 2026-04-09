@@ -21,25 +21,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const fetchRoleFromProfile = async (u: User) => {
     try {
-      const { data, error } = await supabase.from('profiles').select('role').eq('id', u.id).single();
+      const { data, error } = await supabase.from('profiles').select('role, full_name, phone, username').eq('id', u.id).single();
       if (error) throw error;
-      
-      if (data && data.role) {
-        setRole(data.role as UserRole);
-      } else {
-        // Only fallback to metadata if profile is completely missing
-        setRole((u.user_metadata?.role as UserRole) || 'CUSTOMER');
+
+      const resolvedRole = (data?.role as UserRole) || (u.user_metadata?.role as UserRole) || 'CUSTOMER';
+      setRole(resolvedRole);
+
+      // Auto-create customers row for CUSTOMER role users if missing
+      if (resolvedRole === 'CUSTOMER') {
+        await supabase.from('customers').upsert({
+          id:             u.id,
+          profile_id:     u.id,
+          name:           data?.full_name || u.user_metadata?.full_name || u.email?.split('@')[0] || 'Customer',
+          email:          u.email || '',
+          username:       data?.username || u.user_metadata?.username || '',
+          phone:          data?.phone || u.user_metadata?.phone || '',
+          debt_balance:   0,
+          loyalty_points: 0,
+        }, { onConflict: 'profile_id' });
       }
     } catch (err: any) {
       console.error("AuthContext: Failed to fetch role", err);
-      
-      // If it's a real Auth user but their profile is missing or hidden by RLS
       if (err.message?.includes("PGRST116") || err.code === 'PGRST116') {
-         console.warn("AuthContext: Profile row not found for this UID. Defaulting to metadata.");
+         console.warn("AuthContext: Profile row not found. Defaulting to metadata.");
          setRole((u.user_metadata?.role as UserRole) || 'CUSTOMER');
       } else {
-         // Show a one-time structural alert for the developer/manager
-         alert("Role Sync Error: " + (err.message || "RLS Policy Loop Detected"));
          setRole('CUSTOMER');
       }
     } finally {

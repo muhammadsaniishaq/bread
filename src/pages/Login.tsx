@@ -57,7 +57,6 @@ export const Login: React.FC = () => {
 
         if (!rpcErr && legacySession) {
           const resolvedRole = (legacySession.role as UserRole) || 'CUSTOMER';
-          alert('Login Bridge Detected Role: ' + resolvedRole);
           const manualSession = {
             id: legacySession.id, email: legacySession.email,
             user_metadata: { full_name: legacySession.name, role: resolvedRole },
@@ -65,7 +64,7 @@ export const Login: React.FC = () => {
           } as any;
           localStorage.removeItem('bakery_manual_session');
           setManualUser(manualSession, resolvedRole);
-          setSuccessMsg('Authentication successful! Welcome back.');
+          setSuccessMsg('Welcome back! Logging you in...');
           return;
         }
 
@@ -86,10 +85,26 @@ export const Login: React.FC = () => {
         const { error, data } = await supabase.auth.signUp({ email: email.trim().toLowerCase(), password, options: { data: metadata } });
         if (error) throw error;
 
+        // ── Create a matching customers row so the user appears in the system ──
+        if (data?.user?.id) {
+          await supabase.from('customers').upsert({
+            id:           data.user.id,
+            profile_id:   data.user.id,
+            name:         fullName.trim(),
+            email:        email.trim().toLowerCase(),
+            username:     normalizedUsername,
+            phone:        phone.trim(),
+            location:     address.trim(),
+            debt_balance:   0,
+            loyalty_points: 0,
+            assigned_supplier_id: null,
+          }, { onConflict: 'profile_id' });
+        }
+
         if (data?.session) {
-          setSuccessMsg('Success! Account Created. Welcome to the portal.');
+          setSuccessMsg('✅ Account created! Welcome to Best Special Bread.');
         } else {
-          setSuccessMsg('Registration successful! Please check your email for the confirmation link.');
+          setSuccessMsg('✅ Account created! Please check your email to confirm, then log in.');
         }
       }
     } catch (err: any) {
