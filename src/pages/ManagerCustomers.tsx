@@ -191,36 +191,12 @@ export const ManagerCustomers: React.FC = () => {
        };
 
        await addCustomer(newCust);
-       
-       const toDB = (c: any) => ({
-          id: c.id,
-          name: c.name,
-          phone: c.phone || null,
-          email: c.email || null,
-          username: c.username || null,
-          password: c.password || null,
-          location: c.location || null,
-          notes: c.notes || null,
-          debt_balance: c.debtBalance,
-          loyalty_points: c.loyaltyPoints,
-          assigned_supplier_id: c.assignedSupplierId || null,
-          pin: c.pin || null,
-          profile_id: c.profile_id || null,
-          image: c.image || null
-       });
-
-       const { error: upErr } = await supabase.from('customers').upsert(toDB(newCust));
-       if (upErr) throw upErr;
 
        setFName(''); setFPhone(''); setFEmail(''); setFUsername(''); setFPassword(''); setFLocation(''); setFSup(''); setFPin(''); setFNote(''); setIsAdding(false);
 
        // Show credentials modal
        const loginId = fUsername || fEmail || fPhone;
-       if (loginId && fPassword) {
-         setCreatedCreds({ name: fName, login: loginId, password: fPassword });
-       } else {
-         setCreatedCreds({ name: fName, login: fUsername || fEmail || fPhone || '—', password: fPassword || '(no password set)' });
-       }
+       setCreatedCreds({ name: fName, login: loginId || '—', password: fPassword || '(no password set)' });
      } catch (err: any) {
         console.error(err);
         alert("Sync Error: " + (err.message || JSON.stringify(err)));

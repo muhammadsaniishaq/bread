@@ -83,11 +83,13 @@ const mapExpense = (r: any): Expense => ({
 
 // ─── App type → Supabase row helpers ─────────────────────────────────────────
 const customerRow = (c: Customer) => ({
-  id: c.id, name: c.name, phone: c.phone || '', email: c.email || '',
-  username: c.username || '', location: c.location || '', notes: c.notes || '',
+  id: c.id, name: c.name, phone: c.phone || '', email: (c as any).email || '',
+  username: (c as any).username || '', location: c.location || '', notes: c.notes || '',
   profile_id: c.profile_id || null, debt_balance: c.debtBalance || 0,
+  loyalty_points: c.loyaltyPoints || 0,
   assigned_supplier_id: c.assignedSupplierId || null,
-  pin: c.pin || null, password: c.password || null,
+  pin: c.pin || null, password: (c as any).password || null,
+  image: c.image || null,
 });
 
 // ─── Settings (localStorage only — it is config, not data) ───────────────────
@@ -207,9 +209,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   // ─── Customers ──────────────────────────────────────────────────────────────
-  const addCustomer    = async (c: Customer) => { await supabase.from('customers').upsert(customerRow(c)); await refreshData(); };
-  const updateCustomer = async (c: Customer) => { await supabase.from('customers').update(customerRow(c)).eq('id', c.id); await refreshData(); };
-  const deleteCustomer = async (id: string)  => { await supabase.from('customers').delete().eq('id', id); await refreshData(); };
+  const addCustomer = async (c: Customer) => {
+    const { error } = await supabase.from('customers').upsert(customerRow(c));
+    if (error) { console.error('addCustomer failed:', error); throw new Error(error.message); }
+    await refreshData();
+  };
+  const updateCustomer = async (c: Customer) => {
+    const { error } = await supabase.from('customers').update(customerRow(c)).eq('id', c.id);
+    if (error) { console.error('updateCustomer failed:', error); throw new Error(error.message); }
+    await refreshData();
+  };
+  const deleteCustomer = async (id: string) => {
+    await supabase.from('customers').delete().eq('id', id);
+    await refreshData();
+  };
 
   // ─── Record Sale ─────────────────────────────────────────────────────────────
   const recordSale = async (tx: Transaction) => {
