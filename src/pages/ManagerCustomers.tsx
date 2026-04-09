@@ -138,27 +138,61 @@ export const ManagerCustomers: React.FC = () => {
      setLoading(true);
      try {
        if (fEmail && fPassword) {
-         // ── PATH A: Create real Supabase Auth account via SQL RPC ──────────
-         // This creates auth.users + profiles + customers all at once
-         const { data: result, error: rpcErr } = await supabase.rpc('create_customer_account', {
-           p_email:    fEmail.trim().toLowerCase(),
-           p_password: fPassword,
-           p_name:     fName.trim(),
-           p_phone:    fPhone.trim(),
-           p_username: fUsername.trim().toLowerCase() || fEmail.split('@')[0].toLowerCase(),
-           p_location: fLocation.trim(),
+         // ── PATH A: Create real Supabase auth account ────────────────────
+         // Save manager's current session so we can restore it after signUp
+         const { data: { session: managerSession } } = await supabase.auth.getSession();
+
+         const { data: signUpData, error: signUpErr } = await supabase.auth.signUp({
+           email:    fEmail.trim().toLowerCase(),
+           password: fPassword,
+           options: {
+             data: {
+               role:      'CUSTOMER',
+               full_name: fName.trim(),
+               phone:     fPhone.trim(),
+               username:  fUsername.trim().toLowerCase() || fEmail.split('@')[0].toLowerCase(),
+             },
+           },
          });
 
-         if (rpcErr) throw new Error(rpcErr.message);
+         if (signUpErr) throw new Error(signUpErr.message);
 
-         // Also set assigned supplier and pin via update
-         if (result?.id && (fSup || fPin || fNote)) {
-           await supabase.from('customers').update({
-             assigned_supplier_id: fSup || null,
-             pin:   fPin  || null,
-             notes: fNote || null,
-           }).eq('id', result.id);
+         const newUserId = signUpData.user?.id;
+         if (!newUserId) throw new Error('Failed to get new user ID from signUp');
+
+         // ── Restore manager session immediately ──────────────────────────
+         if (managerSession) {
+           await supabase.auth.setSession({
+             access_token:  managerSession.access_token,
+             refresh_token: managerSession.refresh_token,
+           });
          }
+
+         // ── Create profile row for new customer ──────────────────────────
+         await supabase.from('profiles').upsert({
+           id:        newUserId,
+           full_name: fName.trim(),
+           phone:     fPhone.trim(),
+           username:  fUsername.trim().toLowerCase() || fEmail.split('@')[0].toLowerCase(),
+           role:      'CUSTOMER',
+         });
+
+         // ── Create customer record linked to auth user ───────────────────
+         await supabase.from('customers').upsert({
+           id:                   newUserId,
+           profile_id:           newUserId,
+           name:                 fName.trim(),
+           email:                fEmail.trim().toLowerCase(),
+           phone:                fPhone.trim(),
+           username:             fUsername.trim().toLowerCase() || fEmail.split('@')[0].toLowerCase(),
+           location:             fLocation.trim(),
+           notes:                fNote.trim() || null,
+           debt_balance:         0,
+           loyalty_points:       0,
+           assigned_supplier_id: fSup  || null,
+           pin:                  fPin  || null,
+           password:             null, // real auth — no plaintext password needed
+         });
 
          setCreatedCreds({
            name:     fName,
@@ -167,23 +201,22 @@ export const ManagerCustomers: React.FC = () => {
          });
 
        } else {
-         // ── PATH B: No email — create customer record only (legacy login) ──
-         // Customer can login via verify_customer_credentials RPC (username + password)
-         const newId = Date.now().toString();
+         // ── PATH B: No email — legacy record only ────────────────────────
+         // Customer can login via verify_customer_credentials RPC
          const newCust: any = {
-           id:               newId,
-           name:             fName,
-           phone:            fPhone,
-           email:            fEmail,
-           username:         fUsername,
-           password:         fPassword,
-           location:         fLocation,
-           notes:            fNote,
-           debtBalance:      0,
-           loyaltyPoints:    0,
+           id:                 Date.now().toString(),
+           name:               fName,
+           phone:              fPhone,
+           email:              fEmail,
+           username:           fUsername,
+           password:           fPassword,
+           location:           fLocation,
+           notes:              fNote,
+           debtBalance:        0,
+           loyaltyPoints:      0,
            assignedSupplierId: fSup || undefined,
-           pin:              fPin  || undefined,
-           profile_id:       undefined,
+           pin:                fPin || undefined,
+           profile_id:         undefined,
          };
          await addCustomer(newCust);
 
