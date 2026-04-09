@@ -121,6 +121,7 @@ export default function SupplierProfile() {
     try {
       const { error } = await supabase.from('profiles').update({
         full_name:      editName,
+        phone:          editPhone,
         account_number: editAcctNo,
         bank_name:      editBankName,
         avatar_url:     editImage || null,
@@ -128,8 +129,19 @@ export default function SupplierProfile() {
 
       if (error) throw error;
 
+      // Also save phone + name to the linked customer record (if exists)
       if (myAccount) {
         await updateCustomer({ ...myAccount, name: editName, phone: editPhone });
+      } else if (editPhone) {
+        // Fallback: upsert a minimal customer record linked to this profile
+        await supabase.from('customers').upsert({
+          id: user.id,
+          name: editName,
+          phone: editPhone,
+          profile_id: user.id,
+          debt_balance: 0,
+          loyalty_points: 0,
+        }, { onConflict: 'profile_id' });
       }
 
       setProfile((p: any) => ({
