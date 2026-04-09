@@ -121,7 +121,6 @@ export default function SupplierProfile() {
     try {
       const { error } = await supabase.from('profiles').update({
         full_name:      editName,
-        phone:          editPhone,
         account_number: editAcctNo,
         bank_name:      editBankName,
         avatar_url:     editImage || null,
@@ -147,7 +146,6 @@ export default function SupplierProfile() {
       setProfile((p: any) => ({
         ...p,
         full_name:      editName,
-        phone:          editPhone,
         account_number: editAcctNo,
         bank_name:      editBankName,
         avatar_url:     editImage || null,
@@ -411,7 +409,7 @@ export default function SupplierProfile() {
                         {[
                           { icon: User,      label: 'Full Name',    val: profile?.full_name || 'Not set', color: '#4f46e5', bg: 'rgba(79,70,229,0.08)' },
                           { icon: Mail,      label: 'Email',        val: user?.email || 'N/A',            color: '#0ea5e9', bg: 'rgba(14,165,233,0.08)' },
-                          { icon: Phone,     label: 'Phone',        val: profile?.phone || 'Not set',     color: '#10b981', bg: 'rgba(16,185,129,0.08)' },
+                          { icon: Phone,     label: 'Phone',        val: profile?.phone || myAccount?.phone || editPhone || 'Not set', color: '#10b981', bg: 'rgba(16,185,129,0.08)' },
                           { icon: Building2, label: 'Account Type', val: 'Supplier Account',              color: '#8b5cf6', bg: 'rgba(139,92,246,0.08)' },
                           { icon: Activity,  label: 'Transactions', val: String(myTxns.length),           color: '#f59e0b', bg: 'rgba(245,158,11,0.08)' },
                         ].map((row, i, arr) => (

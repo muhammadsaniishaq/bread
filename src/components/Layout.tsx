@@ -17,10 +17,18 @@ export const Layout: React.FC = () => {
     );
   }
 
+  // SUPPLIER has its own SupplierBottomNav rendered per-page
+  if (role === 'SUPPLIER') {
+    return (
+      <div className="bg-gray-50 dark:bg-zinc-950 min-h-screen">
+        <Outlet />
+      </div>
+    );
+  }
+
   return (
     <div className="bg-gray-50 dark:bg-zinc-950 min-h-screen">
       <Outlet />
-      {role === 'SUPPLIER' && <Fab />}
       {role === 'STORE_KEEPER' && <Fab />}
       <BottomNav />
     </div>
