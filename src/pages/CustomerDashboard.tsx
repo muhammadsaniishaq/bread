@@ -131,13 +131,16 @@ export const CustomerDashboard: React.FC = () => {
 
       if (cust) {
         setCustomer(cust);
+        console.log('CustomerDashboard: Customer record linked successfully.');
 
         // 3. Fetch transactions (not orders) — this is what the app uses
-        const { data: txns } = await supabase
+        const { data: txns, error: txnErr } = await supabase
           .from('transactions')
           .select('*')
           .eq('customer_id', cust.id)
           .order('date', { ascending: false });
+
+        if (txnErr) console.error('CustomerDashboard: Error fetching transactions:', txnErr);
 
         if (txns && txns.length > 0) {
           const mapped = txns.map((t: any) => ({
@@ -150,16 +153,27 @@ export const CustomerDashboard: React.FC = () => {
           setTotalBought(txns.filter((t:any) => t.type !== 'Return').reduce((s:number,t:any)=>s+(t.total_price||0),0));
         }
       } else {
+        console.warn('CustomerDashboard: Customer record not found. Attempting sync...');
         // Auto-create customer record for brand-new users
-        const { data: newCust } = await supabase.from('customers').insert({
+        const { data: newCust, error: insErr } = await supabase.from('customers').insert({
           name:         prof?.full_name || user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Member',
           email:        user?.email,
           profile_id:   id,
           debt_balance: 0,
         }).select().single();
-        if (newCust) setCustomer(newCust);
+        
+        if (insErr) {
+          console.error('CustomerDashboard: Critical Error - Sync failed (RLS issue?):', insErr);
+        }
+
+        if (newCust) {
+          setCustomer(newCust);
+          console.log('CustomerDashboard: Customer record created and linked.');
+        }
       }
-    } catch (e) { console.error(e); }
+    } catch (e) {
+      console.error('CustomerDashboard: FetchData crashed:', e);
+    }
     setLoading(false);
   };
 

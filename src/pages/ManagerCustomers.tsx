@@ -169,16 +169,18 @@ export const ManagerCustomers: React.FC = () => {
          }
 
          // ── Create profile row for new customer ──────────────────────────
-         await supabase.from('profiles').upsert({
+         const { error: profErr } = await supabase.from('profiles').upsert({
            id:        newUserId,
            full_name: fName.trim(),
+           email:     fEmail.trim().toLowerCase(),
            phone:     fPhone.trim(),
            username:  fUsername.trim().toLowerCase() || fEmail.split('@')[0].toLowerCase(),
            role:      'CUSTOMER',
          });
+         if (profErr) console.error('ManagerCustomers: Profile upsert failed:', profErr);
 
          // ── Create customer record linked to auth user ───────────────────
-         await supabase.from('customers').upsert({
+         const { error: custErr } = await supabase.from('customers').upsert({
            id:                   newUserId,
            profile_id:           newUserId,
            name:                 fName.trim(),
@@ -191,8 +193,9 @@ export const ManagerCustomers: React.FC = () => {
            loyalty_points:       0,
            assigned_supplier_id: fSup  || null,
            pin:                  fPin  || null,
-           password:             null, // real auth — no plaintext password needed
+           password:             null,
          });
+         if (custErr) console.error('ManagerCustomers: Customer upsert failed:', custErr);
 
          setCreatedCreds({
            name:     fName,
