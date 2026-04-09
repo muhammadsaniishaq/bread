@@ -9,7 +9,6 @@ import {
   MessageSquare, HelpCircle, ChevronRight
 } from 'lucide-react';
 import { AnimatedPage } from '../components/AnimatedPage';
-import SupplierBottomNav from '../components/SupplierBottomNav';
 import { motion } from 'framer-motion';
 
 const T = {
@@ -231,7 +230,6 @@ export default function SupplierMore() {
 
         </div>
 
-        <SupplierBottomNav />
       </div>
     </AnimatedPage>
   );

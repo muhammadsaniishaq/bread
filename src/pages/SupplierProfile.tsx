@@ -11,7 +11,6 @@ import {
   Copy, Camera
 } from 'lucide-react';
 import { AnimatedPage } from '../components/AnimatedPage';
-import SupplierBottomNav from '../components/SupplierBottomNav';
 import { ImageCropModal } from '../components/ImageCropModal';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -615,7 +614,6 @@ export default function SupplierProfile() {
           </AnimatePresence>
         </div>
       </div>
-      <SupplierBottomNav />
       <ImageCropModal
         isOpen={showCropper}
         imageSrc={cropSrc}

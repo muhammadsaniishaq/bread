@@ -2,6 +2,7 @@ import React from 'react';
 import { Outlet } from 'react-router-dom';
 import BottomNav from './BottomNav';
 import ManagerBottomNav from './ManagerBottomNav';
+import SupplierBottomNav from './SupplierBottomNav';
 import { Fab } from './Fab';
 import { useAuth } from '../store/AuthContext';
 
@@ -17,11 +18,12 @@ export const Layout: React.FC = () => {
     );
   }
 
-  // SUPPLIER has its own SupplierBottomNav rendered per-page
+  // Supplier — use their own 6-tab nav across all routes
   if (role === 'SUPPLIER') {
     return (
       <div className="bg-gray-50 dark:bg-zinc-950 min-h-screen">
         <Outlet />
+        <SupplierBottomNav />
       </div>
     );
   }

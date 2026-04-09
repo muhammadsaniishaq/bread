@@ -5,7 +5,6 @@ import { useTranslation } from '../store/LanguageContext';
 import { useNavigate } from 'react-router-dom';
 import { getTransactionItems } from '../store/types';
 import { AnimatedPage } from '../components/AnimatedPage';
-import SupplierBottomNav from '../components/SupplierBottomNav';
 import {
   AlertTriangle, Package, CreditCard, TrendingUp, TrendingDown,
   Clock, ChevronRight, ShoppingCart, RefreshCw, Wallet,
@@ -295,7 +294,6 @@ export default function SupplierDashboard() {
           )}
         </motion.div>
       </div>
-      <SupplierBottomNav />
     </AnimatedPage>
   );
 }
