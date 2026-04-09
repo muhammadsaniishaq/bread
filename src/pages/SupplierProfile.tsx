@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { AnimatedPage } from '../components/AnimatedPage';
 import SupplierBottomNav from '../components/SupplierBottomNav';
+import { ImageCropModal } from '../components/ImageCropModal';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const fmt = (v: number) => '₦' + (v || 0).toLocaleString();
@@ -33,6 +34,8 @@ export default function SupplierProfile() {
   const [signOutConfirm, setSignOutConfirm] = useState(false);
   const [activeTab,      setActiveTab]      = useState<'overview'|'customers'>('overview');
   const [copied,         setCopied]         = useState(false);
+  const [showCropper,    setShowCropper]    = useState(false);
+  const [cropSrc,        setCropSrc]        = useState('');
 
   // ── Fetch profile ──────────────────────────────────────────────────────────
   useEffect(() => {
@@ -98,9 +101,17 @@ export default function SupplierProfile() {
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onloadend = () => setEditImage(reader.result as string);
+    reader.onloadend = () => {
+      setCropSrc(reader.result as string);
+      setShowCropper(true);
+    };
     reader.readAsDataURL(file);
     if (e.target) e.target.value = '';
+  };
+
+  const handleCropComplete = (base64: string) => {
+    setEditImage(base64);
+    setShowCropper(false);
   };
 
   // ── Save profile ───────────────────────────────────────────────────────────
@@ -110,7 +121,6 @@ export default function SupplierProfile() {
     try {
       const { error } = await supabase.from('profiles').update({
         full_name:      editName,
-        phone:          editPhone,
         account_number: editAcctNo,
         bank_name:      editBankName,
         avatar_url:     editImage || null,
@@ -596,6 +606,12 @@ export default function SupplierProfile() {
         </div>
       </div>
       <SupplierBottomNav />
+      <ImageCropModal
+        isOpen={showCropper}
+        imageSrc={cropSrc}
+        onClose={() => setShowCropper(false)}
+        onCropCompleteAction={handleCropComplete}
+      />
     </AnimatedPage>
   );
 }
