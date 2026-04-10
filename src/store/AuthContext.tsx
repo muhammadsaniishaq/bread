@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase';
 import type { User } from '@supabase/supabase-js';
 
 export type UserRole = 'MANAGER' | 'STORE_KEEPER' | 'SUPPLIER' | 'CUSTOMER';
+const VALID_ROLES: UserRole[] = ['MANAGER', 'STORE_KEEPER', 'SUPPLIER', 'CUSTOMER'];
 
 interface AuthContextType {
   user: User | null;
@@ -19,35 +20,75 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [role, setRole] = useState<UserRole | null>(null);
   const [loading, setLoading] = useState(true);
 
+  /**
+   * ROLE RESOLUTION PRIORITY:
+   * 1. profiles table (most authoritative — set by manager)
+   * 2. user_metadata.role (set at registration / manual session)
+   * 3. Default = 'CUSTOMER' (only for confirmed auth users with no other signal)
+   */
   const fetchRoleFromProfile = async (u: User) => {
+    console.log(`AuthContext: Resolving role for ${u.email} (${u.id})...`);
     try {
-      const { data, error } = await supabase.from('profiles').select('role, full_name, phone, username').eq('id', u.id).single();
-      if (error) throw error;
+      // --- Priority 1: try profiles table ---
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('role, full_name, phone, username')
+        .eq('id', u.id)
+        .maybeSingle();
 
-      const resolvedRole = (data?.role as UserRole) || (u.user_metadata?.role as UserRole) || 'CUSTOMER';
-      setRole(resolvedRole);
+      if (data?.role && VALID_ROLES.includes(data.role as UserRole)) {
+        const resolvedRole = data.role as UserRole;
+        console.log(`AuthContext: Level 1 Resolution (Profiles Table) -> ${resolvedRole}`);
+        setRole(resolvedRole);
 
-      // Auto-create customers row for CUSTOMER role users if missing
-      if (resolvedRole === 'CUSTOMER') {
-        await supabase.from('customers').upsert({
-          id:             u.id,
-          profile_id:     u.id,
-          name:           data?.full_name || u.user_metadata?.full_name || u.email?.split('@')[0] || 'Customer',
-          email:          u.email || '',
-          username:       data?.username || u.user_metadata?.username || '',
-          phone:          data?.phone || u.user_metadata?.phone || '',
-          debt_balance:   0,
-          loyalty_points: 0,
-        }, { onConflict: 'profile_id' });
+        // Auto-sync customers row only for CUSTOMER role
+        if (resolvedRole === 'CUSTOMER') {
+          await supabase.from('customers').upsert({
+            id:             u.id,
+            profile_id:     u.id,
+            name:           data.full_name || u.user_metadata?.full_name || u.email?.split('@')[0] || 'Customer',
+            email:          u.email || '',
+            username:       data.username || u.user_metadata?.username || '',
+            phone:          data.phone || u.user_metadata?.phone || '',
+            debt_balance:   0,
+            loyalty_points: 0,
+          }, { onConflict: 'profile_id' });
+        }
+        setLoading(false);
+        return;
       }
+
+      if (error) {
+        console.error('AuthContext: profiles query error:', error.message);
+      }
+
+      // --- Priority 2: fall back to user_metadata ---
+      const metaRole = u.user_metadata?.role as UserRole | undefined;
+      console.log(`AuthContext: Metadata Role Signal -> ${metaRole}`);
+      if (metaRole && VALID_ROLES.includes(metaRole)) {
+        console.log(`AuthContext: Level 2 Resolution (User Metadata) -> ${metaRole}`);
+        setRole(metaRole);
+
+        // Auto-create profile row so next login hits Priority 1
+        await supabase.from('profiles').upsert({
+          id:        u.id,
+          full_name: u.user_metadata?.full_name || u.email?.split('@')[0] || '',
+          username:  u.user_metadata?.username  || u.email?.split('@')[0] || '',
+          email:     u.email || '',
+          role:      metaRole,
+        }, { onConflict: 'id', ignoreDuplicates: false });
+
+        setLoading(false);
+        return;
+      }
+
+      // --- Priority 3: final fallback ---
+      console.warn(`AuthContext: Level 3 Resolution (Fallback) -> CUSTOMER`);
+      setRole('CUSTOMER');
     } catch (err: any) {
-      console.error("AuthContext: Failed to fetch role", err);
-      if (err.message?.includes("PGRST116") || err.code === 'PGRST116') {
-         console.warn("AuthContext: Profile row not found. Defaulting to metadata.");
-         setRole((u.user_metadata?.role as UserRole) || 'CUSTOMER');
-      } else {
-         setRole('CUSTOMER');
-      }
+      console.error('AuthContext: Unexpected error resolving role:', err);
+      const metaRole = u.user_metadata?.role as UserRole | undefined;
+      setRole(VALID_ROLES.includes(metaRole as any) ? (metaRole as UserRole) : 'CUSTOMER');
     } finally {
       setLoading(false);
     }
@@ -55,25 +96,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     const initAuth = async () => {
-      // 1. Check for Manual Session First (Local Storage)
       const manualData = localStorage.getItem('bakery_manual_session');
       if (manualData) {
         try {
           const { user: mUser, role: mRole } = JSON.parse(manualData);
-          setUser(mUser);
-          setRole(mRole);
-          setLoading(false);
-          return;
-        } catch (e) {
-          localStorage.removeItem('bakery_manual_session');
-        }
+          if (mUser && mRole && VALID_ROLES.includes(mRole)) {
+            setUser(mUser);
+            setRole(mRole);
+            setLoading(false);
+            return;
+          }
+        } catch (e) {}
+        localStorage.removeItem('bakery_manual_session');
       }
 
-      // 2. Fallback to standard Supabase Session
       const { data: { session } } = await supabase.auth.getSession();
       setUser(session?.user ?? null);
       if (session?.user) {
-        fetchRoleFromProfile(session.user);
+        await fetchRoleFromProfile(session.user);
       } else {
         setRole(null);
         setLoading(false);
@@ -83,17 +123,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     initAuth();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      // If we already have a manual session, don't let Supabase overwrite it unless it's a real login
       if (_event === 'SIGNED_IN' || _event === 'SIGNED_OUT') {
-         localStorage.removeItem('bakery_manual_session');
-         setUser(session?.user ?? null);
-         if (session?.user) {
-           setLoading(true);
-           fetchRoleFromProfile(session.user);
-         } else {
-           setRole(null);
-           setLoading(false);
-         }
+        localStorage.removeItem('bakery_manual_session');
+        setUser(session?.user ?? null);
+        if (session?.user) {
+          setLoading(true);
+          fetchRoleFromProfile(session.user);
+        } else {
+          setRole(null);
+          setLoading(false);
+        }
       }
     });
 

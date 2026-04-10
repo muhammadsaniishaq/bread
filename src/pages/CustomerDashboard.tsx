@@ -88,6 +88,7 @@ export const CustomerDashboard: React.FC = () => {
   const [totalBought, setTotalBought] = useState(0);
   const [loading, setLoading] = useState(true);
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
+  const [syncError, setSyncError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) { navigate('/login'); return; }
@@ -96,9 +97,15 @@ export const CustomerDashboard: React.FC = () => {
 
   const fetchData = async (id: string) => {
     setLoading(true);
+    setSyncError(null);
     try {
       // 1. Fetch profile
-      const { data: prof } = await supabase.from('profiles').select('*').eq('id', id).maybeSingle();
+      const { data: prof, error: profErr } = await supabase.from('profiles').select('*').eq('id', id).maybeSingle();
+      if (profErr) {
+        console.error('CustomerDashboard: Profile fetch error:', profErr.message);
+        setSyncError(`Profile: ${profErr.message}`);
+      }
+      
       if (prof) {
         if (!prof.full_name && user?.user_metadata?.full_name) {
           prof.full_name = user.user_metadata.full_name;
@@ -107,18 +114,21 @@ export const CustomerDashboard: React.FC = () => {
         setProfile(prof);
       }
 
-      // 2. Find customer record — try profile_id first, then direct id, then email
+      // 2. Find customer record
       let cust: any = null;
 
-      const { data: byProfile } = await supabase.from('customers').select('*').eq('profile_id', id).maybeSingle();
+      const { data: byProfile, error: custErr } = await supabase.from('customers').select('*').eq('profile_id', id).maybeSingle();
+      if (custErr) {
+        console.error('CustomerDashboard: Customer fetch error:', custErr.message);
+        setSyncError(`Customer Fetch: ${custErr.message}`);
+      }
+
       if (byProfile) {
         cust = byProfile;
       } else {
-        // Legacy customers created by manager have customer.id === user.id
         const { data: byId } = await supabase.from('customers').select('*').eq('id', id).maybeSingle();
         if (byId) {
           cust = byId;
-          // Link profile_id for future lookups
           if (!byId.profile_id) await supabase.from('customers').update({ profile_id: id }).eq('id', id);
         } else if (user?.email) {
           const { data: byEmail } = await supabase.from('customers').select('*').eq('email', user.email).maybeSingle();
@@ -131,9 +141,7 @@ export const CustomerDashboard: React.FC = () => {
 
       if (cust) {
         setCustomer(cust);
-        console.log('CustomerDashboard: Customer record linked successfully.');
-
-        // 3. Fetch transactions (not orders) — this is what the app uses
+        // ... rest of transaction fetching
         const { data: txns, error: txnErr } = await supabase
           .from('transactions')
           .select('*')
@@ -154,7 +162,6 @@ export const CustomerDashboard: React.FC = () => {
         }
       } else {
         console.warn('CustomerDashboard: Customer record not found. Attempting sync...');
-        // Auto-create customer record for brand-new users
         const { data: newCust, error: insErr } = await supabase.from('customers').insert({
           name:         prof?.full_name || user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Member',
           email:        user?.email,
@@ -163,16 +170,17 @@ export const CustomerDashboard: React.FC = () => {
         }).select().single();
         
         if (insErr) {
-          console.error('CustomerDashboard: Critical Error - Sync failed (RLS issue?):', insErr);
+          console.error('CustomerDashboard: Critical Error - Sync failed:', insErr.message);
+          setSyncError(`Sync Internal: ${insErr.message}`);
         }
 
         if (newCust) {
           setCustomer(newCust);
-          console.log('CustomerDashboard: Customer record created and linked.');
         }
       }
-    } catch (e) {
+    } catch (e: any) {
       console.error('CustomerDashboard: FetchData crashed:', e);
+      setSyncError(`Crash: ${e.message || 'Unknown Error'}`);
     }
     setLoading(false);
   };
@@ -191,7 +199,15 @@ export const CustomerDashboard: React.FC = () => {
         <Zap size={36} color={T.danger} />
       </div>
       <h2 style={{ color: T.ink, fontSize: '20px', fontWeight: 900, margin: '0 0 8px' }}>Profile Unlinked</h2>
-      <p style={{ color: T.txt2, fontSize: '13px', margin: '0 0 28px' }}>Account ({user?.email}) not linked.<br />Contact management to fix this.</p>
+      <p style={{ color: T.txt2, fontSize: '13px', margin: '0 0 8px' }}>Account ({user?.email}) not linked.</p>
+      
+      {syncError && (
+        <div style={{ padding: '10px', borderRadius: '10px', background: 'rgba(0,0,0,0.05)', color: T.danger, fontSize: '11px', fontWeight: 700, marginBottom: '20px', maxWidth: '300px' }}>
+          Diagnostic: {syncError}
+        </div>
+      )}
+      
+      <p style={{ color: T.txt2, fontSize: '13px', margin: '0 0 28px' }}>Contact management to fix this.</p>
       <motion.button whileTap={{ scale: 0.96 }} onClick={() => { signOut(); navigate('/login'); }}
         style={{ padding: '14px 28px', borderRadius: '14px', background: T.primary, color: '#fff', border: 'none', fontWeight: 900, fontSize: '14px', cursor: 'pointer', boxShadow: T.shadow }}>
         Sign Out
