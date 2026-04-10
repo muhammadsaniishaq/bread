@@ -241,14 +241,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     if (tx.status === 'PENDING_STORE') { await refreshData(); return; }
 
-    // Update customer debt balance
+    // Update customer debt balance and loyalty points
     const targetId = tx.origin === 'POS_SUPPLIER' ? tx.sellerId : tx.customerId;
     const customer = customers.find(c => c.id === targetId);
-    if (customer && (tx.type === 'Debt' || tx.origin === 'POS_SUPPLIER')) {
-      const debtDelta = tx.origin === 'POS_SUPPLIER' ? tx.totalPrice * 0.9 : tx.totalPrice;
-      await supabase.from('customers')
-        .update({ debt_balance: (customer.debtBalance || 0) + debtDelta })
-        .eq('id', customer.id);
+    if (customer) {
+      const updates: any = {};
+      
+      // Update Debt
+      if (tx.type === 'Debt' || tx.origin === 'POS_SUPPLIER') {
+        const debtDelta = tx.origin === 'POS_SUPPLIER' ? tx.totalPrice * 0.9 : tx.totalPrice;
+        updates.debt_balance = (customer.debtBalance || 0) + debtDelta;
+      }
+      
+      // Update Loyalty (1 point per 1000 Naira)
+      if (tx.status !== 'CANCELLED') {
+        const pointsDelta = Math.floor(tx.totalPrice / 1000);
+        updates.loyalty_points = (customer.loyaltyPoints || 0) + pointsDelta;
+      }
+
+      if (Object.keys(updates).length > 0) {
+        await supabase.from('customers').update(updates).eq('id', customer.id);
+      }
     }
 
     // Update product stock for immediate (non-pending) sales
