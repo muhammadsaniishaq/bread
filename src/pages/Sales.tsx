@@ -159,7 +159,7 @@ export const Sales: React.FC = () => {
     }
     
     const tx: Transaction = {
-      id: Date.now().toString(),
+      id: crypto.randomUUID(),
       date: new Date().toISOString(),
       customerId: paymentType === 'Debt' ? customerId : (customerId || undefined), 
       items: cart,

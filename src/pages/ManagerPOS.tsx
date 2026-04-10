@@ -68,7 +68,7 @@ export const ManagerPOS: React.FC = () => {
 
     try {
       const newTx = {
-        id: Date.now().toString(),
+        id: crypto.randomUUID(),
         date: new Date().toISOString(),
         type: paymentType,
         items: cart,
