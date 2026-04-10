@@ -226,13 +226,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // ─── Record Sale ─────────────────────────────────────────────────────────────
   const recordSale = async (tx: Transaction) => {
-    await supabase.from('transactions').insert({
+    const { error } = await supabase.from('transactions').insert({
       id: tx.id, date: tx.date, type: tx.type, status: tx.status || 'COMPLETED',
       origin: tx.origin || 'STORE', total_price: tx.totalPrice,
       customer_id: tx.customerId || null, seller_id: tx.sellerId || null,
       store_keeper_id: tx.storeKeeperId || null,
       items: tx.items || null, discount: tx.discount || 0,
     });
+
+    if (error) {
+      console.error('Sale Sync Error:', error);
+      throw new Error(`Cloud Sync Failed: ${error.message}`);
+    }
 
     if (tx.status === 'PENDING_STORE') { await refreshData(); return; }
 
