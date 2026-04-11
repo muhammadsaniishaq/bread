@@ -161,7 +161,7 @@ export const CustomerProfileHub: React.FC = () => {
         const { error: pwErr } = await supabase.auth.updateUser({ password });
         if (pwErr) throw pwErr;
       }
-      const isMissingUsername = !profile?.username && !user?.user_metadata?.username;
+      const isMissingUsername = !profile?.username && !user?.user_metadata?.username && !customer?.username;
       const normalizedEditUsername = editUsername ? editUsername.trim().toLowerCase().replace(/\s+/g, '') : '';
       const phoneToCheck = (!customer.phone && phone) ? phone.trim() : '';
 
@@ -206,7 +206,7 @@ export const CustomerProfileHub: React.FC = () => {
   );
 
   const isVerified = !!(customer?.phone || customer?.assignedSupplierId);
-  const usernameDisplay = profile?.username || user?.user_metadata?.username;
+  const usernameDisplay = profile?.username || user?.user_metadata?.username || customer?.username;
   const displayName = profile?.full_name || customer?.name || 'Member';
 
   return (

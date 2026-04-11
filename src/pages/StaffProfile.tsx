@@ -52,7 +52,7 @@ const StaffProfile: React.FC = () => {
   
   // Edit State
   const [isEditing, setIsEditing] = useState(false);
-  const [editData, setEditData] = useState({ full_name: '', phone: '', role: '' as UserRole });
+  const [editData, setEditData] = useState({ full_name: '', phone: '', username: '', role: '' as UserRole });
   const [isSaving, setIsSaving] = useState(false);
 
   const fetchData = async () => {
@@ -62,7 +62,7 @@ const StaffProfile: React.FC = () => {
       const { data: prof } = await supabase.from('profiles').select('*').eq('id', id).single();
       if (prof) {
         setProfile(prof);
-        setEditData({ full_name: prof.full_name || '', phone: prof.phone || '', role: prof.role });
+        setEditData({ full_name: prof.full_name || '', phone: prof.phone || '', username: prof.username || '', role: prof.role });
       }
 
       const [txRes, remRes, invRes] = await Promise.all([
@@ -104,12 +104,27 @@ const StaffProfile: React.FC = () => {
   const handleSave = async () => {
     if (!id || !editData.full_name.trim()) return;
     setIsSaving(true);
-    const { error } = await supabase.from('profiles').update({
-      full_name: editData.full_name.trim(),
-      phone: editData.phone.trim(),
-      role: editData.role
-    }).eq('id', id);
-    if (!error) { setIsEditing(false); fetchData(); }
+    try {
+      let unToCheck = (editData.username && editData.username.trim() && editData.username.trim().toLowerCase() !== profile?.username?.toLowerCase()) ? editData.username.trim().toLowerCase() : '';
+      let phToCheck = (editData.phone && editData.phone.trim() && editData.phone.trim() !== profile?.phone) ? editData.phone.trim() : '';
+      
+      if (unToCheck || phToCheck) {
+        const { data: avail, error: availErr } = await supabase.rpc('check_account_availability', { chk_username: unToCheck, chk_phone: phToCheck });
+        if (availErr) throw new Error('Database Error: Unable to verify uniqueness.');
+        if (avail?.username_taken) throw new Error('🚨 ALREADY EXISTS! This Username is currently taken by another user.');
+        if (avail?.phone_taken) throw new Error('🚨 ALREADY EXISTS! This Phone Number is taken and cannot be duplicated.');
+      }
+
+      const { error } = await supabase.from('profiles').update({
+        full_name: editData.full_name.trim(),
+        phone: editData.phone.trim(),
+        username: editData.username.trim().toLowerCase().replace(/\s+/g, ''),
+        role: editData.role
+      }).eq('id', id);
+      
+      if (error) throw error;
+      setIsEditing(false); fetchData();
+    } catch (err: any) { alert(err.message); }
     setIsSaving(false);
   };
 
@@ -144,9 +159,10 @@ const StaffProfile: React.FC = () => {
                  <div style={{ flex: 1 }}>
                     <div style={{ color: T.success, fontSize: '10px', fontWeight: 900, textTransform: 'uppercase', marginBottom: '8px' }}><CheckCircle size={10} /> Verified Personnel</div>
                     <h2 style={{ margin: 0, fontSize: '28px', fontWeight: 900, letterSpacing: '-0.05em' }}>{profile.full_name || 'Personnel'}</h2>
-                    <div style={{ display: 'flex', gap: '10px', marginTop: '16px' }}>
+                    <div style={{ display: 'flex', gap: '10px', marginTop: '16px', alignItems: 'center' }}>
                        <span style={{ fontSize: '10px', fontWeight: 900, background: 'rgba(255,255,255,0.15)', color: '#fff', padding: '6px 12px', borderRadius: '10px' }}>{profile.role.replace('_', ' ')}</span>
-                       <span style={{ fontSize: '10px', fontWeight: 900, color: 'rgba(255,255,255,0.6)', padding: '6px 0' }}><Calendar size={10} /> Sync since {new Date(profile.created_at).getFullYear()}</span>
+                       {profile.username && <span style={{ fontSize: '10px', fontWeight: 900, color: 'rgba(255,255,255,0.6)', padding: '6px 0' }}>@{profile.username}</span>}
+                       <span style={{ fontSize: '10px', fontWeight: 900, color: 'rgba(255,255,255,0.6)', padding: '6px 0' }}><Calendar size={10} /> Sync {new Date(profile.created_at).getFullYear()}</span>
                     </div>
                  </div>
               </div>
@@ -243,8 +259,9 @@ const StaffProfile: React.FC = () => {
                       <button onClick={() => setIsEditing(false)} style={{ border: 'none', background: 'none' }}><X size={20} /></button>
                    </div>
                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                      <input type="text" value={editData.full_name} onChange={e => setEditData({...editData, full_name: e.target.value})} style={{ padding: '16px', borderRadius: '16px', border: `1px solid ${T.border}`, background: '#f8fafc', fontWeight: 700 }} />
-                      <input type="text" value={editData.phone} onChange={e => setEditData({...editData, phone: e.target.value})} style={{ padding: '16px', borderRadius: '16px', border: `1px solid ${T.border}`, background: '#f8fafc', fontWeight: 700 }} />
+                      <input type="text" placeholder="Full Name" value={editData.full_name} onChange={e => setEditData({...editData, full_name: e.target.value})} style={{ padding: '16px', borderRadius: '16px', border: `1px solid ${T.border}`, background: '#f8fafc', fontWeight: 700 }} />
+                      <input type="text" placeholder="Phone Number" value={editData.phone} onChange={e => setEditData({...editData, phone: e.target.value})} style={{ padding: '16px', borderRadius: '16px', border: `1px solid ${T.border}`, background: '#f8fafc', fontWeight: 700 }} />
+                      <input type="text" placeholder="Username (Optional)" value={editData.username} onChange={e => setEditData({...editData, username: e.target.value.toLowerCase().replace(/\s+/g, '')})} style={{ padding: '16px', borderRadius: '16px', border: `1px solid ${T.border}`, background: '#f8fafc', fontWeight: 700 }} />
                       <select value={editData.role} onChange={e => setEditData({...editData, role: e.target.value as UserRole})} style={{ padding: '16px', borderRadius: '16px', border: `1px solid ${T.border}`, background: '#f8fafc', fontWeight: 700 }}>
                           <option value="MANAGER">Manager</option>
                           <option value="STORE_KEEPER">Store Keeper</option>

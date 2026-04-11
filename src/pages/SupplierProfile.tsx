@@ -26,6 +26,7 @@ export default function SupplierProfile() {
   const [editing,        setEditing]        = useState(false);
   const [editName,       setEditName]       = useState('');
   const [editPhone,      setEditPhone]      = useState('');
+  const [editUsername,   setEditUsername]   = useState('');
   const [editAcctNo,     setEditAcctNo]     = useState('');
   const [editBankName,   setEditBankName]   = useState('');
   const [editImage,      setEditImage]      = useState('');
@@ -45,6 +46,7 @@ export default function SupplierProfile() {
           setProfile(data);
           setEditName(data.full_name || '');
           setEditPhone(data.phone || '');
+          setEditUsername(data.username || '');
           setEditAcctNo(data.account_number || '');
           setEditBankName(data.bank_name || '');
           setEditImage(data.avatar_url || '');
@@ -118,8 +120,19 @@ export default function SupplierProfile() {
     if (!user) return;
     setSaving(true);
     try {
+      let unToCheck = (editUsername && editUsername.trim() && editUsername.trim().toLowerCase() !== profile?.username?.toLowerCase()) ? editUsername.trim().toLowerCase() : '';
+      let phToCheck = (editPhone && editPhone.trim() && editPhone.trim() !== profile?.phone) ? editPhone.trim() : '';
+
+      if (unToCheck || phToCheck) {
+        const { data: avail, error: availErr } = await supabase.rpc('check_account_availability', { chk_username: unToCheck, chk_phone: phToCheck });
+        if (availErr) throw new Error('Database Error: Unable to verify uniqueness.');
+        if (avail?.username_taken) throw new Error('🚨 ALREADY EXISTS! This Username is currently taken by another user.');
+        if (avail?.phone_taken) throw new Error('🚨 ALREADY EXISTS! This Phone Number is taken and cannot be duplicated.');
+      }
+
       const { error } = await supabase.from('profiles').update({
         full_name:      editName,
+        username:       editUsername.trim().toLowerCase().replace(/\s+/g, ''),
         account_number: editAcctNo,
         bank_name:      editBankName,
         avatar_url:     editImage || null,
@@ -145,6 +158,7 @@ export default function SupplierProfile() {
       setProfile((p: any) => ({
         ...p,
         full_name:      editName,
+        username:       editUsername.trim().toLowerCase().replace(/\s+/g, ''),
         account_number: editAcctNo,
         bank_name:      editBankName,
         avatar_url:     editImage || null,
@@ -160,6 +174,7 @@ export default function SupplierProfile() {
   const handleCancelEdit = () => {
     setEditName(profile?.full_name || '');
     setEditPhone(profile?.phone || '');
+    setEditUsername(profile?.username || '');
     setEditAcctNo(profile?.account_number || '');
     setEditBankName(profile?.bank_name || '');
     setEditImage(profile?.avatar_url || '');
@@ -336,6 +351,7 @@ export default function SupplierProfile() {
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                           {[
                             { label: 'Full Name',       val: editName,     set: setEditName,     type: 'text',  ph: 'Your name' },
+                            { label: 'Username',        val: editUsername, set: setEditUsername, type: 'text',  ph: 'Optional' },
                             { label: 'Phone Number',    val: editPhone,    set: setEditPhone,    type: 'tel',   ph: '080...' },
                             { label: 'Bank Name',       val: editBankName, set: setEditBankName, type: 'text',  ph: 'e.g. First Bank, GTBank' },
                             { label: 'Account Number',  val: editAcctNo,   set: setEditAcctNo,   type: 'tel',   ph: '0123456789' },
@@ -344,7 +360,7 @@ export default function SupplierProfile() {
                               <label style={{ fontSize: '10px', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: '5px' }}>{f.label}</label>
                               <input
                                 type={f.type} value={f.val} placeholder={f.ph}
-                                onChange={e => f.set(e.target.value)}
+                                onChange={e => f.set(f.label === 'Username' ? e.target.value.toLowerCase().replace(/\s+/g, '') : e.target.value)}
                                 maxLength={f.label === 'Account Number' ? 10 : undefined}
                                 style={{ width: '100%', background: '#f8fafc', border: '1px solid rgba(79,70,229,0.2)', borderRadius: '12px', padding: '12px 14px', fontSize: f.label === 'Account Number' ? '16px' : '14px', fontWeight: f.label === 'Account Number' ? 900 : 700, color: '#0f172a', outline: 'none', boxSizing: 'border-box', letterSpacing: f.label === 'Account Number' ? '0.1em' : 'normal' }}
                               />
