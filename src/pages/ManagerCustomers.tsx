@@ -6,7 +6,8 @@ import {
   Award, ShieldCheck, History, TrendingUp, Zap, 
   Star, CreditCard, Activity, Filter,
   MoreHorizontal, Download,
-  CheckCircle2, Globe, BarChart3, Target, AlertTriangle, PhoneCall, MessageSquare, Mail
+  CheckCircle2, Globe, BarChart3, Target, AlertTriangle, PhoneCall, MessageSquare, Mail,
+  Bot, Clock, Truck, CheckCircle, Flame
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
@@ -17,39 +18,46 @@ import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'rec
 
 const QRCode = (QRCodeImport as any).default || QRCodeImport;
 
-/* ─── Ultimate Enterprise Tokens ─── */
+/* ─────────────────────────────────────────
+   DESIGN SYSTEM V5 — Premium Light Palette
+───────────────────────────────────────── */
 const T = {
-  bg:        '#f8fafc', 
-  surface:   '#ffffff',
-  surface2:  '#f1f5f9',
-  border:    '#e2e8f0',
-  borderDk:  '#cbd5e1',
-  accent:    '#6366f1',
-  accentDk:  '#4f46e5',
-  accentLt:  '#eef2ff',
-  success:   '#10b981',
-  successLt: '#d1fae5',
-  danger:    '#ef4444',
-  dangerLt:  '#fee2e2',
-  warn:      '#f59e0b',
-  warnLt:    '#fef3c7',
-  txt:       '#0f172a',
-  txt2:      '#475569',
-  txt3:      '#94a3b8',
-  shadow:    '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)',
-  shadowLg:  '0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)',
-  radius:    '16px',
-  radiusLg:  '24px',
+  bg:           '#f8f7ff',
+  bg2:          '#f0eeff',
+  white:        'rgba(255,255,255,0.9)', // Glassmorphism base
+  solidWhite:   '#ffffff',
+  border:       'rgba(99,91,255,0.10)',
+  borderLight:  'rgba(0,0,0,0.06)',
+  primary:      '#635bff',
+  primaryLight: 'rgba(99,91,255,0.10)',
+  accent:       '#06b6d4',
+  accentLight:  'rgba(6,182,212,0.10)',
+  success:      '#059669',
+  successLight: 'rgba(5,150,105,0.10)',
+  danger:       '#e11d48',
+  dangerLight:  'rgba(225,29,72,0.10)',
+  gold:         '#d97706',
+  goldLight:    'rgba(217,119,6,0.10)',
+  silver:       '#64748b',
+  ink:          '#0f172a',
+  txt:          '#1e293b',
+  txt2:         '#475569',
+  txt3:         '#94a3b8',
+  radius:       '24px',
+  radiusSm:     '16px',
+  shadow:       '0 8px 32px rgba(99,91,255,0.06)',
+  shadowMd:     '0 12px 48px rgba(99,91,255,0.12)',
 };
 
-const getRank = (debt: number) => {
-  if (debt === 0) return { label: 'DIAMOND', color: '#0ea5e9', bg: '#e0f2fe' };
-  if (debt < 50000) return { label: 'GOLD', color: '#f59e0b', bg: '#fef3c7' };
-  return { label: 'SILVER', color: '#64748b', bg: '#f1f5f9' };
+const getRank = (debt: number, points: number) => {
+  if (points > 1000) return { label: 'DIAMOND', color: T.accent, bg: T.accentLight, icon: Flame };
+  if (debt === 0) return { label: 'GOLD', color: T.gold, bg: T.goldLight, icon: Star };
+  if (debt < 50000) return { label: 'SILVER', color: T.silver, bg: 'rgba(100,116,139,0.10)', icon: CheckCircle2 };
+  return { label: 'BASIC', color: T.txt2, bg: T.bg2, icon: Clock };
 };
 
 const getAvatar = (name: string) => {
-  const palette = [['#6366f1','#e0e7ff'], ['#0ea5e9','#e0f2fe'], ['#10b981','#d1fae5'], ['#f59e0b','#fef3c7']];
+  const palette = [[T.primary, T.primaryLight], [T.accent, T.accentLight], [T.success, T.successLight], [T.gold, T.goldLight]];
   return palette[name.charCodeAt(0) % palette.length];
 };
 
@@ -58,14 +66,12 @@ export const ManagerCustomers: React.FC = () => {
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  /* List State */
   const [search, setSearch]       = useState('');
   const [isAdding, setIsAdding]   = useState(false);
   const [suppliers, setSuppliers] = useState<{id:string; full_name:string}[]>([]);
   const [loading, setLoading]     = useState(false);
   const [createdCreds, setCreatedCreds] = useState<{name:string; login:string; password:string}|null>(null);
 
-  /* Modal States */
   const [showCropper, setShowCropper] = useState(false);
   const [cropImageSrc, setCropImageSrc] = useState('');
 
@@ -82,7 +88,7 @@ export const ManagerCustomers: React.FC = () => {
   /* Drawer State */
   const [drawerId, setDrawerId] = useState<string|null>(null);
   const drawer = useMemo(() => customers.find(c => c.id === drawerId), [customers, drawerId]);
-  const [dTab, setDTab]         = useState<'summary'|'analytics'|'vault'|'identity'|'compliance'|'config'>('summary');
+  const [dTab, setDTab]         = useState<'summary'|'analytics'|'logistics'|'vault'|'identity'|'compliance'|'config'>('summary');
   
   /* Edit States */
   const [eName, setEName]         = useState('');
@@ -98,7 +104,6 @@ export const ManagerCustomers: React.FC = () => {
   const [eCreditLimit, setECreditLimit] = useState('');
   const [eSalesTarget, setESalesTarget] = useState('');
 
-  /* Finance States */
   const [payAmt, setPayAmt]       = useState('');
   const [payMethod, setPayMethod] = useState<'Cash'|'Transfer'>('Cash');
 
@@ -107,7 +112,6 @@ export const ManagerCustomers: React.FC = () => {
       .then(({data}) => { if (data) setSuppliers(data); });
   }, []);
 
-  /* Sync edit states when drawer opens */
   useEffect(() => {
     if (drawer) {
       setEName(drawer.name); setEPhone(drawer.phone); setEEmail(drawer.email || '');
@@ -141,7 +145,6 @@ export const ManagerCustomers: React.FC = () => {
     return transactions.filter(t => t.customerId === drawerId || t.sellerId === drawerId);
   }, [transactions, drawerId]);
 
-  /* Generate Chart Data */
   const chartData = useMemo(() => {
      if (!customerItems.length) return [];
      const groups: Record<string, number> = {};
@@ -158,7 +161,6 @@ export const ManagerCustomers: React.FC = () => {
     active: customers.filter(c => transactions.some(t => t.customerId === c.id)).length
   }), [customers, transactions]);
 
-  /* Parse metadata for goals and risks */
   const drawerMeta = useMemo(() => {
      try { return drawer?.notes ? JSON.parse(drawer.notes) : {}; }
      catch { return {}; }
@@ -174,6 +176,15 @@ export const ManagerCustomers: React.FC = () => {
       const totalSpent = customerItems.reduce((acc, curr) => acc + curr.totalPrice, 0);
       return Math.min(100, Math.round((totalSpent / drawerMeta.salesTarget) * 100));
   }, [customerItems, drawerMeta]);
+
+  /* 🧠 AI Insight Generator Engine */
+  const aiInsight = useMemo(() => {
+      if (!drawer) return null;
+      if (creditRatio >= 80) return { msg: `High Risk! Partner is at ${creditRatio}% of their credit limit. Delay new long-term shipments until settlement.`, color: T.danger, light: T.dangerLight };
+      if (salesProgress >= 80) return { msg: `Great momentum detected! Partner is closing in on their target. Suggest offering a bulk-discount to push them over the finish line.`, color: T.accent, light: T.accentLight };
+      if (customerItems.length > 5 && drawer.debtBalance === 0) return { msg: `A+ Performer. This partner pays consistently. Consider promoting them to the Diamond Loyalty bracket to lock in retention.`, color: T.success, light: T.successLight };
+      return { msg: `Partner activity is stable. Routine check-ins advised to maintain strong relationship ties.`, color: T.primary, light: T.primaryLight };
+  }, [drawer, creditRatio, salesProgress, customerItems]);
 
   /* ───── Actions ───── */
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -246,83 +257,88 @@ export const ManagerCustomers: React.FC = () => {
   };
 
   const sx = {
-    input: { background:'#fff', border:`1px solid ${T.border}`, borderRadius:12, padding:'12px 14px', fontSize:'14px', width:'100%', outline:'none', fontWeight:500 } as React.CSSProperties,
-    btn: { background:T.accent, color:'#fff', border:'none', borderRadius:12, padding:'12px 20px', fontSize:'14px', fontWeight:800, cursor:'pointer', display:'flex', alignItems:'center', gap:8 } as React.CSSProperties,
-    tab: (active: boolean) => ({ padding:'10px', borderRadius:12, background:active ? T.surface : 'transparent', color:active ? T.accent : T.txt3, border:'none', fontSize:11, fontWeight:900, cursor:'pointer', display:'flex', flexDirection:'column', alignItems:'center', gap:4, flex:1, transition:'all 0.2s', boxShadow:active ? T.shadow : 'none' }) as any,
+    input: { background:T.solidWhite, border:`1px solid ${T.borderLight}`, borderRadius:T.radiusSm, padding:'12px 14px', fontSize:'13px', width:'100%', outline:'none', fontWeight:500, color:T.ink, boxShadow:'inset 0 2px 4px rgba(0,0,0,0.02)' } as React.CSSProperties,
+    btn: { background:T.primary, color:T.solidWhite, border:'none', borderRadius:T.radiusSm, padding:'12px 20px', fontSize:'13px', fontWeight:800, cursor:'pointer', display:'flex', alignItems:'center', gap:8, boxShadow:T.shadow } as React.CSSProperties,
+    tab: (active: boolean) => ({ padding:'10px', borderRadius:T.radiusSm, background:active ? T.solidWhite : 'transparent', color:active ? T.primary : T.txt3, border:active ? `1px solid ${T.borderLight}`: 'none', fontSize:10, fontWeight:900, cursor:'pointer', display:'flex', flexDirection:'column', alignItems:'center', gap:4, flex:1, transition:'all 0.2s', boxShadow:active ? T.shadow : 'none' }) as any,
+    glassPanel: { background: T.white, backdropFilter: 'blur(20px)', border: `1px solid rgba(255,255,255,0.4)` } as React.CSSProperties,
   };
 
   return (
     <AnimatedPage>
-      <div style={{ background:T.bg, minHeight:'100vh', paddingBottom:'100px', color:T.txt, fontFamily:"'Inter', system-ui, sans-serif" }}>
+      <div style={{ background:T.bg, minHeight:'100vh', paddingBottom:'100px', color:T.txt, fontFamily:"'Inter', -apple-system, sans-serif" }}>
         
-        {/* COMPACT TOP BAR */}
-        <div style={{ padding:'20px 20px 10px', position:'sticky', top:0, background:'rgba(248,250,252,0.8)', backdropFilter:'blur(24px)', zIndex:50 }}>
+        {/* COMPACT TOP BAR - Floating Glass Palette */}
+        <div style={{ ...sx.glassPanel, padding: '40px 20px 20px', position: 'sticky', top:0, zIndex:50, boxShadow:'0 4px 30px rgba(0,0,0,0.03)' }}>
           <div style={{ display:'flex', alignItems:'center', gap:16, marginBottom:16 }}>
-            <button onClick={() => navigate(-1)} style={{ width:40, height:40, borderRadius:14, border:`1px solid ${T.border}`, background:'#fff', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer' }}>
-              <ArrowLeft size={18} />
+             <button onClick={() => navigate(-1)} style={{ width:38, height:38, borderRadius:12, border:`1px solid ${T.borderLight}`, background:T.solidWhite, display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', boxShadow:'0 2px 10px rgba(0,0,0,0.02)' }}>
+              <ArrowLeft size={16} color={T.ink} />
             </button>
             <div style={{ flex:1 }}>
-              <h1 style={{ margin:0, fontSize:20, fontWeight:900, letterSpacing:'-0.03em' }}>Partner Network</h1>
-              <p style={{ margin:0, fontSize:11, color:T.txt3, fontWeight:700, textTransform:'uppercase', letterSpacing:'0.05em' }}>Enterprise Division • {stats.count} Members</p>
+              <h1 style={{ margin:0, fontSize:18, fontWeight:900, color:T.ink, letterSpacing:'-0.02em', display:'flex', alignItems:'center', gap:6 }}>
+                 Partner Network <div style={{background:T.successLight, padding:'2px 6px', borderRadius:6, fontSize:9, color:T.success, letterSpacing:'0.05em'}}>ENTERPRISE</div>
+              </h1>
+              <p style={{ margin:'2px 0 0', fontSize:10, color:T.txt3, fontWeight:700, textTransform:'uppercase', letterSpacing:'0.05em' }}>{stats.count} Active Members</p>
             </div>
-            <button onClick={() => setIsAdding(true)} style={sx.btn}><UserPlus size={16}/> New Partner</button>
+            <motion.button whileHover={{scale:1.05}} whileTap={{scale:0.95}} onClick={() => setIsAdding(true)} style={{...sx.btn, padding:'8px 14px', fontSize:11, borderRadius:12}}><UserPlus size={14}/> New</motion.button>
           </div>
 
           <div style={{ display:'flex', gap:10, overflowX:'auto', paddingBottom:10 }} className="hide-scrollbar">
              {[
-               { label:'Liability', val:stats.total, color:T.danger, icon:TrendingUp },
-               { label:'Retention', val:Math.round((stats.active/stats.count)*100)||0, color:T.accent, icon:Star, unit:'%' },
-               { label:'Points', val:customers.reduce((s,c)=>s+(c.loyaltyPoints||0), 0), color:T.success, icon:Award }
+               { label:'Liability', val:stats.total, color:T.danger, light:T.dangerLight, icon:TrendingUp },
+               { label:'Retention', val:Math.round((stats.active/stats.count)*100)||0, color:T.primary, light:T.primaryLight, icon:Flame, unit:'%' },
+               { label:'Points', val:customers.reduce((s,c)=>s+(c.loyaltyPoints||0), 0), color:T.success, light:T.successLight, icon:Award }
              ].map((s,i) => (
-                <div key={i} style={{ flexShrink:0, background:'#fff', border:`1px solid ${T.border}`, padding:'12px 18px', borderRadius:16, display:'flex', alignItems:'center', gap:12, minWidth:130 }}>
-                   <div style={{ background:s.color+'10', color:s.color, padding:8, borderRadius:10 }}><s.icon size={14}/></div>
+                <div key={i} style={{ flexShrink:0, background:T.solidWhite, border:`1px solid ${T.borderLight}`, padding:'10px 14px', borderRadius:14, display:'flex', alignItems:'center', gap:10, minWidth:120, boxShadow:'0 2px 10px rgba(0,0,0,0.02)' }}>
+                   <div style={{ background:s.light, color:s.color, padding:6, borderRadius:8 }}><s.icon size={12}/></div>
                    <div>
-                      <p style={{ margin:0, fontSize:9, fontWeight:800, color:T.txt3, textTransform:'uppercase' }}>{s.label}</p>
-                      <p style={{ margin:0, fontSize:14, fontWeight:900 }}>{s.unit==='%' ? s.val+'%' : '₦'+s.val.toLocaleString()}</p>
+                      <p style={{ margin:0, fontSize:8, fontWeight:800, color:T.txt3, textTransform:'uppercase' }}>{s.label}</p>
+                      <p style={{ margin:0, fontSize:13, fontWeight:900, color:T.ink }}>{s.unit==='%' ? s.val+'%' : '₦'+s.val.toLocaleString()}</p>
                    </div>
                 </div>
              ))}
           </div>
 
           <div style={{ position:'relative', marginTop:6 }}>
-            <Search size={16} color={T.txt3} style={{ position:'absolute', left:14, top:'50%', transform:'translateY(-50%)' }} />
-            <input style={{ ...sx.input, paddingLeft:42, height:48, fontSize:15, border:`1px solid ${T.border}` }} placeholder="Search enterprise directory..." value={search} onChange={e => setSearch(e.target.value)} />
+            <Search size={14} color={T.txt3} style={{ position:'absolute', left:14, top:'50%', transform:'translateY(-50%)' }} />
+            <input style={{ ...sx.input, paddingLeft:38, height:42, fontSize:13, borderRadius:14, border:`1px solid ${T.borderLight}`, background:T.solidWhite }} placeholder="Search enterprise directory..." value={search} onChange={e => setSearch(e.target.value)} />
             <div style={{ position:'absolute', right:14, top:'50%', transform:'translateY(-50%)', display:'flex', gap:10 }}>
-               <Filter size={16} color={T.txt3}/>
+               <Filter size={14} color={T.primary}/>
             </div>
           </div>
         </div>
 
         {/* ENTERPRISE BENTO GRID */}
-        <div style={{ padding:'10px 20px', display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(170px, 1fr))', gap:12 }}>
+        <div style={{ padding:'16px', display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(160px, 1fr))', gap:12 }}>
            {list.map(c => {
              const [ac, lc] = getAvatar(c.name);
-             const rank = getRank(c.debtBalance);
+             const rank = getRank(c.debtBalance, c.loyaltyPoints || 0);
              
-             // Extract local meta for quick warning check
              let creditWarining = false;
+             let streak = c.debtBalance === 0 && (transactions.filter(t=>t.customerId===c.id).length > 2);
+
              try {
                 const cm = c.notes ? JSON.parse(c.notes) : {};
                 if (cm.creditLimit && c.debtBalance >= cm.creditLimit * 0.8) creditWarining = true;
              } catch(e) {}
 
              return (
-               <motion.div key={c.id} layoutId={c.id} onClick={() => setDrawerId(c.id)} whileHover={{ y:-4 }} whileTap={{ scale:0.96 }} style={{ background:'#fff', border:`1px solid ${creditWarining ? T.danger : T.border}`, borderRadius:20, padding:16, cursor:'pointer', position:'relative', overflow:'hidden', boxShadow:T.shadow }}>
-                 {creditWarining && <div style={{ position:'absolute', top:0, right:0, background:T.danger, color:'#fff', padding:'2px 8px', borderBottomLeftRadius:10, fontSize:8, fontWeight:900 }}><AlertTriangle size={8} style={{marginRight:4}}/>LIMIT RISK</div>}
+               <motion.div key={c.id} layoutId={c.id} onClick={() => setDrawerId(c.id)} whileHover={{ y:-4, scale:1.02 }} whileTap={{ scale:0.96 }} style={{ ...sx.glassPanel, border:`1px solid ${creditWarining ? T.dangerLight : T.borderLight}`, borderRadius:T.radiusSm, padding:14, cursor:'pointer', position:'relative', overflow:'hidden', boxShadow:T.shadow }}>
+                 {creditWarining && <div style={{ position:'absolute', top:0, right:0, background:T.dangerLight, color:T.danger, padding:'2px 6px', borderBottomLeftRadius:8, fontSize:7, fontWeight:900, display:'flex', alignItems:'center' }}><AlertTriangle size={7} style={{marginRight:3}}/>RISK</div>}
+                 {streak && !creditWarining && <div style={{ position:'absolute', top:0, right:0, background:T.goldLight, color:T.gold, padding:'2px 6px', borderBottomLeftRadius:8, fontSize:7, fontWeight:900, display:'flex', alignItems:'center' }}><Flame size={7} style={{marginRight:3}}/>HOT STREAK</div>}
                  
-                 <div style={{ display:'flex', justifyContent:'space-between', width:'100%', marginBottom:16 }}>
-                    <div style={{ width:36, height:36, borderRadius:12, background:lc, color:ac, display:'flex', alignItems:'center', justifyContent:'center', fontSize:16, fontWeight:900, border:'2px solid #fff', boxShadow:T.shadow }}>
-                       {c.image ? <img src={c.image} style={{width:'100%', height:'100%', objectFit:'cover'}} /> : c.name[0]}
+                 <div style={{ display:'flex', justifyContent:'space-between', width:'100%', marginBottom:12 }}>
+                    <div style={{ width:32, height:32, borderRadius:10, background:lc, color:ac, display:'flex', alignItems:'center', justifyContent:'center', fontSize:14, fontWeight:900 }}>
+                       {c.image ? <img src={c.image} style={{width:'100%', height:'100%', objectFit:'cover', borderRadius:10}} /> : c.name[0]}
                     </div>
-                    <div style={{ background:rank.bg, color:rank.color, fontSize:9, fontWeight:900, padding:'3px 8px', borderRadius:8 }}>{rank.label}</div>
+                    <div style={{ background:rank.bg, color:rank.color, fontSize:8, fontWeight:900, padding:'2px 6px', borderRadius:6, height:'fit-content', display:'flex', alignItems:'center', gap:3 }}><rank.icon size={8}/>{rank.label}</div>
                  </div>
-                 <h3 style={{ margin:0, fontSize:14, fontWeight:900, color:T.txt, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{c.name}</h3>
-                 <p style={{ margin:'4px 0 14px', fontSize:11, color:T.txt3, fontWeight:600 }}>{c.phone || '@'+c.username}</p>
+                 <h3 style={{ margin:0, fontSize:13, fontWeight:900, color:T.ink, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{c.name}</h3>
+                 <p style={{ margin:'2px 0 10px', fontSize:10, color:T.txt3, fontWeight:600 }}>{c.phone || '@'+c.username}</p>
                  
-                 <div style={{ width:'100%', paddingTop:12, borderTop:`1px solid ${T.border}`, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-                    <div style={{ fontSize:15, fontWeight:900, color:c.debtBalance > 0 ? T.danger : T.success }}>₦{(c.debtBalance||0).toLocaleString()}</div>
-                    <div style={{ display:'flex', alignItems:'center', gap:4, color:T.txt3, fontSize:10, fontWeight:700 }}>
-                       <Award size={10}/> {c.loyaltyPoints || 0}
+                 <div style={{ width:'100%', paddingTop:10, borderTop:`1px solid ${T.borderLight}`, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                    <div style={{ fontSize:13, fontWeight:900, color:c.debtBalance > 0 ? T.danger : T.success }}>₦{(c.debtBalance||0).toLocaleString()}</div>
+                    <div style={{ display:'flex', alignItems:'center', gap:3, color:T.txt3, fontSize:9, fontWeight:700 }}>
+                       <Award size={9} color={T.gold}/> {c.loyaltyPoints || 0}
                     </div>
                  </div>
                </motion.div>
@@ -330,284 +346,331 @@ export const ManagerCustomers: React.FC = () => {
            })}
         </div>
 
-        {/* ULTIMATE ENTERPRISE DRAWER */}
+        {/* ULTIMATE ENTERPRISE DRAWER (GLASSMORPHIC) */}
         <AnimatePresence>
            {drawer && (
              <>
-               <motion.div initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} onClick={()=>setDrawerId(null)} style={{ position:'fixed', inset:0, background:'rgba(15,23,42,0.6)', backdropFilter:'blur(10px)', zIndex:100 }}/>
-               <motion.div initial={{y:'100%'}} animate={{y:0}} exit={{y:'100%'}} transition={{type:'spring', damping:32, stiffness:320}} style={{ position:'fixed', bottom:0, left:0, right:0, height:'92vh', background:T.bg, zIndex:110, borderTopLeftRadius:36, borderTopRightRadius:36, display:'flex', flexDirection:'column', overflow:'hidden', boxShadow:'0 -20px 40px -10px rgba(0,0,0,0.1)' }}>
+               <motion.div initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} onClick={()=>setDrawerId(null)} style={{ position:'fixed', inset:0, background:'rgba(15,23,42,0.4)', backdropFilter:'blur(4px)', zIndex:100 }}/>
+               <motion.div initial={{y:'100%'}} animate={{y:0}} exit={{y:'100%'}} transition={{type:'spring', damping:32, stiffness:320}} style={{ position:'fixed', bottom:0, left:0, right:0, height:'90vh', background:T.bg2, zIndex:110, borderTopLeftRadius:T.radius, borderTopRightRadius:T.radius, display:'flex', flexDirection:'column', overflow:'hidden', boxShadow:T.shadowMd, borderTop:`1px solid rgba(255,255,255,0.4)` }}>
                   
                   {/* Handle */}
-                  <div style={{ height:5, width:40, background:T.borderDk, borderRadius:3, margin:'16px auto' }}/>
+                  <div style={{ height:4, width:36, background:T.borderLight, borderRadius:2, margin:'12px auto' }}/>
 
                   {/* Header & Quick Connect Hub */}
-                  <div style={{ padding:'0 24px 24px', display:'flex', alignItems:'flex-start', gap:16 }}>
+                  <div style={{ padding:'0 20px 20px', display:'flex', alignItems:'flex-start', gap:14 }}>
                      <div style={{ position: 'relative' }}>
-                        <div style={{ width:70, height:70, borderRadius:22, background:getAvatar(drawer.name)[1], color:getAvatar(drawer.name)[0], display:'flex', alignItems:'center', justifyContent:'center', fontSize:30, fontWeight:900, overflow:'hidden', border:'4px solid #fff', boxShadow:T.shadow }}>
+                        <div style={{ width:60, height:60, borderRadius:16, background:getAvatar(drawer.name)[1], color:getAvatar(drawer.name)[0], display:'flex', alignItems:'center', justifyContent:'center', fontSize:24, fontWeight:900, overflow:'hidden', border:`2px solid ${T.solidWhite}`, boxShadow:T.shadow }}>
                            {drawer.image ? <img src={drawer.image} style={{width:'100%', height:'100%', objectFit:'cover'}} /> : drawer.name[0]}
                         </div>
-                        <button onClick={() => fileInputRef.current?.click()} style={{ position:'absolute', bottom:-2, right:-2, background:T.accent, color:'#fff', border:`3px solid #fff`, borderRadius:10, width:28, height:28, display:'flex', alignItems:'center', justifyContent:'center', boxShadow:T.shadow, cursor:'pointer' }}>
-                           <Camera size={14}/>
+                        <button onClick={() => fileInputRef.current?.click()} style={{ position:'absolute', bottom:-4, right:-4, background:T.primary, color:T.solidWhite, border:`2px solid ${T.solidWhite}`, borderRadius:8, width:24, height:24, display:'flex', alignItems:'center', justifyContent:'center', boxShadow:T.shadow, cursor:'pointer' }}>
+                           <Camera size={12}/>
                         </button>
                         <input type="file" ref={fileInputRef} onChange={handleImageUpload} accept="image/*" style={{ display: 'none' }} />
                      </div>
                      <div style={{ flex:1, alignSelf:'center' }}>
-                        <h2 style={{ margin:0, fontSize:24, fontWeight:900, letterSpacing:'-0.02em', lineHeight:1.1 }}>{drawer.name}</h2>
-                        <div style={{ display:'flex', gap:10, marginTop:8 }}>
-                           <a href={`tel:${drawer.phone}`} style={{ textDecoration:'none', display:'flex', alignItems:'center', justifyContent:'center', background:T.surface, border:`1px solid ${T.border}`, borderRadius:8, padding:'6px 10px', color:T.accent, flex:1, fontWeight:800, fontSize:10 }}><PhoneCall size={12} style={{marginRight:6}}/> Call</a>
-                           <a href={`https://wa.me/${drawer.phone}`} target="_blank" rel="noreferrer" style={{ textDecoration:'none', display:'flex', alignItems:'center', justifyContent:'center', background:'#25D36615', border:`1px solid #25D36650`, borderRadius:8, padding:'6px 10px', color:'#128C7E', flex:1, fontWeight:800, fontSize:10 }}><MessageSquare size={12} style={{marginRight:6}}/> Chat</a>
-                           {drawer.email && <a href={`mailto:${drawer.email}`} style={{ textDecoration:'none', display:'flex', alignItems:'center', justifyContent:'center', background:T.surface, border:`1px solid ${T.border}`, borderRadius:8, padding:'6px 10px', color:T.txt2, flex:1, fontWeight:800, fontSize:10 }}><Mail size={12} style={{marginRight:6}}/> Mail</a>}
+                        <h2 style={{ margin:0, fontSize:20, fontWeight:900, color:T.ink, letterSpacing:'-0.02em', lineHeight:1.1, display:'flex', gap:6, alignItems:'center' }}>
+                           {drawer.name}
+                           {drawer.debtBalance === 0 && customerItems.length > 2 && <Flame size={14} color={T.accent} />}
+                        </h2>
+                        <div style={{ display:'flex', gap:8, marginTop:8 }}>
+                           <a href={`tel:${drawer.phone}`} style={{ textDecoration:'none', display:'flex', alignItems:'center', justifyContent:'center', background:T.solidWhite, border:`1px solid ${T.borderLight}`, borderRadius:8, padding:'4px 8px', color:T.primary, flex:1, fontWeight:800, fontSize:9, boxShadow:'0 1px 2px rgba(0,0,0,0.02)' }}><PhoneCall size={10} style={{marginRight:4}}/> Call</a>
+                           <a href={`https://wa.me/${drawer.phone}`} target="_blank" rel="noreferrer" style={{ textDecoration:'none', display:'flex', alignItems:'center', justifyContent:'center', background:T.successLight, border:`1px solid rgba(5,150,105,0.1)`, borderRadius:8, padding:'4px 8px', color:T.success, flex:1, fontWeight:800, fontSize:9 }}><MessageSquare size={10} style={{marginRight:4}}/> Chat</a>
+                           {drawer.email && <a href={`mailto:${drawer.email}`} style={{ textDecoration:'none', display:'flex', alignItems:'center', justifyContent:'center', background:T.solidWhite, border:`1px solid ${T.borderLight}`, borderRadius:8, padding:'4px 8px', color:T.txt2, flex:1, fontWeight:800, fontSize:9 }}><Mail size={10} style={{marginRight:4}}/> Mail</a>}
                         </div>
                      </div>
-                     <button onClick={()=>setDrawerId(null)} style={{ border:'none', background:T.surface2, width:40, height:40, borderRadius:14, cursor:'pointer', alignSelf:'center' }}><X size={20}/></button>
+                     <button onClick={()=>setDrawerId(null)} style={{ border:'none', background:T.solidWhite, width:32, height:32, borderRadius:10, cursor:'pointer', alignSelf:'center', color:T.ink, boxShadow:'0 2px 10px rgba(0,0,0,0.04)' }}><X size={16}/></button>
                   </div>
 
                   {/* MASTER TABS */}
-                  <div style={{ display:'flex', padding:4, background:T.surface, border:`1px solid ${T.border}`, margin:'0 24px 28px', borderRadius:16, boxShadow:T.shadow }}>
+                  <div style={{ display:'flex', padding:4, background:T.solidWhite, border:`1px solid ${T.borderLight}`, margin:'0 20px 20px', borderRadius:16, boxShadow:T.shadow, overflowX:'auto' }} className="hide-scrollbar">
                      {[
                        { id:'summary', icon:Activity, label:'Overview' },
                        { id:'analytics', icon:BarChart3, label:'Insights' },
+                       { id:'logistics', icon:Truck, label:'Logistics' },
                        { id:'vault', icon:History, label:'Vault' },
                        { id:'identity', icon:ShieldCheck, label:'Identity' },
                        { id:'compliance', icon:Award, label:'Legal' },
                        { id:'config', icon:MoreHorizontal, label:'Config' },
                      ].map(t => (
-                       <button key={t.id} onClick={()=>setDTab(t.id as any)} style={sx.tab(dTab===t.id)}>
-                          <t.icon size={dTab===t.id ? 16 : 14}/> <span style={{fontSize:9}}>{t.label}</span>
-                       </button>
+                       <motion.button whileTap={{scale:0.95}} key={t.id} onClick={()=>setDTab(t.id as any)} style={{...sx.tab(dTab===t.id), minWidth:60}}>
+                          <t.icon size={dTab===t.id ? 14 : 12}/> <span style={{fontSize:8}}>{t.label}</span>
+                       </motion.button>
                      ))}
                   </div>
 
                   {/* TAB CONTENT */}
-                  <div style={{ flex:1, overflowY:'auto', padding:'0 24px 60px' }} className="hide-scrollbar">
+                  <div style={{ flex:1, overflowY:'auto', padding:'0 20px 40px' }} className="hide-scrollbar">
                      
-                     {/* 1. SUMMARY DASHBOARD WITH GOALS & LIMITS */}
+                     {/* 1. SUMMARY DASHBOARD WITH GOALS, AI & LIMITS */}
                      {dTab === 'summary' && (
-                        <div style={{ display:'flex', flexDirection:'column', gap:20 }}>
-                           <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16 }}>
-                              <div style={{ background: drawer.debtBalance > 0 ? (creditRatio >= 80 ? T.danger : T.warn) : T.success, padding:24, borderRadius:28, color:'#fff', position:'relative', overflow:'hidden', boxShadow:T.shadow }}>
-                                 <CreditCard size={80} style={{ position:'absolute', right:-10, bottom:-10, opacity:0.1, transform:'rotate(-15deg)' }}/>
-                                 <p style={{ margin:0, fontSize:9, fontWeight:900, opacity:0.8, textTransform:'uppercase', letterSpacing:'0.1em' }}>Current Liability</p>
-                                 <h1 style={{ margin:'8px 0', fontSize:26, fontWeight:900 }}>₦{drawer.debtBalance.toLocaleString()}</h1>
+                        <motion.div initial={{opacity:0, y:10}} animate={{opacity:1, y:0}} style={{ display:'flex', flexDirection:'column', gap:16 }}>
+                           
+                           {/* AI Insights Panel */}
+                           {aiInsight && (
+                              <div style={{ background:aiInsight.light, border:`1px solid ${aiInsight.color}30`, borderRadius:20, padding:16, display:'flex', gap:12, boxShadow:T.shadow }}>
+                                 <div style={{ background:T.solidWhite, color:aiInsight.color, width:32, height:32, borderRadius:10, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, boxShadow:'0 2px 10px rgba(0,0,0,0.05)' }}>
+                                    <Bot size={16}/>
+                                 </div>
+                                 <div style={{ alignSelf:'center' }}>
+                                    <h4 style={{ margin:'0 0 4px', fontSize:10, fontWeight:900, color:aiInsight.color }}>Smart AI Insight</h4>
+                                    <p style={{ margin:0, fontSize:10, color:T.ink, lineHeight:1.4, fontWeight:600 }}>{aiInsight.msg}</p>
+                                 </div>
+                              </div>
+                           )}
+
+                           <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
+                              <div style={{ background: drawer.debtBalance > 0 ? (creditRatio >= 80 ? T.danger : T.gold) : T.success, padding:20, borderRadius:20, color:T.solidWhite, position:'relative', overflow:'hidden', boxShadow:T.shadow }}>
+                                 <CreditCard size={60} style={{ position:'absolute', right:-10, bottom:-10, opacity:0.1, transform:'rotate(-15deg)' }}/>
+                                 <p style={{ margin:0, fontSize:8, fontWeight:900, opacity:0.9, textTransform:'uppercase', letterSpacing:'0.1em' }}>Current Liability</p>
+                                 <h1 style={{ margin:'6px 0', fontSize:22, fontWeight:900 }}>₦{drawer.debtBalance.toLocaleString()}</h1>
                                  {drawerMeta.creditLimit && (
-                                    <div style={{ marginTop:8, background:'rgba(0,0,0,0.1)', padding:'8px', borderRadius:10 }}>
-                                       <div style={{ display:'flex', justifyContent:'space-between', fontSize:9, fontWeight:800, marginBottom:4 }}>
+                                    <div style={{ marginTop:8, background:'rgba(0,0,0,0.1)', padding:'6px', borderRadius:8 }}>
+                                       <div style={{ display:'flex', justifyContent:'space-between', fontSize:8, fontWeight:800, marginBottom:4 }}>
                                           <span>Limit Usage</span><span>{creditRatio}%</span>
                                        </div>
                                        <div style={{ height:4, background:'rgba(255,255,255,0.3)', borderRadius:2, overflow:'hidden' }}>
-                                          <div style={{ height:'100%', width:`${creditRatio}%`, background:'#fff', borderRadius:2 }}/>
+                                          <motion.div initial={{width:0}} animate={{width:`${creditRatio}%`}} transition={{duration:1}} style={{ height:'100%', background:T.solidWhite, borderRadius:2 }}/>
                                        </div>
                                     </div>
                                  )}
                               </div>
-                              <div style={{ background:'#fff', border:`1px solid ${T.border}`, padding:20, borderRadius:28, textAlign:'center', display:'flex', flexDirection:'column', justifyContent:'center', boxShadow:T.shadow }}>
-                                 <p style={{ margin:'0 0 12px', fontSize:9, fontWeight:900, color:T.txt3 }}>MONTHLY TARGET</p>
-                                 <div style={{ position:'relative', width:70, height:70, margin:'0 auto' }}>
+                              <div style={{ background:T.solidWhite, border:`1px solid ${T.borderLight}`, padding:16, borderRadius:20, textAlign:'center', display:'flex', flexDirection:'column', justifyContent:'center', boxShadow:T.shadow }}>
+                                 <p style={{ margin:'0 0 10px', fontSize:8, fontWeight:900, color:T.txt3 }}>MONTHLY TARGET</p>
+                                 <div style={{ position:'relative', width:60, height:60, margin:'0 auto' }}>
                                     <svg viewBox="0 0 36 36" style={{ width:'100%', height:'100%' }}>
-                                       <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke={T.surface2} strokeWidth="3" />
-                                       <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke={salesProgress >= 100 ? T.success : T.accent} strokeWidth="3" strokeDasharray={`${salesProgress}, 100`} />
+                                       <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke={T.bg2} strokeWidth="3" />
+                                       <motion.path initial={{strokeDasharray:"0, 100"}} animate={{strokeDasharray:`${salesProgress}, 100`}} transition={{duration:1.5, ease:"easeOut"}} d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke={salesProgress >= 100 ? T.success : T.primary} strokeWidth="3" />
                                     </svg>
-                                    <div style={{ position:'absolute', inset:0, display:'flex', alignItems:'center', justifyContent:'center', fontSize:14, fontWeight:900, color:salesProgress >= 100 ? T.success : T.accent }}>{salesProgress}%</div>
+                                    <div style={{ position:'absolute', inset:0, display:'flex', alignItems:'center', justifyContent:'center', fontSize:12, fontWeight:900, color:salesProgress >= 100 ? T.success : T.primary }}>{salesProgress}%</div>
                                  </div>
-                                 <h3 style={{ margin:'10px 0 0', fontSize:12, fontWeight:900, color:T.txt }}>{drawerMeta.salesTarget ? `₦${drawerMeta.salesTarget.toLocaleString()}` : 'No Valid Target'}</h3>
+                                 <h3 style={{ margin:'8px 0 0', fontSize:11, fontWeight:900, color:T.ink }}>{drawerMeta.salesTarget ? `₦${drawerMeta.salesTarget.toLocaleString()}` : 'No Target Set'}</h3>
                               </div>
                            </div>
 
-                           <div style={{ background:'#fff', border:`1px solid ${T.border}`, borderRadius:24, padding:24, boxShadow:T.shadow }}>
-                              <h4 style={{ margin:'0 0 16px', fontSize:13, fontWeight:900, display:'flex', alignItems:'center', gap:8 }}><TrendingUp size={16} color={T.accent}/> Instant Settlement</h4>
-                              <form onSubmit={payDebt} style={{ display:'flex', flexDirection:'column', gap:14 }}>
+                           <div style={{ background:T.solidWhite, border:`1px solid ${T.borderLight}`, borderRadius:20, padding:20, boxShadow:T.shadow }}>
+                              <h4 style={{ margin:'0 0 12px', fontSize:12, fontWeight:900, color:T.ink, display:'flex', alignItems:'center', gap:6 }}><TrendingUp size={14} color={T.primary}/> Instant Settlement</h4>
+                              <form onSubmit={payDebt} style={{ display:'flex', flexDirection:'column', gap:10 }}>
                                  <div style={{ position:'relative' }}>
-                                    <span style={{ position:'absolute', left:18, top:'50%', transform:'translateY(-50%)', fontWeight:900, fontSize:22, color:T.txt3 }}>₦</span>
-                                    <input style={{...sx.input, height:60, paddingLeft:40, fontSize:28, fontWeight:900, border:`1px solid ${T.borderDk}`, background:T.bg}} type="number" placeholder="0.00" value={payAmt} onChange={e=>setPayAmt(e.target.value)}/>
+                                    <span style={{ position:'absolute', left:14, top:'50%', transform:'translateY(-50%)', fontWeight:900, fontSize:18, color:T.txt3 }}>₦</span>
+                                    <input style={{...sx.input, height:48, paddingLeft:36, fontSize:22, fontWeight:900, background:T.bg2, border:'none'}} type="number" placeholder="0.00" value={payAmt} onChange={e=>setPayAmt(e.target.value)}/>
                                  </div>
-                                 <div style={{ display:'flex', gap:10 }}>
+                                 <div style={{ display:'flex', gap:8 }}>
                                     {['Cash', 'Transfer'].map(m => (
-                                       <button key={m} type="button" onClick={()=>setPayMethod(m as any)} style={{ flex:1, border:`1px solid ${payMethod===m?T.accent:T.border}`, borderRadius:14, padding:'14px 0', fontSize:13, fontWeight:800, background:payMethod===m?T.accentLt:'#fff', color:payMethod===m?T.accent:T.txt2, transition:'0.2s' }}>{m}</button>
+                                       <button key={m} type="button" onClick={()=>setPayMethod(m as any)} style={{ flex:1, border:`1px solid ${payMethod===m?T.border:T.borderLight}`, borderRadius:10, padding:'10px 0', fontSize:11, fontWeight:800, background:payMethod===m?T.primaryLight:T.solidWhite, color:payMethod===m?T.primary:T.txt2, transition:'0.2s', cursor:'pointer' }}>{m}</button>
                                     ))}
                                  </div>
-                                 <button type="submit" disabled={loading} style={{...sx.btn, width:'100%', justifyContent:'center', height:60, fontSize:16, boxShadow:T.shadowLg}}>{loading ? 'Processing...' : 'Process Payment ✓'}</button>
+                                 <motion.button whileTap={{scale:0.97}} type="submit" disabled={loading} style={{...sx.btn, width:'100%', justifyContent:'center', height:48, fontSize:13}}>{loading ? 'Processing...' : 'Complete Payment ✓'}</motion.button>
                               </form>
                            </div>
-                        </div>
+                        </motion.div>
                      )}
 
                      {/* 2. ANALYTICS & INSIGHTS */}
                      {dTab === 'analytics' && (
-                        <div style={{ display:'flex', flexDirection:'column', gap:20 }}>
-                           <div style={{ background:'#fff', border:`1px solid ${T.border}`, borderRadius:24, padding:24, boxShadow:T.shadow }}>
-                              <h4 style={{ margin:'0 0 20px', fontSize:14, fontWeight:900, display:'flex', alignItems:'center', gap:8 }}><BarChart3 size={16} color={T.accent}/> Purchasing Trend</h4>
+                        <motion.div initial={{opacity:0, y:10}} animate={{opacity:1, y:0}} style={{ display:'flex', flexDirection:'column', gap:16 }}>
+                           <div style={{ background:T.solidWhite, border:`1px solid ${T.borderLight}`, borderRadius:20, padding:20, boxShadow:T.shadow }}>
+                              <h4 style={{ margin:'0 0 16px', fontSize:12, fontWeight:900, color:T.ink, display:'flex', alignItems:'center', gap:6 }}><BarChart3 size={14} color={T.primary}/> Purchasing Trend / Heat Matrix</h4>
                               {chartData.length > 0 ? (
-                                 <div style={{ width: '100%', height: 250 }}>
+                                 <div style={{ width: '100%', height: 200 }}>
                                     <ResponsiveContainer width="100%" height="100%">
-                                       <AreaChart data={chartData}>
+                                       <AreaChart data={chartData} margin={{top:0, right:0, left:-20, bottom:0}}>
                                           <defs>
                                              <linearGradient id="colorAmt" x1="0" y1="0" x2="0" y2="1">
-                                                <stop offset="5%" stopColor={T.accent} stopOpacity={0.8}/>
-                                                <stop offset="95%" stopColor={T.accent} stopOpacity={0}/>
+                                                <stop offset="5%" stopColor={T.primary} stopOpacity={0.6}/>
+                                                <stop offset="95%" stopColor={T.primary} stopOpacity={0}/>
                                              </linearGradient>
                                           </defs>
-                                          <XAxis dataKey="date" fontSize={10} axisLine={false} tickLine={false} />
-                                          <YAxis fontSize={10} axisLine={false} tickLine={false} tickFormatter={(v) => `₦${v/1000}k`} />
-                                          <Tooltip contentStyle={{ borderRadius:12, border:`1px solid ${T.border}`, fontWeight:900, fontSize:12 }} />
-                                          <Area type="monotone" dataKey="amount" stroke={T.accent} strokeWidth={3} fillOpacity={1} fill="url(#colorAmt)" />
+                                          <XAxis dataKey="date" fontSize={9} axisLine={false} tickLine={false} tick={{fill:T.txt3}} />
+                                          <YAxis fontSize={9} axisLine={false} tickLine={false} tickFormatter={(v) => `₦${v/1000}k`} tick={{fill:T.txt3}} />
+                                          <Tooltip contentStyle={{ borderRadius:10, border:`1px solid ${T.borderLight}`, fontWeight:900, fontSize:10 }} />
+                                          <Area type="monotone" dataKey="amount" stroke={T.primary} strokeWidth={3} fillOpacity={1} fill="url(#colorAmt)" animationDuration={1500} />
                                        </AreaChart>
                                     </ResponsiveContainer>
                                  </div>
                               ) : (
-                                 <div style={{ height:200, display:'flex', alignItems:'center', justifyContent:'center', color:T.txt3, fontSize:12, fontWeight:700, background:T.bg, borderRadius:16 }}>Not Enough Data Available</div>
+                                 <div style={{ height:150, display:'flex', alignItems:'center', justifyContent:'center', color:T.txt3, fontSize:10, fontWeight:700, background:T.bg2, borderRadius:12 }}>Not Enough Data Available</div>
                               )}
                            </div>
                            
-                           <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16 }}>
-                              <div style={{ background:T.accentLt, padding:20, borderRadius:20 }}>
-                                 <p style={{ margin:0, fontSize:10, fontWeight:900, color:T.accentDk }}>LIFETIME VALUE</p>
-                                 <h3 style={{ margin:'4px 0 0', fontSize:20, fontWeight:900, color:T.accentDk }}>₦{customerItems.reduce((a,c)=>a+c.totalPrice,0).toLocaleString()}</h3>
+                           <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
+                              <div style={{ background:T.primaryLight, padding:16, borderRadius:16, border:`1px solid rgba(99,91,255,0.15)` }}>
+                                 <p style={{ margin:0, fontSize:9, fontWeight:900, color:T.primary }}>LIFETIME VALUE</p>
+                                 <h3 style={{ margin:'4px 0 0', fontSize:16, fontWeight:900, color:T.primary }}>₦{customerItems.reduce((a,c)=>a+c.totalPrice,0).toLocaleString()}</h3>
                               </div>
-                              <div style={{ background:T.successLt, padding:20, borderRadius:20 }}>
-                                 <p style={{ margin:0, fontSize:10, fontWeight:900, color:T.success }}>POINTS REDEEMABLE</p>
-                                 <h3 style={{ margin:'4px 0 0', fontSize:20, fontWeight:900, color:T.success }}>{drawer.loyaltyPoints || 0}  Pts</h3>
+                              <div style={{ background:T.successLight, padding:16, borderRadius:16, border:`1px solid rgba(5,150,105,0.15)` }}>
+                                 <p style={{ margin:0, fontSize:9, fontWeight:900, color:T.success }}>POINTS REDEEMABLE</p>
+                                 <h3 style={{ margin:'4px 0 0', fontSize:16, fontWeight:900, color:T.success }}>{drawer.loyaltyPoints || 0} Pts</h3>
                               </div>
                            </div>
-                        </div>
+                        </motion.div>
+                     )}
+
+                     {/* 2.5 LOGISTICS JOURNEY TIMELINE */}
+                     {dTab === 'logistics' && (
+                        <motion.div initial={{opacity:0, y:10}} animate={{opacity:1, y:0}} style={{ display:'flex', flexDirection:'column', gap:16, background:T.solidWhite, padding:24, borderRadius:20, boxShadow:T.shadow, border:`1px solid ${T.borderLight}` }}>
+                           <h4 style={{ margin:'0 0 16px', fontSize:12, fontWeight:900, color:T.ink, display:'flex', alignItems:'center', gap:6 }}><Truck size={14} color={T.primary}/> Supply Route Status</h4>
+                           
+                           <div style={{ position:'relative', paddingLeft:20, borderLeft:`2px dashed ${T.primaryLight}`, marginLeft:10 }}>
+                              <div style={{ position:'relative', marginBottom:24 }}>
+                                 <div style={{ position:'absolute', left:-28, top:0, background:T.successLight, color:T.success, width:16, height:16, borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', border:`2px solid ${T.solidWhite}` }}><CheckCircle size={10}/></div>
+                                 <h5 style={{ margin:0, fontSize:11, fontWeight:900, color:T.ink }}>Assigned Route</h5>
+                                 <p style={{ margin:'2px 0 0', fontSize:10, color:T.txt3, fontWeight:600 }}>{suppliers.find(s=>s.id===drawer.assignedSupplierId)?.full_name || 'Direct HQ Pickup'}</p>
+                              </div>
+                              
+                              <div style={{ position:'relative', marginBottom:24 }}>
+                                 <div style={{ position:'absolute', left:-28, top:0, background:T.primary, color:T.solidWhite, width:16, height:16, borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', border:`2px solid ${T.solidWhite}`, boxShadow:`0 0 0 3px ${T.primaryLight}` }}><Truck size={8}/></div>
+                                 <h5 style={{ margin:0, fontSize:11, fontWeight:900, color:T.primary }}>In Good Standing</h5>
+                                 <p style={{ margin:'2px 0 0', fontSize:10, color:T.txt3, fontWeight:600 }}>Ready for next dispatch window.</p>
+                              </div>
+
+                              <div style={{ position:'relative' }}>
+                                 <div style={{ position:'absolute', left:-28, top:0, background:T.borderLight, color:T.txt3, width:16, height:16, borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', border:`2px solid ${T.solidWhite}` }}><Clock size={10}/></div>
+                                 <h5 style={{ margin:0, fontSize:11, fontWeight:900, color:T.txt3 }}>Settlement Due</h5>
+                                 <p style={{ margin:'2px 0 0', fontSize:10, color:T.txt3, fontWeight:600 }}>Pending future deliveries.</p>
+                              </div>
+                           </div>
+                        </motion.div>
                      )}
 
                      {/* 3. TRANSACTION VAULT */}
                      {dTab === 'vault' && (
-                        <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
-                           <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:8 }}>
-                              <h3 style={{ margin:0, fontSize:15, fontWeight:900 }}>Statement Vault</h3>
-                              <button style={{ background:T.surface, border:`1px solid ${T.border}`, padding:'8px 14px', borderRadius:10, fontSize:11, fontWeight:900, color:T.txt, boxShadow:T.shadow }}>Export Ledger</button>
+                        <motion.div initial={{opacity:0, y:10}} animate={{opacity:1, y:0}} style={{ display:'flex', flexDirection:'column', gap:10 }}>
+                           <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:6 }}>
+                              <h3 style={{ margin:0, fontSize:13, fontWeight:900, color:T.ink }}>Statement Vault</h3>
+                              <button style={{ background:T.solidWhite, border:`1px solid ${T.borderLight}`, padding:'6px 12px', borderRadius:8, fontSize:9, fontWeight:900, color:T.ink, boxShadow:T.shadow, cursor:'pointer' }}>Export Ledger</button>
                            </div>
                            {customerItems.length > 0 ? customerItems.sort((a,b)=>new Date(b.date).getTime()-new Date(a.date).getTime()).map(tx => (
-                              <div key={tx.id} onClick={()=>navigate(`/receipt/${tx.id}`)} style={{ background:'#fff', padding:16, borderRadius:20, border:`1px solid ${T.border}`, display:'flex', alignItems:'center', gap:16, cursor:'pointer', boxShadow:T.shadow }}>
-                                 <div style={{ width:44, height:44, borderRadius:12, background:tx.type==='Return' ? T.dangerLt: tx.type==='Debt' ? T.warnLt : T.successLt, color:tx.type==='Return'?T.danger: tx.type==='Debt' ? T.warn : T.success, display:'flex', alignItems:'center', justifyContent:'center' }}>
-                                    {tx.type==='Return' ? <ArrowLeft size={18}/> : <Zap size={18}/>}
+                              <div key={tx.id} onClick={()=>navigate(`/receipt/${tx.id}`)} style={{ background:T.solidWhite, padding:12, borderRadius:16, border:`1px solid ${T.borderLight}`, display:'flex', alignItems:'center', gap:12, cursor:'pointer', boxShadow:'0 2px 8px rgba(0,0,0,0.02)' }}>
+                                 <div style={{ width:36, height:36, borderRadius:10, background:tx.type==='Return' ? T.dangerLight: tx.type==='Debt' ? T.goldLight : T.successLight, color:tx.type==='Return'?T.danger: tx.type==='Debt' ? T.gold : T.success, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+                                    {tx.type==='Return' ? <ArrowLeft size={16}/> : <Zap size={16}/>}
                                  </div>
                                  <div style={{ flex:1 }}>
-                                    <p style={{ margin:0, fontSize:14, fontWeight:900 }}>{tx.type} Transaction</p>
-                                    <p style={{ margin:0, fontSize:11, color:T.txt3, fontWeight:600 }}>{new Date(tx.date).toLocaleDateString([], { month:'long', day:'numeric', year:'numeric' })}</p>
+                                    <p style={{ margin:0, fontSize:12, fontWeight:900, color:T.ink }}>{tx.type} Txn</p>
+                                    <p style={{ margin:0, fontSize:9, color:T.txt3, fontWeight:600 }}>{new Date(tx.date).toLocaleDateString([], { month:'short', day:'numeric', year:'numeric' })}</p>
                                  </div>
                                  <div style={{ textAlign:'right' }}>
-                                    <p style={{ margin:0, fontSize:16, fontWeight:900, color:tx.type==='Return'?T.danger:T.txt }}>₦{tx.totalPrice.toLocaleString()}</p>
-                                    <p style={{ margin:0, fontSize:9, fontWeight:800, color:T.txt3 }}>{tx.status || 'COMPLETED'}</p>
+                                    <p style={{ margin:0, fontSize:14, fontWeight:900, color:tx.type==='Return'?T.danger:T.ink }}>₦{tx.totalPrice.toLocaleString()}</p>
+                                    <p style={{ margin:0, fontSize:8, fontWeight:800, color:T.txt3 }}>{tx.status || 'COMPLETED'}</p>
                                  </div>
                               </div>
                            )) : (
-                              <div style={{ textAlign:'center', padding:'60px 40px', background:'#fff', borderRadius:24, border:`1px dashed ${T.borderDk}` }}>
-                                 <History size={40} color={T.txt3} style={{marginBottom:16, opacity:0.3}}/>
-                                 <p style={{margin:0, fontSize:14, fontWeight:800, color:T.txt3}}>No Activity Found</p>
-                                 <p style={{margin:0, fontSize:11, color:T.txt3, opacity:0.6}}>Transactions will appear once recorded</p>
+                              <div style={{ textAlign:'center', padding:'40px 20px', background:T.solidWhite, borderRadius:16, border:`1px dashed ${T.borderLight}` }}>
+                                 <History size={32} color={T.txt3} style={{marginBottom:10, opacity:0.3}}/>
+                                 <p style={{margin:0, fontSize:12, fontWeight:800, color:T.txt3}}>No Activity Found</p>
+                                 <p style={{margin:0, fontSize:9, color:T.txt3, opacity:0.6}}>Transactions will appear once recorded</p>
                               </div>
                            )}
-                        </div>
+                        </motion.div>
                      )}
 
                      {/* 4. DIGITAL IDENTITY */}
                      {dTab === 'identity' && (
-                        <div style={{ display:'flex', flexDirection:'column', gap:24 }}>
-                           <div style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)', color:'#fff', padding:32, borderRadius:32, position:'relative', overflow:'hidden', boxShadow:T.shadowLg }}>
-                              <div style={{ position:'absolute', top:0, right:0, width:150, height:150, background:T.accent, opacity:0.1, filter:'blur(60px)', borderRadius:'50%' }}/>
-                              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:32 }}>
+                        <motion.div initial={{opacity:0, y:10}} animate={{opacity:1, y:0}} style={{ display:'flex', flexDirection:'column', gap:16 }}>
+                           <div style={{ background: `linear-gradient(135deg, ${T.primary} 0%, #4f46e5 100%)`, color:T.solidWhite, padding:24, borderRadius:24, position:'relative', overflow:'hidden', boxShadow:T.shadowMd }}>
+                              <div style={{ position:'absolute', top:0, right:0, width:120, height:120, background:T.solidWhite, opacity:0.05, filter:'blur(40px)', borderRadius:'50%' }}/>
+                              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:24 }}>
                                  <div>
-                                    <h4 style={{ margin:0, fontSize:12, fontWeight:900, letterSpacing:'0.2em', opacity:0.6 }}>{appSettings.companyName?.toUpperCase() || 'BAKERY SYSTEM'}</h4>
-                                    <p style={{ margin:0, fontSize:9, fontWeight:700, opacity:0.4 }}>SINCE 2024 • GLOBAL PARTNER</p>
+                                    <h4 style={{ margin:0, fontSize:10, fontWeight:900, letterSpacing:'0.2em', opacity:0.8 }}>{appSettings.companyName?.toUpperCase() || 'BAKERY SYSTEM'}</h4>
+                                    <p style={{ margin:0, fontSize:8, fontWeight:700, opacity:0.6 }}>SINCE 2024 • GLOBAL PARTNER</p>
                                  </div>
-                                 <ShieldCheck size={28} color={T.accent}/>
+                                 <ShieldCheck size={24} color={T.solidWhite} opacity={0.8}/>
                               </div>
-                              <div style={{ display:'flex', gap:20, alignItems:'center' }}>
-                                 <div style={{ width:74, height:74, borderRadius:20, background:'#fff', overflow:'hidden', border:'4px solid rgba(255,255,255,0.2)' }}>
-                                    {drawer.image ? <img src={drawer.image} style={{width:'100%', height:'100%', objectFit:'cover'}} /> : <div style={{width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center', color:'#1e293b', fontWeight:900, fontSize:28}}>{drawer.name[0]}</div>}
+                              <div style={{ display:'flex', gap:16, alignItems:'center' }}>
+                                 <div style={{ width:60, height:60, borderRadius:16, background:T.solidWhite, overflow:'hidden', border:'3px solid rgba(255,255,255,0.2)' }}>
+                                    {drawer.image ? <img src={drawer.image} style={{width:'100%', height:'100%', objectFit:'cover'}} /> : <div style={{width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center', color:T.primary, fontWeight:900, fontSize:22}}>{drawer.name[0]}</div>}
                                  </div>
                                  <div>
-                                    <h3 style={{ margin:0, fontSize:20, fontWeight:900 }}>{drawer.name}</h3>
-                                    <p style={{ margin:0, fontSize:10, fontWeight:800, color:T.accent, letterSpacing:'0.1em' }}>AUTHORIZED DISTRIBUTOR</p>
+                                    <h3 style={{ margin:0, fontSize:18, fontWeight:900 }}>{drawer.name}</h3>
+                                    <p style={{ margin:0, fontSize:9, fontWeight:800, color:T.accentLight, letterSpacing:'0.1em' }}>AUTHORIZED DISTRIBUTOR</p>
                                  </div>
                               </div>
-                              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-end', marginTop:40 }}>
+                              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-end', marginTop:30 }}>
                                  <div>
-                                    <p style={{ margin:0, fontSize:8, opacity:0.4, fontWeight:900 }}>DIGITAL SERIAL</p>
-                                    <p style={{ margin:0, fontSize:12, fontWeight:900, fontFamily:'monospace' }}>BR-{drawer.id.slice(0,8).toUpperCase()}</p>
+                                    <p style={{ margin:0, fontSize:8, opacity:0.6, fontWeight:900 }}>DIGITAL SERIAL</p>
+                                    <p style={{ margin:0, fontSize:11, fontWeight:900, fontFamily:'monospace' }}>BR-{drawer.id.slice(0,8).toUpperCase()}</p>
                                  </div>
-                                 <div style={{ background:'#fff', padding:6, borderRadius:12 }}>
-                                    <QRCode value={drawer.id} size={50} />
+                                 <div style={{ background:T.solidWhite, padding:4, borderRadius:8 }}>
+                                    <QRCode value={drawer.id} size={40} />
                                  </div>
                               </div>
                            </div>
-                           <button style={{...sx.btn, width:'100%', background:'#fff', color:T.txt, border:`1px solid ${T.border}`, justifyContent:'center'}}><Download size={16}/> Download ID Card</button>
-                        </div>
+                           <button style={{...sx.btn, width:'100%', background:T.solidWhite, color:T.ink, border:`1px solid ${T.borderLight}`, justifyContent:'center'}}><Download size={14}/> Download ID Card</button>
+                        </motion.div>
                      )}
 
                      {/* 5. COMPLIANCE (CERTIFICATE) */}
                      {dTab === 'compliance' && (
-                        <div style={{ display:'flex', flexDirection:'column', gap:24 }}>
-                           <div style={{ background: '#fff', border: `12px double #1e293b`, padding: 40, textAlign: 'center', position: 'relative', boxShadow:T.shadowLg }}>
-                              <div style={{ position:'absolute', top:20, right:20 }}><Award size={40} color="#1e293b" opacity={0.1}/></div>
-                              <Globe size={40} color="#1e293b" style={{ marginBottom: 20 }} />
-                              <h4 style={{ margin: 0, fontSize: 16, fontWeight: 900, letterSpacing:'0.2em' }}>CERTIFICATE OF PARTNERSHIP</h4>
-                              <p style={{ fontSize: 10, margin: '14px 0', opacity: 0.6, fontStyle:'italic' }}>THIS DOCUMENT HEREBY CERTIFIES THAT</p>
-                              <h2 style={{ margin: '10px 0', fontSize: 24, fontWeight: 900, color:'#1e293b', borderBottom:'2px solid #1e293b', display:'inline-block', paddingBottom:4 }}>{drawer.name}</h2>
-                              <p style={{ fontSize: 11, margin: '20px auto', maxWidth:'80%', opacity: 0.8, lineHeight:1.6 }}>is an accredited distributor and trusted partner of <b>{appSettings.companyName || 'The Bakery System'}</b>, entitled to all benefits and privileges of the Partner Network.</p>
-                              <div style={{ background:T.bg, padding:'12px 20px', borderRadius:8, margin:'24px 0', fontSize:10, fontWeight:800, letterSpacing:'0.1em', display:'inline-block' }}>LICENSE NO: BR-CERT-{drawer.id.slice(0,6).toUpperCase()}</div>
-                              <div style={{ display:'flex', justifyContent:'space-between', fontSize:9, fontWeight:900, marginTop:30, borderTop:`1px solid #1e293b`, paddingTop:14 }}>
+                        <motion.div initial={{opacity:0, y:10}} animate={{opacity:1, y:0}} style={{ display:'flex', flexDirection:'column', gap:16 }}>
+                           <div style={{ background: T.solidWhite, border: `6px double ${T.borderLight}`, padding: 30, textAlign: 'center', position: 'relative', boxShadow:T.shadow, borderRadius:16 }}>
+                              <div style={{ position:'absolute', top:16, right:16 }}><Award size={30} color={T.primary} opacity={0.05}/></div>
+                              <Globe size={30} color={T.primary} style={{ marginBottom: 16 }} />
+                              <h4 style={{ margin: 0, fontSize: 13, fontWeight: 900, color:T.ink, letterSpacing:'0.1em' }}>CERTIFICATE OF PARTNERSHIP</h4>
+                              <p style={{ fontSize: 9, margin: '10px 0', color:T.txt3, fontStyle:'italic' }}>THIS DOCUMENT HEREBY CERTIFIES THAT</p>
+                              <h2 style={{ margin: '8px 0', fontSize: 20, fontWeight: 900, color:T.ink, borderBottom:`2px solid ${T.borderLight}`, display:'inline-block', paddingBottom:4 }}>{drawer.name}</h2>
+                              <p style={{ fontSize: 10, margin: '16px auto', maxWidth:'80%', color:T.txt2, lineHeight:1.5 }}>is an accredited distributor and trusted partner of <b>{appSettings.companyName || 'The Bakery System'}</b>, entitled to all benefits and privileges.</p>
+                              <div style={{ background:T.bg2, padding:'8px 16px', borderRadius:6, margin:'16px 0', fontSize:9, fontWeight:800, color:T.ink, letterSpacing:'0.1em', display:'inline-block' }}>LICENSE NO: BR-CERT-{drawer.id.slice(0,6).toUpperCase()}</div>
+                              <div style={{ display:'flex', justifyContent:'space-between', fontSize:8, fontWeight:900, marginTop:24, borderTop:`1px solid ${T.borderLight}`, paddingTop:12, color:T.txt3 }}>
                                  <div style={{ textAlign:'left' }}>
-                                    <span style={{opacity:0.6}}>ISSUED DATE:</span><br/>{new Date().toLocaleDateString(undefined, { month:'long', day:'numeric', year:'numeric' })}
+                                    <span style={{opacity:0.6}}>ISSUED DATE:</span><br/>{new Date().toLocaleDateString(undefined, { month:'short', day:'numeric', year:'numeric' })}
                                  </div>
                                  <div style={{ textAlign:'right' }}>
-                                    <span style={{opacity:0.6}}>DIRECTOR SIGNATURE:</span><br/>____________________
+                                    <span style={{opacity:0.6}}>DIRECTOR:</span><br/>____________________
                                  </div>
                               </div>
                            </div>
-                           <button style={{...sx.btn, width:'100%', background:T.accent, justifyContent:'center'}}><Download size={16}/> Download Official Certificate</button>
-                        </div>
+                           <button style={{...sx.btn, width:'100%', background:T.primary, justifyContent:'center'}}><Download size={14}/> Download Official Certificate</button>
+                        </motion.div>
                      )}
 
                      {/* 6. CONFIG / ADMIN WITH CRM FIELDS */}
                      {dTab === 'config' && (
-                        <form onSubmit={saveEdit} style={{ display:'flex', flexDirection:'column', gap:18 }}>
-                           <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', background:'#fff', padding:16, borderRadius:20, border:`1px solid ${T.border}`, boxShadow:T.shadow }}>
+                        <motion.div initial={{opacity:0, y:10}} animate={{opacity:1, y:0}}>
+                        <form onSubmit={saveEdit} style={{ display:'flex', flexDirection:'column', gap:14 }}>
+                           <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', background:T.solidWhite, padding:14, borderRadius:16, border:`1px solid ${T.borderLight}`, boxShadow:T.shadow }}>
                               <div>
-                                 <h3 style={{ margin:0, fontSize:16, fontWeight:900 }}>Enterprise Settings</h3>
-                                 <p style={{ margin:0, fontSize:10, fontWeight:700, color:T.txt3 }}>Modify partner data and CRM parameters.</p>
+                                 <h3 style={{ margin:0, fontSize:13, fontWeight:900, color:T.ink }}>Enterprise Config</h3>
+                                 <p style={{ margin:0, fontSize:9, fontWeight:700, color:T.txt3 }}>Modify CRM parameters.</p>
                               </div>
-                              <button type="submit" disabled={loading} style={{ background:T.success, color:'#fff', border:'none', borderRadius:10, padding:'10px 16px', fontSize:12, fontWeight:900, cursor:'pointer', boxShadow:T.shadow }}>{loading ? 'Saving...' : 'Sync Master ✓'}</button>
+                              <button type="submit" disabled={loading} style={{ background:T.success, color:T.solidWhite, border:'none', borderRadius:8, padding:'8px 12px', fontSize:10, fontWeight:900, cursor:'pointer', boxShadow:T.shadow }}>{loading ? 'Saving...' : 'Sync Master ✓'}</button>
                            </div>
 
-                           <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:14 }}>
-                              <div><label style={{fontSize:10, fontWeight:800, color:T.txt3, display:'block', marginBottom:6}}>DISPLAY NAME</label><input style={sx.input} value={eName} onChange={e=>setEName(e.target.value)} required/></div>
-                              <div><label style={{fontSize:10, fontWeight:800, color:T.txt3, display:'block', marginBottom:6}}>MOBILE CONTACT</label><input style={sx.input} value={ePhone} onChange={e=>setEPhone(e.target.value)}/></div>
+                           <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
+                              <div><label style={{fontSize:9, fontWeight:800, color:T.txt3, display:'block', marginBottom:4}}>DISPLAY NAME</label><input style={sx.input} value={eName} onChange={e=>setEName(e.target.value)} required/></div>
+                              <div><label style={{fontSize:9, fontWeight:800, color:T.txt3, display:'block', marginBottom:4}}>MOBILE CONTACT</label><input style={sx.input} value={ePhone} onChange={e=>setEPhone(e.target.value)}/></div>
                            </div>
 
-                           <div style={{ background:T.surface, border:`1px solid ${T.accent}40`, padding:20, borderRadius:20, display:'flex', flexDirection:'column', gap:14 }}>
-                              <h4 style={{ margin:0, fontSize:12, fontWeight:900, display:'flex', alignItems:'center', gap:8 }}><Target size={14} color={T.accent}/> Sales Goals & Risk Management</h4>
-                              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:14 }}>
-                                 <div><label style={{fontSize:10, fontWeight:800, color:T.txt3, display:'block', marginBottom:6}}>MAX CREDIT LIMIT (₦)</label><input style={sx.input} type="number" placeholder="e.g. 500000" value={eCreditLimit} onChange={e=>setECreditLimit(e.target.value)}/></div>
-                                 <div><label style={{fontSize:10, fontWeight:800, color:T.txt3, display:'block', marginBottom:6}}>MONTHLY SALES TARGET (₦)</label><input style={sx.input} type="number" placeholder="e.g. 1000000" value={eSalesTarget} onChange={e=>setESalesTarget(e.target.value)}/></div>
+                           <div style={{ background:T.solidWhite, border:`1px solid ${T.borderLight}`, padding:16, borderRadius:16, display:'flex', flexDirection:'column', gap:10 }}>
+                              <h4 style={{ margin:0, fontSize:11, fontWeight:900, color:T.ink, display:'flex', alignItems:'center', gap:6 }}><Target size={12} color={T.primary}/> Sales Goals & Risk</h4>
+                              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
+                                 <div><label style={{fontSize:9, fontWeight:800, color:T.txt3, display:'block', marginBottom:4}}>MAX CREDIT (₦)</label><input style={sx.input} type="number" placeholder="500000" value={eCreditLimit} onChange={e=>setECreditLimit(e.target.value)}/></div>
+                                 <div><label style={{fontSize:9, fontWeight:800, color:T.txt3, display:'block', marginBottom:4}}>MONTH TARGET (₦)</label><input style={sx.input} type="number" placeholder="1000000" value={eSalesTarget} onChange={e=>setESalesTarget(e.target.value)}/></div>
                               </div>
                            </div>
 
-                           <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:14 }}>
-                              <div><label style={{fontSize:10, fontWeight:800, color:T.txt3, display:'block', marginBottom:6}}>LOGIN PORTAL ALIAS</label><input style={sx.input} value={eUsername} onChange={e=>setEUsername(e.target.value)}/></div>
-                              <div><label style={{fontSize:10, fontWeight:800, color:T.txt3, display:'block', marginBottom:6}}>MANAGED PASSWORD</label><input style={sx.input} value={ePassword} onChange={e=>setEPassword(e.target.value)}/></div>
+                           <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
+                              <div><label style={{fontSize:9, fontWeight:800, color:T.txt3, display:'block', marginBottom:4}}>PORTAL ALIAS</label><input style={sx.input} value={eUsername} onChange={e=>setEUsername(e.target.value)}/></div>
+                              <div><label style={{fontSize:9, fontWeight:800, color:T.txt3, display:'block', marginBottom:4}}>PASSWORD</label><input style={sx.input} value={ePassword} onChange={e=>setEPassword(e.target.value)}/></div>
                            </div>
                            
-                           <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:14 }}>
-                              <div><label style={{fontSize:10, fontWeight:800, color:T.txt3, display:'block', marginBottom:6}}>4-DIGIT SECURITY PIN</label><input style={{...sx.input, textAlign:'center', letterSpacing:'0.2em'}} maxLength={4} value={ePin} onChange={e=>setEPin(e.target.value)}/></div>
-                              <div><label style={{fontSize:10, fontWeight:800, color:T.txt3, display:'block', marginBottom:6}}>LOGISTICS ROUTE</label>
+                           <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
+                              <div><label style={{fontSize:9, fontWeight:800, color:T.txt3, display:'block', marginBottom:4}}>4-DIGIT PIN</label><input style={{...sx.input, textAlign:'center', letterSpacing:'0.2em'}} maxLength={4} value={ePin} onChange={e=>setEPin(e.target.value)}/></div>
+                              <div><label style={{fontSize:9, fontWeight:800, color:T.txt3, display:'block', marginBottom:4}}>LOGISTICS ROUTE</label>
                                  <select style={sx.input} value={eSup} onChange={e=>setESup(e.target.value)}>
-                                    <option value="">Direct / HQ Pickup</option>
+                                    <option value="">Direct Pickup</option>
                                     {suppliers.map(s => <option key={s.id} value={s.id}>{s.full_name}</option>)}
                                  </select>
                               </div>
                            </div>
 
-                           <div><label style={{fontSize:10, fontWeight:800, color:T.txt3, display:'block', marginBottom:6}}>BRANCH ADDRESS / LOC</label><input style={sx.input} value={eLocation} onChange={e=>setELocation(e.target.value)}/></div>
-                           <div><label style={{fontSize:10, fontWeight:800, color:T.txt3, display:'block', marginBottom:6}}>ADMINISTRATIVE MEMO</label><textarea style={{...sx.input, minHeight:80, resize:'none'}} value={eNote} onChange={e=>setENote(e.target.value)}/></div>
+                           <div><label style={{fontSize:9, fontWeight:800, color:T.txt3, display:'block', marginBottom:4}}>BRANCH ADDRESS</label><input style={sx.input} value={eLocation} onChange={e=>setELocation(e.target.value)}/></div>
+                           <div><label style={{fontSize:9, fontWeight:800, color:T.txt3, display:'block', marginBottom:4}}>ADMIN MEMO</label><textarea style={{...sx.input, minHeight:60, resize:'none'}} value={eNote} onChange={e=>setENote(e.target.value)}/></div>
                            
-                           <div style={{ paddingTop:20, borderTop:`1px solid ${T.border}`, marginTop:10 }}>
-                              <p style={{ margin:'0 0 12px', fontSize:11, fontWeight:800, color:T.danger }}>Critical Actions</p>
-                              <button type="button" style={{ ...sx.btn, background:T.dangerLt, color:T.danger, width:'100%', justifyContent:'center' }}><Lock size={16}/> Terminate Partnership</button>
+                           <div style={{ paddingTop:16, borderTop:`1px solid ${T.borderLight}`, marginTop:6 }}>
+                              <p style={{ margin:'0 0 10px', fontSize:9, fontWeight:800, color:T.danger }}>Critical Actions</p>
+                              <button type="button" style={{ ...sx.btn, background:T.dangerLight, color:T.danger, width:'100%', justifyContent:'center' }}><Lock size={14}/> Terminate Partnership</button>
                            </div>
                         </form>
+                        </motion.div>
                      )}
                   </div>
                </motion.div>
@@ -618,15 +681,15 @@ export const ManagerCustomers: React.FC = () => {
         {/* ADD PARTNER MODAL */}
         <AnimatePresence>
            {isAdding && (
-              <motion.div initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} style={{ position:'fixed', inset:0, background:'rgba(15,23,42,0.8)', backdropFilter:'blur(12px)', zIndex:200, display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}>
-                 <motion.div initial={{scale:0.95, y:20}} animate={{scale:1, y:0}} style={{ background:'#fff', width:'100%', maxWidth:440, borderRadius:32, padding:32, position:'relative', boxShadow:T.shadowLg }}>
-                    <button onClick={()=>setIsAdding(false)} style={{ position:'absolute', top:24, right:24, border:'none', background:T.surface2, width:36, height:36, borderRadius:12, cursor:'pointer' }}><X size={18}/></button>
-                    <div style={{ textAlign:'center', marginBottom:28 }}>
-                       <div style={{ width:56, height:56, background:T.accentLt, color:T.accent, borderRadius:18, display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 16px' }}><UserPlus size={28}/></div>
-                       <h2 style={{ margin:0, fontSize:22, fontWeight:900 }}>Onboard Enterprise Partner</h2>
-                       <p style={{ margin:0, fontSize:13, color:T.txt3, fontWeight:600 }}>Create a managed distributor profile</p>
+              <motion.div initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} style={{ position:'fixed', inset:0, background:'rgba(15,23,42,0.6)', backdropFilter:'blur(8px)', zIndex:200, display:'flex', alignItems:'center', justifyContent:'center', padding:16 }}>
+                 <motion.div initial={{scale:0.95, y:20}} animate={{scale:1, y:0}} style={{ background:T.solidWhite, width:'100%', maxWidth:400, borderRadius:24, padding:24, position:'relative', boxShadow:T.shadowMd }}>
+                    <button onClick={()=>setIsAdding(false)} style={{ position:'absolute', top:20, right:20, border:'none', background:T.bg2, width:32, height:32, borderRadius:10, cursor:'pointer' }}><X size={16}/></button>
+                    <div style={{ textAlign:'center', marginBottom:20 }}>
+                       <div style={{ width:48, height:48, background:T.primaryLight, color:T.primary, borderRadius:14, display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 12px' }}><UserPlus size={24}/></div>
+                       <h2 style={{ margin:0, fontSize:18, fontWeight:900, color:T.ink }}>Onboard Partner</h2>
+                       <p style={{ margin:0, fontSize:11, color:T.txt3, fontWeight:600 }}>Create a managed distributor profile</p>
                     </div>
-                    <form onSubmit={handleAdd} style={{ display:'flex', flexDirection:'column', gap:14 }}>
+                    <form onSubmit={handleAdd} style={{ display:'flex', flexDirection:'column', gap:10 }}>
                        <input style={sx.input} placeholder="Legal Enterprise Full Name" value={fName} onChange={e=>setFName(e.target.value)} required/>
                        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
                           <input style={sx.input} placeholder="Primary Phone" value={fPhone} onChange={e=>setFPhone(e.target.value)}/>
@@ -635,15 +698,15 @@ export const ManagerCustomers: React.FC = () => {
                              {suppliers.map(s => <option key={s.id} value={s.id}>{s.full_name}</option>)}
                           </select>
                        </div>
-                       <div style={{ background:T.surface2, padding:20, borderRadius:20, display:'flex', flexDirection:'column', gap:12, border:`1px solid ${T.border}` }}>
-                          <p style={{ margin:0, fontSize:10, fontWeight:900, color:T.txt3, letterSpacing:'0.05em' }}>🔐 CLOUD ACCESS PORTAL</p>
+                       <div style={{ background:T.bg2, padding:16, borderRadius:16, display:'flex', flexDirection:'column', gap:10, border:`1px solid ${T.borderLight}` }}>
+                          <p style={{ margin:0, fontSize:9, fontWeight:900, color:T.txt3, letterSpacing:'0.05em' }}>🔐 CLOUD ACCESS PORTAL</p>
                           <input style={sx.input} placeholder="Official Email (Login Identifier)" value={fEmail} onChange={e=>setFEmail(e.target.value)}/>
                           <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
                              <input style={sx.input} placeholder="Create Password" value={fPassword} onChange={e=>setFPassword(e.target.value)}/>
                              <input style={{...sx.input, textAlign:'center'}} placeholder="4-Digit PIN" maxLength={4} value={fPin} onChange={e=>setFPin(e.target.value.replace(/\D/g,''))}/>
                           </div>
                        </div>
-                       <button type="submit" disabled={loading} style={{...sx.btn, width:'100%', height:56, justifyContent:'center', fontSize:16, marginTop:10, boxShadow:T.shadowLg}}>{loading ? 'Deploying Cloud Sync...' : 'Confirm Registration ✓'}</button>
+                       <button type="submit" disabled={loading} style={{...sx.btn, width:'100%', height:48, justifyContent:'center', fontSize:14, marginTop:6}}>{loading ? 'Deploying...' : 'Confirm Registration ✓'}</button>
                     </form>
                  </motion.div>
               </motion.div>
@@ -656,16 +719,16 @@ export const ManagerCustomers: React.FC = () => {
         {/* SUCCESS MODAL */}
         <AnimatePresence>
            {createdCreds && (
-              <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }} style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.7)', backdropFilter:'blur(10px)', zIndex:300, display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}>
-                 <div style={{ background:'#fff', borderRadius:28, padding:32, width:'100%', maxWidth:350, textAlign:'center' }}>
-                    <div style={{ width:60, height:60, background:T.successLt, color:T.success, borderRadius:20, display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 20px', boxShadow:T.shadow }}><CheckCircle2 size={32} /></div>
-                    <h2 style={{ margin:'0 0 8px', fontSize:20, fontWeight:900 }}>Account Enabled</h2>
-                    <p style={{ margin:'0 0 24px', fontSize:13, fontWeight:600, color:T.txt3 }}>Partner credentials have been synced to the database</p>
-                    <div style={{ background:T.surface2, padding:20, borderRadius:20, textAlign:'left', fontSize:13, display:'flex', flexDirection:'column', gap:12 }}>
-                       <div><p style={{margin:0, fontSize:9, fontWeight:900, color:T.txt3, letterSpacing:'0.05em'}}>SYSTEM LOGIN</p><p style={{margin:0, fontWeight:800}}>{createdCreds.login}</p></div>
-                       <div><p style={{margin:0, fontSize:9, fontWeight:900, color:T.txt3, letterSpacing:'0.05em'}}>SECURE PASSWORD</p><p style={{margin:0, fontWeight:800, fontFamily:'monospace', letterSpacing:'0.1em'}}>{createdCreds.password}</p></div>
+              <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }} style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.6)', backdropFilter:'blur(8px)', zIndex:300, display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}>
+                 <div style={{ background:T.solidWhite, borderRadius:24, padding:24, width:'100%', maxWidth:320, textAlign:'center', boxShadow:T.shadowMd }}>
+                    <div style={{ width:50, height:50, background:T.successLight, color:T.success, borderRadius:16, display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 16px' }}><CheckCircle2 size={24} /></div>
+                    <h2 style={{ margin:'0 0 6px', fontSize:18, fontWeight:900, color:T.ink }}>Account Enabled</h2>
+                    <p style={{ margin:'0 0 20px', fontSize:11, fontWeight:600, color:T.txt3 }}>Partner credentials synced to database</p>
+                    <div style={{ background:T.bg2, padding:16, borderRadius:16, textAlign:'left', fontSize:11, display:'flex', flexDirection:'column', gap:10 }}>
+                       <div><p style={{margin:0, fontSize:8, fontWeight:900, color:T.txt3, letterSpacing:'0.05em'}}>SYSTEM LOGIN</p><p style={{margin:0, fontWeight:800, color:T.ink}}>{createdCreds.login}</p></div>
+                       <div><p style={{margin:0, fontSize:8, fontWeight:900, color:T.txt3, letterSpacing:'0.05em'}}>SECURE PASSWORD</p><p style={{margin:0, fontWeight:800, fontFamily:'monospace', letterSpacing:'0.1em', color:T.ink}}>{createdCreds.password}</p></div>
                     </div>
-                    <button onClick={()=>setCreatedCreds(null)} style={{...sx.btn, width:'100%', marginTop:24, height:50, justifyContent:'center'}}>Great, Thanks!</button>
+                    <button onClick={()=>setCreatedCreds(null)} style={{...sx.btn, width:'100%', marginTop:20, height:44, justifyContent:'center'}}>Great, Thanks!</button>
                  </div>
               </motion.div>
            )}
