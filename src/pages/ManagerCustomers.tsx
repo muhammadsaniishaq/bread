@@ -6,17 +6,18 @@ import {
   Award, ShieldCheck, History, TrendingUp, Zap, 
   Star, CreditCard, Activity, Filter,
   MoreHorizontal, Download,
-  CheckCircle2, Globe
+  CheckCircle2, Globe, BarChart3, Target, AlertTriangle, PhoneCall, MessageSquare, Mail
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ImageCropModal } from '../components/ImageCropModal';
 import QRCodeImport from 'react-qr-code';
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 
 const QRCode = (QRCodeImport as any).default || QRCodeImport;
 
-/* ─── Master Executive Tokens ─── */
+/* ─── Ultimate Enterprise Tokens ─── */
 const T = {
   bg:        '#f8fafc', 
   surface:   '#ffffff',
@@ -81,7 +82,7 @@ export const ManagerCustomers: React.FC = () => {
   /* Drawer State */
   const [drawerId, setDrawerId] = useState<string|null>(null);
   const drawer = useMemo(() => customers.find(c => c.id === drawerId), [customers, drawerId]);
-  const [dTab, setDTab]         = useState<'summary'|'vault'|'identity'|'compliance'|'config'>('summary');
+  const [dTab, setDTab]         = useState<'summary'|'analytics'|'vault'|'identity'|'compliance'|'config'>('summary');
   
   /* Edit States */
   const [eName, setEName]         = useState('');
@@ -94,6 +95,8 @@ export const ManagerCustomers: React.FC = () => {
   const [eSup, setESup]           = useState('');
   const [ePin, setEPin]           = useState('');
   const [eNote, setENote]         = useState('');
+  const [eCreditLimit, setECreditLimit] = useState('');
+  const [eSalesTarget, setESalesTarget] = useState('');
 
   /* Finance States */
   const [payAmt, setPayAmt]       = useState('');
@@ -110,7 +113,18 @@ export const ManagerCustomers: React.FC = () => {
       setEName(drawer.name); setEPhone(drawer.phone); setEEmail(drawer.email || '');
       setEUsername(drawer.username || ''); setEPassword(drawer.password || '');
       setELocation(drawer.location || ''); setEImage(drawer.image || '');
-      setESup(drawer.assignedSupplierId || ''); setEPin(drawer.pin || ''); setENote(drawer.notes || '');
+      setESup(drawer.assignedSupplierId || ''); setEPin(drawer.pin || ''); 
+      
+      try {
+         const parsed = JSON.parse(drawer.notes || '{}');
+         setECreditLimit(parsed.creditLimit ? String(parsed.creditLimit) : '');
+         setESalesTarget(parsed.salesTarget ? String(parsed.salesTarget) : '');
+         setENote(parsed.memo || '');
+      } catch (err) {
+         setECreditLimit('');
+         setESalesTarget('');
+         setENote(drawer.notes || '');
+      }
     }
   }, [drawer]);
 
@@ -127,11 +141,39 @@ export const ManagerCustomers: React.FC = () => {
     return transactions.filter(t => t.customerId === drawerId || t.sellerId === drawerId);
   }, [transactions, drawerId]);
 
+  /* Generate Chart Data */
+  const chartData = useMemo(() => {
+     if (!customerItems.length) return [];
+     const groups: Record<string, number> = {};
+     customerItems.sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime()).forEach(tx => {
+        const d = new Date(tx.date).toLocaleDateString([], {month:'short', day:'numeric'});
+        groups[d] = (groups[d] || 0) + tx.totalPrice;
+     });
+     return Object.keys(groups).map(k => ({ date: k, amount: groups[k] }));
+  }, [customerItems]);
+
   const stats = useMemo(() => ({
     total: customers.reduce((s,c) => s+(c.debtBalance||0), 0),
     count: customers.length,
     active: customers.filter(c => transactions.some(t => t.customerId === c.id)).length
   }), [customers, transactions]);
+
+  /* Parse metadata for goals and risks */
+  const drawerMeta = useMemo(() => {
+     try { return drawer?.notes ? JSON.parse(drawer.notes) : {}; }
+     catch { return {}; }
+  }, [drawer]);
+
+  const creditRatio = useMemo(() => {
+     if (!drawer || !drawerMeta.creditLimit) return 0;
+     return Math.min(100, Math.round((drawer.debtBalance / drawerMeta.creditLimit) * 100));
+  }, [drawer, drawerMeta]);
+
+  const salesProgress = useMemo(() => {
+      if (!drawer || !drawerMeta.salesTarget) return 0;
+      const totalSpent = customerItems.reduce((acc, curr) => acc + curr.totalPrice, 0);
+      return Math.min(100, Math.round((totalSpent / drawerMeta.salesTarget) * 100));
+  }, [customerItems, drawerMeta]);
 
   /* ───── Actions ───── */
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -182,8 +224,15 @@ export const ManagerCustomers: React.FC = () => {
     e.preventDefault(); if (!eName || !drawer) return;
     setLoading(true);
     try {
-      await updateCustomer({ ...drawer, name:eName, phone:ePhone, email:eEmail, username:eUsername, password:ePassword, location:eLocation, image:eImage, assignedSupplierId:eSup||undefined, pin:ePin||undefined, notes:eNote } as any);
+      const compiledNotes = JSON.stringify({
+         creditLimit: Number(eCreditLimit) || 0,
+         salesTarget: Number(eSalesTarget) || 0,
+         memo: eNote
+      });
+
+      await updateCustomer({ ...drawer, name:eName, phone:ePhone, email:eEmail, username:eUsername, password:ePassword, location:eLocation, image:eImage, assignedSupplierId:eSup||undefined, pin:ePin||undefined, notes:compiledNotes } as any);
       await refreshData();
+      alert('Partner Configuration Synced Successfully ✓');
     } catch (err: any) { alert(err.message); } finally { setLoading(false); }
   };
 
@@ -199,7 +248,7 @@ export const ManagerCustomers: React.FC = () => {
   const sx = {
     input: { background:'#fff', border:`1px solid ${T.border}`, borderRadius:12, padding:'12px 14px', fontSize:'14px', width:'100%', outline:'none', fontWeight:500 } as React.CSSProperties,
     btn: { background:T.accent, color:'#fff', border:'none', borderRadius:12, padding:'12px 20px', fontSize:'14px', fontWeight:800, cursor:'pointer', display:'flex', alignItems:'center', gap:8 } as React.CSSProperties,
-    tab: (active: boolean) => ({ padding:'10px 16px', borderRadius:12, background:active ? T.surface : 'transparent', color:active ? T.accent : T.txt3, border:'none', fontSize:11, fontWeight:900, cursor:'pointer', display:'flex', flexDirection:'column', alignItems:'center', gap:4, flex:1, transition:'all 0.2s', boxShadow:active ? T.shadow : 'none' }) as any,
+    tab: (active: boolean) => ({ padding:'10px', borderRadius:12, background:active ? T.surface : 'transparent', color:active ? T.accent : T.txt3, border:'none', fontSize:11, fontWeight:900, cursor:'pointer', display:'flex', flexDirection:'column', alignItems:'center', gap:4, flex:1, transition:'all 0.2s', boxShadow:active ? T.shadow : 'none' }) as any,
   };
 
   return (
@@ -214,7 +263,7 @@ export const ManagerCustomers: React.FC = () => {
             </button>
             <div style={{ flex:1 }}>
               <h1 style={{ margin:0, fontSize:20, fontWeight:900, letterSpacing:'-0.03em' }}>Partner Network</h1>
-              <p style={{ margin:0, fontSize:11, color:T.txt3, fontWeight:700, textTransform:'uppercase', letterSpacing:'0.05em' }}>Bakery Management • {stats.count} Members</p>
+              <p style={{ margin:0, fontSize:11, color:T.txt3, fontWeight:700, textTransform:'uppercase', letterSpacing:'0.05em' }}>Enterprise Division • {stats.count} Members</p>
             </div>
             <button onClick={() => setIsAdding(true)} style={sx.btn}><UserPlus size={16}/> New Partner</button>
           </div>
@@ -237,20 +286,30 @@ export const ManagerCustomers: React.FC = () => {
 
           <div style={{ position:'relative', marginTop:6 }}>
             <Search size={16} color={T.txt3} style={{ position:'absolute', left:14, top:'50%', transform:'translateY(-50%)' }} />
-            <input style={{ ...sx.input, paddingLeft:42, height:48, fontSize:15, border:`1px solid ${T.border}` }} placeholder="Search partners, phones or aliass..." value={search} onChange={e => setSearch(e.target.value)} />
+            <input style={{ ...sx.input, paddingLeft:42, height:48, fontSize:15, border:`1px solid ${T.border}` }} placeholder="Search enterprise directory..." value={search} onChange={e => setSearch(e.target.value)} />
             <div style={{ position:'absolute', right:14, top:'50%', transform:'translateY(-50%)', display:'flex', gap:10 }}>
                <Filter size={16} color={T.txt3}/>
             </div>
           </div>
         </div>
 
-        {/* COMPACT BENTO LIST */}
+        {/* ENTERPRISE BENTO GRID */}
         <div style={{ padding:'10px 20px', display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(170px, 1fr))', gap:12 }}>
            {list.map(c => {
              const [ac, lc] = getAvatar(c.name);
              const rank = getRank(c.debtBalance);
+             
+             // Extract local meta for quick warning check
+             let creditWarining = false;
+             try {
+                const cm = c.notes ? JSON.parse(c.notes) : {};
+                if (cm.creditLimit && c.debtBalance >= cm.creditLimit * 0.8) creditWarining = true;
+             } catch(e) {}
+
              return (
-               <motion.div key={c.id} layoutId={c.id} onClick={() => setDrawerId(c.id)} whileHover={{ y:-4 }} whileTap={{ scale:0.96 }} style={{ background:'#fff', border:`1px solid ${T.border}`, borderRadius:20, padding:16, cursor:'pointer', position:'relative', overflow:'hidden', boxShadow:T.shadow }}>
+               <motion.div key={c.id} layoutId={c.id} onClick={() => setDrawerId(c.id)} whileHover={{ y:-4 }} whileTap={{ scale:0.96 }} style={{ background:'#fff', border:`1px solid ${creditWarining ? T.danger : T.border}`, borderRadius:20, padding:16, cursor:'pointer', position:'relative', overflow:'hidden', boxShadow:T.shadow }}>
+                 {creditWarining && <div style={{ position:'absolute', top:0, right:0, background:T.danger, color:'#fff', padding:'2px 8px', borderBottomLeftRadius:10, fontSize:8, fontWeight:900 }}><AlertTriangle size={8} style={{marginRight:4}}/>LIMIT RISK</div>}
+                 
                  <div style={{ display:'flex', justifyContent:'space-between', width:'100%', marginBottom:16 }}>
                     <div style={{ width:36, height:36, borderRadius:12, background:lc, color:ac, display:'flex', alignItems:'center', justifyContent:'center', fontSize:16, fontWeight:900, border:'2px solid #fff', boxShadow:T.shadow }}>
                        {c.image ? <img src={c.image} style={{width:'100%', height:'100%', objectFit:'cover'}} /> : c.name[0]}
@@ -271,48 +330,50 @@ export const ManagerCustomers: React.FC = () => {
            })}
         </div>
 
-        {/* MASTER EXECUTIVE DRAWER */}
+        {/* ULTIMATE ENTERPRISE DRAWER */}
         <AnimatePresence>
            {drawer && (
              <>
-               <motion.div initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} onClick={()=>setDrawerId(null)} style={{ position:'fixed', inset:0, background:'rgba(15,23,42,0.4)', backdropFilter:'blur(8px)', zIndex:100 }}/>
-               <motion.div initial={{y:'100%'}} animate={{y:0}} exit={{y:'100%'}} transition={{type:'spring', damping:32, stiffness:320}} style={{ position:'fixed', bottom:0, left:0, right:0, height:'90vh', background:T.bg, zIndex:110, borderTopLeftRadius:32, borderTopRightRadius:32, display:'flex', flexDirection:'column', overflow:'hidden', boxShadow:'0 -20px 40px -10px rgba(0,0,0,0.1)' }}>
+               <motion.div initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} onClick={()=>setDrawerId(null)} style={{ position:'fixed', inset:0, background:'rgba(15,23,42,0.6)', backdropFilter:'blur(10px)', zIndex:100 }}/>
+               <motion.div initial={{y:'100%'}} animate={{y:0}} exit={{y:'100%'}} transition={{type:'spring', damping:32, stiffness:320}} style={{ position:'fixed', bottom:0, left:0, right:0, height:'92vh', background:T.bg, zIndex:110, borderTopLeftRadius:36, borderTopRightRadius:36, display:'flex', flexDirection:'column', overflow:'hidden', boxShadow:'0 -20px 40px -10px rgba(0,0,0,0.1)' }}>
                   
                   {/* Handle */}
                   <div style={{ height:5, width:40, background:T.borderDk, borderRadius:3, margin:'16px auto' }}/>
 
-                  {/* Header */}
-                  <div style={{ padding:'0 24px 24px', display:'flex', alignItems:'center', gap:16 }}>
+                  {/* Header & Quick Connect Hub */}
+                  <div style={{ padding:'0 24px 24px', display:'flex', alignItems:'flex-start', gap:16 }}>
                      <div style={{ position: 'relative' }}>
-                        <div style={{ width:60, height:60, borderRadius:18, background:getAvatar(drawer.name)[1], color:getAvatar(drawer.name)[0], display:'flex', alignItems:'center', justifyContent:'center', fontSize:26, fontWeight:900, overflow:'hidden', border:'4px solid #fff', boxShadow:T.shadow }}>
+                        <div style={{ width:70, height:70, borderRadius:22, background:getAvatar(drawer.name)[1], color:getAvatar(drawer.name)[0], display:'flex', alignItems:'center', justifyContent:'center', fontSize:30, fontWeight:900, overflow:'hidden', border:'4px solid #fff', boxShadow:T.shadow }}>
                            {drawer.image ? <img src={drawer.image} style={{width:'100%', height:'100%', objectFit:'cover'}} /> : drawer.name[0]}
                         </div>
-                        <button onClick={() => fileInputRef.current?.click()} style={{ position:'absolute', bottom:-2, right:-2, background:T.accent, color:'#fff', border:`3px solid #fff`, borderRadius:10, width:26, height:26, display:'flex', alignItems:'center', justifyContent:'center', boxShadow:T.shadow, cursor:'pointer' }}>
+                        <button onClick={() => fileInputRef.current?.click()} style={{ position:'absolute', bottom:-2, right:-2, background:T.accent, color:'#fff', border:`3px solid #fff`, borderRadius:10, width:28, height:28, display:'flex', alignItems:'center', justifyContent:'center', boxShadow:T.shadow, cursor:'pointer' }}>
                            <Camera size={14}/>
                         </button>
                         <input type="file" ref={fileInputRef} onChange={handleImageUpload} accept="image/*" style={{ display: 'none' }} />
                      </div>
-                     <div style={{ flex:1 }}>
-                        <h2 style={{ margin:0, fontSize:22, fontWeight:900, letterSpacing:'-0.02em' }}>{drawer.name}</h2>
-                        <div style={{ display:'flex', gap:12, alignItems:'center', marginTop:4 }}>
-                           <span style={{ fontSize:12, color:T.txt3, fontWeight:700 }}>BR-DIST-{drawer.id.slice(0,6).toUpperCase()}</span>
-                           <span style={{ fontSize:10, background:T.success+'15', color:T.success, padding:'2px 8px', borderRadius:6, fontWeight:900, textTransform:'uppercase' }}>Verified Partner</span>
+                     <div style={{ flex:1, alignSelf:'center' }}>
+                        <h2 style={{ margin:0, fontSize:24, fontWeight:900, letterSpacing:'-0.02em', lineHeight:1.1 }}>{drawer.name}</h2>
+                        <div style={{ display:'flex', gap:10, marginTop:8 }}>
+                           <a href={`tel:${drawer.phone}`} style={{ textDecoration:'none', display:'flex', alignItems:'center', justifyContent:'center', background:T.surface, border:`1px solid ${T.border}`, borderRadius:8, padding:'6px 10px', color:T.accent, flex:1, fontWeight:800, fontSize:10 }}><PhoneCall size={12} style={{marginRight:6}}/> Call</a>
+                           <a href={`https://wa.me/${drawer.phone}`} target="_blank" rel="noreferrer" style={{ textDecoration:'none', display:'flex', alignItems:'center', justifyContent:'center', background:'#25D36615', border:`1px solid #25D36650`, borderRadius:8, padding:'6px 10px', color:'#128C7E', flex:1, fontWeight:800, fontSize:10 }}><MessageSquare size={12} style={{marginRight:6}}/> Chat</a>
+                           {drawer.email && <a href={`mailto:${drawer.email}`} style={{ textDecoration:'none', display:'flex', alignItems:'center', justifyContent:'center', background:T.surface, border:`1px solid ${T.border}`, borderRadius:8, padding:'6px 10px', color:T.txt2, flex:1, fontWeight:800, fontSize:10 }}><Mail size={12} style={{marginRight:6}}/> Mail</a>}
                         </div>
                      </div>
-                     <button onClick={()=>setDrawerId(null)} style={{ border:'none', background:T.surface2, width:42, height:42, borderRadius:14, cursor:'pointer' }}><X size={20}/></button>
+                     <button onClick={()=>setDrawerId(null)} style={{ border:'none', background:T.surface2, width:40, height:40, borderRadius:14, cursor:'pointer', alignSelf:'center' }}><X size={20}/></button>
                   </div>
 
                   {/* MASTER TABS */}
-                  <div style={{ display:'flex', padding:4, background:T.surface2, margin:'0 24px 28px', borderRadius:18 }}>
+                  <div style={{ display:'flex', padding:4, background:T.surface, border:`1px solid ${T.border}`, margin:'0 24px 28px', borderRadius:16, boxShadow:T.shadow }}>
                      {[
                        { id:'summary', icon:Activity, label:'Overview' },
+                       { id:'analytics', icon:BarChart3, label:'Insights' },
                        { id:'vault', icon:History, label:'Vault' },
                        { id:'identity', icon:ShieldCheck, label:'Identity' },
                        { id:'compliance', icon:Award, label:'Legal' },
                        { id:'config', icon:MoreHorizontal, label:'Config' },
                      ].map(t => (
                        <button key={t.id} onClick={()=>setDTab(t.id as any)} style={sx.tab(dTab===t.id)}>
-                          <t.icon size={dTab===t.id ? 16 : 14}/> <span>{t.label}</span>
+                          <t.icon size={dTab===t.id ? 16 : 14}/> <span style={{fontSize:9}}>{t.label}</span>
                        </button>
                      ))}
                   </div>
@@ -320,55 +381,105 @@ export const ManagerCustomers: React.FC = () => {
                   {/* TAB CONTENT */}
                   <div style={{ flex:1, overflowY:'auto', padding:'0 24px 60px' }} className="hide-scrollbar">
                      
-                     {/* 1. SUMMARY DASHBOARD */}
+                     {/* 1. SUMMARY DASHBOARD WITH GOALS & LIMITS */}
                      {dTab === 'summary' && (
                         <div style={{ display:'flex', flexDirection:'column', gap:20 }}>
-                           <div style={{ display:'grid', gridTemplateColumns:'1.5fr 1fr', gap:16 }}>
-                              <div style={{ background: drawer.debtBalance > 0 ? T.danger : T.success, padding:32, borderRadius:28, color:'#fff', position:'relative', overflow:'hidden' }}>
-                                 <CreditCard size={100} style={{ position:'absolute', right:-20, bottom:-20, opacity:0.1, transform:'rotate(-15deg)' }}/>
-                                 <p style={{ margin:0, fontSize:10, fontWeight:900, opacity:0.8, textTransform:'uppercase', letterSpacing:'0.1em' }}>Current Balance</p>
-                                 <h1 style={{ margin:'8px 0', fontSize:36, fontWeight:900 }}>₦{drawer.debtBalance.toLocaleString()}</h1>
-                                 <div style={{ display:'flex', alignItems:'center', gap:8, background:'rgba(255,255,255,0.15)', padding:'6px 12px', borderRadius:10, width:'fit-content' }}>
-                                    <div style={{ width:6, height:6, borderRadius:3, background:'#fff' }}/>
-                                    <span style={{ fontSize:11, fontWeight:800 }}>{drawer.debtBalance > 0 ? 'Settlement Pending' : 'Clear Account'}</span>
-                                 </div>
+                           <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16 }}>
+                              <div style={{ background: drawer.debtBalance > 0 ? (creditRatio >= 80 ? T.danger : T.warn) : T.success, padding:24, borderRadius:28, color:'#fff', position:'relative', overflow:'hidden', boxShadow:T.shadow }}>
+                                 <CreditCard size={80} style={{ position:'absolute', right:-10, bottom:-10, opacity:0.1, transform:'rotate(-15deg)' }}/>
+                                 <p style={{ margin:0, fontSize:9, fontWeight:900, opacity:0.8, textTransform:'uppercase', letterSpacing:'0.1em' }}>Current Liability</p>
+                                 <h1 style={{ margin:'8px 0', fontSize:26, fontWeight:900 }}>₦{drawer.debtBalance.toLocaleString()}</h1>
+                                 {drawerMeta.creditLimit && (
+                                    <div style={{ marginTop:8, background:'rgba(0,0,0,0.1)', padding:'8px', borderRadius:10 }}>
+                                       <div style={{ display:'flex', justifyContent:'space-between', fontSize:9, fontWeight:800, marginBottom:4 }}>
+                                          <span>Limit Usage</span><span>{creditRatio}%</span>
+                                       </div>
+                                       <div style={{ height:4, background:'rgba(255,255,255,0.3)', borderRadius:2, overflow:'hidden' }}>
+                                          <div style={{ height:'100%', width:`${creditRatio}%`, background:'#fff', borderRadius:2 }}/>
+                                       </div>
+                                    </div>
+                                 )}
                               </div>
-                              <div style={{ background:'#fff', border:`1px solid ${T.border}`, padding:20, borderRadius:28, textAlign:'center', display:'flex', flexDirection:'column', justifyContent:'center' }}>
-                                 <div style={{ width:50, height:50, borderRadius:25, background:getRank(drawer.debtBalance).bg, color:getRank(drawer.debtBalance).color, display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 12px', border:'2px solid #fff', boxShadow:T.shadow }}>
-                                    <Star size={24} fill="currentColor"/>
+                              <div style={{ background:'#fff', border:`1px solid ${T.border}`, padding:20, borderRadius:28, textAlign:'center', display:'flex', flexDirection:'column', justifyContent:'center', boxShadow:T.shadow }}>
+                                 <p style={{ margin:'0 0 12px', fontSize:9, fontWeight:900, color:T.txt3 }}>MONTHLY TARGET</p>
+                                 <div style={{ position:'relative', width:70, height:70, margin:'0 auto' }}>
+                                    <svg viewBox="0 0 36 36" style={{ width:'100%', height:'100%' }}>
+                                       <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke={T.surface2} strokeWidth="3" />
+                                       <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke={salesProgress >= 100 ? T.success : T.accent} strokeWidth="3" strokeDasharray={`${salesProgress}, 100`} />
+                                    </svg>
+                                    <div style={{ position:'absolute', inset:0, display:'flex', alignItems:'center', justifyContent:'center', fontSize:14, fontWeight:900, color:salesProgress >= 100 ? T.success : T.accent }}>{salesProgress}%</div>
                                  </div>
-                                 <p style={{ margin:0, fontSize:9, fontWeight:900, color:T.txt3 }}>LOYALTY RANK</p>
-                                 <h3 style={{ margin:'2px 0 0', fontSize:18, fontWeight:900, color:getRank(drawer.debtBalance).color }}>{getRank(drawer.debtBalance).label}</h3>
+                                 <h3 style={{ margin:'10px 0 0', fontSize:12, fontWeight:900, color:T.txt }}>{drawerMeta.salesTarget ? `₦${drawerMeta.salesTarget.toLocaleString()}` : 'No Valid Target'}</h3>
                               </div>
                            </div>
 
-                           <div style={{ background:'#fff', border:`1px solid ${T.border}`, borderRadius:24, padding:24 }}>
-                              <h4 style={{ margin:'0 0 16px', fontSize:13, fontWeight:900, display:'flex', alignItems:'center', gap:8 }}><TrendingUp size={16} color={T.accent}/> Settle Outstanding</h4>
+                           <div style={{ background:'#fff', border:`1px solid ${T.border}`, borderRadius:24, padding:24, boxShadow:T.shadow }}>
+                              <h4 style={{ margin:'0 0 16px', fontSize:13, fontWeight:900, display:'flex', alignItems:'center', gap:8 }}><TrendingUp size={16} color={T.accent}/> Instant Settlement</h4>
                               <form onSubmit={payDebt} style={{ display:'flex', flexDirection:'column', gap:14 }}>
                                  <div style={{ position:'relative' }}>
                                     <span style={{ position:'absolute', left:18, top:'50%', transform:'translateY(-50%)', fontWeight:900, fontSize:22, color:T.txt3 }}>₦</span>
-                                    <input style={{...sx.input, height:60, paddingLeft:40, fontSize:28, fontWeight:900, border:`1px solid ${T.borderDk}`}} type="number" placeholder="0.00" value={payAmt} onChange={e=>setPayAmt(e.target.value)}/>
+                                    <input style={{...sx.input, height:60, paddingLeft:40, fontSize:28, fontWeight:900, border:`1px solid ${T.borderDk}`, background:T.bg}} type="number" placeholder="0.00" value={payAmt} onChange={e=>setPayAmt(e.target.value)}/>
                                  </div>
                                  <div style={{ display:'flex', gap:10 }}>
                                     {['Cash', 'Transfer'].map(m => (
                                        <button key={m} type="button" onClick={()=>setPayMethod(m as any)} style={{ flex:1, border:`1px solid ${payMethod===m?T.accent:T.border}`, borderRadius:14, padding:'14px 0', fontSize:13, fontWeight:800, background:payMethod===m?T.accentLt:'#fff', color:payMethod===m?T.accent:T.txt2, transition:'0.2s' }}>{m}</button>
                                     ))}
                                  </div>
-                                 <button type="submit" disabled={loading} style={{...sx.btn, width:'100%', justifyContent:'center', height:60, fontSize:16, boxShadow:T.shadowLg}}>{loading ? 'Processing...' : 'Record Payment Now ✓'}</button>
+                                 <button type="submit" disabled={loading} style={{...sx.btn, width:'100%', justifyContent:'center', height:60, fontSize:16, boxShadow:T.shadowLg}}>{loading ? 'Processing...' : 'Process Payment ✓'}</button>
                               </form>
                            </div>
                         </div>
                      )}
 
-                     {/* 2. TRANSACTION VAULT */}
+                     {/* 2. ANALYTICS & INSIGHTS */}
+                     {dTab === 'analytics' && (
+                        <div style={{ display:'flex', flexDirection:'column', gap:20 }}>
+                           <div style={{ background:'#fff', border:`1px solid ${T.border}`, borderRadius:24, padding:24, boxShadow:T.shadow }}>
+                              <h4 style={{ margin:'0 0 20px', fontSize:14, fontWeight:900, display:'flex', alignItems:'center', gap:8 }}><BarChart3 size={16} color={T.accent}/> Purchasing Trend</h4>
+                              {chartData.length > 0 ? (
+                                 <div style={{ width: '100%', height: 250 }}>
+                                    <ResponsiveContainer width="100%" height="100%">
+                                       <AreaChart data={chartData}>
+                                          <defs>
+                                             <linearGradient id="colorAmt" x1="0" y1="0" x2="0" y2="1">
+                                                <stop offset="5%" stopColor={T.accent} stopOpacity={0.8}/>
+                                                <stop offset="95%" stopColor={T.accent} stopOpacity={0}/>
+                                             </linearGradient>
+                                          </defs>
+                                          <XAxis dataKey="date" fontSize={10} axisLine={false} tickLine={false} />
+                                          <YAxis fontSize={10} axisLine={false} tickLine={false} tickFormatter={(v) => `₦${v/1000}k`} />
+                                          <Tooltip contentStyle={{ borderRadius:12, border:`1px solid ${T.border}`, fontWeight:900, fontSize:12 }} />
+                                          <Area type="monotone" dataKey="amount" stroke={T.accent} strokeWidth={3} fillOpacity={1} fill="url(#colorAmt)" />
+                                       </AreaChart>
+                                    </ResponsiveContainer>
+                                 </div>
+                              ) : (
+                                 <div style={{ height:200, display:'flex', alignItems:'center', justifyContent:'center', color:T.txt3, fontSize:12, fontWeight:700, background:T.bg, borderRadius:16 }}>Not Enough Data Available</div>
+                              )}
+                           </div>
+                           
+                           <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16 }}>
+                              <div style={{ background:T.accentLt, padding:20, borderRadius:20 }}>
+                                 <p style={{ margin:0, fontSize:10, fontWeight:900, color:T.accentDk }}>LIFETIME VALUE</p>
+                                 <h3 style={{ margin:'4px 0 0', fontSize:20, fontWeight:900, color:T.accentDk }}>₦{customerItems.reduce((a,c)=>a+c.totalPrice,0).toLocaleString()}</h3>
+                              </div>
+                              <div style={{ background:T.successLt, padding:20, borderRadius:20 }}>
+                                 <p style={{ margin:0, fontSize:10, fontWeight:900, color:T.success }}>POINTS REDEEMABLE</p>
+                                 <h3 style={{ margin:'4px 0 0', fontSize:20, fontWeight:900, color:T.success }}>{drawer.loyaltyPoints || 0}  Pts</h3>
+                              </div>
+                           </div>
+                        </div>
+                     )}
+
+                     {/* 3. TRANSACTION VAULT */}
                      {dTab === 'vault' && (
                         <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
                            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:8 }}>
                               <h3 style={{ margin:0, fontSize:15, fontWeight:900 }}>Statement Vault</h3>
-                              <button style={{ border:'none', background:T.surface2, padding:'6px 12px', borderRadius:8, fontSize:10, fontWeight:900, color:T.accent }}>Export PDF</button>
+                              <button style={{ background:T.surface, border:`1px solid ${T.border}`, padding:'8px 14px', borderRadius:10, fontSize:11, fontWeight:900, color:T.txt, boxShadow:T.shadow }}>Export Ledger</button>
                            </div>
                            {customerItems.length > 0 ? customerItems.sort((a,b)=>new Date(b.date).getTime()-new Date(a.date).getTime()).map(tx => (
-                              <div key={tx.id} onClick={()=>navigate(`/receipt/${tx.id}`)} style={{ background:'#fff', padding:16, borderRadius:20, border:`1px solid ${T.border}`, display:'flex', alignItems:'center', gap:16, cursor:'pointer' }}>
+                              <div key={tx.id} onClick={()=>navigate(`/receipt/${tx.id}`)} style={{ background:'#fff', padding:16, borderRadius:20, border:`1px solid ${T.border}`, display:'flex', alignItems:'center', gap:16, cursor:'pointer', boxShadow:T.shadow }}>
                                  <div style={{ width:44, height:44, borderRadius:12, background:tx.type==='Return' ? T.dangerLt: tx.type==='Debt' ? T.warnLt : T.successLt, color:tx.type==='Return'?T.danger: tx.type==='Debt' ? T.warn : T.success, display:'flex', alignItems:'center', justifyContent:'center' }}>
                                     {tx.type==='Return' ? <ArrowLeft size={18}/> : <Zap size={18}/>}
                                  </div>
@@ -391,7 +502,7 @@ export const ManagerCustomers: React.FC = () => {
                         </div>
                      )}
 
-                     {/* 3. DIGITAL IDENTITY */}
+                     {/* 4. DIGITAL IDENTITY */}
                      {dTab === 'identity' && (
                         <div style={{ display:'flex', flexDirection:'column', gap:24 }}>
                            <div style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)', color:'#fff', padding:32, borderRadius:32, position:'relative', overflow:'hidden', boxShadow:T.shadowLg }}>
@@ -426,7 +537,7 @@ export const ManagerCustomers: React.FC = () => {
                         </div>
                      )}
 
-                     {/* 4. COMPLIANCE (CERTIFICATE) */}
+                     {/* 5. COMPLIANCE (CERTIFICATE) */}
                      {dTab === 'compliance' && (
                         <div style={{ display:'flex', flexDirection:'column', gap:24 }}>
                            <div style={{ background: '#fff', border: `12px double #1e293b`, padding: 40, textAlign: 'center', position: 'relative', boxShadow:T.shadowLg }}>
@@ -450,38 +561,51 @@ export const ManagerCustomers: React.FC = () => {
                         </div>
                      )}
 
-                     {/* 5. CONFIG / ADMIN */}
+                     {/* 6. CONFIG / ADMIN WITH CRM FIELDS */}
                      {dTab === 'config' && (
                         <form onSubmit={saveEdit} style={{ display:'flex', flexDirection:'column', gap:18 }}>
-                           <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-                              <h3 style={{ margin:0, fontSize:15, fontWeight:900 }}>Account Configuration</h3>
-                              <button type="submit" disabled={loading} style={{ background:T.success, color:'#fff', border:'none', borderRadius:10, padding:'6px 14px', fontSize:11, fontWeight:900, cursor:'pointer' }}>{loading ? 'Saving...' : 'Sync Changes'}</button>
+                           <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', background:'#fff', padding:16, borderRadius:20, border:`1px solid ${T.border}`, boxShadow:T.shadow }}>
+                              <div>
+                                 <h3 style={{ margin:0, fontSize:16, fontWeight:900 }}>Enterprise Settings</h3>
+                                 <p style={{ margin:0, fontSize:10, fontWeight:700, color:T.txt3 }}>Modify partner data and CRM parameters.</p>
+                              </div>
+                              <button type="submit" disabled={loading} style={{ background:T.success, color:'#fff', border:'none', borderRadius:10, padding:'10px 16px', fontSize:12, fontWeight:900, cursor:'pointer', boxShadow:T.shadow }}>{loading ? 'Saving...' : 'Sync Master ✓'}</button>
                            </div>
 
                            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:14 }}>
                               <div><label style={{fontSize:10, fontWeight:800, color:T.txt3, display:'block', marginBottom:6}}>DISPLAY NAME</label><input style={sx.input} value={eName} onChange={e=>setEName(e.target.value)} required/></div>
-                              <div><label style={{fontSize:10, fontWeight:800, color:T.txt3, display:'block', marginBottom:6}}>SECURITY PIN</label><input style={{...sx.input, textAlign:'center', letterSpacing:'0.2em'}} maxLength={4} value={ePin} onChange={e=>setEPin(e.target.value)}/></div>
+                              <div><label style={{fontSize:10, fontWeight:800, color:T.txt3, display:'block', marginBottom:6}}>MOBILE CONTACT</label><input style={sx.input} value={ePhone} onChange={e=>setEPhone(e.target.value)}/></div>
                            </div>
 
-                           <div><label style={{fontSize:10, fontWeight:800, color:T.txt3, display:'block', marginBottom:6}}>LOGIN USERNAME</label><input style={sx.input} value={eUsername} onChange={e=>setEUsername(e.target.value)}/></div>
-                           <div><label style={{fontSize:10, fontWeight:800, color:T.txt3, display:'block', marginBottom:6}}>MANAGED PASSWORD</label><input style={sx.input} value={ePassword} onChange={e=>setEPassword(e.target.value)}/></div>
+                           <div style={{ background:T.surface, border:`1px solid ${T.accent}40`, padding:20, borderRadius:20, display:'flex', flexDirection:'column', gap:14 }}>
+                              <h4 style={{ margin:0, fontSize:12, fontWeight:900, display:'flex', alignItems:'center', gap:8 }}><Target size={14} color={T.accent}/> Sales Goals & Risk Management</h4>
+                              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:14 }}>
+                                 <div><label style={{fontSize:10, fontWeight:800, color:T.txt3, display:'block', marginBottom:6}}>MAX CREDIT LIMIT (₦)</label><input style={sx.input} type="number" placeholder="e.g. 500000" value={eCreditLimit} onChange={e=>setECreditLimit(e.target.value)}/></div>
+                                 <div><label style={{fontSize:10, fontWeight:800, color:T.txt3, display:'block', marginBottom:6}}>MONTHLY SALES TARGET (₦)</label><input style={sx.input} type="number" placeholder="e.g. 1000000" value={eSalesTarget} onChange={e=>setESalesTarget(e.target.value)}/></div>
+                              </div>
+                           </div>
+
+                           <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:14 }}>
+                              <div><label style={{fontSize:10, fontWeight:800, color:T.txt3, display:'block', marginBottom:6}}>LOGIN PORTAL ALIAS</label><input style={sx.input} value={eUsername} onChange={e=>setEUsername(e.target.value)}/></div>
+                              <div><label style={{fontSize:10, fontWeight:800, color:T.txt3, display:'block', marginBottom:6}}>MANAGED PASSWORD</label><input style={sx.input} value={ePassword} onChange={e=>setEPassword(e.target.value)}/></div>
+                           </div>
                            
                            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:14 }}>
-                              <div><label style={{fontSize:10, fontWeight:800, color:T.txt3, display:'block', marginBottom:6}}>MOBILE CONTACT</label><input style={sx.input} value={ePhone} onChange={e=>setEPhone(e.target.value)}/></div>
-                              <div><label style={{fontSize:10, fontWeight:800, color:T.txt3, display:'block', marginBottom:6}}>ASSIGNED ROUTE</label>
+                              <div><label style={{fontSize:10, fontWeight:800, color:T.txt3, display:'block', marginBottom:6}}>4-DIGIT SECURITY PIN</label><input style={{...sx.input, textAlign:'center', letterSpacing:'0.2em'}} maxLength={4} value={ePin} onChange={e=>setEPin(e.target.value)}/></div>
+                              <div><label style={{fontSize:10, fontWeight:800, color:T.txt3, display:'block', marginBottom:6}}>LOGISTICS ROUTE</label>
                                  <select style={sx.input} value={eSup} onChange={e=>setESup(e.target.value)}>
-                                    <option value="">Direct / Walk-in</option>
+                                    <option value="">Direct / HQ Pickup</option>
                                     {suppliers.map(s => <option key={s.id} value={s.id}>{s.full_name}</option>)}
                                  </select>
                               </div>
                            </div>
 
-                           <div><label style={{fontSize:10, fontWeight:800, color:T.txt3, display:'block', marginBottom:6}}>LOCATION / ADDRESS</label><input style={sx.input} value={eLocation} onChange={e=>setELocation(e.target.value)}/></div>
-                           <div><label style={{fontSize:10, fontWeight:800, color:T.txt3, display:'block', marginBottom:6}}>INTERNAL NOTES</label><textarea style={{...sx.input, minHeight:80, resize:'none'}} value={eNote} onChange={e=>setENote(e.target.value)}/></div>
+                           <div><label style={{fontSize:10, fontWeight:800, color:T.txt3, display:'block', marginBottom:6}}>BRANCH ADDRESS / LOC</label><input style={sx.input} value={eLocation} onChange={e=>setELocation(e.target.value)}/></div>
+                           <div><label style={{fontSize:10, fontWeight:800, color:T.txt3, display:'block', marginBottom:6}}>ADMINISTRATIVE MEMO</label><textarea style={{...sx.input, minHeight:80, resize:'none'}} value={eNote} onChange={e=>setENote(e.target.value)}/></div>
                            
                            <div style={{ paddingTop:20, borderTop:`1px solid ${T.border}`, marginTop:10 }}>
-                              <p style={{ margin:'0 0 12px', fontSize:11, fontWeight:800, color:T.danger }}>Dangerous Actions</p>
-                              <button type="button" style={{ ...sx.btn, background:T.dangerLt, color:T.danger, width:'100%', justifyContent:'center' }}><Lock size={16}/> Suspend Partner Account</button>
+                              <p style={{ margin:'0 0 12px', fontSize:11, fontWeight:800, color:T.danger }}>Critical Actions</p>
+                              <button type="button" style={{ ...sx.btn, background:T.dangerLt, color:T.danger, width:'100%', justifyContent:'center' }}><Lock size={16}/> Terminate Partnership</button>
                            </div>
                         </form>
                      )}
@@ -499,11 +623,11 @@ export const ManagerCustomers: React.FC = () => {
                     <button onClick={()=>setIsAdding(false)} style={{ position:'absolute', top:24, right:24, border:'none', background:T.surface2, width:36, height:36, borderRadius:12, cursor:'pointer' }}><X size={18}/></button>
                     <div style={{ textAlign:'center', marginBottom:28 }}>
                        <div style={{ width:56, height:56, background:T.accentLt, color:T.accent, borderRadius:18, display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 16px' }}><UserPlus size={28}/></div>
-                       <h2 style={{ margin:0, fontSize:22, fontWeight:900 }}>Onboard New Partner</h2>
-                       <p style={{ margin:0, fontSize:13, color:T.txt3, fontWeight:600 }}>Create an elite distributor profile</p>
+                       <h2 style={{ margin:0, fontSize:22, fontWeight:900 }}>Onboard Enterprise Partner</h2>
+                       <p style={{ margin:0, fontSize:13, color:T.txt3, fontWeight:600 }}>Create a managed distributor profile</p>
                     </div>
                     <form onSubmit={handleAdd} style={{ display:'flex', flexDirection:'column', gap:14 }}>
-                       <input style={sx.input} placeholder="Legal Full Name" value={fName} onChange={e=>setFName(e.target.value)} required/>
+                       <input style={sx.input} placeholder="Legal Enterprise Full Name" value={fName} onChange={e=>setFName(e.target.value)} required/>
                        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
                           <input style={sx.input} placeholder="Primary Phone" value={fPhone} onChange={e=>setFPhone(e.target.value)}/>
                           <select style={sx.input} value={fSup} onChange={e=>setFSup(e.target.value)}>
@@ -512,14 +636,14 @@ export const ManagerCustomers: React.FC = () => {
                           </select>
                        </div>
                        <div style={{ background:T.surface2, padding:20, borderRadius:20, display:'flex', flexDirection:'column', gap:12, border:`1px solid ${T.border}` }}>
-                          <p style={{ margin:0, fontSize:10, fontWeight:900, color:T.txt3, letterSpacing:'0.05em' }}>🔐 CLOUD ACCESS (OPTIONAL)</p>
+                          <p style={{ margin:0, fontSize:10, fontWeight:900, color:T.txt3, letterSpacing:'0.05em' }}>🔐 CLOUD ACCESS PORTAL</p>
                           <input style={sx.input} placeholder="Official Email (Login Identifier)" value={fEmail} onChange={e=>setFEmail(e.target.value)}/>
                           <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
                              <input style={sx.input} placeholder="Create Password" value={fPassword} onChange={e=>setFPassword(e.target.value)}/>
                              <input style={{...sx.input, textAlign:'center'}} placeholder="4-Digit PIN" maxLength={4} value={fPin} onChange={e=>setFPin(e.target.value.replace(/\D/g,''))}/>
                           </div>
                        </div>
-                       <button type="submit" disabled={loading} style={{...sx.btn, width:'100%', height:56, justifyContent:'center', fontSize:16, marginTop:10, boxShadow:T.shadowLg}}>{loading ? 'Initializing Cloud Sync...' : 'Confirm Registration ✓'}</button>
+                       <button type="submit" disabled={loading} style={{...sx.btn, width:'100%', height:56, justifyContent:'center', fontSize:16, marginTop:10, boxShadow:T.shadowLg}}>{loading ? 'Deploying Cloud Sync...' : 'Confirm Registration ✓'}</button>
                     </form>
                  </motion.div>
               </motion.div>
