@@ -6,6 +6,10 @@ export interface Product {
   stock: number;
   category?: string;
   image?: string;
+  description?: string;
+  ingredients?: string;
+  costPrice?: number;
+  barcode?: string;
 }
 
 export interface Customer {

@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Home, ShoppingBag, FileText, User, ListOrdered } from 'lucide-react';
+import { Home, ShoppingBag, User, ListOrdered } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 export const CustomerBottomNav: React.FC = () => {
@@ -15,7 +15,6 @@ export const CustomerBottomNav: React.FC = () => {
     { id: 'dashboard', label: 'Home',    icon: Home,        route: '/customer/dashboard' },
     { id: 'orders',    label: 'Orders',  icon: ListOrdered, route: '/customer/orders' },
     { id: 'store',     label: 'Shop',    icon: ShoppingBag, route: '/customer/store', isCenter: true },
-    { id: 'docs',      label: 'Docs',    icon: FileText,    route: '/customer/docs' },
     { id: 'profile',   label: 'Profile', icon: User,        route: '/customer/profile' },
   ];
 

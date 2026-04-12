@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { BarChart, Bar, ResponsiveContainer } from 'recharts';
+import { ImageCropModal } from '../components/ImageCropModal';
 
 const T = {
   bg:'#f8fafc', surface:'#ffffff', surface2:'#f1f5f9', border:'#e2e8f0',
@@ -56,18 +57,35 @@ export const ManagerCustomers: React.FC = () => {
   const [sortMode, setSortMode]     = useState<'A-Z'|'DEBT'|'VIP'|'NEWEST'>('A-Z');
   
   const [isAdding, setIsAdding]   = useState(false);
-  const [, setSuppliers] = useState<{id:string; full_name:string}[]>([]);
+  const [suppliers, setSuppliers] = useState<{id:string; full_name:string}[]>([]);
   const [loading, setLoading]     = useState(false);
 
   const [drawerId, setDrawerId] = useState<string|null>(null);
   const drawer = useMemo(() => customers.find(c => c.id === drawerId), [customers, drawerId]);
   
-  const [fName, setFName]=useState(''); const [fPhone, setFPhone]=useState(''); const [fEmail, setFEmail]=useState(''); const [fUsername, setFUsername]=useState(''); const [fPassword, setFPassword]=useState(''); const [fLocation, setFLocation]=useState(''); const [fSup, setFSup]=useState(''); const [fPin, setFPin]=useState(''); const [fCreditLimit, setFCreditLimit]=useState(''); const [fSalesTarget, setFSalesTarget]=useState(''); const [fNote, setFNote]=useState('');
+  const [fName, setFName]=useState(''); const [fPhone, setFPhone]=useState(''); const [fEmail, setFEmail]=useState(''); const [fUsername, setFUsername]=useState(''); const [fPassword, setFPassword]=useState(''); const [fLocation, setFLocation]=useState(''); const [fImage, setFImage]=useState(''); const [fSup, setFSup]=useState(''); const [fPin, setFPin]=useState(''); const [fCreditLimit, setFCreditLimit]=useState(''); const [fSalesTarget, setFSalesTarget]=useState(''); const [fNote, setFNote]=useState('');
 
   const [eName, setEName]=useState(''); const [ePhone, setEPhone]=useState(''); const [eEmail, setEEmail]=useState(''); const [eUsername, setEUsername]=useState(''); const [ePassword, setEPassword]=useState(''); const [eLocation, setELocation]=useState(''); const [eImage, setEImage]=useState(''); const [eSup, setESup]=useState(''); const [ePin, setEPin]=useState(''); const [eNote, setENote]=useState(''); const [eCreditLimit, setECreditLimit]=useState(''); const [eSalesTarget, setESalesTarget]=useState('');
   
-  const [dTab, setDTab] = useState<'history'|'analytics'|'config'>('history');
+  const [dTab, setDTab] = useState<'history'|'analytics'>('history');
   const [historyFilter, setHistoryFilter] = useState<'ALL'|'PURCHASES'|'PAYMENTS'>('ALL');
+  const [editModalOpen, setEditModalOpen] = useState(false);
+
+  const [cropModalOpen, setCropModalOpen] = useState(false);
+  const [tempImage, setTempImage] = useState<string>('');
+  const [cropTarget, setCropTarget] = useState<'add'|'edit'>('edit');
+
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>, target: 'add'|'edit') => {
+    if (e.target.files && e.target.files.length > 0) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        setTempImage(reader.result as string);
+        setCropTarget(target);
+        setCropModalOpen(true);
+      };
+      reader.readAsDataURL(e.target.files[0]);
+    }
+  };
 
   useEffect(() => { supabase.from('profiles').select('id,full_name').eq('role','SUPPLIER').then(({data}) => { if (data) setSuppliers(data); }); }, []);
 
@@ -128,12 +146,19 @@ export const ManagerCustomers: React.FC = () => {
         if (session) await supabase.auth.setSession(session);
         const uid = sData.user?.id || newId;
 
-        await supabase.from('profiles').upsert({ id:uid, full_name:fName, role:'CUSTOMER' });
-        await addCustomer({ id:uid, profile_id:uid, name:fName, email:fEmail, phone:fPhone, username:fUsername||fEmail.split('@')[0], location:fLocation, debtBalance:0, loyaltyPoints:0, assignedSupplierId:fSup||undefined, pin:fPin||undefined, notes:compiledNotes });
+        await supabase.from('profiles').upsert({ 
+           id:uid, 
+           full_name:fName, 
+           role:'CUSTOMER',
+           username: fUsername || fEmail.split('@')[0],
+           phone: fPhone || null,
+           avatar_url: fImage || null
+        });
+        await addCustomer({ id:uid, profile_id:uid, name:fName, email:fEmail, phone:fPhone, username:fUsername||fEmail.split('@')[0], location:fLocation, image:fImage, debtBalance:0, loyaltyPoints:0, assignedSupplierId:fSup||undefined, pin:fPin||undefined, notes:compiledNotes });
       } else {
-        await addCustomer({ id:newId, name:fName, phone:fPhone, email:fEmail, username:fUsername, debtBalance:0, loyaltyPoints:0, location:fLocation, notes:compiledNotes, assignedSupplierId:fSup||undefined, pin:fPin||undefined });
+        await addCustomer({ id:newId, name:fName, phone:fPhone, email:fEmail, username:fUsername, image:fImage, debtBalance:0, loyaltyPoints:0, location:fLocation, notes:compiledNotes, assignedSupplierId:fSup||undefined, pin:fPin||undefined });
       }
-      setIsAdding(false); setFName(''); setFPhone(''); setFEmail(''); setFUsername(''); setFPassword(''); setFLocation(''); setFSup(''); setFPin(''); setFCreditLimit(''); setFSalesTarget(''); setFNote('');
+      setIsAdding(false); setFName(''); setFPhone(''); setFEmail(''); setFUsername(''); setFPassword(''); setFLocation(''); setFImage(''); setFSup(''); setFPin(''); setFCreditLimit(''); setFSalesTarget(''); setFNote('');
       await refreshData();
     } catch (err: any) { alert(err.message); } finally { setLoading(false); }
   };
@@ -143,8 +168,21 @@ export const ManagerCustomers: React.FC = () => {
     try {
       await checkUniqueness(eUsername, ePhone, drawer.username, drawer.phone);
       const compiledNotes = JSON.stringify({ creditLimit: Number(eCreditLimit) || 0, salesTarget: Number(eSalesTarget) || 0, memo: eNote });
+      
       await updateCustomer({ ...drawer, name:eName, phone:ePhone, email:eEmail, username:eUsername, password:ePassword, location:eLocation, image:eImage, assignedSupplierId:eSup||undefined, pin:ePin||undefined, notes:compiledNotes } as any);
+      
+      // SYNC to profiles table so the customer's personal dashboard sees updates
+      if (drawer.profile_id || drawer.id) {
+         await supabase.from('profiles').update({
+            full_name: eName,
+            username: eUsername ? eUsername.toLowerCase().trim() : null,
+            phone: ePhone || null,
+            avatar_url: eImage || null
+         }).eq('id', drawer.profile_id || drawer.id);
+      }
+
       await refreshData(); alert('Client details updated.');
+      setEditModalOpen(false);
     } catch (err: any) { alert(err.message); } finally { setLoading(false); }
   };
 
@@ -304,26 +342,63 @@ Generated via Admin Console.`;
           </div>
         </div>
 
-        {/* PROVISIONING DRAWER */}
+        {/* PROVISIONING CENTERED MODAL */}
         <AnimatePresence>
           {isAdding&&(
-             <div style={{position:'fixed',inset:0,background:'rgba(15,23,42,0.4)',backdropFilter:'blur(4px)',zIndex:50,display:'flex',alignItems:'flex-end'}}>
-             <motion.form initial={{y:'100%'}} animate={{y:0}} exit={{y:'100%'}} transition={{type:'spring',damping:25,stiffness:300}} onSubmit={handleAdd}
-               style={{background:T.bg,width:'100%',height:'90vh',borderRadius:'24px 24px 0 0',display:'flex',flexDirection:'column',boxShadow:T.shadowMd}}>
-                 <div style={{padding:'20px', display:'flex', justifyContent:'space-between', borderBottom:`1px solid ${T.border}`}}>
-                    <h2 style={{margin:0, fontSize:'18px', fontWeight:600}}>Add Client</h2>
-                    <button type="button" onClick={()=>setIsAdding(false)} style={{background:'none', border:'none', cursor:'pointer'}}><X size={20}/></button>
-                 </div>
-                 <div style={{padding:'20px', overflowY:'auto'}}>
-                    <input style={{...inp, marginBottom:16}} placeholder="Full Name" value={fName} onChange={e=>setFName(e.target.value)} required/>
-                    <input style={{...inp, marginBottom:16}} placeholder="Phone" value={fPhone} onChange={e=>setFPhone(e.target.value)}/>
-                    <input style={{...inp, marginBottom:16}} placeholder="Address" value={fLocation} onChange={e=>setFLocation(e.target.value)}/>
-                    <input style={{...inp, marginBottom:16}} placeholder="Username" value={fUsername} onChange={e=>setFUsername(e.target.value)}/>
-                    <input style={{...inp, marginBottom:16}} type="password" placeholder="Password" value={fPassword} onChange={e=>setFPassword(e.target.value)}/>
-                    <button type="submit" style={{width:'100%', background:T.txt, color:'#fff', padding:'16px', borderRadius:'12px', border:'none', fontWeight:600, fontSize:'16px'}}>Save Profile</button>
-                 </div>
-             </motion.form>
-             </div>
+            <div style={{ position: 'fixed', inset: 0, zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(5px)', padding: '20px' }}>
+              <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
+                style={{ background: T.surface, width: '100%', maxWidth: '440px', maxHeight: '90vh', borderRadius: '24px', display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: T.shadowMd }}>
+                <div style={{ padding: '18px 24px', borderBottom: `1px solid ${T.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: T.surface }}>
+                   <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 800, color: T.ink }}>Add New Client</h3>
+                   <button type="button" onClick={() => setIsAdding(false)} style={{ background: T.surface2, border: 'none', width: '32px', height: '32px', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: T.ink }}><X size={16}/></button>
+                </div>
+                <div style={{ padding: '24px', overflowY: 'auto' }} className="hide-scrollbar">
+                   <form onSubmit={handleAdd} style={{display:'flex',flexDirection:'column',gap:16}}>
+                      <div style={{display:'flex',flexDirection:'column',gap:12}}>
+                         <div><label style={lbl}>Legal/Business Name</label><input style={inp} value={fName} onChange={e=>setFName(e.target.value)} required/></div>
+                         <div><label style={lbl}>Phone Number</label><input style={inp} value={fPhone} onChange={e=>setFPhone(e.target.value)}/></div>
+                         <div><label style={lbl}>Email Address</label><input style={inp} type="email" value={fEmail} onChange={e=>setFEmail(e.target.value)}/></div>
+                         <div><label style={lbl}>Username</label><input style={inp} value={fUsername} onChange={e=>setFUsername(e.target.value.toLowerCase().replace(/\s+/g, ''))}/></div>
+                         <div><label style={lbl}>Password (For Client Login)</label><input style={inp} type="password" value={fPassword} onChange={e=>setFPassword(e.target.value)}/></div>
+                         <div><label style={lbl}>Security PIN (4-Digits)</label><input style={inp} type="text" placeholder="e.g. 1234" maxLength={4} value={fPin} onChange={e=>setFPin(e.target.value)}/></div>
+                         <div>
+                           <label style={lbl}>Customer Avatar (Upload)</label>
+                           <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                             {fImage ? <img src={fImage} alt="Avatar" style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover' }} /> : null}
+                             <label style={{ ...inp, cursor: 'pointer', textAlign: 'center', background: T.surface2, border: `1px dashed ${T.border}` }}>
+                               <input type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => handleImageSelect(e, 'add')} />
+                               {fImage ? 'Change Photo' : 'Tap to Upload Photo'}
+                             </label>
+                             {fImage ? <button type="button" onClick={() => setFImage('')} style={{ background: T.dangerLt, color: T.textDanger, padding: '10px', border: 'none', borderRadius: '10px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><X size={14}/></button> : null}
+                           </div>
+                         </div>
+                         <div><label style={lbl}>Operations Base / Location</label><input style={inp} value={fLocation} onChange={e=>setFLocation(e.target.value)}/></div>
+                         <div>
+                            <label style={lbl}>Assigned Supplier / Manager</label>
+                            <select style={inp} value={fSup} onChange={e=>setFSup(e.target.value)}>
+                               <option value="">None (Direct Bakery Client)</option>
+                               {suppliers.map(s => <option key={s.id} value={s.id}>{s.full_name}</option>)}
+                            </select>
+                         </div>
+                      </div>
+                      
+                      <h4 style={{fontSize:'14px',fontWeight:600,color:T.ink,margin:'8px 0 0'}}>Initial Policies</h4>
+                      <div style={{display:'flex',flexDirection:'column',gap:12}}>
+                         <div>
+                            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}}>
+                               <label style={{...lbl,margin:0}}>Credit Threshold (₦)</label>
+                            </div>
+                            <input style={inp} type="number" value={fCreditLimit} onChange={e=>setFCreditLimit(e.target.value)}/>
+                         </div>
+                      </div>
+
+                      <button type="submit" disabled={loading} style={{background:T.ink,color:'#fff',border:'none',borderRadius:'12px',padding:'16px',fontWeight:600,fontSize:'14px',cursor:'pointer',marginTop:8}}>
+                        {loading?'Enrolling...':'Create Client Account'}
+                      </button>
+                   </form>
+                </div>
+              </motion.div>
+            </div>
           )}
         </AnimatePresence>
 
@@ -388,7 +463,7 @@ Generated via Admin Console.`;
                              <button onClick={copyCustomerReport} style={{background:T.surface2,color:T.ink,padding:'10px',borderRadius:'10px',display:'flex',alignItems:'center',justifyContent:'center',gap:'8px',fontWeight:600,fontSize:'14px',border:`1px solid ${T.border}`,cursor:'pointer',flex:1,whiteSpace:'nowrap'}}>
                                 <ClipboardList size={16}/> Report
                              </button>
-                             <button onClick={()=>setDTab('config')} style={{background:T.surface,color:T.ink,padding:'10px',borderRadius:'10px',display:'flex',alignItems:'center',justifyContent:'center',border:`1px solid ${T.border}`,cursor:'pointer'}} title="Edit Client">
+                             <button onClick={()=>setEditModalOpen(true)} style={{background:T.surface,color:T.ink,padding:'10px',borderRadius:'10px',display:'flex',alignItems:'center',justifyContent:'center',border:`1px solid ${T.border}`,cursor:'pointer'}} title="Edit Client">
                                 <Edit2 size={16}/>
                              </button>
                           </div>
@@ -396,7 +471,7 @@ Generated via Admin Console.`;
                           {/* Notes Preview Block */}
                           <div style={{marginTop:'28px'}}>
                              <h3 style={{fontSize:'15px',fontWeight:600,color:T.ink,margin:'0 0 8px',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-                                Notes <button onClick={()=>setDTab('config')} style={{background:'none',border:'none',color:T.accent,fontSize:'12px',cursor:'pointer'}}>Edit</button>
+                                Notes <button onClick={()=>setEditModalOpen(true)} style={{background:'none',border:'none',color:T.accent,fontSize:'12px',cursor:'pointer'}}>Edit</button>
                              </h3>
                              <p style={{color:T.txt2,fontSize:'14px',lineHeight:1.6,margin:0}}>{eNote || 'No internal notes captured for this client. Lorem ipsum text acts as placeholder if none exists.'}</p>
                           </div>
@@ -432,7 +507,7 @@ Generated via Admin Console.`;
 
                     {/* Navigation Tabs Container */}
                     <div style={{marginTop:'12px',display:'flex',gap:'24px',borderBottom:`1px solid ${T.border}`,padding:'0 24px'}}>
-                       {['history', 'analytics', 'config'].map(tab => (
+                       {['history', 'analytics'].map(tab => (
                           <button key={tab} onClick={()=>setDTab(tab as any)} style={{background:'none',border:'none',borderBottom:dTab===tab?`2px solid ${T.accent}`:'2px solid transparent',padding:'12px 0',fontSize:'14px',fontWeight:dTab===tab?600:500,color:dTab===tab?T.accent:T.txt2,cursor:'pointer',textTransform:'capitalize'}}>
                              {tab}
                           </button>
@@ -531,38 +606,86 @@ Generated via Admin Console.`;
                           </motion.div>
                        )}
 
-                       {dTab === 'config' && (
-                          <motion.form initial={{opacity:0}} animate={{opacity:1}} transition={{duration:0.2}} onSubmit={saveEdit} style={{display:'flex',flexDirection:'column',gap:16}}>
-                             <div style={{display:'flex',flexDirection:'column',gap:12}}>
-                                <div><label style={lbl}>Legal Name</label><input style={inp} value={eName} onChange={e=>setEName(e.target.value)} required/></div>
-                                <div><label style={lbl}>Username</label><input style={inp} value={eUsername} onChange={e=>setEUsername(e.target.value)}/></div>
-                                <div><label style={lbl}>Operations Base</label><input style={inp} value={eLocation} onChange={e=>setELocation(e.target.value)}/></div>
-                             </div>
-                             
-                             <h4 style={{fontSize:'14px',fontWeight:600,color:T.ink,margin:'8px 0 0'}}>Restricted Policies</h4>
-                             <div style={{display:'flex',flexDirection:'column',gap:12}}>
-                                <div>
-                                   <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}}>
-                                      <label style={{...lbl,margin:0}}>Credit Threshold (₦)</label>
-                                      <button type="button" onClick={applyBestQuota} style={{background:T.surface2,color:T.ink,border:'none',borderRadius:'6px',padding:'4px 8px',fontSize:'10px',fontWeight:600}}>Auto-tune</button>
-                                   </div>
-                                   <input style={inp} type="number" value={eCreditLimit} onChange={e=>setECreditLimit(e.target.value)}/>
-                                </div>
-                                <div><label style={lbl}>Override Memo / Internal Note</label><textarea style={{...inp,resize:'none',height:100}} value={eNote} onChange={e=>setENote(e.target.value)}></textarea></div>
-                             </div>
-
-                             <button type="submit" disabled={loading} style={{background:T.ink,color:'#fff',border:'none',borderRadius:'12px',padding:'16px',fontWeight:600,fontSize:'14px',cursor:'pointer',marginTop:8}}>
-                               {loading?'Saving updates...':'Save Configuration'}
-                             </button>
-                          </motion.form>
-                       )}
-
                     </div>
                  </div>
                </motion.div>
             </div>
           )}
         </AnimatePresence>
+        
+        {/* Floating Edit Modal in Center */}
+        <AnimatePresence>
+          {editModalOpen && drawer && (
+            <div style={{ position: 'fixed', inset: 0, zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(5px)', padding: '20px' }}>
+              <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
+                style={{ background: T.surface, width: '100%', maxWidth: '440px', maxHeight: '90vh', borderRadius: '24px', display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: T.shadowMd }}>
+                <div style={{ padding: '18px 24px', borderBottom: `1px solid ${T.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: T.surface }}>
+                   <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 800, color: T.ink }}>Edit Client Profile</h3>
+                   <button type="button" onClick={() => setEditModalOpen(false)} style={{ background: T.surface2, border: 'none', width: '32px', height: '32px', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: T.ink }}><X size={16}/></button>
+                </div>
+                <div style={{ padding: '24px', overflowY: 'auto' }} className="hide-scrollbar">
+                   <form onSubmit={saveEdit} style={{display:'flex',flexDirection:'column',gap:16}}>
+                      <div style={{display:'flex',flexDirection:'column',gap:12}}>
+                         <div><label style={lbl}>Legal/Business Name</label><input style={inp} value={eName} onChange={e=>setEName(e.target.value)} required/></div>
+                         <div><label style={lbl}>Business Registration No. (Optional)</label><input style={inp} placeholder="RC-123456" /></div>
+                         <div><label style={lbl}>Phone Number</label><input style={inp} value={ePhone} onChange={e=>setEPhone(e.target.value)} required/></div>
+                         <div><label style={lbl}>Email Address</label><input style={inp} type="email" value={eEmail} onChange={e=>setEEmail(e.target.value)}/></div>
+                         <div><label style={lbl}>Username</label><input style={inp} value={eUsername} onChange={e=>setEUsername(e.target.value.toLowerCase().replace(/\s+/g, ''))}/></div>
+                         <div><label style={lbl}>Password</label><input style={inp} type="text" placeholder="Leave blank to keep current" value={ePassword} onChange={e=>setEPassword(e.target.value)}/></div>
+                         <div><label style={lbl}>Security PIN (4-Digits)</label><input style={inp} type="text" placeholder="e.g. 1234" maxLength={4} value={ePin} onChange={e=>setEPin(e.target.value)}/></div>
+                         <div>
+                           <label style={lbl}>Customer Avatar (Upload)</label>
+                           <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                             {eImage ? <img src={eImage} alt="Avatar" style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover' }} /> : null}
+                             <label style={{ ...inp, cursor: 'pointer', textAlign: 'center', background: T.surface2, border: `1px dashed ${T.border}` }}>
+                               <input type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => handleImageSelect(e, 'edit')} />
+                               {eImage ? 'Change Photo' : 'Tap to Upload Photo'}
+                             </label>
+                             {eImage ? <button type="button" onClick={() => setEImage('')} style={{ background: T.dangerLt, color: T.textDanger, padding: '10px', border: 'none', borderRadius: '10px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><X size={14}/></button> : null}
+                           </div>
+                         </div>
+                         <div><label style={lbl}>Operations Base / Location</label><input style={inp} value={eLocation} onChange={e=>setELocation(e.target.value)}/></div>
+                         <div>
+                            <label style={lbl}>Assigned Supplier / Manager</label>
+                            <select style={inp} value={eSup} onChange={e=>setESup(e.target.value)}>
+                               <option value="">None (Direct Bakery Client)</option>
+                               {suppliers.map(s => <option key={s.id} value={s.id}>{s.full_name}</option>)}
+                            </select>
+                         </div>
+                      </div>
+                      
+                      <h4 style={{fontSize:'14px',fontWeight:600,color:T.ink,margin:'8px 0 0'}}>Restricted Policies</h4>
+                      <div style={{display:'flex',flexDirection:'column',gap:12}}>
+                         <div>
+                            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}}>
+                               <label style={{...lbl,margin:0}}>Credit Threshold (₦)</label>
+                               <button type="button" onClick={applyBestQuota} style={{background:T.surface2,color:T.ink,border:'none',borderRadius:'6px',padding:'4px 8px',fontSize:'10px',fontWeight:600}}>Auto-tune</button>
+                            </div>
+                            <input style={inp} type="number" value={eCreditLimit} onChange={e=>setECreditLimit(e.target.value)}/>
+                         </div>
+                         <div><label style={lbl}>Override Memo / Internal Note</label><textarea style={{...inp,resize:'none',height:100}} value={eNote} onChange={e=>setENote(e.target.value)}></textarea></div>
+                      </div>
+
+                      <button type="submit" disabled={loading} style={{background:T.ink,color:'#fff',border:'none',borderRadius:'12px',padding:'16px',fontWeight:600,fontSize:'14px',cursor:'pointer',marginTop:8}}>
+                        {loading?'Saving updates...':'Save Configuration'}
+                      </button>
+                   </form>
+                </div>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
+
+        <ImageCropModal 
+          isOpen={cropModalOpen} 
+          imageSrc={tempImage} 
+          onClose={() => setCropModalOpen(false)} 
+          onCropCompleteAction={(res) => { 
+            if (cropTarget === 'edit') setEImage(res); 
+            else setFImage(res);
+            setCropModalOpen(false); 
+          }} 
+        />
       </div>
     </AnimatedPage>
   );

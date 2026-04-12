@@ -5,8 +5,8 @@ import { useAppContext } from '../store/AppContext';
 import {
   ShoppingBag, Wallet, LogOut, Star,
   Calendar, ShoppingCart, Zap,
-  ChefHat, TrendingUp, Package,
-  FileText, Phone, Bell, ChevronRight,
+  TrendingUp, Package,
+  User, Phone, Bell, ChevronRight,
   Award, ArrowUpRight, Sparkles
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -223,10 +223,10 @@ export const CustomerDashboard: React.FC = () => {
   const avatar = customer.image || profile?.avatar_url;
 
   const quickActions = [
-    { id: 'shop',    label: 'Shop',    icon: ShoppingCart, color: T.primary, light: T.primaryLight,  path: '/customer/store' },
-    { id: 'orders',  label: 'Orders',  icon: Package,      color: T.accent,  light: T.accentLight,   path: '/customer/orders' },
-    { id: 'docs',    label: 'My Docs', icon: FileText,     color: T.gold,    light: T.goldLight,     path: '/customer/docs' },
-    { id: 'profile', label: 'Profile', icon: ChefHat,      color: T.success, light: T.successLight,  path: '/customer/profile' },
+    { id: 'shop',    label: 'Order',   icon: ShoppingCart, color: T.primary, light: T.primaryLight,  path: '/customer/store' },
+    { id: 'orders',  label: 'History', icon: Package,      color: T.accent,  light: T.accentLight,   path: '/customer/orders' },
+    { id: 'ledger',  label: 'Ledger',  icon: Wallet,       color: T.gold,    light: T.goldLight,     path: '/customer/dashboard' },
+    { id: 'profile', label: 'Profile', icon: User,         color: T.success, light: T.successLight,  path: '/customer/profile' },
   ];
 
   return (
@@ -253,15 +253,17 @@ export const CustomerDashboard: React.FC = () => {
           {/* Avatar + Greeting */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '16px', position: 'relative', zIndex: 1 }}>
             <motion.div whileTap={{ scale: 0.95 }} onClick={() => navigate('/customer/profile')}
-              style={{ width: '68px', height: '68px', borderRadius: '22px', overflow: 'hidden', border: `2.5px solid ${tier.color}`, boxShadow: `0 0 0 4px ${tier.light}, 0 8px 20px rgba(0,0,0,0.08)`, cursor: 'pointer', background: T.bg2, flexShrink: 0 }}>
+              style={{ width: '70px', height: '70px', borderRadius: '24px', overflow: 'hidden', border: `3px solid ${T.white}`, boxShadow: `0 0 0 3px ${tier.color}, 0 12px 28px rgba(0,0,0,0.12)`, cursor: 'pointer', background: T.bg2, flexShrink: 0 }}>
               {avatar
                 ? <img src={avatar} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '26px', fontWeight: 900, color: T.primary, background: T.primaryLight }}>{displayName[0]?.toUpperCase()}</div>
+                : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '28px', fontWeight: 900, color: T.primary, background: T.primaryLight }}>{displayName[0]?.toUpperCase()}</div>
               }
             </motion.div>
             <div>
-              <div style={{ color: T.txt3, fontSize: '12px', fontWeight: 600, marginBottom: '2px' }}>Welcome back 👋</div>
-              <div style={{ color: T.ink, fontSize: '24px', fontWeight: 900, lineHeight: 1.1 }}>{displayName}</div>
+              <div style={{ color: T.txt3, fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '4px' }}>
+                {new Date().getHours() < 12 ? 'Good Morning ☀️' : new Date().getHours() < 18 ? 'Good Afternoon 🌤️' : 'Good Evening 🌙'}
+              </div>
+              <div style={{ color: T.ink, fontSize: '26px', fontWeight: 900, lineHeight: 1.1, letterSpacing: '-0.03em' }}>{displayName}</div>
               <div style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', marginTop: '6px', padding: '3px 10px', borderRadius: '8px', background: tier.light, border: `1px solid ${tier.color}30` }}>
                 <span style={{ fontSize: '12px' }}>{tier.icon}</span>
                 <span style={{ color: tier.color, fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em' }}>{tier.name} Member</span>
@@ -274,28 +276,32 @@ export const CustomerDashboard: React.FC = () => {
 
           {/* ─── FINANCIAL LEDGER CARD ─── */}
           <motion.div {...cardAnim(0)}
-            style={{ background: T.white, borderRadius: T.radius, border: `1px solid ${T.border}`, padding: '22px', boxShadow: T.shadow }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px' }}>
+            style={{ position: 'relative', overflow: 'hidden', background: T.ink, borderRadius: '28px', padding: '24px', boxShadow: '0 20px 40px rgba(15,23,42,0.15)' }}>
+            {/* Dynamic Glassmorphism Background elements */}
+            <div style={{ position: 'absolute', top: '-50px', right: '-20px', width: '180px', height: '180px', background: 'linear-gradient(135deg, rgba(99,91,255,0.4), rgba(6,182,212,0.1))', borderRadius: '50%', filter: 'blur(40px)' }} />
+            <div style={{ position: 'absolute', bottom: '-40px', left: '-40px', width: '140px', height: '140px', background: 'rgba(217,119,6,0.2)', borderRadius: '50%', filter: 'blur(30px)' }} />
+            
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '22px', position: 'relative', zIndex: 1 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <div style={{ width: '36px', height: '36px', borderRadius: '11px', background: T.successLight, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <Wallet size={18} color={T.success} />
+                <div style={{ width: '38px', height: '38px', borderRadius: '12px', background: 'rgba(255,255,255,0.1)', backdropFilter: 'blur(10px)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid rgba(255,255,255,0.1)' }}>
+                  <Wallet size={18} color="#fff" />
                 </div>
-                <span style={{ color: T.ink, fontSize: '14px', fontWeight: 800 }}>Financial Ledger</span>
+                <span style={{ color: '#fff', fontSize: '15px', fontWeight: 800, letterSpacing: '0.02em' }}>Financial Ledger</span>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '4px 10px', borderRadius: '8px', background: T.successLight }}>
-                <TrendingUp size={11} color={T.success} />
-                <span style={{ color: T.success, fontSize: '10px', fontWeight: 900 }}>LIVE</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '4px 10px', borderRadius: '8px', background: 'rgba(5,150,105,0.2)', border: '1px solid rgba(5,150,105,0.3)' }}>
+                <TrendingUp size={11} color="#34d399" />
+                <span style={{ color: '#34d399', fontSize: '10px', fontWeight: 900 }}>LIVE</span>
               </div>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px', position: 'relative', zIndex: 1 }}>
               {[
-                { label: 'Total Bought', value: totalBought, color: T.ink,     bg: T.bg },
-                { label: 'Total Paid',   value: totalPaid,   color: T.success, bg: T.successLight },
-                { label: 'Balance Due',  value: debt,        color: debt > 0 ? T.danger : T.success, bg: debt > 0 ? T.dangerLight : T.successLight },
+                { label: 'Total Volume', value: totalBought, color: '#fff',     bg: 'rgba(255,255,255,0.06)' },
+                { label: 'Total Paid',   value: totalPaid,   color: '#34d399', bg: 'rgba(5,150,105,0.15)' },
+                { label: 'Amount Due',  value: debt,        color: debt > 0 ? '#fb7185' : '#34d399', bg: debt > 0 ? 'rgba(225,29,72,0.15)' : 'rgba(5,150,105,0.15)' },
               ].map((stat, i) => (
-                <div key={i} style={{ textAlign: 'center', padding: '14px 6px', borderRadius: '16px', background: stat.bg, border: `1px solid ${T.borderLight}` }}>
-                  <div style={{ color: T.txt3, fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>{stat.label}</div>
-                  <div style={{ color: stat.color, fontSize: '13px', fontWeight: 900 }}>
+                <div key={i} style={{ textAlign: 'center', padding: '16px 8px', borderRadius: '18px', background: stat.bg, border: '1px solid rgba(255,255,255,0.05)', backdropFilter: 'blur(10px)' }}>
+                  <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: '9px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '8px' }}>{stat.label}</div>
+                  <div style={{ color: stat.color, fontSize: '14px', fontWeight: 900 }}>
                     <AnimatedCounter value={stat.value} />
                   </div>
                 </div>

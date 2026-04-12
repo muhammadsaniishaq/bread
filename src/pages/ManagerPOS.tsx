@@ -1,10 +1,56 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useAppContext } from '../store/AppContext';
 import type { TransactionItem } from '../store/types';
 import { useNavigate } from 'react-router-dom';
-import { ShoppingCart, Trash2, ShieldCheck, ArrowLeft, Camera } from 'lucide-react';
+import { ShoppingCart, Trash2, ShieldCheck, ArrowLeft, Camera, CreditCard, Banknote, PackageOpen, Minus, Plus } from 'lucide-react';
 import { AnimatedPage } from '../components/AnimatedPage';
 import { QRScanner } from '../components/QRScanner';
+import { motion, AnimatePresence } from 'framer-motion';
+
+/* ─────────────────────────────────────────
+   DESIGN SYSTEM V5 — Executive Premium Hub
+───────────────────────────────────────── */
+const T = {
+  bg:           '#f8f7ff',
+  bg2:          '#f0eeff',
+  white:        '#ffffff',
+  border:       'rgba(99,91,255,0.10)',
+  borderLight:  'rgba(0,0,0,0.06)',
+  primary:      '#635bff',
+  primaryLight: 'rgba(99,91,255,0.10)',
+  accent:       '#06b6d4',
+  accentLight:  'rgba(6,182,212,0.10)',
+  success:      '#059669',
+  successLight: 'rgba(5,150,105,0.10)',
+  danger:       '#e11d48',
+  dangerLight:  'rgba(225,29,72,0.10)',
+  gold:         '#d97706',
+  goldLight:    'rgba(217,119,6,0.10)',
+  ink:          '#0f172a',
+  txt:          '#1e293b',
+  txt2:         '#475569',
+  txt3:         '#94a3b8',
+  radius:       '24px',
+  radiusSm:     '16px',
+  shadow:       '0 4px 24px rgba(99,91,255,0.08)',
+  shadowMd:     '0 8px 40px rgba(99,91,255,0.12)',
+};
+
+// Animated Number Counter
+const AnimatedCounter: React.FC<{ value: number }> = ({ value }) => {
+  const [display, setDisplay] = useState(0);
+  useEffect(() => {
+    let cur = 0;
+    const step = value / 20;
+    const t = setInterval(() => {
+      cur += step;
+      if (cur >= value) { setDisplay(value); clearInterval(t); }
+      else setDisplay(Math.floor(cur));
+    }, 20);
+    return () => clearInterval(t);
+  }, [value]);
+  return <span>₦{display.toLocaleString()}</span>;
+};
 
 export const ManagerPOS: React.FC = () => {
   const { customers, products, recordSale } = useAppContext();
@@ -14,6 +60,7 @@ export const ManagerPOS: React.FC = () => {
   const [paymentType, setPaymentType] = useState<'Cash' | 'Debt'>('Cash');
   const [cart, setCart] = useState<TransactionItem[]>([]);
   const [showScanner, setShowScanner] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   const handleScan = (decodedId: string) => {
     setShowScanner(false);
@@ -22,22 +69,17 @@ export const ManagerPOS: React.FC = () => {
 
   const activeProducts = products.filter(p => p.active);
   
-  const subtotal = useMemo(() => {
-    return cart.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0);
-  }, [cart]);
-
+  const subtotal = useMemo(() => cart.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0), [cart]);
   const totalAmount = subtotal;
 
   const handleQuickAdd = (product: typeof activeProducts[0]) => {
-    if (product.stock <= 0) {
-      alert(`Out of stock!`);
-      return;
-    }
+    if (product.stock <= 0) return alert(`Out of stock!`);
+    
     setCart(prev => {
       const existing = prev.find(item => item.productId === product.id);
       if (existing) {
         if (existing.quantity >= product.stock) {
-          alert(`Not enough stock! Only ${product.stock} available.`);
+          alert(`Limit reached. Only ${product.stock} available.`);
           return prev;
         }
         return prev.map(item => item.productId === product.id ? { ...item, quantity: item.quantity + 1 } : item);
@@ -66,6 +108,7 @@ export const ManagerPOS: React.FC = () => {
     if (cart.length === 0) return alert('Cart is empty');
     if (paymentType === 'Debt' && !customerId) return alert('Select customer for debt');
 
+    setIsProcessing(true);
     try {
       const newTx = {
         id: crypto.randomUUID(),
@@ -75,125 +118,192 @@ export const ManagerPOS: React.FC = () => {
         totalPrice: totalAmount,
         discount: 0,
         customerId: customerId || undefined,
+        origin: 'POS_BAKERY' // Assuming this is bakery admin doing the POS
       };
 
-      await recordSale(newTx);
+      await recordSale(newTx as any);
       alert('Sale Completed Successfully!');
       setCart([]);
       setCustomerId('');
     } catch (err: any) {
       alert(err.message || 'Error occurred');
+    } finally {
+      setIsProcessing(false);
     }
   };
 
+  const cInput = { width: '100%', padding: '16px', borderRadius: '14px', border: `1px solid ${T.border}`, background: T.white, color: T.ink, fontSize: '15px', fontWeight: 600, outline: 'none', transition: 'all 0.2s', boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.02)' };
+
   return (
     <AnimatedPage>
-      <div className="container pb-24 h-full flex flex-col">
-        <div className="flex items-center gap-3 mb-4">
-          <button onClick={() => navigate(-1)} className="p-2 bg-surface rounded-full shadow-sm hover:bg-black/5 transition-colors border border-[var(--border-color)]">
-            <ArrowLeft size={20} className="text-secondary" />
+      <div style={{ background: T.bg, minHeight: '100vh', padding: 'env(safe-area-inset-top) 16px 100px', display: 'flex', flexDirection: 'column', fontFamily: "'Inter', sans-serif" }}>
+        
+        {/* HEADER */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '24px', paddingTop: '16px' }}>
+          <button onClick={() => navigate(-1)} style={{ width: '42px', height: '42px', borderRadius: '14px', background: T.white, border: `1px solid ${T.borderLight}`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: T.shadow }}>
+            <ArrowLeft size={20} color={T.ink} />
           </button>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <ShieldCheck className="text-emerald-500" /> Executive POS
-          </h1>
+          <div>
+            <h1 style={{ margin: 0, fontSize: '22px', fontWeight: 900, color: T.ink, display: 'flex', alignItems: 'center', gap: '8px', letterSpacing: '-0.02em' }}>
+              <ShieldCheck size={24} color={T.primary} /> Executive POS
+            </h1>
+            <p style={{ margin: 0, fontSize: '13px', color: T.txt2, fontWeight: 500 }}>Global Bakery Over-the-counter</p>
+          </div>
         </div>
 
-        <div className="flex-1 grid md:grid-cols-2 gap-4">
-          {/* Products Panel */}
-          <div className="bg-surface p-4 rounded-3xl shadow-sm border border-[var(--border-color)] overflow-y-auto">
-             <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
-               {activeProducts.map(p => (
-                 <button 
-                   key={p.id}
-                   onClick={() => handleQuickAdd(p)}
-                   className="p-4 rounded-2xl border border-[var(--border-color)] bg-white/50 dark:bg-black/20 hover:scale-[1.02] transition-transform text-left"
-                 >
-                   <div className="font-bold text-[15px] leading-tight mb-1">{p.name}</div>
-                   <div className="text-emerald-500 font-black mb-2">₦{p.price}</div>
-                   <div className="text-[10px] text-secondary font-bold uppercase">Stock: {p.stock}</div>
-                 </button>
-               ))}
-             </div>
+        {/* WORKSPACE GRID */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.4fr) minmax(0, 1fr)', gap: '20px', flex: 1, alignItems: 'start' }}>
+          
+          {/* LEFT: PRODUCT CATALOG */}
+          <div style={{ background: T.white, borderRadius: T.radius, padding: '24px', boxShadow: T.shadow, border: `1px solid ${T.borderLight}`, display: 'flex', flexDirection: 'column', maxHeight: 'calc(100vh - 120px)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <h2 style={{ fontSize: '17px', fontWeight: 800, margin: 0, color: T.ink, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <PackageOpen size={18} color={T.accent} /> Store Catalog
+              </h2>
+              <div style={{ padding: '6px 12px', background: T.bg2, borderRadius: '8px', fontSize: '12px', fontWeight: 700, color: T.primary }}>{activeProducts.length} Items Active</div>
+            </div>
+
+            <div style={{ flex: 1, overflowY: 'auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '14px', paddingRight: '8px' }} className="hide-scrollbar">
+              {activeProducts.map((p, i) => (
+                <motion.button 
+                  key={p.id} 
+                  initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }}
+                  onClick={() => handleQuickAdd(p)}
+                  whileTap={{ scale: 0.95 }}
+                  style={{ background: T.bg, border: `1px solid ${T.border}`, borderRadius: '18px', padding: '16px', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', cursor: 'pointer', textAlign: 'left', position: 'relative', overflow: 'hidden' }}
+                >
+                  <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: T.white, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '12px', boxShadow: T.shadow, border: `1px solid ${T.borderLight}` }}>
+                     {p.image ? <img src={p.image} style={{width:'100%',height:'100%',objectFit:'cover',borderRadius:'10px'}}/> : <ShoppingCart size={18} color={T.txt3} />}
+                  </div>
+                  <div style={{ fontSize: '14px', fontWeight: 800, color: T.ink, lineHeight: 1.2, marginBottom: '6px', width: '100%' }}>{p.name}</div>
+                  <div style={{ fontSize: '16px', fontWeight: 900, color: T.primary, marginBottom: '10px' }}>₦{p.price.toLocaleString()}</div>
+                  <div style={{ fontSize: '10px', fontWeight: 800, background: p.stock > 10 ? T.successLight : T.dangerLight, color: p.stock > 10 ? T.success : T.danger, padding: '4px 8px', borderRadius: '6px', textTransform: 'uppercase' }}>
+                     {p.stock} in stock
+                  </div>
+                </motion.button>
+              ))}
+            </div>
           </div>
 
-          {/* Cart Panel */}
-          <div className="bg-surface p-6 rounded-3xl shadow-sm border border-[var(--border-color)] flex flex-col bg-gradient-to-br from-emerald-500/5 to-transparent">
-             <div className="flex items-center justify-between mb-4 pb-3 border-b border-[var(--border-color)]">
-               <h2 className="font-bold text-lg flex items-center gap-2"><ShoppingCart size={20}/> Current Cart</h2>
-               <div className="text-xs font-bold px-2 py-1 bg-emerald-500 text-white rounded-md">{cart.length} Items</div>
-             </div>
-
-             <div className="flex-1 overflow-y-auto mb-4 custom-scrollbar pr-2">
-               {cart.map(item => {
-                 const p = activeProducts.find(x => x.id === item.productId);
-                 return (
-                   <div key={item.productId} className="flex items-center justify-between py-3 border-b border-[var(--border-color)]">
-                     <div className="flex-1">
-                       <div className="font-bold">{p?.name || 'Unknown'}</div>
-                       <div className="text-xs opacity-70">₦{item.unitPrice} each</div>
-                     </div>
-                     <div className="flex items-center gap-3">
-                       <div className="flex items-center bg-black/5 rounded-xl">
-                         <button className="px-3 py-1 font-bold" onClick={() => updateCartQty(item.productId, -1)}>-</button>
-                         <span className="w-6 text-center font-bold text-sm">{item.quantity}</span>
-                         <button className="px-3 py-1 font-bold" onClick={() => updateCartQty(item.productId, 1)}>+</button>
-                       </div>
-                       <button className="text-danger p-2 hover:bg-danger/10 rounded-full" onClick={() => removeFromCart(item.productId)}>
-                         <Trash2 size={16}/>
-                       </button>
-                     </div>
-                   </div>
-                 );
-               })}
-               {cart.length === 0 && <div className="text-center py-10 opacity-40 font-bold">Cart is empty. Tap items to add.</div>}
-             </div>
-
-             <div className="mt-auto">
-               <div className="flex justify-between items-center mb-4 p-4 bg-white/50 dark:bg-zinc-900/50 rounded-2xl border border-[var(--border-color)]">
-                 <span className="font-bold opacity-70 uppercase tracking-widest text-xs">Total Amount</span>
-                 <span className="text-3xl font-black text-emerald-600 dark:text-emerald-400">₦{totalAmount.toLocaleString()}</span>
-               </div>
-               
-               <div className="grid grid-cols-2 gap-3 mb-4">
-                 <select className="form-input py-3 font-bold bg-white/50 dark:bg-zinc-900/50 backdrop-blur-md cursor-pointer text-sm" value={paymentType} onChange={e => setPaymentType(e.target.value as 'Cash'|'Debt')}>
-                   <option value="Cash">Cash Sale</option>
-                   <option value="Debt">Debt (Credit)</option>
-                 </select>
-                 
-                 <div className="relative">
-                   <select className="form-input w-full py-3 font-bold bg-white/50 dark:bg-zinc-900/50 backdrop-blur-md cursor-pointer text-sm" value={customerId} onChange={e => setCustomerId(e.target.value)}>
-                     <option value="">Walk-in Customer</option>
-                     {customers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                   </select>
-                   <button onClick={() => setShowScanner(true)} className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 bg-black/5 hover:bg-emerald-500 hover:text-white rounded-md transition-colors">
-                     <Camera size={16}/>
-                   </button>
+          {/* RIGHT: CART & CHECKOUT (PREMIUM GLASS PANEL) */}
+          <div style={{ position: 'relative', borderRadius: T.radius, overflow: 'hidden', padding: '24px', boxShadow: T.shadowMd, border: `1px solid ${T.borderLight}`, display: 'flex', flexDirection: 'column', maxHeight: 'calc(100vh - 120px)', background: T.ink }}>
+            {/* Dark glass aesthetics */}
+            <div style={{ position: 'absolute', top: '-50px', right: '-50px', width: '200px', height: '200px', background: 'radial-gradient(circle, rgba(99,91,255,0.4) 0%, transparent 70%)', filter: 'blur(30px)' }} />
+            <div style={{ position: 'absolute', bottom: '-20px', left: '-50px', width: '180px', height: '180px', background: 'radial-gradient(circle, rgba(6,182,212,0.3) 0%, transparent 70%)', filter: 'blur(40px)' }} />
+            
+            <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', height: '100%' }}>
+               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', paddingBottom: '16px', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+                 <h2 style={{ fontSize: '18px', fontWeight: 800, color: '#fff', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                   <ShoppingCart size={18} color="#fff" /> Current Cart
+                 </h2>
+                 <div style={{ background: 'rgba(255,255,255,0.1)', color: '#fff', fontSize: '12px', fontWeight: 800, padding: '6px 12px', borderRadius: '10px', backdropFilter: 'blur(5px)' }}>
+                   {cart.length} Items
                  </div>
                </div>
 
-               <button 
-                 onClick={handleCheckout} 
-                 className={`w-full py-4 rounded-2xl font-black text-lg transition-transform ${cart.length === 0 ? 'bg-black/10 text-black/40 cursor-not-allowed' : 'bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg shadow-emerald-500/30 hover:scale-[1.02]'}`}
-                 disabled={cart.length === 0}
-               >
-                 {cart.length === 0 ? 'No Items' : `Charge ₦${totalAmount.toLocaleString()}`}
-               </button>
-             </div>
+               {/* Cart Items List */}
+               <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '12px', paddingRight: '4px' }} className="hide-scrollbar">
+                  <AnimatePresence>
+                    {cart.map(item => {
+                      const p = activeProducts.find(x => x.id === item.productId);
+                      return (
+                        <motion.div key={item.productId} initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9, height: 0 }}
+                          style={{ background: 'rgba(255,255,255,0.06)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '16px', padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                           <div>
+                             <div style={{ fontSize: '14px', fontWeight: 800, color: '#fff', marginBottom: '4px' }}>{p?.name}</div>
+                             <div style={{ fontSize: '12px', fontWeight: 600, color: 'rgba(255,255,255,0.5)' }}>₦{item.unitPrice.toLocaleString()} ea</div>
+                           </div>
+                           <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                             <div style={{ display: 'flex', alignItems: 'center', background: 'rgba(0,0,0,0.3)', borderRadius: '10px', padding: '4px' }}>
+                                <button onClick={() => updateCartQty(item.productId, -1)} style={{ background: 'none', border: 'none', width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#fff' }}><Minus size={14}/></button>
+                                <span style={{ width: '28px', textAlign: 'center', fontSize: '14px', fontWeight: 800, color: '#fff' }}>{item.quantity}</span>
+                                <button onClick={() => updateCartQty(item.productId, 1)} style={{ background: 'none', border: 'none', width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#fff' }}><Plus size={14}/></button>
+                             </div>
+                             <button onClick={() => removeFromCart(item.productId)} style={{ background: 'rgba(225,29,72,0.15)', border: 'none', width: '36px', height: '36px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#fb7185' }}>
+                               <Trash2 size={16}/>
+                             </button>
+                           </div>
+                        </motion.div>
+                      )
+                    })}
+                  </AnimatePresence>
+                  
+                  {cart.length === 0 && (
+                    <div style={{ margin: 'auto', textAlign: 'center', color: 'rgba(255,255,255,0.3)' }}>
+                      <ShoppingCart size={48} style={{ margin: '0 auto 16px', opacity: 0.5 }} />
+                      <div style={{ fontSize: '14px', fontWeight: 700 }}>Your cart is empty</div>
+                    </div>
+                  )}
+               </div>
+
+               {/* Checkout Section */}
+               <div style={{ marginTop: '20px', paddingTop: '20px', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+                 
+                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '24px', background: 'rgba(0,0,0,0.3)', padding: '20px', borderRadius: '18px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                   <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Amount Due</div>
+                   <div style={{ color: '#fff', fontSize: '32px', fontWeight: 900, lineHeight: 1 }}>
+                     <AnimatedCounter value={totalAmount} />
+                   </div>
+                 </div>
+
+                 <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1.2fr)', gap: '12px', marginBottom: '24px' }}>
+                   {/* Payment Method Selector */}
+                   <div style={{ position: 'relative' }}>
+                     <select style={{ ...cInput, WebkitAppearance: 'none', background: 'rgba(255,255,255,0.05)', color: '#fff', border: '1px solid rgba(255,255,255,0.1)' }} value={paymentType} onChange={e => setPaymentType(e.target.value as 'Cash'|'Debt')}>
+                       <option value="Cash" style={{ color: T.ink }}>💶 Cash Sale</option>
+                       <option value="Debt" style={{ color: T.ink }}>💳 Debt (Credit)</option>
+                     </select>
+                     <div style={{ position: 'absolute', right: '14px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}>
+                        {paymentType === 'Cash' ? <Banknote size={16} color="rgba(255,255,255,0.5)"/> : <CreditCard size={16} color="rgba(255,255,255,0.5)"/>}
+                     </div>
+                   </div>
+
+                   {/* Customer Selector */}
+                   <div style={{ position: 'relative' }}>
+                     <select style={{ ...cInput, WebkitAppearance: 'none', background: 'rgba(255,255,255,0.05)', color: '#fff', border: '1px solid rgba(255,255,255,0.1)', paddingRight: '48px' }} value={customerId} onChange={e => setCustomerId(e.target.value)}>
+                       <option value="" style={{ color: T.ink }}>Walk-in (Anonymous)</option>
+                       {customers.map(c => <option key={c.id} value={c.id} style={{ color: T.ink }}>{c.name}</option>)}
+                     </select>
+                     <button onClick={() => setShowScanner(true)} style={{ position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)', width: '32px', height: '32px', background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#fff' }}>
+                       <Camera size={14} />
+                     </button>
+                   </div>
+                 </div>
+
+                 <motion.button 
+                   whileTap={cart.length > 0 && !isProcessing ? { scale: 0.96 } : {}}
+                   disabled={cart.length === 0 || isProcessing}
+                   onClick={handleCheckout}
+                   style={{ 
+                     width: '100%', padding: '20px', borderRadius: '18px', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', fontSize: '18px', fontWeight: 900, cursor: cart.length === 0 ? 'not-allowed' : 'pointer',
+                     background: cart.length === 0 ? 'rgba(255,255,255,0.1)' : T.primary,
+                     color: cart.length === 0 ? 'rgba(255,255,255,0.4)' : '#fff',
+                     boxShadow: cart.length > 0 ? '0 12px 28px rgba(99,91,255,0.4)' : 'none',
+                     transition: 'all 0.3s'
+                   }}
+                 >
+                   {isProcessing ? 'Processing Transaction...' : cart.length > 0 ? 'Charge Client & Checkout' : 'Cart Empty'}
+                 </motion.button>
+
+               </div>
+            </div>
           </div>
+
         </div>
+
       </div>
-      
+
       {showScanner && (
-        <div className="fixed inset-0 z-[100] bg-black/90 flex flex-col pt-10 px-4 pb-6 backdrop-blur-sm">
-           <div className="flex justify-between items-center mb-6 text-white">
-             <h2 className="font-bold text-xl">Scan Customer Barcode</h2>
-             <button onClick={() => setShowScanner(false)} className="px-4 py-2 bg-white/20 rounded-full font-bold">CLOSE</button>
+        <div style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(10px)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
+           <div style={{ width: '100%', maxWidth: '400px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', color: '#fff' }}>
+             <h2 style={{ margin: 0, fontSize: '20px', fontWeight: 800 }}>Scan QR/Barcode</h2>
+             <button onClick={() => setShowScanner(false)} style={{ background: 'rgba(255,255,255,0.15)', color: '#fff', border: 'none', padding: '8px 16px', borderRadius: '20px', fontSize: '12px', fontWeight: 800, cursor: 'pointer' }}>CANCEL</button>
            </div>
-           <div className="flex-1 bg-black rounded-3xl overflow-hidden shadow-2xl relative border border-white/20">
+           <div style={{ width: '100%', maxWidth: '400px', height: '400px', background: '#000', borderRadius: '24px', overflow: 'hidden', position: 'relative', border: '1px solid rgba(255,255,255,0.1)' }}>
              <QRScanner onScan={handleScan} onClose={() => setShowScanner(false)} />
-             <div className="absolute inset-0 pointer-events-none border-2 border-emerald-500/50 rounded-3xl z-10 m-4 shadow-[inset_0_0_20px_rgba(16,185,129,0.3)]"></div>
+             <div style={{ position: 'absolute', inset: 0, border: `2px solid ${T.primary}`, borderRadius: '24px', margin: '16px', pointerEvents: 'none', boxShadow: 'inset 0 0 30px rgba(99,91,255,0.2)' }} />
            </div>
-           <p className="text-center text-white/50 text-sm mt-6 font-bold uppercase tracking-widest">Hold device steady</p>
+           <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '12px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', marginTop: '24px' }}>Focus code inside the scanner</p>
         </div>
       )}
     </AnimatedPage>

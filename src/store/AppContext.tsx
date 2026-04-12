@@ -44,6 +44,8 @@ interface AppContextType {
 const mapProduct = (r: any): Product => ({
   id: r.id, name: r.name, price: r.price, active: r.active,
   stock: r.stock || 0, category: r.category, image: r.image,
+  description: r.description || '', ingredients: r.ingredients || '',
+  costPrice: r.cost_price || 0, barcode: r.barcode || ''
 });
 
 const mapCustomer = (r: any): Customer => ({
@@ -188,18 +190,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // ─── Products ───────────────────────────────────────────────────────────────
   const addProduct = async (p: Product) => {
-    await supabase.from('products').upsert({
+    const { error } = await supabase.from('products').upsert({
       id: p.id, name: p.name, price: p.price, active: p.active,
       stock: p.stock, category: p.category || null, image: p.image || null,
+      description: p.description || null, ingredients: p.ingredients || null,
+      cost_price: p.costPrice || null, barcode: p.barcode || null
     });
+    if (error) { console.error('addProduct failed:', error); throw new Error(error.message); }
     await refreshData();
   };
 
   const updateProduct = async (p: Product) => {
-    await supabase.from('products').update({
+    const { error } = await supabase.from('products').update({
       name: p.name, price: p.price, active: p.active,
       stock: p.stock, category: p.category || null, image: p.image || null,
+      description: p.description || null, ingredients: p.ingredients || null,
+      cost_price: p.costPrice || null, barcode: p.barcode || null
     }).eq('id', p.id);
+    if (error) { console.error('updateProduct failed:', error); throw new Error(error.message); }
     await refreshData();
   };
 
