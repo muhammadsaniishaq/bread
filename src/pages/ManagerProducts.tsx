@@ -35,6 +35,7 @@ const T = {
   radius:       '24px',
   radiusSm:     '16px',
   shadow:       '0 4px 24px rgba(99,91,255,0.08)',
+  shadowMd:     '0 8px 32px rgba(99,91,255,0.12)',
 };
 
 const stagger: Variants = {

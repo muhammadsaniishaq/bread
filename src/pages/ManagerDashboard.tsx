@@ -163,6 +163,7 @@ export const ManagerDashboard: React.FC = () => {
       bg: T.amberL,
       modules: [
         { label: 'Bread Catalog',  icon: PackageSearch, color: T.amber,   bg: T.amberL,  path: '/manager/products' },
+        { label: 'Loda Stock',     icon: Zap,           color: '#7c3aed', bg: 'rgba(124,58,237,0.1)', path: '/manager/load-stock' },
         { label: 'Raw Materials',  icon: Boxes,         color: '#92400e', bg: 'rgba(146,64,14,0.10)', path: '/manager/raw-materials' },
         { label: 'Assign Stock',   icon: ArrowRightLeft,color: T.blue,    bg: T.blueL,   path: '/manager/stock-assignment' },
         { label: 'Stock Levels',   icon: PieChart,      color: T.emerald, bg: T.emeraldL, path: '/manager/stock-levels' },

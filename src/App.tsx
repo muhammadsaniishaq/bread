@@ -46,6 +46,7 @@ import ManagerCustomerIDs from './pages/ManagerCustomerIDs';
 import ManagerCompanyInfo from './pages/ManagerCompanyInfo';
 import ManagerStaffProfiles from './pages/ManagerStaffProfiles';
 import ManagerAuditHistory from './pages/ManagerAuditHistory';
+import ManagerProductionLoad from './pages/ManagerProductionLoad';
 
 import Dashboard from './pages/Dashboard';
 import Settings from './pages/Settings';
@@ -149,6 +150,7 @@ const AppContent: React.FC = () => {
             <Route path="/manager/company" element={<RoleGuard allowedRoles={['MANAGER']}><ManagerCompanyInfo /></RoleGuard>} />
             <Route path="/manager/staff-profiles" element={<RoleGuard allowedRoles={['MANAGER']}><ManagerStaffProfiles /></RoleGuard>} />
             <Route path="/manager/audit-history" element={<RoleGuard allowedRoles={['MANAGER']}><ManagerAuditHistory /></RoleGuard>} />
+            <Route path="/manager/load-stock" element={<RoleGuard allowedRoles={['MANAGER']}><ManagerProductionLoad /></RoleGuard>} />
 
             {/* Supplier routes — inside Layout so SupplierBottomNav renders */}
             <Route path="/supplier" element={<RoleGuard allowedRoles={['SUPPLIER']}><SupplierDashboard /></RoleGuard>} />
