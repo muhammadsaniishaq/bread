@@ -118,10 +118,10 @@ export const ManagerPOS: React.FC = () => {
 
   return (
     <AnimatedPage>
-      <div style={{ background: T.bg, minHeight: '100vh', paddingBottom: isMobile ? '100px' : '40px', fontFamily: "'Segoe UI', Roboto, sans-serif", color: T.ink }}>
+      <div style={{ background: T.bg, minHeight: '100vh', paddingBottom: isMobile ? '180px' : '40px', fontFamily: "'Segoe UI', Roboto, sans-serif", color: T.ink }}>
         
         {/* ULTRA COMPACT ADAPTIVE HEADER */}
-        <div style={{ background: T.white, borderBottom: `1px solid ${T.border}`, padding: isMobile ? '12px 16px' : '16px 24px', position: 'sticky', top: 0, zIndex: 100, backdropFilter: 'blur(10px)' }}>
+        <div style={{ background: T.white, borderBottom: `1px solid ${T.border}`, padding: isMobile ? '8px 16px' : '16px 24px', position: 'sticky', top: 0, zIndex: 100, backdropFilter: 'blur(10px)' }}>
            <div style={{ maxWidth: '1400px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '20px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '12px' : '20px' }}>
                  <motion.button whileTap={{ scale: 0.9 }} onClick={() => navigate(-1)} style={{ background: 'none', border: 'none', color: T.txt2, cursor: 'pointer' }}>
@@ -138,7 +138,7 @@ export const ManagerPOS: React.FC = () => {
                  <input 
                    placeholder="Search menu..." 
                    value={search} onChange={e => setSearch(e.target.value)}
-                   style={{ width: '100%', padding: '10px 12px 10px 38px', borderRadius: '14px', border: `1px solid ${T.border}`, background: T.surface, fontSize: '14px', fontWeight: 600, outline: 'none' }}
+                   style={{ width: '100%', padding: isMobile ? '8px 12px 8px 38px' : '10px 12px 10px 38px', borderRadius: '12px', border: `1px solid ${T.border}`, background: T.surface, fontSize: '13px', fontWeight: 600, outline: 'none' }}
                  />
               </div>
 
@@ -157,7 +157,7 @@ export const ManagerPOS: React.FC = () => {
         </div>
 
         {/* MAIN TERMINAL AREA */}
-        <div style={{ maxWidth: '1400px', margin: isMobile ? '12px auto' : '24px auto', padding: '0 16px', display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 360px', gap: '24px' }}>
+        <div style={{ maxWidth: '1400px', margin: isMobile ? '8px auto' : '24px auto', padding: '0 16px', display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 360px', gap: '24px' }}>
            
            {/* CATALOG AREA */}
            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -169,10 +169,10 @@ export const ManagerPOS: React.FC = () => {
               <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(3, 1fr)' : 'repeat(auto-fill, minmax(140px, 1fr))', gap: isMobile ? '8px' : '16px' }}>
                  {activeProducts.map((p, i) => (
                     <motion.button 
-                      key={p.id} initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: i * 0.03 }}
+                      key={p.id} initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: i * 0.02 }}
                       whileTap={{ scale: 0.95 }}
                       onClick={() => handleQuickAdd(p)}
-                      style={{ background: T.white, border: `1px solid ${T.border}`, borderRadius: isMobile ? '14px' : '20px', padding: isMobile ? '10px' : '16px', textAlign: 'left', cursor: 'pointer', boxShadow: T.shadow, position: 'relative', overflow: 'hidden' }}
+                      style={{ background: T.white, border: `1px solid ${T.border}`, borderRadius: isMobile ? '12px' : '20px', padding: isMobile ? '8px' : '16px', textAlign: 'left', cursor: 'pointer', boxShadow: T.shadow, position: 'relative', overflow: 'hidden' }}
                     >
                        <div style={{ width: isMobile ? '32px' : '48px', height: isMobile ? '32px' : '48px', borderRadius: isMobile ? '8px' : '12px', background: T.surface, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: isMobile ? '8px' : '12px', fontSize: isMobile ? '16px' : '24px' }}>
                           {p.image ? <img src={p.image} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: isMobile ? '8px' : '12px' }} /> : '🍞'}
