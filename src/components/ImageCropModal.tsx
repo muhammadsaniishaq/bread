@@ -8,6 +8,8 @@ interface CropModalProps {
   imageSrc: string;
   onClose: () => void;
   onCropCompleteAction: (base64: string) => void;
+  shape?: 'rect' | 'round';
+  title?: string;
 }
 
 const createImage = (url: string): Promise<HTMLImageElement> =>
@@ -44,7 +46,14 @@ export const getCroppedImg = async (imageSrc: string, pixelCrop: any): Promise<s
   return canvas.toDataURL('image/jpeg', 0.9);
 };
 
-export const ImageCropModal: React.FC<CropModalProps> = ({ isOpen, imageSrc, onClose, onCropCompleteAction }) => {
+export const ImageCropModal: React.FC<CropModalProps> = ({ 
+  isOpen, 
+  imageSrc, 
+  onClose, 
+  onCropCompleteAction,
+  shape = 'rect',
+  title = 'Crop Image'
+}) => {
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
   const [croppedAreaPixels, setCroppedAreaPixels] = useState(null);
@@ -75,7 +84,7 @@ export const ImageCropModal: React.FC<CropModalProps> = ({ isOpen, imageSrc, onC
           style={{ width: '90%', maxWidth: '400px', background: '#1e293b', borderRadius: '24px', overflow: 'hidden', display: 'flex', flexDirection: 'column', height: '500px' }}>
           
           <div style={{ padding: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
-             <h3 style={{ margin: 0, color: '#fff', fontSize: '14px', fontWeight: 900 }}>Crop Avatar</h3>
+             <h3 style={{ margin: 0, color: '#fff', fontSize: '14px', fontWeight: 900 }}>{title}</h3>
              <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.1)', border: 'none', color: '#fff', borderRadius: '12px', width: '30px', height: '30px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><X size={14} /></button>
           </div>
 
@@ -85,7 +94,7 @@ export const ImageCropModal: React.FC<CropModalProps> = ({ isOpen, imageSrc, onC
               crop={crop}
               zoom={zoom}
               aspect={1}
-              cropShape="round"
+              cropShape={shape}
               showGrid={false}
               onCropChange={setCrop}
               onCropComplete={onCropComplete}
@@ -99,7 +108,7 @@ export const ImageCropModal: React.FC<CropModalProps> = ({ isOpen, imageSrc, onC
              
              <button onClick={handleSave} disabled={processing}
                style={{ width: '100%', padding: '14px', borderRadius: '14px', background: '#4f46e5', color: '#fff', border: 'none', fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-               {processing ? 'Processing...' : <><Check size={16} /> Set Avatar</>}
+               {processing ? 'Processing...' : <><Check size={16} /> Save Image</>}
              </button>
           </div>
         </motion.div>
