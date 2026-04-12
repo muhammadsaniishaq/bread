@@ -171,14 +171,35 @@ export const ManagerCustomers: React.FC = () => {
       
       await updateCustomer({ ...drawer, name:eName, phone:ePhone, email:eEmail, username:eUsername, password:ePassword, location:eLocation, image:eImage, assignedSupplierId:eSup||undefined, pin:ePin||undefined, notes:compiledNotes } as any);
       
-      // SYNC to profiles table so the customer's personal dashboard sees updates
+      // SYNC to Auth system and profiles table
       if (drawer.profile_id || drawer.id) {
-         await supabase.from('profiles').update({
-            full_name: eName,
-            username: eUsername ? eUsername.toLowerCase().trim() : null,
-            phone: ePhone || null,
-            avatar_url: eImage || null
-         }).eq('id', drawer.profile_id || drawer.id);
+         const targetId = drawer.profile_id || drawer.id;
+         
+         // Call the administrative RPC for secure Auth updates
+         const { error: rpcErr } = await supabase.rpc('admin_update_user_credentials', {
+            target_user_id: targetId,
+            new_email: eEmail !== drawer.email ? eEmail : null,
+            new_password: ePassword ? ePassword : null, // Manager provided a new password
+            new_username: eUsername !== drawer.username ? eUsername : null
+         });
+
+         if (rpcErr) {
+            console.warn('Auth sync failed, falling back to profile update:', rpcErr);
+            // Fallback: update profile table normally if RPC doesn't exist yet
+            await supabase.from('profiles').update({
+               full_name: eName,
+               username: eUsername ? eUsername.toLowerCase().trim() : null,
+               phone: ePhone || null,
+               avatar_url: eImage || null
+            }).eq('id', targetId);
+         } else {
+            // Even if RPC worked, update the remaining profile fields (name, phone, avatar) to be sure
+            await supabase.from('profiles').update({
+               full_name: eName,
+               phone: ePhone || null,
+               avatar_url: eImage || null
+            }).eq('id', targetId);
+         }
       }
 
       await refreshData(); alert('Client details updated.');
