@@ -241,26 +241,51 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     if (tx.status === 'PENDING_STORE') { await refreshData(); return; }
 
-    // Update customer debt balance and loyalty points
-    const targetId = tx.origin === 'POS_SUPPLIER' ? tx.sellerId : tx.customerId;
-    const customer = customers.find(c => c.id === targetId);
-    if (customer) {
-      const updates: any = {};
-      
-      // Update Debt
-      if (tx.type === 'Debt' || tx.origin === 'POS_SUPPLIER') {
-        const debtDelta = tx.origin === 'POS_SUPPLIER' ? tx.totalPrice * 0.9 : tx.totalPrice;
-        updates.debt_balance = (customer.debtBalance || 0) + debtDelta;
-      }
-      
-      // Update Loyalty (1 point per 1000 Naira)
-      if (tx.status !== 'CANCELLED') {
-        const pointsDelta = Math.floor(tx.totalPrice / 1000);
-        updates.loyalty_points = (customer.loyaltyPoints || 0) + pointsDelta;
+    // Update customer debt balance and loyalty points (DUAL LEDGER FOR SUPPLIER POS)
+    if (tx.origin === 'POS_SUPPLIER') {
+      // 1. Supplier's Ledger with Bakery (Supplier ALWAYS owes 90% of what they sell)
+      if (tx.sellerId) {
+        const supplier = customers.find(c => c.id === tx.sellerId);
+        if (supplier) {
+          const wholesaleValue = tx.totalPrice * 0.9;
+          await supabase.from('customers')
+            .update({ debt_balance: (supplier.debtBalance || 0) + wholesaleValue })
+            .eq('id', supplier.id);
+        }
       }
 
-      if (Object.keys(updates).length > 0) {
-        await supabase.from('customers').update(updates).eq('id', customer.id);
+      // 2. Retail Customer's Ledger with Supplier
+      if (tx.customerId) {
+        const retailCustomer = customers.find(c => c.id === tx.customerId);
+        if (retailCustomer) {
+          const updates: any = {};
+          if (tx.type === 'Debt') {
+            updates.debt_balance = (retailCustomer.debtBalance || 0) + tx.totalPrice;
+          }
+          if (tx.status !== 'CANCELLED') {
+            updates.loyalty_points = (retailCustomer.loyaltyPoints || 0) + Math.floor(tx.totalPrice / 1000);
+          }
+          if (Object.keys(updates).length > 0) {
+             await supabase.from('customers').update(updates).eq('id', retailCustomer.id);
+          }
+        }
+      }
+    } else {
+      // Normal Store Sales Flow (Store sells directly to Retail Customer)
+      if (tx.customerId) {
+        const customer = customers.find(c => c.id === tx.customerId);
+        if (customer) {
+          const updates: any = {};
+          if (tx.type === 'Debt') {
+            updates.debt_balance = (customer.debtBalance || 0) + tx.totalPrice;
+          }
+          if (tx.status !== 'CANCELLED') {
+            updates.loyalty_points = (customer.loyaltyPoints || 0) + Math.floor(tx.totalPrice / 1000);
+          }
+          if (Object.keys(updates).length > 0) {
+             await supabase.from('customers').update(updates).eq('id', customer.id);
+          }
+        }
       }
     }
 
