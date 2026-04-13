@@ -169,12 +169,21 @@ export const ManagerProductionLoad: React.FC = () => {
                        </div>
 
                        {/* QUANTITY CONTROLS */}
-                       <div style={{ display: 'flex', alignItems: 'center', background: T.surface2, padding: '6px', borderRadius: '16px', border: `1px solid ${T.border}` }}>
-                           <motion.button whileTap={{ scale: 0.9 }} onClick={() => handleUpdateQty(p.id, -1)} style={{ width: '40px', height: '40px', borderRadius: '12px', background: T.surface, border: `1px solid ${T.border}`, boxShadow: T.softShadow, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.txt2 }}><Minus size={16} /></motion.button>
+                       <div style={{ display: 'flex', alignItems: 'center', background: T.surface2, padding: '4px', borderRadius: '14px', border: `1px solid ${T.border}` }}>
+                           <motion.button whileTap={{ scale: 0.9 }} onClick={() => handleUpdateQty(p.id, -1)} style={{ width: '36px', height: '36px', borderRadius: '10px', background: T.surface, border: `1px solid ${T.border}`, boxShadow: T.softShadow, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.txt2 }}><Minus size={14} /></motion.button>
                           <div style={{ width: '60px', textAlign: 'center' }}>
-                             <motion.div key={quantities[p.id]} initial={{ scale: 0.8 }} animate={{ scale: 1 }} style={{ fontSize: '20px', fontWeight: 900, color: quantities[p.id] > 0 ? T.brand : T.ink }}>{quantities[p.id] || 0}</motion.div>
+                             <input 
+                               type="number"
+                               value={quantities[p.id] || ''}
+                               placeholder="0"
+                               onChange={(e) => {
+                                  const val = parseInt(e.target.value);
+                                  setQuantities(prev => ({ ...prev, [p.id]: isNaN(val) ? 0 : Math.max(0, val) }));
+                               }}
+                               style={{ width: '100%', border: 'none', background: 'transparent', textAlign: 'center', fontSize: '18px', fontWeight: 900, color: quantities[p.id] > 0 ? T.brand : T.ink, outline: 'none', padding: 0 }}
+                             />
                           </div>
-                           <motion.button whileTap={{ scale: 0.9 }} onClick={() => handleUpdateQty(p.id, 1)} style={{ width: '40px', height: '40px', borderRadius: '12px', background: T.surface, border: `1px solid ${T.border}`, boxShadow: T.softShadow, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.brand }}><Plus size={16} /></motion.button>
+                           <motion.button whileTap={{ scale: 0.9 }} onClick={() => handleUpdateQty(p.id, 1)} style={{ width: '36px', height: '36px', borderRadius: '10px', background: T.surface, border: `1px solid ${T.border}`, boxShadow: T.softShadow, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.brand }}><Plus size={14} /></motion.button>
                        </div>
                     </motion.div>
                  ))}

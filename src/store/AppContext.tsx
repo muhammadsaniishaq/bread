@@ -402,7 +402,42 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const processInventoryBatch = async (logs: InventoryLog[], action: 'Receive' | 'Return') => {
     const batchId = Date.now().toString();
-    for (const log of logs) await _insertInventoryLog(log, action, batchId);
+    
+    // 1. Bulk insert inventory logs
+    const logData = logs.map(l => ({
+      id: l.id,
+      batch_id: batchId,
+      date: l.date,
+      type: action,
+      product_id: l.productId,
+      quantity_received: l.quantityReceived,
+      cost_price: l.costPrice,
+      store_keeper: l.storeKeeper || null,
+      profile_id: l.profile_id || user?.id || null,
+    }));
+
+    const { error: logErr } = await supabase.from('inventory_logs').insert(logData);
+    if (logErr) {
+      console.error('Batch Log Insert Error:', logErr);
+      throw new Error(`Cloud Sync Failed: ${logErr.message}`);
+    }
+
+    // 2. Group stock updates by product ID to prevent race conditions within the batch
+    const stockUpdates: Record<string, number> = {};
+    for (const log of logs) {
+      const delta = action === 'Receive' ? log.quantityReceived : -log.quantityReceived;
+      stockUpdates[log.productId] = (stockUpdates[log.productId] || 0) + delta;
+    }
+
+    // 3. Update each affected product's stock sequentially
+    for (const [productId, delta] of Object.entries(stockUpdates)) {
+      const product = products.find(p => p.id === productId);
+      if (product) {
+        const newStock = Math.max(0, (product.stock || 0) + delta);
+        await supabase.from('products').update({ stock: newStock }).eq('id', productId);
+      }
+    }
+
     await refreshData();
   };
 
