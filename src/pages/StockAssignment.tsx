@@ -83,6 +83,7 @@ export const StockAssignment: React.FC = () => {
         quantityReceived: quantities[p.id],
         costPrice: p.price,
         type: mode === 'Receive' ? 'Receive' : 'Return',
+        category: 'ASSIGNMENT' as const,
         date: new Date().toISOString(),
         storeKeeper: selectedId,
         profile_id: selectedId,

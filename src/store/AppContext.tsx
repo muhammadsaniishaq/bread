@@ -71,6 +71,7 @@ const mapDebtPay = (r: any): DebtPayment => ({
 
 const mapInvLog = (r: any): InventoryLog => ({
   id: r.id, batchId: r.batch_id, date: r.date, type: r.type,
+  category: r.category, // Added category mapping
   productId: r.product_id, quantityReceived: r.quantity_received,
   costPrice: r.cost_price, storeKeeper: r.store_keeper, profile_id: r.profile_id,
 });
@@ -381,18 +382,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // ─── Inventory ────────────────────────────────────────────────────────────────
   const _insertInventoryLog = async (log: InventoryLog, type: 'Receive' | 'Return', batchId?: string) => {
+    const cat = log.category || 'PRODUCTION';
     await supabase.from('inventory_logs').insert({
       id: log.id, batch_id: batchId || log.batchId || null,
-      date: log.date, type,
+      date: log.date, type, category: cat,
       product_id: log.productId, quantity_received: log.quantityReceived,
       cost_price: log.costPrice, store_keeper: log.storeKeeper || null,
       profile_id: log.profile_id || user?.id || null,
     });
     const product = products.find(p => p.id === log.productId);
     if (product) {
-      const newStock = type === 'Receive'
-        ? (product.stock || 0) + log.quantityReceived
-        : Math.max(0, (product.stock || 0) - log.quantityReceived);
+      let newStock = product.stock || 0;
+      if (cat === 'PRODUCTION') {
+        newStock = type === 'Receive' ? newStock + log.quantityReceived : Math.max(0, newStock - log.quantityReceived);
+      } else {
+        // ASSIGNMENT: Receive (Giving to staff) means SUBTRACT, Return means ADD
+        newStock = type === 'Receive' ? Math.max(0, newStock - log.quantityReceived) : newStock + log.quantityReceived;
+      }
       await supabase.from('products').update({ stock: newStock }).eq('id', log.productId);
     }
   };
@@ -416,7 +422,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       profile_id: l.profile_id || user?.id || null,
     }));
 
-    const { error: logErr } = await supabase.from('inventory_logs').insert(logData);
+    const { error: logErr } = await supabase.from('inventory_logs').insert(logData.map(l => ({ ...l, category: logs[0].category || 'PRODUCTION' })));
     if (logErr) {
       console.error('Batch Log Insert Error:', logErr);
       throw new Error(`Cloud Sync Failed: ${logErr.message}`);
@@ -424,8 +430,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     // 2. Group stock updates by product ID to prevent race conditions within the batch
     const stockUpdates: Record<string, number> = {};
+    const batchCategory = logs[0].category || 'PRODUCTION';
+
     for (const log of logs) {
-      const delta = action === 'Receive' ? log.quantityReceived : -log.quantityReceived;
+      let delta = 0;
+      if (batchCategory === 'PRODUCTION') {
+        delta = action === 'Receive' ? log.quantityReceived : -log.quantityReceived;
+      } else {
+        // ASSIGNMENT: Receive means subtraction from main store
+        delta = action === 'Receive' ? -log.quantityReceived : log.quantityReceived;
+      }
       stockUpdates[log.productId] = (stockUpdates[log.productId] || 0) + delta;
     }
 

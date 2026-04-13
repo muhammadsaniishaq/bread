@@ -130,8 +130,8 @@ export const ManagerReports: React.FC = () => {
   }, [period, startDate, endDate, transactions, expenses, debtPayments, inventoryLogs, rmLogs]);
 
   const metrics = useMemo(() => {
-    // 1. Bread Produced (Net) = Received - Returned
-    const invLogs = filteredInventory;
+    // 1. Bread Produced (Net) = Received - Returned (ONLY PRODUCTION CATEGORY)
+    const invLogs = filteredInventory.filter(l => !l.category || l.category === 'PRODUCTION');
     const receivedValue = invLogs.filter(l => l.type === 'Receive').reduce((s, l) => s + (l.quantityReceived * l.costPrice), 0);
     const returnedValue = invLogs.filter(l => l.type === 'Return').reduce((s, l) => s + (l.quantityReceived * l.costPrice), 0);
     const totalBreadValue = Math.max(0, receivedValue - returnedValue);

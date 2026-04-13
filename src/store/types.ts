@@ -90,6 +90,7 @@ export interface InventoryLog {
   batchId?: string; // Groups multiple items into a single receipt
   date: string;
   type?: 'Receive' | 'Return'; // Added for tracking returns vs receiving
+  category?: 'PRODUCTION' | 'ASSIGNMENT'; // Differentiate between Production vs Staff/Supplier Assign
   productId: string;
   quantityReceived: number; // For returns, this represents the quantity returned
   costPrice: number;

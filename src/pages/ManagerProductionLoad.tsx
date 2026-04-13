@@ -80,6 +80,7 @@ export const ManagerProductionLoad: React.FC = () => {
         productId: item.id,
         quantityReceived: item.qty,
         costPrice: products.find(p => p.id === item.id)?.costPrice || 0,
+        category: 'PRODUCTION' as const,
         batchId: Date.now().toString()
       }));
 
