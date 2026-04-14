@@ -355,20 +355,29 @@ export const CustomerStore: React.FC = () => {
                                     </div>
 
                                     <div style={{ marginTop: '16px' }}>
-                                       <a 
-                                         href={`https://wa.me/${assignedSupplier?.phone || '08033620803'}?text=${encodeURIComponent(`Hello, I've just transferred ${fmtRaw(totalPrice)} for my order. ${paymentProof ? `I have attached proof: ${paymentProof.name}` : ''}`)}`}
-                                         target="_blank" 
-                                         rel="noopener noreferrer"
-                                         onClick={(e) => {
-                                            if (!paymentProof) {
-                                               alert("Please upload your payment proof first!");
-                                               e.preventDefault();
-                                            }
-                                         }}
-                                         style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', padding: '14px', borderRadius: '14px', background: '#25D366', color: '#fff', textDecoration: 'none', fontWeight: 900, fontSize: '13px', boxShadow: '0 8px 20px rgba(37,211,102,0.3)', transition: 'all 0.2s' }}
-                                       >
-                                          <MessageSquare size={16} /> Send Proof via WhatsApp
-                                       </a>
+                                       {(() => {
+                                          const phoneRaw = assignedSupplier?.phone || '08033620803';
+                                          const cleanPhone = phoneRaw.replace(/\D/g, '');
+                                          const whatsappBase = `https://wa.me/${cleanPhone.startsWith('0') ? '234' + cleanPhone.substring(1) : cleanPhone}`;
+                                          const message = encodeURIComponent(`Hello *${assignedSupplier?.full_name || 'Admin'}*, I've just transferred *${fmtRaw(totalPrice)}* for my order ${paymentProof ? `and I've attached proof: ${paymentProof.name}` : ''}. Please verify.`);
+                                          
+                                          return (
+                                             <a 
+                                               href={`${whatsappBase}?text=${message}`}
+                                               target="_blank" 
+                                               rel="noopener noreferrer"
+                                               onClick={(e) => {
+                                                  if (!paymentProof) {
+                                                     alert("Please upload your payment proof first!");
+                                                     e.preventDefault();
+                                                  }
+                                               }}
+                                               style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', padding: '16px', borderRadius: '16px', background: '#25D366', color: '#fff', textDecoration: 'none', fontWeight: 900, fontSize: '13px', boxShadow: '0 8px 25px rgba(37,211,102,0.3)', transition: 'all 0.2s' }}
+                                             >
+                                                <MessageSquare size={18} /> Send Proof via WhatsApp
+                                             </a>
+                                          );
+                                       })()}
                                     </div>
                                     
                                     {!assignedSupplier && <div style={{ marginTop: '12px', fontSize: '10px', color: T.danger, fontWeight: 700, textAlign: 'center' }}>No supplier is currently assigned to you.</div>}

@@ -9,8 +9,10 @@ import { ImageCropper } from '../components/ImageCropper';
 import {
   ArrowLeft, Phone, MapPin, MessageCircle, MessageSquare,
   FileText, Edit2, Trash2, Camera, Star, TrendingUp,
-  CreditCard, X, Check, AlertTriangle, Activity, BadgeCheck
+  CreditCard, X, Check, AlertTriangle, Activity, BadgeCheck, Zap
 } from 'lucide-react';
+
+const fmtRaw = (v: number) => `₦${Math.round(v).toLocaleString()}`;
 
 const T = {
   bg:'#f2f3f7', surface:'#ffffff', surface2:'#f8f9fc', border:'#e8eaef',
@@ -21,6 +23,7 @@ const T = {
   txt:'#0f172a', txt2:'#475569', txt3:'#94a3b8',
   shadow:'0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04)',
   radius:'16px', radiusLg:'24px',
+  bg2:'#f1f5f9',
 };
 const avatarPalette=[['#4f46e5','#e0e7ff'],['#0891b2','#e0f7fa'],['#059669','#d1fae5'],['#d97706','#fef3c7'],['#dc2626','#fee2e2'],['#7c3aed','#ede9fe']];
 const getAvatar=(n:string)=>avatarPalette[n.charCodeAt(0)%avatarPalette.length];
@@ -154,8 +157,12 @@ export const CustomerProfile: React.FC = () => {
               <div>
                 <div style={{display:'flex',alignItems:'center',gap:'8px',flexWrap:'wrap'}}>
                   <h1 style={{color:'#fff',fontWeight:900,fontSize:'22px',margin:0,letterSpacing:'-0.02em'}}>{customer.name}</h1>
+                  {(customer.pin && customer.phone) ? (
+                    <span style={{background:'#10b981',color:'#fff',padding:'2px 8px',borderRadius:'8px',fontSize:'9px',fontWeight:900,textTransform:'uppercase',display:'flex',alignItems:'center',gap:'3px'}}><BadgeCheck size={10}/> VERIFIED</span>
+                  ) : (
+                    <span style={{background:'#f59e0b',color:'#fff',padding:'2px 8px',borderRadius:'8px',fontSize:'9px',fontWeight:900,textTransform:'uppercase',display:'flex',alignItems:'center',gap:'3px'}}><Star size={10}/> UNVERIFIED</span>
+                  )}
                   {isVIP&&<span style={{background:'rgba(251,191,36,0.25)',color:'#fde68a',border:'1px solid rgba(251,191,36,0.3)',borderRadius:'8px',padding:'2px 8px',fontSize:'10px',fontWeight:900,textTransform:'uppercase',display:'flex',alignItems:'center',gap:'3px'}}><Star size={9} fill="#fde68a"/> VIP</span>}
-                  {customer.pin&&<span style={{background:'rgba(52,211,153,0.2)',color:'#a7f3d0',border:'1px solid rgba(52,211,153,0.3)',borderRadius:'8px',padding:'2px 8px',fontSize:'10px',fontWeight:900,textTransform:'uppercase',display:'flex',alignItems:'center',gap:'3px'}}><BadgeCheck size={9}/> Auth</span>}
                 </div>
                 <div style={{display:'flex',gap:'14px',marginTop:'6px',flexWrap:'wrap'}}>
                   {customer.phone&&<span style={{color:'rgba(255,255,255,0.75)',fontSize:'13px',fontWeight:600,display:'flex',alignItems:'center',gap:'5px'}}><Phone size={12}/>{customer.phone}</span>}
@@ -165,66 +172,101 @@ export const CustomerProfile: React.FC = () => {
             </div>
           </div>
 
+          {/* VERIFICATION CENTER */}
+          <div style={{background:T.surface,borderRadius:T.radiusLg,padding:'22px',border:`1.5px solid ${T.border}`,boxShadow:T.shadow,marginBottom:'24px'}}>
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'16px'}}>
+               <h3 style={{fontSize:'11px',fontWeight:900,color:T.txt,margin:0,textTransform:'uppercase',letterSpacing:'0.1em'}}>Verification Center</h3>
+               <div style={{fontSize:'10px',fontWeight:800,color:(customer.pin && customer.phone) ? T.success : T.warn, display:'flex', alignItems:'center', gap:'4px'}}>
+                  {(customer.pin && customer.phone) ? <><BadgeCheck size={12}/> COMPLETED</> : <><Activity size={12}/> PENDING ACTION</>}
+               </div>
+            </div>
+            
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'12px'}}>
+               <div style={{background:customer.phone ? '#f0fdf4' : T.bg2, padding:'16px', borderRadius:'18px', border: `1.5px solid ${customer.phone ? '#bbf7d0' : T.border}`, display:'flex', flexDirection:'column', gap:'8px'}}>
+                  <div style={{width:'32px',height:'32px',borderRadius:'10px',background:customer.phone ? '#22c55e' : T.txt3, display:'flex', alignItems:'center', justifyContent:'center'}}>
+                     <Phone size={14} color="#fff"/>
+                  </div>
+                  <span style={{fontSize:'13px',fontWeight:800,color:T.txt}}>Phone {customer.phone ? 'Link' : 'Missing'}</span>
+                  <span style={{fontSize:'10px',color:T.txt3,fontWeight:600}}>{customer.phone ? 'Contact Verified' : 'Action Required'}</span>
+               </div>
+               <div style={{background:customer.pin ? '#f0fdf4' : T.bg2, padding:'16px', borderRadius:'18px', border: `1.5px solid ${customer.pin ? '#bbf7d0' : T.border}`, display:'flex', flexDirection:'column', gap:'8px'}}>
+                  <div style={{width:'32px',height:'32px',borderRadius:'10px',background:customer.pin ? '#22c55e' : T.txt3, display:'flex', alignItems:'center', justifyContent:'center'}}>
+                     <BadgeCheck size={14} color="#fff"/>
+                  </div>
+                  <span style={{fontSize:'13px',fontWeight:800,color:T.txt}}>Security {customer.pin ? 'Active' : 'Missing'}</span>
+                  <span style={{fontSize:'10px',color:T.txt3,fontWeight:600}}>{customer.pin ? 'PIN Secure' : 'Action Required'}</span>
+               </div>
+            </div>
+            {!(customer.phone && customer.pin) && (
+              <div style={{marginTop:'16px',background:T.warnLt,padding:'12px 14px',borderRadius:'14px',border:`1px solid ${T.warn}`,fontSize:'12px',fontWeight:700,color:'#92400e',lineHeight:1.5}}>
+                ⚠️ Verification Incomplete: Please ensure both your Phone Number and Security PIN are set to gain full access to your financial ledger and debt features.
+              </div>
+            )}
+          </div>
           {/* 4 STAT CARDS */}
           <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'12px',marginBottom:'20px'}}>
             <div style={{background:T.surface,borderRadius:T.radiusLg,padding:'18px',border:`1.5px solid ${T.border}`,boxShadow:T.shadow}}>
               <p style={{fontSize:'10px',fontWeight:700,color:T.txt3,textTransform:'uppercase',letterSpacing:'0.1em',margin:'0 0 8px'}}>Lifetime Value</p>
-              <p style={{fontSize:'20px',fontWeight:900,color:T.success,margin:0}}>₦{metrics.lifetimeValue.toLocaleString()}</p>
+              <p style={{fontSize:'20px',fontWeight:900,color:T.success,margin:0}}>{fmtRaw(metrics.lifetimeValue)}</p>
               <p style={{fontSize:'11px',color:T.txt3,margin:'5px 0 0'}}>{metrics.txCount} orders total</p>
             </div>
             <div style={{background:customer.debtBalance>0?T.dangerLt:T.successLt,borderRadius:T.radiusLg,padding:'18px',border:`1.5px solid ${customer.debtBalance>0?'#fecaca':'#bbf7d0'}`,boxShadow:T.shadow}}>
               <p style={{fontSize:'10px',fontWeight:700,color:customer.debtBalance>0?T.danger:T.success,textTransform:'uppercase',letterSpacing:'0.1em',margin:'0 0 8px'}}>Active Debt</p>
-              <p style={{fontSize:'20px',fontWeight:900,color:customer.debtBalance>0?T.danger:T.success,margin:0}}>₦{customer.debtBalance.toLocaleString()}</p>
+              <p style={{fontSize:'20px',fontWeight:900,color:customer.debtBalance>0?T.danger:T.success,margin:0}}>{fmtRaw(customer.debtBalance)}</p>
               {customer.debtBalance>0
                 ?<button onClick={()=>setShowPaymentForm(true)} style={{marginTop:'8px',background:T.danger,color:'#fff',border:'none',borderRadius:'8px',padding:'5px 10px',fontSize:'11px',fontWeight:700,cursor:'pointer',width:'100%'}}>Settle Now</button>
                 :<p style={{fontSize:'11px',color:T.success,margin:'6px 0 0',fontWeight:700}}>✓ Clear</p>}
             </div>
             <div style={{background:T.surface,borderRadius:T.radiusLg,padding:'18px',border:`1.5px solid ${T.border}`,boxShadow:T.shadow}}>
               <p style={{fontSize:'10px',fontWeight:700,color:T.txt3,textTransform:'uppercase',letterSpacing:'0.1em',margin:'0 0 8px'}}>Debt Paid</p>
-              <p style={{fontSize:'20px',fontWeight:900,color:T.accent,margin:0}}>₦{metrics.totalDebtPaid.toLocaleString()}</p>
-              <p style={{fontSize:'11px',color:T.txt3,margin:'5px 0 0'}}>of ₦{metrics.totalDebtIssued.toLocaleString()}</p>
+              <p style={{fontSize:'20px',fontWeight:900,color:T.accent,margin:0}}>{fmtRaw(metrics.totalDebtPaid)}</p>
+              <p style={{fontSize:'11px',color:T.txt3,margin:'5px 0 0'}}>of {fmtRaw(metrics.totalDebtIssued)}</p>
             </div>
-
-          {/* ASSIGNED SUPPLIER */}
-          {assignedSupplier && (
-            <div style={{background:T.surface,borderRadius:T.radiusLg,padding:'20px',border:`1.5px solid ${T.border}`,boxShadow:T.shadow,marginBottom:'20px'}}>
-              <p style={{fontSize:'10px',fontWeight:700,color:T.txt3,textTransform:'uppercase',letterSpacing:'0.1em',margin:'0 0 12px'}}>Your Assigned Supplier</p>
-              <div style={{display:'flex',alignItems:'center',gap:'12px',marginBottom:'16px'}}>
-                <div style={{width:'44px',height:'44px',borderRadius:'14px',background:T.accentLt,display:'flex',alignItems:'center',justifyContent:'center',fontSize:'18px',fontWeight:900,color:T.accent}}>
-                   {assignedSupplier.full_name?.charAt(0)}
-                </div>
-                <div>
-                  <p style={{color:T.txt,fontWeight:800,fontSize:'15px',margin:0}}>{assignedSupplier.full_name}</p>
-                  <p style={{color:T.txt3,fontSize:'12px',margin:'2px 0 0'}}>Handles your orders & payments</p>
-                </div>
-              </div>
-              <div style={{display:'flex',gap:'10px'}}>
-                {assignedSupplier.phone && (
-                  <a href={`tel:${assignedSupplier.phone}`}
-                    style={{flex:1,background:T.accent,color:'#fff',borderRadius:'12px',padding:'12px',fontSize:'13px',fontWeight:700,display:'flex',alignItems:'center',justifyContent:'center',gap:'6px',textDecoration:'none'}}>
-                    <Phone size={14}/> Call
-                  </a>
-                )}
-                {assignedSupplier.email && (
-                  <a href={`mailto:${assignedSupplier.email}`}
-                    style={{flex:1,background:T.surface2,color:T.txt2,border:`1.5px solid ${T.border}`,borderRadius:'12px',padding:'12px',fontSize:'13px',fontWeight:700,display:'flex',alignItems:'center',justifyContent:'center',gap:'6px',textDecoration:'none'}}>
-                    <FileText size={14}/> Email
-                  </a>
-                )}
-              </div>
-            </div>
-          )}
             <div style={{background:'linear-gradient(135deg,#fffbeb,#fef3c7)',borderRadius:T.radiusLg,padding:'18px',border:'1.5px solid #fde68a',boxShadow:T.shadow}}>
               <p style={{fontSize:'10px',fontWeight:700,color:'#92400e',textTransform:'uppercase',letterSpacing:'0.1em',margin:'0 0 8px'}}>Rewards</p>
               <div style={{display:'flex',alignItems:'center',gap:'8px'}}>
                 <div style={{width:'32px',height:'32px',borderRadius:'9px',background:'#f59e0b',display:'flex',alignItems:'center',justifyContent:'center'}}><Star size={16} color="#fff" fill="#fff"/></div>
                 <div>
                   <p style={{fontSize:'20px',fontWeight:900,color:'#b45309',margin:0}}>{customer.loyaltyPoints||0}</p>
-                  <p style={{fontSize:'10px',color:'#b45309',margin:0}}>≈ ₦{((customer.loyaltyPoints||0)*10).toLocaleString()}</p>
+                  <p style={{fontSize:'10px',color:'#b45309',margin:0}}>≈ {fmtRaw((customer.loyaltyPoints||0)*10)}</p>
                 </div>
               </div>
             </div>
           </div>
+
+          {/* ASSIGNED SUPPLIER */}
+          {assignedSupplier && (
+            <div style={{background:T.surface,borderRadius:T.radiusLg,padding:'20px',border:`1.5px solid ${T.border}`,boxShadow:T.shadow,marginBottom:'24px',position:'relative',overflow:'hidden'}}>
+              <div style={{position:'absolute',top:0,right:0,bottom:0,width:'4px',background:T.accent}}/>
+              <p style={{fontSize:'10px',fontWeight:900,color:T.txt3,textTransform:'uppercase',letterSpacing:'0.1em',margin:'0 0 16px',display:'flex',alignItems:'center',gap:'6px'}}><Zap size={10} color={T.accent} fill={T.accent}/> Assigned Logistics Partner</p>
+              
+              <div style={{display:'flex',alignItems:'center',gap:'14px',marginBottom:'20px'}}>
+                <div style={{width:'52px',height:'52px',borderRadius:'16px',background:T.accentLt,display:'flex',alignItems:'center',justifyContent:'center',fontSize:'22px',fontWeight:900,color:T.accent,boxShadow:`0 4px 12px ${T.accent}15`}}>
+                   {assignedSupplier.full_name?.charAt(0)}
+                </div>
+                <div>
+                  <p style={{color:T.txt,fontWeight:900,fontSize:'16px',margin:0}}>{assignedSupplier.full_name}</p>
+                  <p style={{color:T.txt3,fontSize:'12px',fontWeight:600,margin:'2px 0 0'}}>Verified Supplier</p>
+                </div>
+              </div>
+              
+              <div style={{display:'flex',gap:'12px'}}>
+                {assignedSupplier.phone && (
+                  <a href={`tel:${assignedSupplier.phone}`}
+                    style={{flex:1,background:T.accent,color:'#fff',borderRadius:'14px',padding:'14px',fontSize:'13px',fontWeight:800,display:'flex',alignItems:'center',justifyContent:'center',gap:'8px',textDecoration:'none',boxShadow:`0 6px 16px ${T.accent}40`}}>
+                    <Phone size={16}/> Call Supplier
+                  </a>
+                )}
+                {assignedSupplier.email && (
+                  <a href={`mailto:${assignedSupplier.email}`}
+                    style={{flex:1,background:T.bg2,color:T.txt2,borderRadius:'14px',padding:'14px',fontSize:'13px',fontWeight:800,display:'flex',alignItems:'center',justifyContent:'center',gap:'8px',textDecoration:'none'}}>
+                    <FileText size={16}/> Email
+                  </a>
+                )}
+              </div>
+            </div>
+          )}
+
 
           {/* DEBT ALERT */}
           {customer.debtBalance>0&&customer.phone&&(
@@ -395,8 +437,8 @@ export const CustomerProfile: React.FC = () => {
             <ImageCropper imageSrc={rawUpload} onCropComplete={c=>{setEditImage(c);setRawUpload(null);}} onCancel={()=>setRawUpload(null)}/>
           </div>
         )}
-      </div>
-    </AnimatedPage>
+        </div>
+      </AnimatedPage>
   );
 };
 

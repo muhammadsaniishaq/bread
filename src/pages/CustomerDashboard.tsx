@@ -229,7 +229,7 @@ export const CustomerDashboard: React.FC = () => {
     { id: 'profile', label: 'Profile', icon: User,         color: T.success, light: T.successLight,  path: '/customer/profile' },
   ];
 
-  const isVerified = (customer.pin && customer.pin.length > 0) || (customer.phone && customer.phone.length > 0);
+  const isVerified = (customer.pin && customer.pin.length > 0) && (customer.phone && customer.phone.length > 0);
 
   return (
     <AnimatedPage>
