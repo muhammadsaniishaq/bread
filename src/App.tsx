@@ -26,6 +26,8 @@ import CustomerHistory from './pages/CustomerHistory';
 import CustomerOfficialDocs from './pages/CustomerOfficialDocs';
 import SupplierProfile from './pages/SupplierProfile';
 import SupplierDashboard from './pages/SupplierDashboard';
+import SupplierOfficialDocs from './pages/SupplierOfficialDocs';
+import StoreOfficialDocs from './pages/StoreOfficialDocs';
 
 
 import RawMaterialsManager from './components/RawMaterialsManager';
@@ -154,6 +156,7 @@ const AppContent: React.FC = () => {
 
             {/* Supplier routes — inside Layout so SupplierBottomNav renders */}
             <Route path="/supplier" element={<RoleGuard allowedRoles={['SUPPLIER']}><SupplierDashboard /></RoleGuard>} />
+            <Route path="/supplier/docs" element={<RoleGuard allowedRoles={['SUPPLIER']}><SupplierOfficialDocs /></RoleGuard>} />
             <Route path="/supplier/profile" element={<RoleGuard allowedRoles={['SUPPLIER']}><SupplierProfile /></RoleGuard>} />
           </Route>
 
@@ -162,6 +165,7 @@ const AppContent: React.FC = () => {
             <Route path="/store/orders" element={<RoleGuard allowedRoles={['STORE_KEEPER']}><StoreOrders /></RoleGuard>} />
             <Route path="/store/inventory" element={<RoleGuard allowedRoles={['STORE_KEEPER']}><StoreInventory /></RoleGuard>} />
             <Route path="/store/records" element={<RoleGuard allowedRoles={['STORE_KEEPER']}><StoreRecords /></RoleGuard>} />
+            <Route path="/store/docs" element={<RoleGuard allowedRoles={['STORE_KEEPER']}><StoreOfficialDocs /></RoleGuard>} />
             <Route path="/store/accounting" element={<RoleGuard allowedRoles={['STORE_KEEPER']}><StoreAccounting /></RoleGuard>} />
             <Route path="/store/profile" element={<RoleGuard allowedRoles={['STORE_KEEPER']}><StoreProfile /></RoleGuard>} />
             <Route path="/store/more" element={<RoleGuard allowedRoles={['STORE_KEEPER']}><StoreMore /></RoleGuard>} />

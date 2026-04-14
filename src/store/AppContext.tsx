@@ -59,6 +59,7 @@ const mapCustomer = (r: any): Customer => ({
     full_name: r.assigned_supplier.full_name,
     phone: r.assigned_supplier.phone,
     email: r.assigned_supplier.email,
+    whatsapp_number: r.assigned_supplier.whatsapp_number,
   } : undefined,
 });
 
@@ -142,7 +143,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         { data: dPay }, { data: invL }, { data: bPay }, { data: exps },
       ] = await Promise.all([
         supabase.from('products').select('*').order('name'),
-        supabase.from('customers').select('*, assigned_supplier:profiles!assigned_supplier_id(full_name, phone, email)').order('name'),
+        supabase.from('customers').select('*, assigned_supplier:profiles!assigned_supplier_id(full_name, phone, email, whatsapp_number)').order('name'),
         supabase.from('transactions').select('*').order('date', { ascending: false }),
         supabase.from('debt_payments').select('*').order('date', { ascending: false }),
         supabase.from('inventory_logs').select('*').order('date', { ascending: false }),

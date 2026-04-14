@@ -35,6 +35,23 @@ const getVerificationStatus = (c: any) => {
   return { icon: ShieldAlert, color: '#ef4444', label: 'Unverified' };
 };
 
+const Card: React.FC<{ children: React.ReactNode; style?: React.CSSProperties; onClick?: () => void }> = ({ children, style, onClick }) => (
+  <motion.div 
+    whileTap={onClick ? { scale: 0.98 } : undefined}
+    onClick={onClick}
+    style={{
+      background: '#ffffff',
+      border: '1px solid rgba(0,0,0,0.05)',
+      borderRadius: '24px',
+      padding: '16px',
+      boxShadow: '0 4px 24px rgba(0,0,0,0.06)',
+      ...style
+    }}
+  >
+    {children}
+  </motion.div>
+);
+
 export default function SupplierDashboard() {
   const { transactions, products, customers, inventoryLogs, loading, refreshData, getPersonalStock, recordSale } = useAppContext();
   const { user } = useAuth();
@@ -194,7 +211,13 @@ export default function SupplierDashboard() {
                     {greeting.text}
                   </span>{' '}{greeting.emoji}
                 </h1>
-                <div style={{ fontSize:'13px', fontWeight:700, color:'rgba(255,255,255,0.55)', marginTop:'2px' }}>{firstName}</div>
+                <div style={{ fontSize: '13px', fontWeight: 700, color: 'rgba(255,255,255,0.55)', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  {firstName}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '3px', background: 'rgba(16,185,129,0.2)', padding: '2px 6px', borderRadius: '6px' }}>
+                    <ShieldCheck size={10} color="#10b981" />
+                    <span style={{ fontSize: '9px', fontWeight: 800, color: '#10b981', textTransform: 'uppercase' }}>Fully Verified</span>
+                  </div>
+                </div>
               </div>
               <div style={{ display:'flex', gap:'10px', alignItems:'center' }}>
                 {pendingTxns.length > 0 && (
@@ -438,6 +461,44 @@ export default function SupplierDashboard() {
                     </motion.div>
                   )}
                 </AnimatePresence>
+
+                {/* ══ THE RECORDS VAULT ══ */}
+                <motion.div variants={fadeUp} initial="hidden" animate="show" style={{ marginTop: '24px' }}>
+                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+                     <div style={{ padding: '8px', borderRadius: '10px', background: 'rgba(15,23,42,0.05)', color: '#0f172a' }}>
+                       <Shield size={16} />
+                     </div>
+                     <h3 style={{ fontSize: '16px', fontWeight: 900, color: '#0f172a', margin: 0 }}>The Records Vault</h3>
+                   </div>
+                   
+                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                     <Card onClick={() => navigate('/supplier/docs')} 
+                       style={{ background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)', display: 'flex', flexDirection: 'column', gap: '12px', cursor: 'pointer', border: '1px solid #e2e8f0' }}>
+                       <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)', color: '#6366f1' }}>
+                         <ShieldCheck size={20} />
+                       </div>
+                       <div>
+                         <div style={{ fontSize: '14px', fontWeight: 800, color: '#0f172a' }}>Digital Identity</div>
+                         <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>ID Card & Certs</div>
+                       </div>
+                     </Card>
+
+                     <Card onClick={() => navigate('/inventory')} 
+                       style={{ background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)', display: 'flex', flexDirection: 'column', gap: '12px', cursor: 'pointer', border: '1px solid #e2e8f0' }}>
+                       <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)', color: '#10b981' }}>
+                         <Package size={20} />
+                       </div>
+                       <div>
+                         <div style={{ fontSize: '14px', fontWeight: 800, color: '#0f172a' }}>Stock Ledger</div>
+                         <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>Dispatch Archive</div>
+                       </div>
+                     </Card>
+                   </div>
+
+                   <p style={{ fontSize: '11px', color: '#94a3b8', textAlign: 'center', marginTop: '20px', fontWeight: 500 }}>
+                     Your digital records are encrypted and secured by Bread Cloud™
+                   </p>
+                </motion.div>
 
                 {/* Performance Badge */}
                 {completedTxns.length >= 10 && (

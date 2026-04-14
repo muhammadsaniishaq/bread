@@ -35,6 +35,7 @@ export default function StoreMore() {
       label: t('store.allProducts'),
       items: [
         { title: t('store.profile'), desc: t('store.manageDetails'), icon: User, path: '/store/profile', color: T.primary },
+        { title: 'Employee Badge', desc: 'Digital ID & Credentials', icon: ShieldCheck, path: '/store/docs', color: '#6366f1' },
         { title: t('store.accounting'), desc: t('store.bakerySync'), icon: TrendingUp, path: '/store/accounting', color: T.success },
         { title: t('store.dispatchStats'), desc: t('store.dispatchHistory'), icon: Database, path: '/store/records', color: '#8b5cf6' },
       ]

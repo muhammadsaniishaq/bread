@@ -7,7 +7,8 @@ import {
   Calendar, ShoppingCart, Zap,
   TrendingUp, Package,
   User, Phone, Bell, ChevronRight,
-  Award, ArrowUpRight, Sparkles, BadgeCheck
+  Award, ArrowUpRight, Sparkles, BadgeCheck, MessageCircle,
+  Library, ShieldCheck, FileText, Fingerprint
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AnimatedPage } from '../components/AnimatedPage';
@@ -118,7 +119,7 @@ export const CustomerDashboard: React.FC = () => {
       let cust: any = null;
 
       const { data: byProfile, error: custErr } = await supabase.from('customers')
-        .select('*, assigned_supplier:profiles!assigned_supplier_id(full_name, phone, email, bank_name, account_number)')
+        .select('*, assigned_supplier:profiles!assigned_supplier_id(full_name, phone, email, bank_name, account_number, whatsapp_number)')
         .eq('profile_id', id)
         .maybeSingle();
 
@@ -131,7 +132,7 @@ export const CustomerDashboard: React.FC = () => {
         cust = byProfile;
       } else {
         const { data: byId } = await supabase.from('customers')
-          .select('*, assigned_supplier:profiles!assigned_supplier_id(full_name, phone, email, bank_name, account_number)')
+          .select('*, assigned_supplier:profiles!assigned_supplier_id(full_name, phone, email, bank_name, account_number, whatsapp_number)')
           .eq('id', id)
           .maybeSingle();
         if (byId) {
@@ -139,7 +140,7 @@ export const CustomerDashboard: React.FC = () => {
           if (!byId.profile_id) await supabase.from('customers').update({ profile_id: id }).eq('id', id);
         } else if (user?.email) {
           const { data: byEmail } = await supabase.from('customers')
-            .select('*, assigned_supplier:profiles!assigned_supplier_id(full_name, phone, email, bank_name, account_number)')
+            .select('*, assigned_supplier:profiles!assigned_supplier_id(full_name, phone, email, bank_name, account_number, whatsapp_number)')
             .eq('email', user.email)
             .maybeSingle();
           if (byEmail) {
@@ -278,9 +279,16 @@ export const CustomerDashboard: React.FC = () => {
                 {new Date().getHours() < 12 ? 'Good Morning ☀️' : new Date().getHours() < 18 ? 'Good Afternoon 🌤️' : 'Good Evening 🌙'}
               </div>
               <div style={{ color: T.ink, fontSize: '26px', fontWeight: 900, lineHeight: 1.1, letterSpacing: '-0.03em' }}>{displayName}</div>
-              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', marginTop: '6px', padding: '3px 10px', borderRadius: '8px', background: tier.light, border: `1px solid ${tier.color}30` }}>
-                <span style={{ fontSize: '12px' }}>{tier.icon}</span>
-                <span style={{ color: tier.color, fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em' }}>{tier.name} Member</span>
+              <div style={{ display: 'flex', gap: '8px', marginTop: '6px' }}>
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '3px 10px', borderRadius: '8px', background: tier.light, border: `1px solid ${tier.color}30` }}>
+                  <span style={{ fontSize: '12px' }}>{tier.icon}</span>
+                  <span style={{ color: tier.color, fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em' }}>{tier.name} Member</span>
+                </div>
+                {isVerified && (
+                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '3px 10px', borderRadius: '8px', background: T.successLight, border: `1px solid ${T.success}30`, color: T.success, fontSize: '10px', fontWeight: 800 }}>
+                    <ShieldCheck size={11} /> VERIFIED
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -403,6 +411,74 @@ export const CustomerDashboard: React.FC = () => {
                 🎉 Maximum Tier Reached — Diamond Member!
               </div>
             )}
+          </motion.div>
+          
+          {/* ─── LOGISTICS PARTNER (Assigned Supplier) ─── */}
+          {customer.assigned_supplier && (
+            <motion.div {...cardAnim(2.5)}
+              style={{ background: `linear-gradient(135deg, ${T.white}, ${T.bg2})`, borderRadius: T.radius, border: `1px solid ${T.border}`, padding: '20px', boxShadow: T.shadow, position: 'relative', overflow: 'hidden' }}>
+              <div style={{ position: 'absolute', top: '-20px', right: '-20px', width: '100px', height: '100px', background: T.primaryLight, borderRadius: '50%', filter: 'blur(25px)', pointerEvents: 'none' }} />
+              
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <div style={{ width: '38px', height: '38px', borderRadius: '12px', background: T.primaryLight, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Zap size={18} color={T.primary} />
+                  </div>
+                  <div>
+                    <div style={{ color: T.txt3, fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Logistics Partner</div>
+                    <div style={{ color: T.ink, fontSize: '15px', fontWeight: 900 }}>{customer.assigned_supplier.full_name}</div>
+                  </div>
+                </div>
+                <div style={{ background: T.successLight, color: T.success, padding: '4px 8px', borderRadius: '8px', fontSize: '10px', fontWeight: 800 }}>ACTIVE</div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '8px' }}>
+                {customer.assigned_supplier.phone && (
+                  <a href={`tel:${customer.assigned_supplier.phone}`}
+                    style={{ flex: 1, textDecoration: 'none', background: T.white, border: `1px solid ${T.border}`, borderRadius: '12px', padding: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', color: T.txt, fontSize: '11px', fontWeight: 700 }}>
+                    <Phone size={13} color={T.primary} /> Call
+                  </a>
+                )}
+                <a href={`https://wa.me/${(customer.assigned_supplier.whatsapp_number || customer.assigned_supplier.phone || '').replace(/\D/g,'')}`}
+                  target="_blank" rel="noopener noreferrer"
+                  style={{ flex: 1, textDecoration: 'none', background: '#25d366', borderRadius: '12px', padding: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', color: '#fff', fontSize: '11px', fontWeight: 800, boxShadow: '0 4px 12px rgba(37,211,102,0.2)' }}>
+                  <MessageCircle size={13} /> WhatsApp
+                </a>
+              </div>
+            </motion.div>
+          )}
+
+          {/* ─── THE RECORDS VAULT ─── */}
+          <motion.div {...cardAnim(2.7)}
+            style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', paddingLeft: '4px' }}>
+               <Library size={16} color={T.primary} />
+               <span style={{ color: T.ink, fontSize: '13px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.05em' }}>The Records Vault</span>
+            </div>
+            
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+               {/* Identity Card */}
+               <motion.div whileTap={{ scale: 0.97 }} onClick={() => navigate('/customer/docs')}
+                 style={{ cursor: 'pointer', background: T.white, borderRadius: T.radiusSm, border: `1px solid ${T.border}`, padding: '16px', boxShadow: T.shadow, position: 'relative', overflow: 'hidden' }}>
+                 <div style={{ position: 'absolute', top: '-10px', right: '-10px', width: '60px', height: '60px', background: T.primaryLight, borderRadius: '50%', filter: 'blur(20px)' }} />
+                 <div style={{ width: '32px', height: '32px', borderRadius: '10px', background: T.primaryLight, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '12px' }}>
+                    <Fingerprint size={18} color={T.primary} />
+                 </div>
+                 <div style={{ color: T.ink, fontSize: '13px', fontWeight: 800 }}>Digital Identity</div>
+                 <div style={{ color: T.txt3, fontSize: '10px', fontWeight: 600, marginTop: '2px' }}>ID & Certificates</div>
+               </motion.div>
+
+               {/* Receipt Archive */}
+               <motion.div whileTap={{ scale: 0.97 }} onClick={() => navigate('/customer/orders')}
+                 style={{ cursor: 'pointer', background: T.white, borderRadius: T.radiusSm, border: `1px solid ${T.border}`, padding: '16px', boxShadow: T.shadow, position: 'relative', overflow: 'hidden' }}>
+                 <div style={{ position: 'absolute', top: '-10px', right: '-10px', width: '60px', height: '60px', background: T.accentLight, borderRadius: '50%', filter: 'blur(20px)' }} />
+                 <div style={{ width: '32px', height: '32px', borderRadius: '10px', background: T.accentLight, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '12px' }}>
+                    <FileText size={18} color={T.accent} />
+                 </div>
+                 <div style={{ color: T.ink, fontSize: '13px', fontWeight: 800 }}>Receipt Archive</div>
+                 <div style={{ color: T.txt3, fontSize: '10px', fontWeight: 600, marginTop: '2px' }}>Lifetime Records</div>
+               </motion.div>
+            </div>
           </motion.div>
 
           {/* ─── PROFILE COMPLETION NUDGE ─── */}

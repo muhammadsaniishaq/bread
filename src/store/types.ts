@@ -31,6 +31,7 @@ export interface Customer {
     full_name: string;
     phone?: string;
     email?: string;
+    whatsapp_number?: string;
   };
 }
 

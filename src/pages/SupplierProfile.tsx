@@ -29,6 +29,7 @@ export default function SupplierProfile() {
   const [editUsername,   setEditUsername]   = useState('');
   const [editAcctNo,     setEditAcctNo]     = useState('');
   const [editBankName,   setEditBankName]   = useState('');
+  const [editWhatsapp,   setEditWhatsapp]   = useState('');
   const [editImage,      setEditImage]      = useState('');
   const [saving,         setSaving]         = useState(false);
   const [signOutConfirm, setSignOutConfirm] = useState(false);
@@ -49,6 +50,7 @@ export default function SupplierProfile() {
           setEditUsername(data.username || '');
           setEditAcctNo(data.account_number || '');
           setEditBankName(data.bank_name || '');
+          setEditWhatsapp(data.whatsapp_number || '');
           setEditImage(data.avatar_url || '');
         }
       });
@@ -135,6 +137,7 @@ export default function SupplierProfile() {
         username:       editUsername.trim().toLowerCase().replace(/\s+/g, ''),
         account_number: editAcctNo,
         bank_name:      editBankName,
+        whatsapp_number: editWhatsapp,
         avatar_url:     editImage || null,
       }).eq('id', user.id);
 
@@ -161,6 +164,7 @@ export default function SupplierProfile() {
         username:       editUsername.trim().toLowerCase().replace(/\s+/g, ''),
         account_number: editAcctNo,
         bank_name:      editBankName,
+        whatsapp_number: editWhatsapp,
         avatar_url:     editImage || null,
       }));
       setEditing(false);
@@ -177,6 +181,7 @@ export default function SupplierProfile() {
     setEditUsername(profile?.username || '');
     setEditAcctNo(profile?.account_number || '');
     setEditBankName(profile?.bank_name || '');
+    setEditWhatsapp(profile?.whatsapp_number || '');
     setEditImage(profile?.avatar_url || '');
     setEditing(false);
   };
@@ -355,6 +360,7 @@ export default function SupplierProfile() {
                             { label: 'Phone Number',    val: editPhone,    set: setEditPhone,    type: 'tel',   ph: '080...' },
                             { label: 'Bank Name',       val: editBankName, set: setEditBankName, type: 'text',  ph: 'e.g. First Bank, GTBank' },
                             { label: 'Account Number',  val: editAcctNo,   set: setEditAcctNo,   type: 'tel',   ph: '0123456789' },
+                            { label: 'WhatsApp Number', val: editWhatsapp, set: setEditWhatsapp, type: 'tel',   ph: '234...' },
                           ].map(f => (
                             <div key={f.label}>
                               <label style={{ fontSize: '10px', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: '5px' }}>{f.label}</label>
@@ -425,6 +431,7 @@ export default function SupplierProfile() {
                           { icon: User,      label: 'Full Name',    val: profile?.full_name || 'Not set', color: '#4f46e5', bg: 'rgba(79,70,229,0.08)' },
                           { icon: Mail,      label: 'Email',        val: user?.email || 'N/A',            color: '#0ea5e9', bg: 'rgba(14,165,233,0.08)' },
                           { icon: Phone,     label: 'Phone',        val: profile?.phone || myAccount?.phone || editPhone || 'Not set', color: '#10b981', bg: 'rgba(16,185,129,0.08)' },
+                          { icon: MessageSquare, label: 'WhatsApp', val: profile?.whatsapp_number || 'Not set', color: '#25d366', bg: 'rgba(37,211,102,0.08)' },
                           { icon: Building2, label: 'Account Type', val: 'Supplier Account',              color: '#8b5cf6', bg: 'rgba(139,92,246,0.08)' },
                           { icon: Activity,  label: 'Transactions', val: String(myTxns.length),           color: '#f59e0b', bg: 'rgba(245,158,11,0.08)' },
                         ].map((row, i, arr) => (

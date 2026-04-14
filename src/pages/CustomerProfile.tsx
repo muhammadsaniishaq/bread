@@ -256,13 +256,25 @@ export const CustomerProfile: React.FC = () => {
                     <Phone size={16}/> Call Supplier
                   </a>
                 )}
-                {assignedSupplier.email && (
+                {assignedSupplier.whatsapp_number && (
+                  <a href={`https://wa.me/${assignedSupplier.whatsapp_number.replace(/\D/g,'')}`}
+                    target="_blank" rel="noopener noreferrer"
+                    style={{flex:1,background:'#25d366',color:'#fff',borderRadius:'14px',padding:'14px',fontSize:'13px',fontWeight:800,display:'flex',alignItems:'center',justifyContent:'center',gap:'8px',textDecoration:'none',boxShadow:'0 6px 16px rgba(37,211,102,0.3)'}}>
+                    <MessageCircle size={16}/> WhatsApp Proof
+                  </a>
+                )}
+                {!assignedSupplier.whatsapp_number && assignedSupplier.email && (
                   <a href={`mailto:${assignedSupplier.email}`}
                     style={{flex:1,background:T.bg2,color:T.txt2,borderRadius:'14px',padding:'14px',fontSize:'13px',fontWeight:800,display:'flex',alignItems:'center',justifyContent:'center',gap:'8px',textDecoration:'none'}}>
                     <FileText size={16}/> Email
                   </a>
                 )}
               </div>
+              {assignedSupplier.whatsapp_number && (
+                <p style={{fontSize:'10px',color:T.txt3,fontWeight:600,textAlign:'center',marginTop:'12px',margin:'12px 0 0'}}>
+                  Directly send payment receipts or identity proof via WhatsApp
+                </p>
+              )}
             </div>
           )}
 
