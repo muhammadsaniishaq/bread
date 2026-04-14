@@ -4,6 +4,7 @@ import { useAppContext } from '../store/AppContext';
 import { useAuth } from '../store/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { getTransactionItems } from '../store/types';
+import type { Transaction } from '../store/types';
 import { AnimatedPage } from '../components/AnimatedPage';
 import {
   AlertTriangle, Package, TrendingUp, TrendingDown,
@@ -135,15 +136,15 @@ export default function SupplierDashboard() {
     if (!confirm(`Process this order for ${order.total_price.toLocaleString()}?`)) return;
 
     // Convert order to a Sale Transaction
-    const tx = {
+    const tx: Transaction = {
       id: crypto.randomUUID(),
       date: new Date().toISOString(),
       customerId: order.customer_id,
       items: order.details || [], 
       totalPrice: order.total_price,
-      type: 'Debt' as const, // Capture as debt for the supplier ledger
-      status: 'COMPLETED' as const,
-      origin: 'POS_SUPPLIER' as const,
+      type: 'Debt', // Explicitly typed as 'Debt' to match the Transaction interface literals
+      status: 'COMPLETED',
+      origin: 'POS_SUPPLIER',
       sellerId: user?.id
     };
 

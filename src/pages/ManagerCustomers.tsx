@@ -342,6 +342,10 @@ Generated via Admin Console.`;
                     </div>
                     <div style={{display:'flex',gap:'12px',alignItems:'center'}}>
                       <span style={{color:T.txt2,fontSize:'13px'}}>{customer.phone || 'No phone'}</span>
+                      <span style={{width:4,height:4,borderRadius:'50%',background:T.border}}/>
+                      <span style={{color:customer.assignedSupplierId ? T.accent : T.txt3, fontSize:'11px', fontWeight:700}}>
+                        {suppliers.find(s => s.id === customer.assignedSupplierId)?.full_name || 'Direct Bakery Client'}
+                      </span>
                     </div>
                   </div>
 

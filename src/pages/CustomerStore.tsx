@@ -5,7 +5,7 @@ import { useAuth } from '../store/AuthContext';
 import { 
   ArrowLeft, Search, Plus, Minus,
   Zap, Star, CheckCircle2, ArrowRight,
-  PackageX, CreditCard, Truck
+  PackageX, CreditCard, Truck, MessageSquare
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AnimatedPage } from '../components/AnimatedPage';
@@ -65,8 +65,9 @@ export const CustomerStore: React.FC = () => {
       const { data: cData } = await supabase.from('customers').select('*').eq('profile_id', user.id).maybeSingle();
       if (cData) {
          setCustomer(cData);
-         if (cData.assignedSupplierId) {
-            const { data: sData } = await supabase.from('profiles').select('full_name, id').eq('id', cData.assignedSupplierId).maybeSingle();
+         const sid = cData.assigned_supplier_id;
+         if (sid) {
+            const { data: sData } = await supabase.from('profiles').select('full_name, id, bank_name, account_number').eq('id', sid).maybeSingle();
             if (sData) setAssignedSupplier(sData);
          }
       }
@@ -171,47 +172,47 @@ export const CustomerStore: React.FC = () => {
         </div>
 
         {/* PRODUCT BENTO TILES */}
-        <div style={{ padding: '0 20px', display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
+        <div style={{ padding: '0 16px', display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px' }}>
            {filteredProducts.map((p) => {
              const supplierId = assignedSupplier?.id;
              const avail = supplierId ? getPersonalStock(p.id, 'SUPPLIER', supplierId) : p.stock;
              const outOfStock = avail <= 0;
              
              return (
-               <motion.div layout key={p.id} style={{ background: '#fff', borderRadius: '20px', overflow: 'hidden', border: `1px solid ${T.border}`, boxShadow: T.shadow, display: 'flex', flexDirection: 'column', opacity: outOfStock ? 0.7 : 1 }}>
-                  <div style={{ height: '120px', background: T.bg2, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', position: 'relative' }}>
-                     {p.image ? <img src={p.image} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <Star size={32} color={T.txt3} />}
-                     <div style={{ position: 'absolute', top: '8px', left: '8px', background: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(10px)', padding: '4px 8px', borderRadius: '8px', fontSize: '9px', fontWeight: 900, color: T.ink, textTransform: 'uppercase' }}>{p.category || 'BREAD'}</div>
+               <motion.div layout key={p.id} style={{ background: '#fff', borderRadius: '18px', overflow: 'hidden', border: `1px solid ${T.border}`, boxShadow: T.shadow, display: 'flex', flexDirection: 'column', opacity: outOfStock ? 0.7 : 1 }}>
+                  <div style={{ height: '64px', background: T.bg2, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', position: 'relative' }}>
+                     {p.image ? <img src={p.image} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <Star size={24} color={T.txt3} />}
+                     <div style={{ position: 'absolute', top: '6px', left: '6px', background: 'rgba(255,255,255,0.92)', backdropFilter: 'blur(10px)', padding: '3px 6px', borderRadius: '6px', fontSize: '8px', fontWeight: 900, color: T.ink, textTransform: 'uppercase' }}>{p.category || 'BREAD'}</div>
                      
                      {/* Stock Badge */}
-                     <div style={{ position: 'absolute', top: '8px', right: '8px', background: outOfStock ? 'rgba(244, 63, 94, 0.9)' : 'rgba(16, 185, 129, 0.9)', color: '#fff', backdropFilter: 'blur(10px)', padding: '4px 8px', borderRadius: '8px', fontSize: '9px', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                     <div style={{ position: 'absolute', top: '6px', right: '6px', background: outOfStock ? 'rgba(244, 63, 94, 0.9)' : 'rgba(16, 185, 129, 0.9)', color: '#fff', backdropFilter: 'blur(10px)', padding: '3px 6px', borderRadius: '6px', fontSize: '8px', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '3px' }}>
                         {outOfStock ? <PackageX size={10} /> : null} 
                         {outOfStock ? 'OUT' : `${avail} LEFT`}
                      </div>
                   </div>
                   
-                  <div style={{ padding: '14px', flex: 1, display: 'flex', flexDirection: 'column' }}>
-                     <h3 style={{ margin: '0 0 2px', fontSize: '13px', fontWeight: 800, color: T.ink }}>{p.name}</h3>
-                     <div style={{ fontSize: '14px', fontWeight: 900, color: T.primary, marginBottom: '12px' }}>{fmtRaw(p.price)}</div>
+                  <div style={{ padding: '8px 10px', flex: 1, display: 'flex', flexDirection: 'column' }}>
+                     <h3 style={{ margin: '0 0 1px', fontSize: '12px', fontWeight: 800, color: T.ink, lineHeight: 1.2 }}>{p.name}</h3>
+                     <div style={{ fontSize: '13px', fontWeight: 900, color: T.primary, marginBottom: '8px' }}>{fmtRaw(p.price)}</div>
                      
                      <div style={{ marginTop: 'auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         {cart[p.id] ? (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', background: T.bg, padding: '4px', borderRadius: '12px', width: '100%', justifyContent: 'space-between' }}>
-                             <button onClick={() => updateCart(p.id, -1)} style={{ border: 'none', background: '#fff', width: '28px', height: '28px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 5px rgba(0,0,0,0.05)', color: T.ink }}><Minus size={12} /></button>
-                             <span style={{ fontSize: '13px', fontWeight: 900, color: T.ink }}>{cart[p.id]}</span>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: T.bg, padding: '3px', borderRadius: '10px', width: '100%', justifyContent: 'space-between' }}>
+                             <button onClick={() => updateCart(p.id, -1)} style={{ border: 'none', background: '#fff', width: '24px', height: '24px', borderRadius: '7px', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 4px rgba(0,0,0,0.04)', color: T.ink }}><Minus size={10} /></button>
+                             <span style={{ fontSize: '12px', fontWeight: 900, color: T.ink }}>{cart[p.id]}</span>
                              <button 
                                onClick={() => updateCart(p.id, 1)} 
                                disabled={cart[p.id] >= avail}
-                               style={{ border: 'none', background: cart[p.id] >= avail ? T.txt3 : T.primary, width: '28px', height: '28px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', boxShadow: cart[p.id] >= avail ? 'none' : '0 4px 10px rgba(79, 70, 229, 0.2)', transition: 'all 0.2s', cursor: cart[p.id] >= avail ? 'not-allowed' : 'pointer' }}>
-                               <Plus size={12} />
+                               style={{ border: 'none', background: cart[p.id] >= avail ? T.txt3 : T.primary, width: '24px', height: '24px', borderRadius: '7px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', boxShadow: cart[p.id] >= avail ? 'none' : '0 3px 8px rgba(79, 70, 229, 0.2)', transition: 'all 0.2s', cursor: cart[p.id] >= avail ? 'not-allowed' : 'pointer' }}>
+                               <Plus size={10} />
                              </button>
                           </div>
                         ) : (
                           <button 
                              onClick={() => updateCart(p.id, 1)}
                              disabled={outOfStock}
-                             style={{ width: '100%', padding: '10px', borderRadius: '12px', background: outOfStock ? T.bg2 : T.ink, color: outOfStock ? T.txt3 : '#fff', border: 'none', fontSize: '11px', fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', cursor: outOfStock ? 'not-allowed' : 'pointer', transition: 'all 0.2s' }}>
-                             {outOfStock ? 'Sold Out' : <><Plus size={12} /> Add</>}
+                             style={{ width: '100%', padding: '8px', borderRadius: '10px', background: outOfStock ? T.bg2 : T.ink, color: outOfStock ? T.txt3 : '#fff', border: 'none', fontSize: '10px', fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px', cursor: outOfStock ? 'not-allowed' : 'pointer', transition: 'all 0.2s' }}>
+                             {outOfStock ? 'Sold Out' : <><Plus size={10} /> Add</>}
                           </button>
                         )}
                      </div>
@@ -231,7 +232,7 @@ export const CustomerStore: React.FC = () => {
         <AnimatePresence>
            {totalItems > 0 && !showReview && (
              <motion.div initial={{ y: 100, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 100, opacity: 0 }}
-                style={{ position: 'fixed', bottom: '24px', left: '20px', right: '20px', zIndex: 100 }}>
+                style={{ position: 'fixed', bottom: '94px', left: '20px', right: '20px', zIndex: 100 }}>
                 <div style={{ background: T.ink, borderRadius: '20px', padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', boxShadow: '0 20px 40px rgba(0,0,0,0.2)' }}>
                    <div>
                       <div style={{ fontSize: '10px', fontWeight: 900, color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{totalItems} Items</div>
@@ -306,13 +307,26 @@ export const CustomerStore: React.FC = () => {
                                        </div>
                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px dashed rgba(255,255,255,0.2)', paddingBottom: '8px' }}>
                                           <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.8)', fontWeight: 600 }}>Bank Name</span>
-                                          <span style={{ fontSize: '13px', fontWeight: 900 }}>Guaranty Trust Bank</span>
+                                          <span style={{ fontSize: '13px', fontWeight: 900 }}>{assignedSupplier?.bank_name || 'Guaranty Trust Bank'}</span>
                                        </div>
                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                           <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.8)', fontWeight: 600 }}>Account No.</span>
-                                          <span style={{ fontSize: '16px', fontWeight: 900, color: T.success, letterSpacing: '2px' }}>0422119034</span>
+                                          <span style={{ fontSize: '16px', fontWeight: 900, color: T.success, letterSpacing: '2px' }}>{assignedSupplier?.account_number || '0422119034'}</span>
                                        </div>
                                     </div>
+
+                                    {assignedSupplier && (
+                                       <div style={{ marginTop: '16px' }}>
+                                          <a 
+                                            href={`https://wa.me/${assignedSupplier.phone || ''}?text=${encodeURIComponent(`Hello ${assignedSupplier.full_name}, I've just transferred ${fmtRaw(totalPrice)} for my order. Here is the proof of payment.`)}`}
+                                            target="_blank" 
+                                            rel="noopener noreferrer"
+                                            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', padding: '12px', borderRadius: '12px', background: '#25D366', color: '#fff', textDecoration: 'none', fontWeight: 900, fontSize: '12px', boxShadow: '0 4px 12px rgba(37,211,102,0.3)' }}
+                                          >
+                                             <MessageSquare size={14} /> Send Proof via WhatsApp
+                                          </a>
+                                       </div>
+                                    )}
                                     
                                     {!assignedSupplier && <div style={{ marginTop: '12px', fontSize: '10px', color: T.danger, fontWeight: 700, textAlign: 'center' }}>No supplier is currently assigned to you.</div>}
                                  </div>
