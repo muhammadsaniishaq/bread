@@ -2,8 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useAppContext } from '../store/AppContext';
 import { useAuth } from '../store/AuthContext';
 import { supabase } from '../lib/supabase';
-import { getTransactionItems } from '../store/types';
-import type { InventoryLog, TransactionItem } from '../store/types';
+import type { InventoryLog } from '../store/types';
 import { AnimatedPage } from '../components/AnimatedPage';
 import { useNavigate, Link } from 'react-router-dom';
 import { useTranslation } from '../store/LanguageContext';
@@ -26,7 +25,7 @@ const T = {
 
 export const Inventory: React.FC = () => {
   const { user, role } = useAuth();
-  const { products, companyMetrics, processInventoryBatch, inventoryLogs, recordBakeryPayment, bakeryPayments, transactions, expenses, customers, recordSale, loading } = useAppContext();
+  const { products, companyMetrics, processInventoryBatch, inventoryLogs, recordBakeryPayment, bakeryPayments, transactions, expenses, customers, recordSale, loading, getPersonalStock } = useAppContext();
   const { t } = useTranslation();
   const navigate = useNavigate();
   
@@ -68,36 +67,7 @@ export const Inventory: React.FC = () => {
   const myTxs = useMemo(() => (transactions || []).filter(t => t.customerId === myId || t.sellerId === myId), [transactions, myId]);
 
   // Centralized Stock Helper for Suppliers (Moved up for use in products map)
-  const getPersonalStock = (pId: string) => {
-    if (!isSupplier) return (products || []).find(p => p.id === pId)?.stock || 0;
-    const mid = myAccount?.id || user?.id;
-    if (!mid) return 0;
-    
-    // Received = Debt (Completed) + Legacy (Filtered by Supplier)
-    const rec = (transactions || []).filter(t => t.status === 'COMPLETED' && t.type === 'Debt' && t.customerId === mid)
-      .reduce((sum, t) => {
-         const it = getTransactionItems(t).find((i: TransactionItem) => i.productId === pId);
-         return sum + (it?.quantity || 0);
-      }, 0);
-    const lr = (inventoryLogs || []).filter(l => l.productId === pId && l.type !== 'Return' && l.profile_id === mid).reduce((sum, l) => sum + (l.quantityReceived || 0), 0);
 
-    // Returned = Return (Completed) + Legacy (Filtered by Supplier)
-    const ret = (transactions || []).filter(t => t.status === 'COMPLETED' && t.type === 'Return' && t.customerId === mid)
-      .reduce((sum, t) => {
-         const it = getTransactionItems(t).find((i: TransactionItem) => i.productId === pId);
-         return sum + (it?.quantity || 0);
-      }, 0);
-    const lret = (inventoryLogs || []).filter(l => l.productId === pId && l.type === 'Return' && l.profile_id === mid).reduce((sum, l) => sum + (l.quantityReceived || 0), 0);
-
-    // Sold = POS_SUPPLIER
-    const sold = (transactions || []).filter(t => t.status === 'COMPLETED' && t.origin === 'POS_SUPPLIER' && t.sellerId === mid)
-      .reduce((sum, t) => {
-        const it = getTransactionItems(t).find((i: TransactionItem) => i.productId === pId);
-        return sum + (it?.quantity || 0);
-      }, 0);
-    
-    return Math.max(0, (rec + lr) - (ret + lret) - sold);
-  };
 
   const activeProducts = (products || []).filter(p => p.active);
   const categories = Array.from(new Set((products || []).map(p => p.category || 'Standard')));
@@ -432,6 +402,16 @@ export const Inventory: React.FC = () => {
               <div style={{ marginBottom: '16px' }}>
                 <label style={{ fontSize: '10px', fontWeight: 800, color: T.txt3 }}>Store Keeper</label>
                 <input type="text" placeholder="Name" value={paymentReceiver} onChange={e => setPaymentReceiver(e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '10px', border: `1px solid ${T.border}`, background: T.bg, fontSize: '12px', fontWeight: 700 }} />
+              </div>
+            )}
+
+            {/* Manager Availability Indicator */}
+            {productId && activeTab === 'receive' && (
+              <div style={{ background: 'rgba(37,99,235,0.05)', padding: '10px', borderRadius: '12px', marginBottom: '12px', border: '1px solid rgba(37,99,235,0.1)' }}>
+                <div style={{ fontSize: '10px', fontWeight: 800, color: T.primary, textTransform: 'uppercase', marginBottom: '2px' }}>Main Store Availability</div>
+                <div style={{ fontSize: '16px', fontWeight: 900, color: T.ink }}>
+                  {(products.find(p => p.id === productId)?.stock || 0)} <span style={{ fontSize: '12px', fontWeight: 700, color: T.txt3 }}>units available</span>
+                </div>
               </div>
             )}
             

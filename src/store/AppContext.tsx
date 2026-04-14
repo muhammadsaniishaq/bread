@@ -38,6 +38,7 @@ interface AppContextType {
   addExpense: (expense: Expense) => Promise<void>;
   appSettings: AppSettings;
   updateSettings: (settings: AppSettings) => Promise<void>;
+  getPersonalStock: (productId: string, role?: string, profileId?: string) => number;
 }
 
 // ─── Supabase row → App type mappers ─────────────────────────────────────────
@@ -113,7 +114,7 @@ const loadSettings = (): AppSettings => {
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user } = useAuth();
+  const { user, role } = useAuth();
 
   const [products,       setProducts]       = useState<Product[]>([]);
   const [customers,      setCustomers]      = useState<Customer[]>([]);
@@ -472,7 +473,48 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
     await refreshData();
   };
+  const getPersonalStock = (productId: string, customRole?: string, profileId?: string) => {
+    const currentRole = customRole || role;
+    const uid = profileId || user?.id;
+    if (currentRole !== 'SUPPLIER' && currentRole !== 'STORE_KEEPER') {
+      return products.find(p => p.id === productId)?.stock || 0;
+    }
+    if (!uid) return 0;
 
+    // Find the customer account linked to this profile
+    const myAccount = customers.find(c => c.profile_id === uid);
+    const cid = myAccount?.id;
+
+    // 1. Logs (Legacy & Assignments)
+    const logs = inventoryLogs.filter(l => l.productId === productId);
+    const recLogs = logs.filter(l => (l.profile_id === uid || (cid && l.profile_id === cid)) && l.type !== 'Return').reduce((s, l) => s + l.quantityReceived, 0);
+    const retLogs = logs.filter(l => (l.profile_id === uid || (cid && l.profile_id === cid)) && l.type === 'Return').reduce((s, l) => s + l.quantityReceived, 0);
+
+    // 2. Transactions (Legacy Debt/Return Requests)
+    const txs = transactions.filter(t => t.status === 'COMPLETED');
+    const recTxs = txs.filter(t => t.type === 'Debt' && (t.customerId === uid || (cid && t.customerId === cid)))
+      .reduce((s, t) => { 
+        const items = getTransactionItems(t);
+        const item = items.find(i => i.productId === productId);
+        return s + (item?.quantity || 0);
+      }, 0);
+    const retTxs = txs.filter(t => t.type === 'Return' && (t.customerId === uid || (cid && t.customerId === cid)))
+      .reduce((s, t) => { 
+        const items = getTransactionItems(t);
+        const item = items.find(i => i.productId === productId);
+        return s + (item?.quantity || 0);
+      }, 0);
+
+    // 3. Sales (What has been sold to customers)
+    const sold = txs.filter(t => t.origin === 'POS_SUPPLIER' && (t.sellerId === uid || (cid && t.sellerId === cid) || (uid && t.sellerId === uid)))
+      .reduce((s, t) => {
+        const items = getTransactionItems(t);
+        const item = items.find(i => i.productId === productId);
+        return s + (item?.quantity || 0);
+      }, 0);
+
+    return Math.max(0, (recLogs + recTxs) - (retLogs + retTxs) - sold);
+  };
   return (
     <AppContext.Provider value={{
       products, customers, transactions, debtPayments, inventoryLogs,
@@ -483,7 +525,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       recordSale, updateTransactionStatus, recordDebtPayment,
       addInventory, returnInventory, processInventoryBatch,
       recordBakeryPayment, addExpense,
-      appSettings, updateSettings,
+      appSettings, updateSettings, getPersonalStock
     }}>
       {children}
     </AppContext.Provider>

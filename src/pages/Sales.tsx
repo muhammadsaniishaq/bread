@@ -8,7 +8,7 @@ import { useAuth } from '../store/AuthContext';
 import { QRScanner } from '../components/QRScanner';
 
 export const Sales: React.FC = () => {
-  const { customers, products, transactions, recordSale } = useAppContext();
+  const { customers, products, transactions, recordSale, getPersonalStock } = useAppContext();
   const { user, role } = useAuth();
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -40,23 +40,7 @@ export const Sales: React.FC = () => {
   const activeProducts = useMemo(() => {
     let prods = products.filter(p => p.active);
     if (isSupplier && myAccount) {
-      prods = prods.map(p => {
-        // Received stock (Supplier requested from Store)
-        const received = myTxs.filter(tx => tx.status === 'COMPLETED' && tx.type === 'Debt' && tx.origin === 'SUPPLIER' && (tx.items?.[0]?.productId === p.id || tx.productId === p.id))
-          .reduce((sum, tx) => sum + ((tx.items?.[0]?.quantity || tx.quantity) || 0), 0);
-        // Returned stock (Supplier returned to Store)
-        const returned = myTxs.filter(tx => tx.status === 'COMPLETED' && tx.type === 'Return' && tx.origin === 'SUPPLIER' && (tx.items?.[0]?.productId === p.id || tx.productId === p.id))
-          .reduce((sum, tx) => sum + ((tx.items?.[0]?.quantity || tx.quantity) || 0), 0);
-        // POS Sales (Supplier sold to customer)
-        const sold = myTxs.filter(tx => tx.origin === 'POS_SUPPLIER' && (tx.type === 'Cash' || tx.type === 'Debt'))
-          .reduce((sum, tx) => {
-            const item = tx.items?.find(i => i.productId === p.id);
-            if (item) return sum + item.quantity;
-            if (tx.productId === p.id) return sum + (tx.quantity || 0);
-            return sum;
-          }, 0);
-        return { ...p, stock: Math.max(0, received - returned - sold) };
-      });
+      prods = prods.map(p => ({ ...p, stock: getPersonalStock(p.id) }));
     }
     return prods;
   }, [products, isSupplier, myAccount, myTxs]);

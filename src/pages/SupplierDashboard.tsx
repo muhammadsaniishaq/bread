@@ -28,7 +28,7 @@ const STATUS: Record<string, { label: string; color: string; bg: string; Icon: a
 };
 
 export default function SupplierDashboard() {
-  const { transactions, products, customers, inventoryLogs, loading, refreshData } = useAppContext();
+  const { transactions, products, customers, inventoryLogs, loading, refreshData, getPersonalStock } = useAppContext();
   const { user } = useAuth();
   const navigate = useNavigate();
   const [refreshing, setRefreshing]   = useState(false);
@@ -50,16 +50,10 @@ export default function SupplierDashboard() {
   /* ── Stock per product ──────────────────────────────────────────────────── */
   const myStock = useMemo(() =>
     products.filter(p => p.active).map(p => {
-      const rec  = inventoryLogs.filter(l => l.productId === p.id && l.type !== 'Return' && l.profile_id === mid).reduce((s, l) => s + l.quantityReceived, 0);
-      const ret  = inventoryLogs.filter(l => l.productId === p.id && l.type === 'Return'  && l.profile_id === mid).reduce((s, l) => s + l.quantityReceived, 0);
-      const sold = transactions.filter(t => t.status === 'COMPLETED' && t.origin === 'POS_SUPPLIER' && t.sellerId === mid)
-        .reduce((s, t) => { const it = (t.items||[]).find(i => i.productId === p.id); return s+(it?.quantity||0); }, 0);
-      const txRec = transactions.filter(t => t.status==='COMPLETED'&&t.type==='Debt'&&t.customerId===mid&&(t.items?.[0]?.productId===p.id||t.productId===p.id)).reduce((s,t)=>s+(t.items?.[0]?.quantity||t.quantity||0),0);
-      const txRet = transactions.filter(t => t.status==='COMPLETED'&&t.type==='Return'&&t.customerId===mid&&(t.items?.[0]?.productId===p.id||t.productId===p.id)).reduce((s,t)=>s+(t.items?.[0]?.quantity||t.quantity||0),0);
-      const stock = Math.max(0, (rec + txRec) - (ret + txRet) - sold);
+      const stock = getPersonalStock(p.id);
       return { ...p, myStock: stock, warning: stock < 5 };
     }),
-  [products, inventoryLogs, transactions, mid]);
+  [products, inventoryLogs, transactions, mid, getPersonalStock]);
 
   /* ── Transactions ───────────────────────────────────────────────────────── */
   const myTxns = useMemo(() =>
