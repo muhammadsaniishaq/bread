@@ -7,7 +7,7 @@ import {
   Calendar, ShoppingCart, Zap,
   TrendingUp, Package,
   User, Phone, Bell, ChevronRight,
-  Award, ArrowUpRight, Sparkles
+  Award, ArrowUpRight, Sparkles, BadgeCheck
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AnimatedPage } from '../components/AnimatedPage';
@@ -229,6 +229,8 @@ export const CustomerDashboard: React.FC = () => {
     { id: 'profile', label: 'Profile', icon: User,         color: T.success, light: T.successLight,  path: '/customer/profile' },
   ];
 
+  const isVerified = (customer.pin && customer.pin.length > 0) || (customer.phone && customer.phone.length > 0);
+
   return (
     <AnimatedPage>
       <div style={{ minHeight: '100vh', background: T.bg, paddingBottom: '100px', fontFamily: "'Inter', -apple-system, sans-serif" }}>
@@ -275,39 +277,54 @@ export const CustomerDashboard: React.FC = () => {
         <div style={{ padding: '20px 16px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
 
           {/* ─── FINANCIAL LEDGER CARD ─── */}
-          <motion.div {...cardAnim(0)}
-            style={{ position: 'relative', overflow: 'hidden', background: T.ink, borderRadius: '28px', padding: '24px', boxShadow: '0 20px 40px rgba(15,23,42,0.15)' }}>
-            {/* Dynamic Glassmorphism Background elements */}
-            <div style={{ position: 'absolute', top: '-50px', right: '-20px', width: '180px', height: '180px', background: 'linear-gradient(135deg, rgba(99,91,255,0.4), rgba(6,182,212,0.1))', borderRadius: '50%', filter: 'blur(40px)' }} />
-            <div style={{ position: 'absolute', bottom: '-40px', left: '-40px', width: '140px', height: '140px', background: 'rgba(217,119,6,0.2)', borderRadius: '50%', filter: 'blur(30px)' }} />
-            
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '22px', position: 'relative', zIndex: 1 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <div style={{ width: '38px', height: '38px', borderRadius: '12px', background: 'rgba(255,255,255,0.1)', backdropFilter: 'blur(10px)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid rgba(255,255,255,0.1)' }}>
-                  <Wallet size={18} color="#fff" />
-                </div>
-                <span style={{ color: '#fff', fontSize: '15px', fontWeight: 800, letterSpacing: '0.02em' }}>Financial Ledger</span>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '4px 10px', borderRadius: '8px', background: 'rgba(5,150,105,0.2)', border: '1px solid rgba(5,150,105,0.3)' }}>
-                <TrendingUp size={11} color="#34d399" />
-                <span style={{ color: '#34d399', fontSize: '10px', fontWeight: 900 }}>LIVE</span>
-              </div>
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px', position: 'relative', zIndex: 1 }}>
-              {[
-                { label: 'Total Volume', value: totalBought, color: '#fff',     bg: 'rgba(255,255,255,0.06)' },
-                { label: 'Total Paid',   value: totalPaid,   color: '#34d399', bg: 'rgba(5,150,105,0.15)' },
-                { label: 'Amount Due',  value: debt,        color: debt > 0 ? '#fb7185' : '#34d399', bg: debt > 0 ? 'rgba(225,29,72,0.15)' : 'rgba(5,150,105,0.15)' },
-              ].map((stat, i) => (
-                <div key={i} style={{ textAlign: 'center', padding: '16px 8px', borderRadius: '18px', background: stat.bg, border: '1px solid rgba(255,255,255,0.05)', backdropFilter: 'blur(10px)' }}>
-                  <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: '9px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '8px' }}>{stat.label}</div>
-                  <div style={{ color: stat.color, fontSize: '14px', fontWeight: 900 }}>
-                    <AnimatedCounter value={stat.value} />
+          {isVerified ? (
+            <motion.div {...cardAnim(0)}
+              style={{ position: 'relative', overflow: 'hidden', background: T.ink, borderRadius: '28px', padding: '24px', boxShadow: '0 20px 40px rgba(15,23,42,0.15)' }}>
+              {/* Dynamic Glassmorphism Background elements */}
+              <div style={{ position: 'absolute', top: '-50px', right: '-20px', width: '180px', height: '180px', background: 'linear-gradient(135deg, rgba(99,91,255,0.4), rgba(6,182,212,0.1))', borderRadius: '50%', filter: 'blur(40px)' }} />
+              <div style={{ position: 'absolute', bottom: '-40px', left: '-40px', width: '140px', height: '140px', background: 'rgba(217,119,6,0.2)', borderRadius: '50%', filter: 'blur(30px)' }} />
+              
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '22px', position: 'relative', zIndex: 1 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <div style={{ width: '38px', height: '38px', borderRadius: '12px', background: 'rgba(255,255,255,0.1)', backdropFilter: 'blur(10px)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid rgba(255,255,255,0.1)' }}>
+                    <Wallet size={18} color="#fff" />
                   </div>
+                  <span style={{ color: '#fff', fontSize: '15px', fontWeight: 800, letterSpacing: '0.02em' }}>Financial Ledger</span>
                 </div>
-              ))}
-            </div>
-          </motion.div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '4px 10px', borderRadius: '8px', background: 'rgba(5,150,105,0.2)', border: '1px solid rgba(5,150,105,0.3)' }}>
+                  <TrendingUp size={11} color="#34d399" />
+                  <span style={{ color: '#34d399', fontSize: '10px', fontWeight: 900 }}>LIVE</span>
+                </div>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px', position: 'relative', zIndex: 1 }}>
+                {[
+                  { label: 'Total Volume', value: totalBought, color: '#fff',     bg: 'rgba(255,255,255,0.06)' },
+                  { label: 'Total Paid',   value: totalPaid,   color: '#34d399', bg: 'rgba(5,150,105,0.15)' },
+                  { label: 'Amount Due',  value: debt,        color: debt > 0 ? '#fb7185' : '#34d399', bg: debt > 0 ? 'rgba(225,29,72,0.15)' : 'rgba(5,150,105,0.15)' },
+                ].map((stat, i) => (
+                  <div key={i} style={{ textAlign: 'center', padding: '16px 8px', borderRadius: '18px', background: stat.bg, border: '1px solid rgba(255,255,255,0.05)', backdropFilter: 'blur(10px)' }}>
+                    <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: '9px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '8px' }}>{stat.label}</div>
+                    <div style={{ color: stat.color, fontSize: '14px', fontWeight: 900 }}>
+                      <AnimatedCounter value={stat.value} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+          ) : (
+            <motion.div {...cardAnim(0)}
+              style={{ background: T.white, borderRadius: '28px', padding: '24px', border: `1px solid ${T.border}`, boxShadow: T.shadow, textAlign: 'center' }}>
+              <div style={{ width: '48px', height: '48px', borderRadius: '16px', background: T.primaryLight, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+                <BadgeCheck size={24} color={T.primary} />
+              </div>
+              <h3 style={{ fontSize: '16px', fontWeight: 900, color: T.ink, margin: '0 0 8px' }}>Verify Identity</h3>
+              <p style={{ fontSize: '13px', color: T.txt2, margin: '0 0 20px', lineHeight: 1.5 }}>Access your financial ledger and debt status by verifying your profile with a phone number and PIN.</p>
+              <motion.button whileTap={{ scale: 0.95 }} onClick={() => navigate('/customer/profile')}
+                style={{ background: T.primary, color: '#fff', border: 'none', padding: '12px 24px', borderRadius: '14px', fontSize: '13px', fontWeight: 900, cursor: 'pointer' }}>
+                Complete Profile
+              </motion.button>
+            </motion.div>
+          )}
 
           {/* ─── QUICK ACTIONS ─── */}
           <motion.div {...cardAnim(1)}>

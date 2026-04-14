@@ -1,5 +1,6 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { supabase } from '../lib/supabase';
 import { useAppContext } from '../store/AppContext';
 import { useAuth } from '../store/AuthContext';
 import { getTransactionItems } from '../store/types';
@@ -57,6 +58,17 @@ export const CustomerProfile: React.FC = () => {
   const [editNotes, setEditNotes] = useState(customer?.notes||'');
   const [editImage, setEditImage] = useState(customer?.image||'');
   const [rawUpload, setRawUpload] = useState<string|null>(null);
+  const [assignedSupplier, setAssignedSupplier] = useState<any>(null);
+
+  useEffect(() => {
+    if (customer?.assignedSupplierId) {
+      supabase.from('profiles')
+        .select('full_name, phone, email')
+        .eq('id', customer.assignedSupplierId)
+        .maybeSingle()
+        .then(({ data }: { data: any }) => setAssignedSupplier(data));
+    }
+  }, [customer]);
 
   const handleImageUpload=(e:React.ChangeEvent<HTMLInputElement>)=>{
     const file=e.target.files?.[0];
@@ -172,6 +184,36 @@ export const CustomerProfile: React.FC = () => {
               <p style={{fontSize:'20px',fontWeight:900,color:T.accent,margin:0}}>₦{metrics.totalDebtPaid.toLocaleString()}</p>
               <p style={{fontSize:'11px',color:T.txt3,margin:'5px 0 0'}}>of ₦{metrics.totalDebtIssued.toLocaleString()}</p>
             </div>
+
+          {/* ASSIGNED SUPPLIER */}
+          {assignedSupplier && (
+            <div style={{background:T.surface,borderRadius:T.radiusLg,padding:'20px',border:`1.5px solid ${T.border}`,boxShadow:T.shadow,marginBottom:'20px'}}>
+              <p style={{fontSize:'10px',fontWeight:700,color:T.txt3,textTransform:'uppercase',letterSpacing:'0.1em',margin:'0 0 12px'}}>Your Assigned Supplier</p>
+              <div style={{display:'flex',alignItems:'center',gap:'12px',marginBottom:'16px'}}>
+                <div style={{width:'44px',height:'44px',borderRadius:'14px',background:T.accentLt,display:'flex',alignItems:'center',justifyContent:'center',fontSize:'18px',fontWeight:900,color:T.accent}}>
+                   {assignedSupplier.full_name?.charAt(0)}
+                </div>
+                <div>
+                  <p style={{color:T.txt,fontWeight:800,fontSize:'15px',margin:0}}>{assignedSupplier.full_name}</p>
+                  <p style={{color:T.txt3,fontSize:'12px',margin:'2px 0 0'}}>Handles your orders & payments</p>
+                </div>
+              </div>
+              <div style={{display:'flex',gap:'10px'}}>
+                {assignedSupplier.phone && (
+                  <a href={`tel:${assignedSupplier.phone}`}
+                    style={{flex:1,background:T.accent,color:'#fff',borderRadius:'12px',padding:'12px',fontSize:'13px',fontWeight:700,display:'flex',alignItems:'center',justifyContent:'center',gap:'6px',textDecoration:'none'}}>
+                    <Phone size={14}/> Call
+                  </a>
+                )}
+                {assignedSupplier.email && (
+                  <a href={`mailto:${assignedSupplier.email}`}
+                    style={{flex:1,background:T.surface2,color:T.txt2,border:`1.5px solid ${T.border}`,borderRadius:'12px',padding:'12px',fontSize:'13px',fontWeight:700,display:'flex',alignItems:'center',justifyContent:'center',gap:'6px',textDecoration:'none'}}>
+                    <FileText size={14}/> Email
+                  </a>
+                )}
+              </div>
+            </div>
+          )}
             <div style={{background:'linear-gradient(135deg,#fffbeb,#fef3c7)',borderRadius:T.radiusLg,padding:'18px',border:'1.5px solid #fde68a',boxShadow:T.shadow}}>
               <p style={{fontSize:'10px',fontWeight:700,color:'#92400e',textTransform:'uppercase',letterSpacing:'0.1em',margin:'0 0 8px'}}>Rewards</p>
               <div style={{display:'flex',alignItems:'center',gap:'8px'}}>
