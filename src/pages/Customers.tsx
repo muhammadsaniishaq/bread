@@ -6,7 +6,7 @@ import { ImageCropper } from '../components/ImageCropper';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from '../store/LanguageContext';
 import { useAuth } from '../store/AuthContext';
-import { Award, Star, Crown, Medal, MessageCircle, X, Camera, Search, UserPlus, ChevronRight, Phone, MapPin, BadgeCheck, CreditCard, Check, QrCode } from 'lucide-react';
+import { Award, Star, Crown, Medal, MessageCircle, X, Camera, Search, UserPlus, ChevronRight, Phone, MapPin, CreditCard, Check, QrCode, Shield, ShieldCheck, ShieldAlert } from 'lucide-react';
 import { QRScanner } from '../components/QRScanner';
 
 /* ── Design Tokens ── */
@@ -226,7 +226,11 @@ export const Customers: React.FC = () => {
                       <div style={{display:'flex',alignItems:'center',gap:'6px',flexWrap:'wrap',marginBottom:'4px'}}>
                         <span style={{color:T.txt,fontWeight:800,fontSize:'15px',letterSpacing:'-0.01em'}}>{customer.name}</span>
                         {getBadge(customer.loyaltyPoints)}
-                        {customer.pin&&<span style={{display:'flex',alignItems:'center',gap:'3px',fontSize:'10px',fontWeight:800,padding:'2px 7px',borderRadius:'7px',background:T.successLt,color:T.success}}><BadgeCheck size={9}/> Auth</span>}
+                        {(() => {
+                           if (customer.pin && customer.phone) return <span style={{display:'flex',alignItems:'center',gap:'3px',fontSize:'10px',fontWeight:800,padding:'2px 7px',borderRadius:'7px',background:T.successLt,color:T.success}}><ShieldCheck size={10}/> Verified</span>;
+                           if (customer.phone) return <span style={{display:'flex',alignItems:'center',gap:'3px',fontSize:'10px',fontWeight:800,padding:'2px 7px',borderRadius:'7px',background:T.warn+'20',color:T.warn}}><Shield size={10}/> No PIN</span>;
+                           return <span style={{display:'flex',alignItems:'center',gap:'3px',fontSize:'10px',fontWeight:800,padding:'2px 7px',borderRadius:'7px',background:T.dangerLt,color:T.danger}}><ShieldAlert size={10}/> Unverified</span>;
+                        })()}
                       </div>
                       <div style={{display:'flex',gap:'10px',flexWrap:'wrap'}}>
                         {customer.phone&&<span style={{color:T.txt3,fontSize:'12px',fontWeight:600,display:'flex',alignItems:'center',gap:'4px'}}><Phone size={10}/>{customer.phone}</span>}

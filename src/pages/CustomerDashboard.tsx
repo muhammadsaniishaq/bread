@@ -117,7 +117,11 @@ export const CustomerDashboard: React.FC = () => {
       // 2. Find customer record
       let cust: any = null;
 
-      const { data: byProfile, error: custErr } = await supabase.from('customers').select('*').eq('profile_id', id).maybeSingle();
+      const { data: byProfile, error: custErr } = await supabase.from('customers')
+        .select('*, assigned_supplier:profiles!assigned_supplier_id(full_name, phone, email, bank_name, account_number)')
+        .eq('profile_id', id)
+        .maybeSingle();
+
       if (custErr) {
         console.error('CustomerDashboard: Customer fetch error:', custErr.message);
         setSyncError(`Customer Fetch: ${custErr.message}`);
@@ -126,12 +130,18 @@ export const CustomerDashboard: React.FC = () => {
       if (byProfile) {
         cust = byProfile;
       } else {
-        const { data: byId } = await supabase.from('customers').select('*').eq('id', id).maybeSingle();
+        const { data: byId } = await supabase.from('customers')
+          .select('*, assigned_supplier:profiles!assigned_supplier_id(full_name, phone, email, bank_name, account_number)')
+          .eq('id', id)
+          .maybeSingle();
         if (byId) {
           cust = byId;
           if (!byId.profile_id) await supabase.from('customers').update({ profile_id: id }).eq('id', id);
         } else if (user?.email) {
-          const { data: byEmail } = await supabase.from('customers').select('*').eq('email', user.email).maybeSingle();
+          const { data: byEmail } = await supabase.from('customers')
+            .select('*, assigned_supplier:profiles!assigned_supplier_id(full_name, phone, email, bank_name, account_number)')
+            .eq('email', user.email)
+            .maybeSingle();
           if (byEmail) {
             cust = byEmail;
             await supabase.from('customers').update({ profile_id: id }).eq('id', byEmail.id);
@@ -228,6 +238,8 @@ export const CustomerDashboard: React.FC = () => {
     { id: 'ledger',  label: 'Ledger',  icon: Wallet,       color: T.gold,    light: T.goldLight,     path: '/customer/dashboard' },
     { id: 'profile', label: 'Profile', icon: User,         color: T.success, light: T.successLight,  path: '/customer/profile' },
   ];
+
+
 
   const isVerified = (customer.pin && customer.pin.length > 0) && (customer.phone && customer.phone.length > 0);
 

@@ -1,6 +1,5 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { supabase } from '../lib/supabase';
 import { useAppContext } from '../store/AppContext';
 import { useAuth } from '../store/AuthContext';
 import { getTransactionItems } from '../store/types';
@@ -8,8 +7,9 @@ import { AnimatedPage } from '../components/AnimatedPage';
 import { ImageCropper } from '../components/ImageCropper';
 import {
   ArrowLeft, Phone, MapPin, MessageCircle, MessageSquare,
-  FileText, Edit2, Trash2, Camera, Star, TrendingUp,
-  CreditCard, X, Check, AlertTriangle, Activity, BadgeCheck, Zap
+  CreditCard, X, Check, AlertTriangle, Activity, BadgeCheck, Zap,
+  Shield, ShieldCheck, ShieldAlert, FileSearch,
+  Edit2, FileText, Trash2, Star, TrendingUp, Camera
 } from 'lucide-react';
 
 const fmtRaw = (v: number) => `₦${Math.round(v).toLocaleString()}`;
@@ -61,17 +61,7 @@ export const CustomerProfile: React.FC = () => {
   const [editNotes, setEditNotes] = useState(customer?.notes||'');
   const [editImage, setEditImage] = useState(customer?.image||'');
   const [rawUpload, setRawUpload] = useState<string|null>(null);
-  const [assignedSupplier, setAssignedSupplier] = useState<any>(null);
-
-  useEffect(() => {
-    if (customer?.assignedSupplierId) {
-      supabase.from('profiles')
-        .select('full_name, phone, email')
-        .eq('id', customer.assignedSupplierId)
-        .maybeSingle()
-        .then(({ data }: { data: any }) => setAssignedSupplier(data));
-    }
-  }, [customer]);
+  const assignedSupplier = customer?.supplierDetails;
 
   const handleImageUpload=(e:React.ChangeEvent<HTMLInputElement>)=>{
     const file=e.target.files?.[0];
@@ -157,11 +147,13 @@ export const CustomerProfile: React.FC = () => {
               <div>
                 <div style={{display:'flex',alignItems:'center',gap:'8px',flexWrap:'wrap'}}>
                   <h1 style={{color:'#fff',fontWeight:900,fontSize:'22px',margin:0,letterSpacing:'-0.02em'}}>{customer.name}</h1>
-                  {(customer.pin && customer.phone) ? (
-                    <span style={{background:'#10b981',color:'#fff',padding:'2px 8px',borderRadius:'8px',fontSize:'9px',fontWeight:900,textTransform:'uppercase',display:'flex',alignItems:'center',gap:'3px'}}><BadgeCheck size={10}/> VERIFIED</span>
-                  ) : (
-                    <span style={{background:'#f59e0b',color:'#fff',padding:'2px 8px',borderRadius:'8px',fontSize:'9px',fontWeight:900,textTransform:'uppercase',display:'flex',alignItems:'center',gap:'3px'}}><Star size={10}/> UNVERIFIED</span>
-                  )}
+                  {(() => {
+                    const isV = (customer.pin && customer.phone);
+                    const hasP = !!customer.phone;
+                    if (isV) return <span style={{background:T.success,color:'#fff',padding:'2px 8px',borderRadius:'8px',fontSize:'9px',fontWeight:900,textTransform:'uppercase',display:'flex',alignItems:'center',gap:'3px'}}><ShieldCheck size={10}/> VERIFIED</span>;
+                    if (hasP) return <span style={{background:T.warn,color:'#fff',padding:'2px 8px',borderRadius:'8px',fontSize:'9px',fontWeight:900,textTransform:'uppercase',display:'flex',alignItems:'center',gap:'3px'}}><Shield size={10}/> NO PIN</span>;
+                    return <span style={{background:T.danger,color:'#fff',padding:'2px 8px',borderRadius:'8px',fontSize:'9px',fontWeight:900,textTransform:'uppercase',display:'flex',alignItems:'center',gap:'3px'}}><ShieldAlert size={10}/> UNVERIFIED</span>;
+                  })()}
                   {isVIP&&<span style={{background:'rgba(251,191,36,0.25)',color:'#fde68a',border:'1px solid rgba(251,191,36,0.3)',borderRadius:'8px',padding:'2px 8px',fontSize:'10px',fontWeight:900,textTransform:'uppercase',display:'flex',alignItems:'center',gap:'3px'}}><Star size={9} fill="#fde68a"/> VIP</span>}
                 </div>
                 <div style={{display:'flex',gap:'14px',marginTop:'6px',flexWrap:'wrap'}}>
@@ -177,10 +169,17 @@ export const CustomerProfile: React.FC = () => {
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'16px'}}>
                <h3 style={{fontSize:'11px',fontWeight:900,color:T.txt,margin:0,textTransform:'uppercase',letterSpacing:'0.1em'}}>Verification Center</h3>
                <div style={{fontSize:'10px',fontWeight:800,color:(customer.pin && customer.phone) ? T.success : T.warn, display:'flex', alignItems:'center', gap:'4px'}}>
-                  {(customer.pin && customer.phone) ? <><BadgeCheck size={12}/> COMPLETED</> : <><Activity size={12}/> PENDING ACTION</>}
+                  {(customer.pin && customer.phone) ? <><ShieldCheck size={12}/> COMPLETED</> : <><Shield size={12}/> PENDING ACTION</>}
                </div>
             </div>
             
+            <div style={{marginBottom:'16px', display:'flex', gap:'10px'}}>
+              <button onClick={() => navigate(`/customer-docs/${customer.id}`)}
+                style={{flex:1, display:'flex', alignItems:'center', justifyContent:'center', gap:'8px', padding:'12px', borderRadius:'14px', background:T.bg2, border:`1px solid ${T.border}`, color:T.txt, fontSize:'12px', fontWeight:800, cursor:'pointer', transition:'all 0.2s'}}>
+                <FileSearch size={16} color={T.accent}/> View Identity Docs
+              </button>
+            </div>
+
             <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'12px'}}>
                <div style={{background:customer.phone ? '#f0fdf4' : T.bg2, padding:'16px', borderRadius:'18px', border: `1.5px solid ${customer.phone ? '#bbf7d0' : T.border}`, display:'flex', flexDirection:'column', gap:'8px'}}>
                   <div style={{width:'32px',height:'32px',borderRadius:'10px',background:customer.phone ? '#22c55e' : T.txt3, display:'flex', alignItems:'center', justifyContent:'center'}}>

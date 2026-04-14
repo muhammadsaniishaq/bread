@@ -11,7 +11,7 @@ import {
   ShoppingCart, RefreshCw, Wallet, Users,
   CheckCircle2, Hourglass, XCircle, ChevronRight,
   BarChart3, ArrowUpRight, ArrowDownRight, Bell,
-  Target, Zap, Star, ShoppingBag
+  Target, Zap, Star, ShoppingBag, Shield, ShieldCheck, ShieldAlert
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -27,6 +27,12 @@ const STATUS: Record<string, { label: string; color: string; bg: string; Icon: a
   PENDING_STORE:    { label: 'Pending',   color: '#f59e0b', bg: 'rgba(245,158,11,0.12)', Icon: Hourglass },
   PENDING_SUPPLIER: { label: 'Pending',   color: '#f59e0b', bg: 'rgba(245,158,11,0.12)', Icon: Hourglass },
   CANCELLED:        { label: 'Cancelled', color: '#ef4444', bg: 'rgba(239,68,68,0.12)',  Icon: XCircle },
+};
+
+const getVerificationStatus = (c: any) => {
+  if (c.phone && c.pin) return { icon: ShieldCheck, color: '#10b981', label: 'Verified' };
+  if (c.phone) return { icon: Shield, color: '#f59e0b', label: 'No PIN' };
+  return { icon: ShieldAlert, color: '#ef4444', label: 'Unverified' };
 };
 
 export default function SupplierDashboard() {
@@ -385,7 +391,13 @@ export default function SupplierDashboard() {
                             {c.name.charAt(0).toUpperCase()}
                           </div>
                           <div>
-                            <div style={{ fontSize:'13px', fontWeight:800, color:'#0f172a' }}>{c.name}</div>
+                            <div style={{ display:'flex', alignItems:'center', gap:'6px' }}>
+                               <div style={{ fontSize:'13px', fontWeight:800, color:'#0f172a' }}>{c.name}</div>
+                               {(() => {
+                                  const v = getVerificationStatus(c);
+                                  return <v.icon size={12} color={v.color} />;
+                               })()}
+                            </div>
                             <div style={{ fontSize:'10px', fontWeight:600, color:'#94a3b8' }}>{c.phone || 'No phone'}</div>
                           </div>
                         </div>

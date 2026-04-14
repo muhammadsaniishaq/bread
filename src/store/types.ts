@@ -27,6 +27,11 @@ export interface Customer {
   pin?: string; // App login PIN
   password?: string; // App login password (manager set)
   profile_id?: string; // Links to Supabase profiles.id
+  supplierDetails?: {
+    full_name: string;
+    phone?: string;
+    email?: string;
+  };
 }
 
 export interface TransactionItem {

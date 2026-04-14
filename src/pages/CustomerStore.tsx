@@ -63,13 +63,15 @@ export const CustomerStore: React.FC = () => {
     if (!user) return;
     setLoading(true);
     try {
-      const { data: cData } = await supabase.from('customers').select('*').eq('profile_id', user.id).maybeSingle();
+      const { data: cData } = await supabase.from('customers')
+        .select('*, assigned_supplier:profiles!assigned_supplier_id(full_name, id, phone, bank_name, account_number)')
+        .eq('profile_id', user.id)
+        .maybeSingle();
+        
       if (cData) {
          setCustomer(cData);
-         const sid = cData.assigned_supplier_id;
-          if (sid) {
-            const { data: sData } = await supabase.from('profiles').select('full_name, id, phone, bank_name, account_number').eq('id', sid).maybeSingle();
-            if (sData) setAssignedSupplier(sData);
+         if (cData.assigned_supplier) {
+            setAssignedSupplier(cData.assigned_supplier);
          }
       }
     } catch (e) { console.error(e); }
