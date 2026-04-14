@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
+import { supabase } from '../lib/supabase';
 import { useAppContext } from '../store/AppContext';
 import { useAuth } from '../store/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -9,7 +10,7 @@ import {
   ShoppingCart, RefreshCw, Wallet, Users,
   CheckCircle2, Hourglass, XCircle, ChevronRight,
   BarChart3, ArrowUpRight, ArrowDownRight, Bell,
-  Target, Zap, Star
+  Target, Zap, Star, ShoppingBag
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -28,11 +29,12 @@ const STATUS: Record<string, { label: string; color: string; bg: string; Icon: a
 };
 
 export default function SupplierDashboard() {
-  const { transactions, products, customers, inventoryLogs, loading, refreshData, getPersonalStock } = useAppContext();
+  const { transactions, products, customers, inventoryLogs, loading, refreshData, getPersonalStock, recordSale } = useAppContext();
   const { user } = useAuth();
   const navigate = useNavigate();
   const [refreshing, setRefreshing]   = useState(false);
-  const [activeSection, setSection]   = useState<'overview'|'stock'|'activity'>('overview');
+  const [activeSection, setSection]   = useState<'overview'|'stock'|'activity'|'orders'>('overview');
+  const [customerOrders, setCustomerOrders] = useState<any[]>([]);
 
   /* ── My Account ─────────────────────────────────────────────────────────── */
   const myAccount = useMemo(() =>
@@ -107,7 +109,54 @@ export default function SupplierDashboard() {
     return              { text: 'Good Evening',   emoji: '🌙', grad: 'linear-gradient(135deg,#9333ea,#818cf8)' };
   }, []);
 
-  const handleRefresh = async () => { setRefreshing(true); await refreshData(); setRefreshing(false); };
+  const handleRefresh = async () => { 
+    setRefreshing(true); 
+    await Promise.all([refreshData(), fetchCustomerOrders()]); 
+    setRefreshing(false); 
+  };
+
+  const fetchCustomerOrders = async () => {
+    if (!user) return;
+    const { data } = await supabase.from('orders')
+      .select('*, customers(name, location)')
+      .eq('supplier_id', user.id)
+      .order('created_at', { ascending: false });
+    if (data) setCustomerOrders(data);
+  };
+
+  useEffect(() => {
+    fetchCustomerOrders();
+  }, [user]);
+
+  const processOrder = async (orderId: string) => {
+    const order = customerOrders.find(o => o.id === orderId);
+    if (!order) return;
+
+    if (!confirm(`Process this order for ${order.total_price.toLocaleString()}?`)) return;
+
+    // Convert order to a Sale Transaction
+    const tx = {
+      id: crypto.randomUUID(),
+      date: new Date().toISOString(),
+      customerId: order.customer_id,
+      items: order.details || [], 
+      totalPrice: order.total_price,
+      type: 'Debt' as const, // Capture as debt for the supplier ledger
+      status: 'COMPLETED' as const,
+      origin: 'POS_SUPPLIER' as const,
+      sellerId: user?.id
+    };
+
+    try {
+      await recordSale(tx);
+      // Mark original order as COMPLETED
+      await supabase.from('orders').update({ status: 'COMPLETED' }).eq('id', orderId);
+      await fetchCustomerOrders();
+      alert("Order processed successfully and stock updated!");
+    } catch(e: any) {
+      alert("Error: " + e.message);
+    }
+  };
   const getProductName = (id?: string) => products.find(p=>p.id===id)?.name||'Product';
 
   const firstName = (myAccount?.name || user?.email || 'Supplier').split(' ')[0];
@@ -205,10 +254,10 @@ export default function SupplierDashboard() {
 
           {/* ══ SECTION TABS ══ */}
           <div style={{ background:'rgba(255,255,255,0.9)', backdropFilter:'blur(12px)', borderRadius:'16px', padding:'4px', display:'flex', gap:'4px', marginBottom:'12px', boxShadow:'0 2px 12px rgba(0,0,0,0.05)' }}>
-            {(['overview','stock','activity'] as const).map(s => (
+            {(['overview','stock','orders','activity'] as const).map(s => (
               <button key={s} onClick={() => setSection(s)}
-                style={{ flex:1, padding:'9px 6px', borderRadius:'12px', border:'none', cursor:'pointer', fontSize:'11px', fontWeight:800, textTransform:'uppercase', letterSpacing:'0.04em', transition:'all 0.2s', background: activeSection===s?'#4f46e5':'transparent', color: activeSection===s?'#fff':'#94a3b8' }}>
-                {s === 'overview' ? 'Overview' : s === 'stock' ? 'Stock' : 'Activity'}
+                style={{ flex:1, padding:'9px 4px', borderRadius:'12px', border:'none', cursor:'pointer', fontSize:'10px', fontWeight:800, textTransform:'uppercase', letterSpacing:'0.04em', transition:'all 0.2s', background: activeSection===s?'#4f46e5':'transparent', color: activeSection===s?'#fff':'#94a3b8' }}>
+                {s === 'overview' ? 'Overview' : s === 'stock' ? 'Stock' : s === 'orders' ? 'Orders' : 'Activity'}
               </button>
             ))}
           </div>
@@ -456,7 +505,57 @@ export default function SupplierDashboard() {
                 </motion.button>
               </motion.div>
             )}
+            {/* ══════════ ORDERS ══════════ */}
+            {activeSection === 'orders' && (
+              <motion.div key="orders" initial={{ opacity:0 }} animate={{ opacity:1 }} exit={{ opacity:0 }}>
+                <motion.div variants={fadeUp} initial="hidden" animate="show"
+                  style={{ background:'#fff', borderRadius:'24px', overflow:'hidden', boxShadow:'0 4px 24px rgba(0,0,0,0.06)', border:'1px solid rgba(0,0,0,0.04)', marginBottom:'12px' }}>
+                  <div style={{ padding:'16px 20px 14px', borderBottom:'1px solid rgba(0,0,0,0.04)', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+                    <div style={{ display:'flex', alignItems:'center', gap:'10px' }}>
+                      <div style={{ width:'32px', height:'32px', borderRadius:'10px', background:'rgba(79,70,229,0.08)', display:'flex', alignItems:'center', justifyContent:'center', color:'#4f46e5' }}><ShoppingBag size={15}/></div>
+                      <div style={{ fontSize:'13px', fontWeight:900, color:'#0f172a' }}>Assigned Orders</div>
+                    </div>
+                    <div style={{ background:'rgba(79,70,229,0.08)', color:'#4f46e5', padding:'4px 10px', borderRadius:'8px', fontSize:'11px', fontWeight:800 }}>
+                      {customerOrders.filter(o => o.status === 'PENDING').length} new
+                    </div>
+                  </div>
 
+                  {customerOrders.length === 0 ? (
+                    <div style={{ padding:'40px', textAlign:'center', color:'#94a3b8' }}>
+                      <ShoppingBag size={32} style={{ margin:'0 auto 8px', opacity:0.2 }} />
+                      <div style={{ fontSize:'13px', fontWeight:600 }}>No orders assigned to you</div>
+                    </div>
+                  ) : customerOrders.map((o, i) => (
+                    <div key={o.id} style={{ padding:'16px 20px', borderBottom: i < customerOrders.length-1 ? '1px solid rgba(0,0,0,0.04)' : 'none' }}>
+                       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:'12px' }}>
+                          <div>
+                             <div style={{ fontSize:'14px', fontWeight:900, color:'#0f172a' }}>{o.customers?.name || 'Customer'}</div>
+                             <div style={{ fontSize:'11px', color:'#94a3b8', fontWeight:700 }}>Loc: {o.customers?.location || 'Unknown'}</div>
+                          </div>
+                          <div style={{ textAlign:'right' }}>
+                             <div style={{ fontSize:'16px', fontWeight:900, color:'#4f46e5' }}>{fmt(o.total_price)}</div>
+                             <div style={{ fontSize:'9px', fontWeight:800, color: o.status==='PENDING'?'#f59e0b':'#10b981', textTransform:'uppercase' }}>{o.status}</div>
+                          </div>
+                       </div>
+                       
+                       <div style={{ background:'#f8fafc', padding:'10px', borderRadius:'12px', marginBottom:'12px' }}>
+                          <div style={{ fontSize:'10px', fontWeight:800, color:'#94a3b8', textTransform:'uppercase', marginBottom:'4px' }}>Items Order</div>
+                          <div style={{ fontSize:'12px', fontWeight:700, color:'#1e293b' }}>
+                             {o.details?.map((it: any) => `${it.quantity}x ${products.find(px=>px.id===it.productId)?.name}`).join(', ') || 'N/A'}
+                          </div>
+                       </div>
+
+                       {o.status === 'PENDING' && (
+                         <motion.button whileTap={{ scale:0.95 }} onClick={() => processOrder(o.id)}
+                           style={{ width:'100%', padding:'12px', borderRadius:'14px', border:'none', background:'linear-gradient(135deg,#10b981,#059669)', color:'#fff', fontSize:'12px', fontWeight:900, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:'8px', boxShadow:'0 4px 12px rgba(16,185,129,0.2)' }}>
+                            <CheckCircle2 size={16} /> Approve & Deliver
+                         </motion.button>
+                       )}
+                    </div>
+                  ))}
+                </motion.div>
+              </motion.div>
+            )}
             {/* ══════════ ACTIVITY ══════════ */}
             {activeSection === 'activity' && (
               <motion.div key="activity" initial={{ opacity:0 }} animate={{ opacity:1 }} exit={{ opacity:0 }}>

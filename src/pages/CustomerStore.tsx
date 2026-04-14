@@ -36,7 +36,7 @@ const fmtRaw = (v: number) => `₦${v.toLocaleString()}`;
 
 export const CustomerStore: React.FC = () => {
   const { user } = useAuth();
-  const { products: contextProducts } = useAppContext();
+  const { products: contextProducts, getPersonalStock } = useAppContext();
   const navigate = useNavigate();
   
   const [customer, setCustomer] = useState<any>(null);
@@ -83,8 +83,11 @@ export const CustomerStore: React.FC = () => {
       let next = Math.max(0, current + delta);
       
       // Enforce real-time stock limits
-      if (next > (product.stock || 0)) {
-         next = product.stock || 0;
+      const supplierId = assignedSupplier?.id;
+      const availableStock = supplierId ? getPersonalStock(pid, 'SUPPLIER', supplierId) : product.stock;
+      
+      if (next > availableStock) {
+         next = availableStock;
       }
       
       if (next === 0) {
@@ -114,11 +117,11 @@ export const CustomerStore: React.FC = () => {
 
        const { error } = await supabase.from('orders').insert({
           customer_id: customer.id,
+          supplier_id: assignedSupplier?.id || null, // Track assignment
           total_price: totalPrice,
           items: cart, 
           details: mappedItems,
           status: 'PENDING',
-          // appending payment method to a notes field natively if available, or just letting it process.
           created_at: new Date().toISOString()
        });
 
@@ -170,8 +173,9 @@ export const CustomerStore: React.FC = () => {
         {/* PRODUCT BENTO TILES */}
         <div style={{ padding: '0 20px', display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
            {filteredProducts.map((p) => {
-             const stock = p.stock || 0;
-             const outOfStock = stock <= 0;
+             const supplierId = assignedSupplier?.id;
+             const avail = supplierId ? getPersonalStock(p.id, 'SUPPLIER', supplierId) : p.stock;
+             const outOfStock = avail <= 0;
              
              return (
                <motion.div layout key={p.id} style={{ background: '#fff', borderRadius: '20px', overflow: 'hidden', border: `1px solid ${T.border}`, boxShadow: T.shadow, display: 'flex', flexDirection: 'column', opacity: outOfStock ? 0.7 : 1 }}>
@@ -182,7 +186,7 @@ export const CustomerStore: React.FC = () => {
                      {/* Stock Badge */}
                      <div style={{ position: 'absolute', top: '8px', right: '8px', background: outOfStock ? 'rgba(244, 63, 94, 0.9)' : 'rgba(16, 185, 129, 0.9)', color: '#fff', backdropFilter: 'blur(10px)', padding: '4px 8px', borderRadius: '8px', fontSize: '9px', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '4px' }}>
                         {outOfStock ? <PackageX size={10} /> : null} 
-                        {outOfStock ? 'OUT' : `${stock} LEFT`}
+                        {outOfStock ? 'OUT' : `${avail} LEFT`}
                      </div>
                   </div>
                   
@@ -197,8 +201,8 @@ export const CustomerStore: React.FC = () => {
                              <span style={{ fontSize: '13px', fontWeight: 900, color: T.ink }}>{cart[p.id]}</span>
                              <button 
                                onClick={() => updateCart(p.id, 1)} 
-                               disabled={cart[p.id] >= stock}
-                               style={{ border: 'none', background: cart[p.id] >= stock ? T.txt3 : T.primary, width: '28px', height: '28px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', boxShadow: cart[p.id] >= stock ? 'none' : '0 4px 10px rgba(79, 70, 229, 0.2)', transition: 'all 0.2s', cursor: cart[p.id] >= stock ? 'not-allowed' : 'pointer' }}>
+                               disabled={cart[p.id] >= avail}
+                               style={{ border: 'none', background: cart[p.id] >= avail ? T.txt3 : T.primary, width: '28px', height: '28px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', boxShadow: cart[p.id] >= avail ? 'none' : '0 4px 10px rgba(79, 70, 229, 0.2)', transition: 'all 0.2s', cursor: cart[p.id] >= avail ? 'not-allowed' : 'pointer' }}>
                                <Plus size={12} />
                              </button>
                           </div>

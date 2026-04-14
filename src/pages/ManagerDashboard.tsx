@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { supabase } from '../lib/supabase';
 import { AnimatedPage } from '../components/AnimatedPage';
 import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../store/AppContext';
@@ -52,7 +53,10 @@ export const ManagerDashboard: React.FC = () => {
   const { signOut } = useAuth();
   const navigate = useNavigate();
   const [chartType, setChartType] = useState<'area' | 'bar'>('area');
-  const [activeSection, setActiveSection] = useState<'overview' | 'stock' | 'activity' | 'debtors'>('overview');
+  const [activeSection, setActiveSection] = useState<'overview' | 'stock' | 'activity' | 'debtors' | 'orders'>('overview');
+  const [customerOrders, setCustomerOrders] = useState<any[]>([]);
+  const [suppliers, setSuppliers] = useState<any[]>([]);
+  const [assigningId, setAssigningId] = useState<string | null>(null);
   const [clockStr, setClockStr] = useState('');
 
   useEffect(() => {
@@ -64,6 +68,34 @@ export const ManagerDashboard: React.FC = () => {
     const id = setInterval(update, 1000);
     return () => clearInterval(id);
   }, []);
+
+  const fetchOrders = async () => {
+    const { data } = await supabase.from('orders').select('*, customers(name, location)').order('created_at', { ascending: false });
+    if (data) setCustomerOrders(data);
+  };
+
+  const fetchSuppliers = async () => {
+    const { data } = await supabase.from('profiles').select('*').eq('role', 'SUPPLIER');
+    if (data) setSuppliers(data);
+  };
+
+  useEffect(() => {
+    fetchOrders();
+    fetchSuppliers();
+  }, []);
+
+  const assignOrder = async (orderId: string, supplierId: string) => {
+    setAssigningId(orderId);
+    try {
+      const { error } = await supabase.from('orders').update({ supplier_id: supplierId }).eq('id', orderId);
+      if (error) throw error;
+      await fetchOrders();
+      alert("Order assigned successfully!");
+    } catch (e: any) {
+      alert("Error: " + e.message);
+    }
+    setAssigningId(null);
+  };
 
   const metrics = React.useMemo(() => {
     const today = new Date().toISOString().split('T')[0];
@@ -372,10 +404,10 @@ export const ManagerDashboard: React.FC = () => {
 
           {/* ─── SECTION TABS ─── */}
           <div style={{ display: 'flex', background: T.white, padding: '5px', borderRadius: '14px', gap: '2px', boxShadow: T.shadow, overflowX: 'auto' }}>
-            {(['overview', 'stock', 'activity', 'debtors'] as const).map(s => (
+            {(['overview', 'stock', 'orders', 'activity', 'debtors'] as const).map(s => (
               <button key={s} onClick={() => setActiveSection(s)}
                 style={{ flex: 1, padding: '9px 6px', borderRadius: '10px', border: 'none', fontSize: '10px', fontWeight: 700, cursor: 'pointer', transition: 'all 0.2s', fontFamily: 'inherit', background: activeSection === s ? T.primary : 'transparent', color: activeSection === s ? '#fff' : T.txt3, whiteSpace: 'nowrap' }}>
-                {s === 'overview' ? '📋 Overview' : s === 'stock' ? '📦 Stock' : s === 'activity' ? '⚡ Activity' : '🏦 Debtors'}
+                {s === 'overview' ? '📋 Overview' : s === 'stock' ? '📦 Stock' : s === 'orders' ? '🛍️ Orders' : s === 'activity' ? '⚡ Activity' : '🏦 Debtors'}
               </button>
             ))}
           </div>
@@ -590,6 +622,61 @@ export const ManagerDashboard: React.FC = () => {
                           </div>
                         </div>
                       </motion.div>
+                    ))}
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
+            {/* ─── ORDERS SECTION ─── */}
+            {activeSection === 'orders' && (
+              <motion.div key="orders" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <div style={{ background: T.white, borderRadius: T.radius, padding: '16px', boxShadow: T.shadow, border: `1px solid ${T.borderL}` }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+                    <ClipboardList size={14} color={T.primary} />
+                    <span style={{ fontSize: '12px', fontWeight: 800, color: T.ink, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Inbound Customer Orders</span>
+                  </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    {customerOrders.length === 0 ? (
+                      <div style={{ textAlign: 'center', padding: '32px 0', color: T.txt3 }}>No orders found.</div>
+                    ) : customerOrders.map((o) => (
+                      <div key={o.id} style={{ padding: '14px', borderRadius: '16px', background: T.bg, border: `1px solid ${T.borderL}` }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
+                          <div>
+                            <div style={{ fontSize: '14px', fontWeight: 900, color: T.ink }}>{o.customers?.name || 'Customer'}</div>
+                            <div style={{ fontSize: '11px', color: T.txt3, fontWeight: 700 }}>{o.customers?.location}</div>
+                          </div>
+                          <div style={{ textAlign: 'right' }}>
+                            <div style={{ fontSize: '15px', fontWeight: 900, color: T.primary }}>{fmt(o.total_price)}</div>
+                            <div style={{ fontSize: '9px', fontWeight: 800, color: o.status === 'PENDING' ? T.amber : T.emerald, textTransform: 'uppercase' }}>{o.status}</div>
+                          </div>
+                        </div>
+
+                        <div style={{ background: T.white, padding: '10px', borderRadius: '12px', marginBottom: '12px', fontSize: '12px', fontWeight: 600, color: T.txt2 }}>
+                          {o.details?.map((it: any) => `${it.quantity}x ${products.find(px => px.id === it.productId)?.name}`).join(', ') || 'Bread'}
+                        </div>
+
+                        {o.status === 'PENDING' && (
+                          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                            <select 
+                              onChange={(e) => assignOrder(o.id, e.target.value)}
+                              disabled={assigningId === o.id}
+                              value={o.supplier_id || ""}
+                              style={{ flex: 1, padding: '10px', borderRadius: '10px', border: `1px solid ${T.borderL}`, background: T.white, fontSize: '12px', fontWeight: 700, outline: 'none' }}>
+                              <option value="">{o.supplier_id ? 'Reassign Supplier' : 'Assign to Supplier'}</option>
+                              {suppliers.map(s => (
+                                <option key={s.id} value={s.id}>{s.full_name}</option>
+                              ))}
+                            </select>
+                            {o.supplier_id && (
+                              <div style={{ fontSize: '10px', fontWeight: 800, color: T.emerald, background: T.emeraldL, padding: '4px 8px', borderRadius: '6px' }}>
+                                Assigned to: {suppliers.find(s => s.id === o.supplier_id)?.full_name || '...'}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
                     ))}
                   </div>
                 </div>
