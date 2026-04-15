@@ -517,13 +517,13 @@ Generated via Admin Console.`;
                              <h3 style={{fontSize:'15px',fontWeight:600,color:T.ink,margin:'0 0 8px',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
                                 Notes <button onClick={()=>setEditModalOpen(true)} style={{background:'none',border:'none',color:T.accent,fontSize:'12px',cursor:'pointer'}}>Edit</button>
                              </h3>
-                             <p style={{color:T.txt2,fontSize:'14px',lineHeight:1.6,margin:0}}>{eNote || 'No internal notes captured for this client. Lorem ipsum text acts as placeholder if none exists.'}</p>
+                             <p style={{color:T.txt2,fontSize:'14px',lineHeight:1.6,margin:0}}>{eNote || 'No internal notes captured for this client.'}</p>
                           </div>
 
                           {/* Address / Map Placeholder Block */}
                           <div style={{marginTop:'24px'}}>
                              <h3 style={{fontSize:'15px',fontWeight:600,color:T.ink,margin:'0 0 8px'}}>Address</h3>
-                             <p style={{color:T.txt2,fontSize:'14px',margin:'0 0 12px'}}>{drawer.location || '1901 Thornridge Cir. Shiloh, null'}</p>
+                             <p style={{color:T.txt2,fontSize:'14px',margin:'0 0 12px'}}>{drawer.location || 'No location saved.'}</p>
                              <div onClick={()=>window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(drawer.location||'')}`)} style={{background:'#e5e7eb',height:'100px',borderRadius:'12px',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',backgroundImage:'url("https://maps.googleapis.com/maps/api/staticmap?center=location&zoom=13&size=600x300&maptype=roadmap&color=gray")',backgroundSize:'cover'}}>
                                 <span style={{background:T.surface,padding:'8px 16px',borderRadius:'8px',fontSize:'13px',fontWeight:600,color:T.ink,boxShadow:T.shadow}}>View map</span>
                              </div>
@@ -606,8 +606,10 @@ Generated via Admin Console.`;
                                     setEIsVerified(newVal);
                                     try {
                                       await verifyCustomer(drawer.id, newVal);
-                                    } catch (err) {
+                                    } catch (err: any) {
+                                      console.error('Toggle failed:', err);
                                       setEIsVerified(!newVal);
+                                      alert(`Verification Failed: ${err.message || 'Check database permissions'}`);
                                     }
                                   }}
                                   style={{width:'44px',height:'24px',borderRadius:'12px',background:eIsVerified?T.success:T.txt3,position:'relative',cursor:'pointer',transition:'background 0.3s'}}

@@ -242,27 +242,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const verifyCustomer = async (customerId: string, isVerified: boolean) => {
     // 1. Find customer to get profile_id
     const customer = customers.find(c => c.id === customerId);
-    if (!customer) return;
+    if (!customer) throw new Error('Customer not found');
 
-    // 2. Prepare updates
-    const updates = [
-      supabase.from('customers').update({ is_verified: isVerified }).eq('id', customerId)
-    ];
+    // 2. Primary Update: Customers Table (Manager/Supplier have access)
+    const { error: custErr } = await supabase.from('customers').update({ is_verified: isVerified }).eq('id', customerId);
+    if (custErr) {
+      console.error('Core verification failed:', custErr);
+      throw new Error(`Database Error: ${custErr.message}`);
+    }
 
+    // 3. Secondary Sync: Profiles Table (Might fail due to RLS)
+    // We do this separately so it doesn't block the primary operation
     if (customer.profile_id) {
-      updates.push(supabase.from('profiles').update({ is_verified: isVerified }).eq('id', customer.profile_id));
+       const { error: profErr } = await supabase.from('profiles').update({ is_verified: isVerified }).eq('id', customer.profile_id);
+       if (profErr) {
+         console.warn('Profile sync failed (likely RLS):', profErr.message);
+         // We DON'T throw here because the primary verification succeeded
+       }
     }
 
-    // 3. Execute concurrently
-    const results = await Promise.all(updates);
-    const hasError = results.some(r => r.error);
-    if (hasError) {
-      const err = results.find(r => r.error)?.error;
-      console.error('verifyCustomer failed:', err);
-      throw new Error(err?.message || 'Sync failed');
-    }
-
-    // 4. Single refresh AFTER both are done
+    // 4. Refresh to update UI
     await refreshData();
   };
 

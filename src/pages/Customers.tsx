@@ -280,6 +280,9 @@ export const Customers: React.FC = () => {
                            try {
                              const newVal = !customer.is_verified;
                              await verifyCustomer(customer.id, newVal);
+                           } catch (err: any) {
+                             console.error('Verification failed:', err);
+                             alert(`Verification Failed: ${err.message || 'Check database permissions'}`);
                            } finally {
                              setVerifyingId(null);
                            }

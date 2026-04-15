@@ -439,6 +439,9 @@ export default function SupplierDashboard() {
                               try {
                                 const newVal = !c.is_verified;
                                 await verifyCustomer(c.id, newVal);
+                              } catch (err: any) {
+                                console.error('Verification failed:', err);
+                                alert(`Verification Failed: ${err.message || 'Check database permissions'}`);
                               } finally {
                                 setVerifyingId(null);
                               }
