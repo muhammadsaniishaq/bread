@@ -27,6 +27,7 @@ interface AppContextType {
   deleteProduct: (id: string) => Promise<void>;
   addCustomer: (customer: Customer) => Promise<void>;
   updateCustomer: (customer: Customer) => Promise<void>;
+  verifyCustomer: (customerId: string, isVerified: boolean) => Promise<void>;
   deleteCustomer: (id: string) => Promise<void>;
   recordSale: (transaction: Transaction) => Promise<void>;
   updateTransactionStatus: (id: string, status: 'COMPLETED' | 'CANCELLED') => Promise<void>;
@@ -237,6 +238,34 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (error) { console.error('updateCustomer failed:', error); throw new Error(error.message); }
     await refreshData();
   };
+
+  const verifyCustomer = async (customerId: string, isVerified: boolean) => {
+    // 1. Find customer to get profile_id
+    const customer = customers.find(c => c.id === customerId);
+    if (!customer) return;
+
+    // 2. Prepare updates
+    const updates = [
+      supabase.from('customers').update({ is_verified: isVerified }).eq('id', customerId)
+    ];
+
+    if (customer.profile_id) {
+      updates.push(supabase.from('profiles').update({ is_verified: isVerified }).eq('id', customer.profile_id));
+    }
+
+    // 3. Execute concurrently
+    const results = await Promise.all(updates);
+    const hasError = results.some(r => r.error);
+    if (hasError) {
+      const err = results.find(r => r.error)?.error;
+      console.error('verifyCustomer failed:', err);
+      throw new Error(err?.message || 'Sync failed');
+    }
+
+    // 4. Single refresh AFTER both are done
+    await refreshData();
+  };
+
   const deleteCustomer = async (id: string) => {
     await supabase.from('customers').delete().eq('id', id);
     await refreshData();
@@ -533,7 +562,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       recordSale, updateTransactionStatus, recordDebtPayment,
       addInventory, returnInventory, processInventoryBatch,
       recordBakeryPayment, addExpense,
-      appSettings, updateSettings, getPersonalStock
+      appSettings, updateSettings, getPersonalStock, verifyCustomer
     }}>
       {children}
     </AppContext.Provider>

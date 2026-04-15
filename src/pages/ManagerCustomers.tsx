@@ -49,7 +49,7 @@ const inp:React.CSSProperties={background:T.surface,border:`1px solid ${T.border
 const lbl:React.CSSProperties={fontSize:'11px',fontWeight:700,color:T.txt2,textTransform:'uppercase',letterSpacing:'0.04em',marginBottom:'8px',display:'block'};
 
 export const ManagerCustomers: React.FC = () => {
-  const { customers, transactions, debtPayments, addCustomer, updateCustomer, deleteCustomer, refreshData, appSettings } = useAppContext();
+  const { customers, transactions, debtPayments, addCustomer, updateCustomer, verifyCustomer, deleteCustomer, refreshData, appSettings } = useAppContext();
   // const navigate = useNavigate();
 
   const [search, setSearch]       = useState('');
@@ -601,15 +601,13 @@ Generated via Admin Console.`;
                                 </div>
                                 <div 
                                   onClick={async () => {
+                                    if (!drawer) return;
                                     const newVal = !eIsVerified;
                                     setEIsVerified(newVal);
-                                    if(drawer) {
-                                      // Write to BOTH tables for 100% sync
-                                      await updateCustomer({ ...drawer, is_verified: newVal });
-                                      if (drawer.profile_id || drawer.id) {
-                                        await supabase.from('profiles').update({ is_verified: newVal }).eq('id', drawer.profile_id || drawer.id);
-                                      }
-                                      refreshData();
+                                    try {
+                                      await verifyCustomer(drawer.id, newVal);
+                                    } catch (err) {
+                                      setEIsVerified(!newVal);
                                     }
                                   }}
                                   style={{width:'44px',height:'24px',borderRadius:'12px',background:eIsVerified?T.success:T.txt3,position:'relative',cursor:'pointer',transition:'background 0.3s'}}

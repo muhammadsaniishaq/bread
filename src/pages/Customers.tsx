@@ -1,6 +1,5 @@
 import React, { useState, useMemo } from 'react';
 import { useAppContext } from '../store/AppContext';
-import { supabase } from '../lib/supabase';
 import type { Customer } from '../store/types';
 import { AnimatedPage } from '../components/AnimatedPage';
 import { ImageCropper } from '../components/ImageCropper';
@@ -8,6 +7,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from '../store/LanguageContext';
 import { useAuth } from '../store/AuthContext';
 import { Award, Star, Crown, Medal, MessageCircle, X, Camera, Search, UserPlus, ChevronRight, Phone, MapPin, CreditCard, Check, QrCode, Shield, ShieldCheck, ShieldAlert } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { QRScanner } from '../components/QRScanner';
 
 /* ── Design Tokens ── */
@@ -38,7 +38,7 @@ const inp:React.CSSProperties={background:T.surface2,border:`1.5px solid ${T.bor
 const lbl:React.CSSProperties={fontSize:'11px',fontWeight:700,color:T.txt3,textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:'6px',display:'block'};
 
 export const Customers: React.FC = () => {
-  const { customers, addCustomer, updateCustomer, recordDebtPayment, refreshData } = useAppContext();
+  const { customers, addCustomer, verifyCustomer, recordDebtPayment } = useAppContext();
   const { user, role } = useAuth();
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -62,6 +62,7 @@ export const Customers: React.FC = () => {
   const [isAdding, setIsAdding]       = useState(false);
   const [search, setSearch]           = useState('');
   const [showScanner, setShowScanner] = useState(false);
+  const [verifyingId, setVerifyingId] = useState<string|null>(null);
 
   const handleScan = (decodedId: string) => {
     setShowScanner(false);
@@ -252,26 +253,47 @@ export const Customers: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Quick Verify for Suppliers (Phase 9) */}
-                  {isSupplier && !customer.is_verified && (
+                  {/* Quick Verify for Suppliers (Phase 9 Toggle) */}
+                  {isSupplier && (
                     <div className="no-nav" onClick={e=>e.stopPropagation()} 
-                         style={{padding:'10px 16px', background:T.warn+'10', borderTop:`1px solid ${T.border}`, display:'flex', alignItems:'center', justifyContent:'space-between'}}>
-                       <div style={{display:'flex', alignItems:'center', gap:8}}>
-                          <ShieldAlert size={14} color={T.warn}/>
-                          <span style={{fontSize:'12px', fontWeight:700, color:T.txt2}}>Allow Credit?</span>
+                         style={{padding:'12px 16px', background:T.surface2, borderTop:`1px solid ${T.border}`, display:'flex', alignItems:'center', justifyContent:'space-between', borderBottomLeftRadius:T.radiusLg, borderBottomRightRadius:T.radiusLg}}>
+                       <div style={{display:'flex', alignItems:'center', gap:'8px'}}>
+                          <div style={{width:'32px', height:'32px', borderRadius:'10px', background:customer.is_verified ? T.success + '15' : T.warn + '15', display:'flex', alignItems:'center', justifyContent:'center'}}>
+                            {customer.is_verified ? <ShieldCheck size={16} color={T.success}/> : <Shield size={16} color={T.warn}/>}
+                          </div>
+                          <div>
+                            <div style={{fontSize:'12px', fontWeight:800, color:T.txt}}>Verified Credit?</div>
+                            <div style={{fontSize:'10px', fontWeight:600, color:T.txt3}}>{customer.is_verified ? 'Access Granted' : 'Access Locked'}</div>
+                          </div>
                        </div>
-                       <button 
-                         onClick={async () => {
-                           // Write to BOTH tables for 100% sync
-                           await updateCustomer({ ...customer, is_verified: true });
-                           await supabase.from('profiles').update({ is_verified: true }).eq('id', customer.profile_id || customer.id);
-                           // Refresh so badge updates instantly
-                           await refreshData();
+                       
+                       <div 
+                         style={{
+                           width: '42px', height: '22px', borderRadius: '12px', 
+                           background: customer.is_verified ? T.success : T.txt3 + '40', 
+                           position: 'relative', cursor: verifyingId === customer.id ? 'wait' : 'pointer', 
+                           transition: 'all 0.3s', border: `1px solid ${customer.is_verified ? T.success : T.border}`
                          }}
-                         style={{background:T.success, color:'#fff', border:'none', borderRadius:'8px', padding:'6px 14px', fontSize:'11px', fontWeight:800, cursor:'pointer', boxShadow:'0 2px 8px rgba(16,185,129,0.3)'}}
+                         onClick={async () => {
+                           if (verifyingId === customer.id) return;
+                           setVerifyingId(customer.id);
+                           try {
+                             const newVal = !customer.is_verified;
+                             await verifyCustomer(customer.id, newVal);
+                           } finally {
+                             setVerifyingId(null);
+                           }
+                         }}
                        >
-                         Verify Now ✓
-                       </button>
+                         {verifyingId === customer.id ? (
+                           <div style={{ position:'absolute', top:3, left: customer.is_verified ? 3 : 23, width:14, height:14, border:'2px solid #fff', borderTopColor:'transparent', borderRadius:'50%', animation:'spin 0.8s linear infinite' }} />
+                         ) : (
+                           <motion.div 
+                             animate={{ x: customer.is_verified ? 20 : 2 }} 
+                             style={{ width: '16px', height: '16px', borderRadius: '50%', background: '#fff', marginTop: 2, boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }} 
+                           />
+                         )}
+                       </div>
                     </div>
                   )}
 

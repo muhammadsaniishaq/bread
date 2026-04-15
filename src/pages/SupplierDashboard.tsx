@@ -53,12 +53,13 @@ const Card: React.FC<{ children: React.ReactNode; style?: React.CSSProperties; o
 );
 
 export default function SupplierDashboard() {
-  const { transactions, products, customers, inventoryLogs, loading, refreshData, getPersonalStock, recordSale } = useAppContext();
+  const { transactions, products, customers, inventoryLogs, loading, refreshData, getPersonalStock, recordSale, verifyCustomer } = useAppContext();
   const { user } = useAuth();
   const navigate = useNavigate();
   const [refreshing, setRefreshing]   = useState(false);
   const [activeSection, setSection]   = useState<'overview'|'stock'|'activity'|'orders'>('overview');
   const [customerOrders, setCustomerOrders] = useState<any[]>([]);
+  const [verifyingId, setVerifyingId] = useState<string|null>(null);
 
   /* ── My Account ─────────────────────────────────────────────────────────── */
   const myAccount = useMemo(() =>
@@ -424,12 +425,39 @@ export default function SupplierDashboard() {
                             <div style={{ fontSize:'10px', fontWeight:600, color:'#94a3b8' }}>{c.phone || 'No phone'}</div>
                           </div>
                         </div>
-                        <div style={{ display:'flex', alignItems:'center', gap:'8px' }}>
-                          <span style={{ fontSize:'13px', fontWeight:900, color: c.is_verified ? ((c.debtBalance||0)>0?'#ef4444':'#10b981') : '#94a3b8' }}>
-                            {!c.is_verified ? 'Unverified' : ((c.debtBalance||0)>0 ? fmt(c.debtBalance) : '✓ Clear')}
+                        <div style={{ display:'flex', alignItems:'center', gap:'12px', background: 'rgba(0,0,0,0.02)', padding: '6px 10px', borderRadius: '14px', border: '1px solid rgba(0,0,0,0.04)' }} className="no-nav" onClick={e=>e.stopPropagation()}>
+                          <div 
+                            style={{ 
+                              width: '34px', height: '18px', borderRadius: '10px', 
+                              background: c.is_verified ? '#10b981' : '#94a3b840', 
+                              position: 'relative', cursor: verifyingId === c.id ? 'wait' : 'pointer', 
+                              transition: 'all 0.3s', border: `1px solid ${c.is_verified ? '#10b981' : 'rgba(0,0,0,0.06)'}`
+                            }}
+                            onClick={async () => {
+                              if (verifyingId === c.id) return;
+                              setVerifyingId(c.id);
+                              try {
+                                const newVal = !c.is_verified;
+                                await verifyCustomer(c.id, newVal);
+                              } finally {
+                                setVerifyingId(null);
+                              }
+                            }}
+                          >
+                            {verifyingId === c.id ? (
+                               <div style={{ position:'absolute', top:2, left: c.is_verified ? 2 : 18, width:12, height:12, border:'2px solid #fff', borderTopColor:'transparent', borderRadius:'50%', animation:'spin 0.8s linear infinite' }} />
+                            ) : (
+                               <motion.div 
+                                 animate={{ x: c.is_verified ? 16 : 2 }} 
+                                 style={{ width: '14px', height: '14px', borderRadius: '50%', background: '#fff', marginTop: 2, boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }} 
+                               />
+                            )}
+                          </div>
+                          <span style={{ fontSize:'11px', fontWeight:900, color: c.is_verified ? '#10b981' : '#94a3b8', minWidth: '60px' }}>
+                            {c.is_verified ? 'Verified' : 'Verify'}
                           </span>
-                          <ChevronRight size={14} color="#94a3b8" />
                         </div>
+                        <ChevronRight size={14} color="#94a3b8" />
                       </div>
                     ))}
                     {myCustomers.length > 4 && (

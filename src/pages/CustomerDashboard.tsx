@@ -7,7 +7,7 @@ import {
   Calendar, ShoppingCart, Zap,
   TrendingUp, Package,
   User, Phone, Bell, ChevronRight,
-  Award, ArrowUpRight, Sparkles, BadgeCheck, MessageCircle,
+  Award, ArrowUpRight, Sparkles, MessageCircle,
   Library, ShieldCheck, FileText, Fingerprint
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -242,7 +242,8 @@ export const CustomerDashboard: React.FC = () => {
 
 
 
-  const isVerified = (customer.pin && customer.pin.length > 0) && (customer.phone && customer.phone.length > 0);
+  const isVerified = customer.is_verified === true;
+  const isProfileComplete = (customer.pin && customer.pin.length > 0) && (customer.phone && customer.phone.length > 0);
 
   return (
     <AnimatedPage>
@@ -333,16 +334,22 @@ export const CustomerDashboard: React.FC = () => {
             </motion.div>
           ) : (
             <motion.div {...cardAnim(0)}
-              style={{ background: T.white, borderRadius: '28px', padding: '24px', border: `1px solid ${T.border}`, boxShadow: T.shadow, textAlign: 'center' }}>
+              style={{ background: T.white, borderRadius: '28px', padding: '24px', border: `1px solid ${T.border}`, boxShadow: T.shadow, textAlign: 'center', overflow: 'hidden', position: 'relative' }}>
               <div style={{ width: '48px', height: '48px', borderRadius: '16px', background: T.primaryLight, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
-                <BadgeCheck size={24} color={T.primary} />
+                <ShieldCheck size={24} color={T.primary} />
               </div>
-              <h3 style={{ fontSize: '16px', fontWeight: 900, color: T.ink, margin: '0 0 8px' }}>Verify Identity</h3>
-              <p style={{ fontSize: '13px', color: T.txt2, margin: '0 0 20px', lineHeight: 1.5 }}>Access your financial ledger and debt status by verifying your profile with a phone number and PIN.</p>
-              <motion.button whileTap={{ scale: 0.95 }} onClick={() => navigate('/customer/profile')}
-                style={{ background: T.primary, color: '#fff', border: 'none', padding: '12px 24px', borderRadius: '14px', fontSize: '13px', fontWeight: 900, cursor: 'pointer' }}>
-                Complete Profile
-              </motion.button>
+              <h3 style={{ fontSize: '16px', fontWeight: 900, color: T.ink, margin: '0 0 8px' }}>{isProfileComplete ? 'Verification Pending' : 'Identity Verification'}</h3>
+              <p style={{ fontSize: '13px', color: T.txt2, margin: '0 0 20px', lineHeight: 1.5, maxWidth: '280px', marginInline: 'auto' }}>
+                {isProfileComplete 
+                  ? 'Your profile is complete! Once management approves your account, you will unlock your financial records and credit tab.' 
+                  : 'Access your financial ledger and debt status by verifying your profile with a phone number and PIN.'}
+              </p>
+              {!isProfileComplete && (
+                <motion.button whileTap={{ scale: 0.95 }} onClick={() => navigate('/customer/profile')}
+                  style={{ background: T.primary, color: '#fff', border: 'none', padding: '12px 24px', borderRadius: '14px', fontSize: '13px', fontWeight: 900, cursor: 'pointer', boxShadow: '0 8px 16px rgba(99,91,255,0.2)' }}>
+                  Complete Profile
+                </motion.button>
+              )}
             </motion.div>
           )}
 
@@ -482,7 +489,7 @@ export const CustomerDashboard: React.FC = () => {
           </motion.div>
 
           {/* ─── PROFILE COMPLETION NUDGE ─── */}
-          {!customer.phone && (
+          {!isProfileComplete && (
             <motion.div {...cardAnim(3)} onClick={() => navigate('/customer/profile')}
               style={{ cursor: 'pointer', background: T.goldLight, borderRadius: T.radiusSm, border: '1px solid rgba(217,119,6,0.2)', padding: '14px 16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
               <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'rgba(217,119,6,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>

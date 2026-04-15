@@ -2,7 +2,6 @@ import React, { useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAppContext } from '../store/AppContext';
 import { useAuth } from '../store/AuthContext';
-import { supabase } from '../lib/supabase';
 import { motion } from 'framer-motion';
 import { getTransactionItems } from '../store/types';
 import { AnimatedPage } from '../components/AnimatedPage';
@@ -35,7 +34,7 @@ const lbl:React.CSSProperties={fontSize:'11px',fontWeight:700,color:T.txt3,textT
 export const CustomerProfile: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { customers, transactions, debtPayments, products, recordDebtPayment, updateCustomer, deleteCustomer, refreshData } = useAppContext();
+  const { customers, transactions, debtPayments, products, recordDebtPayment, updateCustomer, verifyCustomer, deleteCustomer } = useAppContext();
   const { user, role } = useAuth();
   const isSupplier = role === 'SUPPLIER';
   const customer = customers.find(c => c.id === id);
@@ -57,6 +56,7 @@ export const CustomerProfile: React.FC = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [showPaymentForm, setShowPaymentForm] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [verifying, setVerifying] = useState(false);
   const [editName, setEditName] = useState(customer?.name||'');
   const [editPhone, setEditPhone] = useState(customer?.phone||'');
   const [editLocation, setEditLocation] = useState(customer?.location||'');
@@ -171,22 +171,29 @@ export const CustomerProfile: React.FC = () => {
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'16px'}}>
                <h3 style={{fontSize:'11px',fontWeight:900,color:T.txt,margin:0,textTransform:'uppercase',letterSpacing:'0.1em'}}>Verification Center</h3>
                <div style={{display:'flex', alignItems:'center', gap:'12px'}}>
-                  <div style={{fontSize:'10px',fontWeight:800,color:customer.is_verified ? T.success : T.warn, display:'flex', alignItems:'center', gap:'4px'}}>
-                     {customer.is_verified ? <><ShieldCheck size={12}/> VERIFIED</> : <><Shield size={12}/> UNVERIFIED</>}
-                  </div>
-                  {/* Toggle Switch */}
                   <div 
-                    onClick={async () => {
-                       const newVal = !customer.is_verified;
-                       // Write to BOTH tables for 100% sync
-                       await updateCustomer({ ...customer, is_verified: newVal });
-                       await supabase.from('profiles').update({ is_verified: newVal }).eq('id', customer.profile_id || customer.id);
-                       // Refresh context so UI updates immediately
-                       await refreshData();
+                    onClick={async (e) => {
+                      if (!customer || verifying) return;
+                      e.stopPropagation();
+                      setVerifying(true);
+                      try {
+                        const newVal = !customer.is_verified;
+                        await verifyCustomer(customer.id, newVal);
+                      } finally {
+                        setVerifying(false);
+                      }
                     }}
-                    style={{width:'36px', height:'20px', borderRadius:'10px', background:customer.is_verified ? T.success : T.txt3, position:'relative', cursor:'pointer', transition:'all 0.3s'}}
+                    style={{display:'flex', alignItems:'center', gap:'12px', cursor:'pointer', padding:'4px 8px', borderRadius:'12px', background:T.bg2, border:`1px solid ${T.border}`, opacity: verifying ? 0.6 : 1, transition:'all 0.2s'}}
                   >
-                     <motion.div animate={{x: customer.is_verified ? 18 : 2}} style={{width:'16px', height:'16px', borderRadius:'50%', background:'#fff', marginTop:2}}/>
+                    <div style={{fontSize:'10px',fontWeight:800,color:customer.is_verified ? T.success : T.warn, display:'flex', alignItems:'center', gap:'4px'}}>
+                       {customer.is_verified ? <><ShieldCheck size={12}/> VERIFIED</> : <><Shield size={12}/> UNVERIFIED</>}
+                    </div>
+                    {/* Toggle Switch */}
+                    <div 
+                      style={{width:'36px', height:'20px', borderRadius:'10px', background:customer.is_verified ? T.success : T.txt3, position:'relative', transition:'all 0.3s'}}
+                    >
+                       <motion.div animate={{x: customer.is_verified ? 18 : 2}} style={{width:'16px', height:'16px', borderRadius:'50%', background:'#fff', marginTop:2, boxShadow:'0 1px 3px rgba(0,0,0,0.1)'}}/>
+                    </div>
                   </div>
                </div>
             </div>
