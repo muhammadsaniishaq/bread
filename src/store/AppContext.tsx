@@ -55,6 +55,7 @@ const mapCustomer = (r: any): Customer => ({
   debtBalance: r.debt_balance || 0, loyaltyPoints: r.loyalty_points || 0,
   image: r.image, assignedSupplierId: r.assigned_supplier_id,
   pin: r.pin, password: r.password, profile_id: r.profile_id,
+  is_verified: r.is_verified || false,
   supplierDetails: r.assigned_supplier ? {
     full_name: r.assigned_supplier.full_name,
     phone: r.assigned_supplier.phone,
@@ -98,6 +99,7 @@ const customerRow = (c: Customer) => ({
   profile_id: c.profile_id || null, debt_balance: c.debtBalance || 0,
   loyalty_points: c.loyaltyPoints || 0,
   assigned_supplier_id: c.assignedSupplierId || null,
+  is_verified: c.is_verified || false,
   pin: c.pin || null, password: (c as any).password || null,
   image: c.image || null,
 });

@@ -2,6 +2,8 @@ import React, { useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAppContext } from '../store/AppContext';
 import { useAuth } from '../store/AuthContext';
+import { supabase } from '../lib/supabase';
+import { motion } from 'framer-motion';
 import { getTransactionItems } from '../store/types';
 import { AnimatedPage } from '../components/AnimatedPage';
 import { ImageCropper } from '../components/ImageCropper';
@@ -168,8 +170,22 @@ export const CustomerProfile: React.FC = () => {
           <div style={{background:T.surface,borderRadius:T.radiusLg,padding:'22px',border:`1.5px solid ${T.border}`,boxShadow:T.shadow,marginBottom:'24px'}}>
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'16px'}}>
                <h3 style={{fontSize:'11px',fontWeight:900,color:T.txt,margin:0,textTransform:'uppercase',letterSpacing:'0.1em'}}>Verification Center</h3>
-               <div style={{fontSize:'10px',fontWeight:800,color:(customer.pin && customer.phone) ? T.success : T.warn, display:'flex', alignItems:'center', gap:'4px'}}>
-                  {(customer.pin && customer.phone) ? <><ShieldCheck size={12}/> COMPLETED</> : <><Shield size={12}/> PENDING ACTION</>}
+               <div style={{display:'flex', alignItems:'center', gap:'12px'}}>
+                  <div style={{fontSize:'10px',fontWeight:800,color:customer.is_verified ? T.success : T.warn, display:'flex', alignItems:'center', gap:'4px'}}>
+                     {customer.is_verified ? <><ShieldCheck size={12}/> VERIFIED</> : <><Shield size={12}/> UNVERIFIED</>}
+                  </div>
+                  {/* Toggle Switch */}
+                  <div 
+                    onClick={async () => {
+                       const newVal = !customer.is_verified;
+                       await updateCustomer({ ...customer, is_verified: newVal });
+                       // Also sync to profiles table directly for POS/Dashboard logic
+                       await supabase.from('profiles').update({ is_verified: newVal }).eq('id', customer.profile_id || customer.id);
+                    }}
+                    style={{width:'36px', height:'20px', borderRadius:'10px', background:customer.is_verified ? T.success : T.txt3, position:'relative', cursor:'pointer', transition:'all 0.3s'}}
+                  >
+                     <motion.div animate={{x: customer.is_verified ? 18 : 2}} style={{width:'16px', height:'16px', borderRadius:'50%', background:'#fff', marginTop:2}}/>
+                  </div>
                </div>
             </div>
             
@@ -196,9 +212,9 @@ export const CustomerProfile: React.FC = () => {
                   <span style={{fontSize:'10px',color:T.txt3,fontWeight:600}}>{customer.pin ? 'PIN Secure' : 'Action Required'}</span>
                </div>
             </div>
-            {!(customer.phone && customer.pin) && (
+            {!customer.is_verified && (
               <div style={{marginTop:'16px',background:T.warnLt,padding:'12px 14px',borderRadius:'14px',border:`1px solid ${T.warn}`,fontSize:'12px',fontWeight:700,color:'#92400e',lineHeight:1.5}}>
-                ⚠️ Verification Incomplete: Please ensure both your Phone Number and Security PIN are set to gain full access to your financial ledger and debt features.
+                ⚠️ Verification Locked: Financial ledger and debt features are disabled until this client is verified by an administrator.
               </div>
             )}
           </div>
@@ -213,7 +229,7 @@ export const CustomerProfile: React.FC = () => {
               <p style={{fontSize:'10px',fontWeight:700,color:customer.debtBalance>0?T.danger:T.success,textTransform:'uppercase',letterSpacing:'0.1em',margin:'0 0 8px'}}>Active Debt</p>
               <p style={{fontSize:'20px',fontWeight:900,color:customer.debtBalance>0?T.danger:T.success,margin:0}}>{fmtRaw(customer.debtBalance)}</p>
               {customer.debtBalance>0
-                ?<button onClick={()=>setShowPaymentForm(true)} style={{marginTop:'8px',background:T.danger,color:'#fff',border:'none',borderRadius:'8px',padding:'5px 10px',fontSize:'11px',fontWeight:700,cursor:'pointer',width:'100%'}}>Settle Now</button>
+                ? (customer.is_verified ? <button onClick={()=>setShowPaymentForm(true)} style={{marginTop:'8px',background:T.danger,color:'#fff',border:'none',borderRadius:'8px',padding:'5px 10px',fontSize:'11px',fontWeight:700,cursor:'pointer',width:'100%'}}>Settle Now</button> : <p style={{fontSize:'11px',color:T.txt3,margin:'6px 0 0',fontWeight:700}}>Locked</p>)
                 :<p style={{fontSize:'11px',color:T.success,margin:'6px 0 0',fontWeight:700}}>✓ Clear</p>}
             </div>
             <div style={{background:T.surface,borderRadius:T.radiusLg,padding:'18px',border:`1.5px solid ${T.border}`,boxShadow:T.shadow}}>
@@ -280,7 +296,7 @@ export const CustomerProfile: React.FC = () => {
 
 
           {/* DEBT ALERT */}
-          {customer.debtBalance>0&&customer.phone&&(
+          {customer.is_verified && customer.debtBalance>0&&customer.phone&&(
             <div style={{background:T.warnLt,border:`1.5px solid #fde68a`,borderRadius:T.radiusLg,padding:'18px',marginBottom:'20px'}}>
               <div style={{display:'flex',alignItems:'center',gap:'12px',marginBottom:'12px'}}>
                 <div style={{width:'36px',height:'36px',borderRadius:'10px',background:'#fef3c7',border:'1.5px solid #fde68a',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>

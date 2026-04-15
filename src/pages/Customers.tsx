@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useAppContext } from '../store/AppContext';
+import { supabase } from '../lib/supabase';
 import type { Customer } from '../store/types';
 import { AnimatedPage } from '../components/AnimatedPage';
 import { ImageCropper } from '../components/ImageCropper';
@@ -37,7 +38,7 @@ const inp:React.CSSProperties={background:T.surface2,border:`1.5px solid ${T.bor
 const lbl:React.CSSProperties={fontSize:'11px',fontWeight:700,color:T.txt3,textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:'6px',display:'block'};
 
 export const Customers: React.FC = () => {
-  const { customers, addCustomer, recordDebtPayment } = useAppContext();
+  const { customers, addCustomer, updateCustomer, recordDebtPayment } = useAppContext();
   const { user, role } = useAuth();
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -227,8 +228,8 @@ export const Customers: React.FC = () => {
                         <span style={{color:T.txt,fontWeight:800,fontSize:'15px',letterSpacing:'-0.01em'}}>{customer.name}</span>
                         {getBadge(customer.loyaltyPoints)}
                         {(() => {
-                           if (customer.pin && customer.phone) return <span style={{display:'flex',alignItems:'center',gap:'3px',fontSize:'10px',fontWeight:800,padding:'2px 7px',borderRadius:'7px',background:T.successLt,color:T.success}}><ShieldCheck size={10}/> Verified</span>;
-                           if (customer.phone) return <span style={{display:'flex',alignItems:'center',gap:'3px',fontSize:'10px',fontWeight:800,padding:'2px 7px',borderRadius:'7px',background:T.warn+'20',color:T.warn}}><Shield size={10}/> No PIN</span>;
+                           if (customer.is_verified) return <span style={{display:'flex',alignItems:'center',gap:'3px',fontSize:'10px',fontWeight:800,padding:'2px 7px',borderRadius:'7px',background:T.successLt,color:T.success}}><ShieldCheck size={10}/> Verified</span>;
+                           if (customer.phone && customer.pin) return <span style={{display:'flex',alignItems:'center',gap:'3px',fontSize:'10px',fontWeight:800,padding:'2px 7px',borderRadius:'7px',background:T.warn+'20',color:T.warn}}><Shield size={10}/> Pending</span>;
                            return <span style={{display:'flex',alignItems:'center',gap:'3px',fontSize:'10px',fontWeight:800,padding:'2px 7px',borderRadius:'7px',background:T.dangerLt,color:T.danger}}><ShieldAlert size={10}/> Unverified</span>;
                         })()}
                       </div>
@@ -250,6 +251,27 @@ export const Customers: React.FC = () => {
                       )}
                     </div>
                   </div>
+
+                  {/* Quick Verify for Suppliers (Phase 9) */}
+                  {isSupplier && !customer.is_verified && (
+                    <div className="no-nav" onClick={e=>e.stopPropagation()} 
+                         style={{padding:'10px 16px', background:T.warn+'10', borderTop:`1px solid ${T.border}`, display:'flex', alignItems:'center', justifyContent:'space-between'}}>
+                       <div style={{display:'flex', alignItems:'center', gap:8}}>
+                          <ShieldAlert size={14} color={T.warn}/>
+                          <span style={{fontSize:'12px', fontWeight:700, color:T.txt2}}>Allow Credit?</span>
+                       </div>
+                       <button 
+                         onClick={async () => {
+                           await updateCustomer({ ...customer, is_verified: true });
+                           await supabase.from('profiles').update({ is_verified: true }).eq('id', customer.profile_id || customer.id);
+                           alert(`${customer.name} is now verified for credit.`);
+                         }}
+                         style={{background:T.success, color:'#fff', border:'none', borderRadius:'8px', padding:'6px 14px', fontSize:'11px', fontWeight:800, cursor:'pointer', boxShadow:'0 2px 8px rgba(16,185,129,0.3)'}}
+                       >
+                         Verify Now
+                       </button>
+                    </div>
+                  )}
 
                   {/* Debt Actions */}
                   {isDebt&&(

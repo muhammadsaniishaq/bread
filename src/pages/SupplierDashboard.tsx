@@ -30,8 +30,8 @@ const STATUS: Record<string, { label: string; color: string; bg: string; Icon: a
 };
 
 const getVerificationStatus = (c: any) => {
-  if (c.phone && c.pin) return { icon: ShieldCheck, color: '#10b981', label: 'Verified' };
-  if (c.phone) return { icon: Shield, color: '#f59e0b', label: 'No PIN' };
+  if (c.is_verified) return { icon: ShieldCheck, color: '#10b981', label: 'Verified' };
+  if (c.phone && c.pin) return { icon: Shield, color: '#f59e0b', label: 'Tantancewa' };
   return { icon: ShieldAlert, color: '#ef4444', label: 'Unverified' };
 };
 
@@ -425,8 +425,8 @@ export default function SupplierDashboard() {
                           </div>
                         </div>
                         <div style={{ display:'flex', alignItems:'center', gap:'8px' }}>
-                          <span style={{ fontSize:'13px', fontWeight:900, color: (c.debtBalance||0)>0?'#ef4444':'#10b981' }}>
-                            {(c.debtBalance||0)>0 ? fmt(c.debtBalance) : '✓ Clear'}
+                          <span style={{ fontSize:'13px', fontWeight:900, color: c.is_verified ? ((c.debtBalance||0)>0?'#ef4444':'#10b981') : '#94a3b8' }}>
+                            {!c.is_verified ? 'Unverified' : ((c.debtBalance||0)>0 ? fmt(c.debtBalance) : '✓ Clear')}
                           </span>
                           <ChevronRight size={14} color="#94a3b8" />
                         </div>

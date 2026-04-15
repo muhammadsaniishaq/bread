@@ -105,9 +105,6 @@ export const ManagerPOS: React.FC = () => {
         customerId: customerId || undefined,
         origin: 'POS_BAKERY'
       } as any);
-      setCart([]);
-      setCustomerId('');
-      setShowCartMobile(false);
       alert('Transaction Successful!');
     } catch (err: any) {
       alert(err.message || 'Error processing sale');
@@ -115,6 +112,15 @@ export const ManagerPOS: React.FC = () => {
       setIsProcessing(false);
     }
   };
+
+  const selectedCustomer = useMemo(() => customers.find(c => c.id === customerId), [customerId, customers]);
+  const isVerified = selectedCustomer?.is_verified || false;
+
+  useEffect(() => {
+    if (customerId && !isVerified && paymentType === 'Debt') {
+      setPaymentType('Cash');
+    }
+  }, [customerId, isVerified]);
 
   return (
     <AnimatedPage>
@@ -225,9 +231,15 @@ export const ManagerPOS: React.FC = () => {
                           </select>
                           <select value={paymentType} onChange={e => setPaymentType(e.target.value as any)} style={{ flex: 1, padding: '12px', borderRadius: '14px', background: 'rgba(255,255,255,0.05)', color: '#fff', border: '1px solid rgba(255,255,255,0.1)', outline: 'none', fontSize: '13px', fontWeight: 700 }}>
                              <option value="Cash" style={{ color: '#000' }}>Cash</option>
-                             <option value="Debt" style={{ color: '#000' }}>Debt</option>
+                             {isVerified && <option value="Debt" style={{ color: '#000' }}>Debt</option>}
                           </select>
                        </div>
+
+                       {!isVerified && customerId && (
+                          <div style={{fontSize:'10px',fontWeight:700,color:T.danger,background:'rgba(239,68,68,0.1)',padding:'8px 12px',borderRadius:'10px',marginBottom:'16px',textAlign:'center'}}>
+                             ⚠️ Unverified client. Credit blocked.
+                          </div>
+                       )}
 
                        <div style={{ background: 'rgba(0,0,0,0.3)', padding: '20px', borderRadius: '20px', marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                           <span style={{ fontSize: '11px', fontWeight: 800, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase' }}>Subtotal Due</span>
@@ -318,10 +330,16 @@ export const ManagerPOS: React.FC = () => {
                           <span style={{ fontSize: '10px', fontWeight: 800, color: T.txt3 }}>PAYMENT</span>
                           <select value={paymentType} onChange={e => setPaymentType(e.target.value as any)} style={{ width: '100%', padding: '14px', borderRadius: '14px', border: `1px solid ${T.border}`, background: T.surface, fontWeight: 700 }}>
                              <option value="Cash">Cash</option>
-                             <option value="Debt">Debt</option>
+                             {isVerified && <option value="Debt">Debt</option>}
                           </select>
                        </div>
                     </div>
+
+                    {!isVerified && customerId && (
+                       <div style={{fontSize:'11px',fontWeight:700,color:T.danger,textAlign:'center',marginBottom:'20px'}}>
+                          Client identity not verified for credit.
+                       </div>
+                    )}
 
                     <div style={{ background: T.primary, padding: '24px', borderRadius: '24px', marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: '#fff' }}>
                        <span style={{ fontSize: '12px', fontWeight: 800, opacity: 0.6 }}>TOTAL PAYABLE</span>

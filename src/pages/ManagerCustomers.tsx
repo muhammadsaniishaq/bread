@@ -8,7 +8,7 @@ import {
   Crown, Star, Medal,
   BadgeCheck,
   MessageCircle, Clock, AlertOctagon,
-  Shield, Target,
+  Shield, Target, Trash2,
   ArrowLeft, Edit2, CheckCircle2, FileText as InvoiceIcon, ClipboardList
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -49,7 +49,7 @@ const inp:React.CSSProperties={background:T.surface,border:`1px solid ${T.border
 const lbl:React.CSSProperties={fontSize:'11px',fontWeight:700,color:T.txt2,textTransform:'uppercase',letterSpacing:'0.04em',marginBottom:'8px',display:'block'};
 
 export const ManagerCustomers: React.FC = () => {
-  const { customers, transactions, debtPayments, addCustomer, updateCustomer, refreshData } = useAppContext();
+  const { customers, transactions, debtPayments, addCustomer, updateCustomer, deleteCustomer, refreshData, appSettings } = useAppContext();
   // const navigate = useNavigate();
 
   const [search, setSearch]       = useState('');
@@ -59,6 +59,11 @@ export const ManagerCustomers: React.FC = () => {
   const [isAdding, setIsAdding]   = useState(false);
   const [suppliers, setSuppliers] = useState<{id:string; full_name:string}[]>([]);
   const [loading, setLoading]     = useState(false);
+  const isSubmitting = React.useRef(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [deletePin, setDeletePin] = useState('');
+  const [deletePinError, setDeletePinError] = useState(false);
 
   const [drawerId, setDrawerId] = useState<string|null>(null);
   const drawer = useMemo(() => customers.find(c => c.id === drawerId), [customers, drawerId]);
@@ -66,6 +71,7 @@ export const ManagerCustomers: React.FC = () => {
   const [fName, setFName]=useState(''); const [fPhone, setFPhone]=useState(''); const [fEmail, setFEmail]=useState(''); const [fUsername, setFUsername]=useState(''); const [fPassword, setFPassword]=useState(''); const [fLocation, setFLocation]=useState(''); const [fImage, setFImage]=useState(''); const [fSup, setFSup]=useState(''); const [fPin, setFPin]=useState(''); const [fCreditLimit, setFCreditLimit]=useState(''); const [fSalesTarget, setFSalesTarget]=useState(''); const [fNote, setFNote]=useState('');
 
   const [eName, setEName]=useState(''); const [ePhone, setEPhone]=useState(''); const [eEmail, setEEmail]=useState(''); const [eUsername, setEUsername]=useState(''); const [ePassword, setEPassword]=useState(''); const [eLocation, setELocation]=useState(''); const [eImage, setEImage]=useState(''); const [eSup, setESup]=useState(''); const [ePin, setEPin]=useState(''); const [eNote, setENote]=useState(''); const [eCreditLimit, setECreditLimit]=useState(''); const [eSalesTarget, setESalesTarget]=useState('');
+  const [eIsVerified, setEIsVerified] = useState(false);
   
   const [dTab, setDTab] = useState<'history'|'analytics'>('history');
   const [historyFilter, setHistoryFilter] = useState<'ALL'|'PURCHASES'|'PAYMENTS'>('ALL');
@@ -95,6 +101,7 @@ export const ManagerCustomers: React.FC = () => {
       setEUsername(drawer.username || ''); setEPassword(drawer.password || '');
       setELocation(drawer.location || ''); setEImage(drawer.image || '');
       setESup(drawer.assignedSupplierId || ''); setEPin(drawer.pin || ''); setDTab('history');
+      setEIsVerified(drawer.is_verified || false);
       try {
          const parsed = JSON.parse(drawer.notes || '{}');
          setECreditLimit(parsed.creditLimit ? String(parsed.creditLimit) : '');
@@ -134,7 +141,10 @@ export const ManagerCustomers: React.FC = () => {
   };
 
   const handleAdd = async (e: React.FormEvent) => {
-    e.preventDefault(); if (!fName) return; setLoading(true);
+    e.preventDefault();
+    if (!fName || isSubmitting.current) return;
+    isSubmitting.current = true;
+    setLoading(true);
     try {
       await checkUniqueness(fUsername, fPhone);
       const newId = crypto.randomUUID();
@@ -146,65 +156,71 @@ export const ManagerCustomers: React.FC = () => {
         if (session) await supabase.auth.setSession(session);
         const uid = sData.user?.id || newId;
 
+        // Use upsert to avoid double-create from auth triggers
         await supabase.from('profiles').upsert({ 
-           id:uid, 
-           full_name:fName, 
-           role:'CUSTOMER',
+           id:uid, full_name:fName, role:'CUSTOMER',
            username: fUsername || fEmail.split('@')[0],
-           phone: fPhone || null,
-           avatar_url: fImage || null
-        });
-        await addCustomer({ id:uid, profile_id:uid, name:fName, email:fEmail, phone:fPhone, username:fUsername||fEmail.split('@')[0], location:fLocation, image:fImage, debtBalance:0, loyaltyPoints:0, assignedSupplierId:fSup||undefined, pin:fPin||undefined, notes:compiledNotes });
+           phone: fPhone || null, avatar_url: fImage || null
+        }, { onConflict: 'id' });
+
+        // Check if customer already exists (auth trigger may have created one)
+        const { data: existingCust } = await supabase.from('customers').select('id').eq('id', uid).maybeSingle();
+        if (!existingCust) {
+          await addCustomer({ id:uid, profile_id:uid, name:fName, email:fEmail, phone:fPhone, username:fUsername||fEmail.split('@')[0], location:fLocation, image:fImage, debtBalance:0, loyaltyPoints:0, assignedSupplierId:fSup||undefined, pin:fPin||undefined, notes:compiledNotes });
+        } else {
+          // Update existing record with full details
+          await updateCustomer({ id:uid, profile_id:uid, name:fName, email:fEmail, phone:fPhone, username:fUsername||fEmail.split('@')[0], location:fLocation, image:fImage, debtBalance:0, loyaltyPoints:0, assignedSupplierId:fSup||undefined, pin:fPin||undefined, notes:compiledNotes });
+        }
       } else {
         await addCustomer({ id:newId, name:fName, phone:fPhone, email:fEmail, username:fUsername, image:fImage, debtBalance:0, loyaltyPoints:0, location:fLocation, notes:compiledNotes, assignedSupplierId:fSup||undefined, pin:fPin||undefined });
       }
       setIsAdding(false); setFName(''); setFPhone(''); setFEmail(''); setFUsername(''); setFPassword(''); setFLocation(''); setFImage(''); setFSup(''); setFPin(''); setFCreditLimit(''); setFSalesTarget(''); setFNote('');
       await refreshData();
-    } catch (err: any) { alert(err.message); } finally { setLoading(false); }
+    } catch (err: any) { alert(err.message); } finally { setLoading(false); isSubmitting.current = false; }
   };
 
   const saveEdit = async (e: React.FormEvent) => {
-    e.preventDefault(); if (!eName || !drawer) return; setLoading(true);
+    e.preventDefault(); if (!eName || !drawer || isSubmitting.current) return;
+    isSubmitting.current = true;
+    setLoading(true);
     try {
       await checkUniqueness(eUsername, ePhone, drawer.username, drawer.phone);
       const compiledNotes = JSON.stringify({ creditLimit: Number(eCreditLimit) || 0, salesTarget: Number(eSalesTarget) || 0, memo: eNote });
       
-      await updateCustomer({ ...drawer, name:eName, phone:ePhone, email:eEmail, username:eUsername, password:ePassword, location:eLocation, image:eImage, assignedSupplierId:eSup||undefined, pin:ePin||undefined, notes:compiledNotes } as any);
+      // Write is_verified to the customers table too
+      await updateCustomer({ 
+        ...drawer, name:eName, phone:ePhone, email:eEmail, username:eUsername, 
+        password:ePassword, location:eLocation, image:eImage, 
+        assignedSupplierId: eSup || undefined, 
+        pin: ePin || undefined, 
+        is_verified: eIsVerified,
+        notes:compiledNotes 
+      } as any);
       
       // SYNC to Auth system and profiles table
       if (drawer.profile_id || drawer.id) {
          const targetId = drawer.profile_id || drawer.id;
          
-         // Call the administrative RPC for secure Auth updates
          const { error: rpcErr } = await supabase.rpc('admin_update_user_credentials', {
             target_user_id: targetId,
             new_email: eEmail !== drawer.email ? eEmail : null,
-            new_password: ePassword ? ePassword : null, // Manager provided a new password
+            new_password: ePassword ? ePassword : null,
             new_username: eUsername !== drawer.username ? eUsername : null
          });
 
-         if (rpcErr) {
-            console.warn('Auth sync failed, falling back to profile update:', rpcErr);
-            // Fallback: update profile table normally if RPC doesn't exist yet
-            await supabase.from('profiles').update({
-               full_name: eName,
-               username: eUsername ? eUsername.toLowerCase().trim() : null,
-               phone: ePhone || null,
-               avatar_url: eImage || null
-            }).eq('id', targetId);
-         } else {
-            // Even if RPC worked, update the remaining profile fields (name, phone, avatar) to be sure
-            await supabase.from('profiles').update({
-               full_name: eName,
-               phone: ePhone || null,
-               avatar_url: eImage || null
-            }).eq('id', targetId);
-         }
+         // Always sync these fields to profiles, regardless of RPC result
+         await supabase.from('profiles').update({
+            full_name: eName, phone: ePhone || null,
+            avatar_url: eImage || null, is_verified: eIsVerified,
+            ...(rpcErr ? { username: eUsername ? eUsername.toLowerCase().trim() : null } : {})
+         }).eq('id', targetId);
+         
+         if (rpcErr) console.warn('Auth credential sync failed, basic profile updated:', rpcErr);
       }
 
       await refreshData(); alert('Client details updated.');
       setEditModalOpen(false);
-    } catch (err: any) { alert(err.message); } finally { setLoading(false); }
+    } catch (err: any) { alert(err.message); } finally { setLoading(false); isSubmitting.current = false; }
   };
 
   const applyBestQuota = () => {
@@ -437,6 +453,9 @@ Generated via Admin Console.`;
                  <div style={{padding:'16px 20px',display:'flex',alignItems:'center',gap:'16px',borderBottom:`1px solid ${T.border}`,background:T.surface}}>
                     <button onClick={()=>setDrawerId(null)} style={{background:'none',border:'none',cursor:'pointer',padding:'8px',marginLeft:'-8px'}}><ArrowLeft size={20} color={T.ink}/></button>
                     <h2 style={{fontSize:'18px',fontWeight:600,color:T.ink,margin:0,flex:1}}>Client details</h2>
+                    <button onClick={()=>setShowDeleteModal(true)} style={{background:T.dangerLt,border:'none',padding:'8px 14px',borderRadius:'10px',display:'flex',alignItems:'center',gap:6,cursor:'pointer',color:T.danger,fontSize:'13px',fontWeight:700}}>
+                       <Trash2 size={14}/> Delete
+                    </button>
                  </div>
 
                  <div style={{flex:1,overflowY:'auto'}} className="hide-scrollbar">
@@ -569,6 +588,32 @@ Generated via Admin Console.`;
                                 <span style={{fontSize:'14px',fontWeight:600,color:T.txt2}}>Status</span>
                              </div>
 
+                             {/* Verification Status Toggle (Phase 9) */}
+                             <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',background:eIsVerified ? T.successLt : T.surface2,padding:'12px 16px',borderRadius:'14px',marginBottom:'24px',border:`1px solid ${eIsVerified ? T.success : T.border}`,transition:'all 0.3s'}}>
+                                <div style={{display:'flex',alignItems:'center',gap:10}}>
+                                   <div style={{width:32,height:32,borderRadius:'10px',background:eIsVerified ? T.success : T.txt3,display:'flex',alignItems:'center',justifyContent:'center'}}>
+                                      <BadgeCheck size={18} color="#fff"/>
+                                   </div>
+                                   <div>
+                                      <div style={{fontSize:'13px',fontWeight:800,color:eIsVerified ? T.textSuccess : T.ink}}>Identity Verification</div>
+                                      <div style={{fontSize:'10px',fontWeight:600,color:T.txt2}}>{eIsVerified ? 'Customer is verified for credit' : 'Pending verification'}</div>
+                                   </div>
+                                </div>
+                                <div 
+                                  onClick={async () => {
+                                    const newVal = !eIsVerified;
+                                    setEIsVerified(newVal);
+                                    if(drawer && (drawer.profile_id || drawer.id)) {
+                                      await supabase.from('profiles').update({ is_verified: newVal }).eq('id', drawer.profile_id || drawer.id);
+                                      refreshData();
+                                    }
+                                  }}
+                                  style={{width:'44px',height:'24px',borderRadius:'12px',background:eIsVerified?T.success:T.txt3,position:'relative',cursor:'pointer',transition:'background 0.3s'}}
+                                >
+                                   <motion.div animate={{x: eIsVerified ? 22 : 2}} style={{width:'20px',height:'20px',borderRadius:'10px',background:'#fff',marginTop:2,boxShadow:'0 2px 4px rgba(0,0,0,0.1)'}}/>
+                                </div>
+                             </div>
+
                              <div style={{display:'flex',flexDirection:'column',gap:'12px'}}>
                                 {timelineFull.length===0?<p style={{color:T.txt3,fontSize:14,textAlign:'center'}}>No items recorded.</p> : timelineFull.map((item,i) => (
                                    <div key={i} style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'12px 0',borderBottom:i!==timelineFull.length-1?`1px solid ${T.border}`:'none'}}>
@@ -677,6 +722,17 @@ Generated via Admin Console.`;
                                {suppliers.map(s => <option key={s.id} value={s.id}>{s.full_name}</option>)}
                             </select>
                          </div>
+                         
+                         {/* Verification Toggle in Modal */}
+                         <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'12px',background:T.surface2,borderRadius:'12px'}}>
+                            <div style={{display:'flex',alignItems:'center',gap:8}}>
+                               <BadgeCheck size={16} color={eIsVerified ? T.success : T.txt3}/>
+                               <span style={{fontSize:'13px',fontWeight:700,color:T.ink}}>Verified Status</span>
+                            </div>
+                            <div onClick={() => setEIsVerified(!eIsVerified)} style={{width:'40px',height:'20px',borderRadius:'10px',background:eIsVerified?T.success:T.txt3,position:'relative',cursor:'pointer'}}>
+                               <motion.div animate={{x: eIsVerified ? 22 : 2}} style={{width:'16px',height:'16px',borderRadius:'8px',background:'#fff',marginTop:2}}/>
+                            </div>
+                         </div>
                       </div>
                       
                       <h4 style={{fontSize:'14px',fontWeight:600,color:T.ink,margin:'8px 0 0'}}>Restricted Policies</h4>
@@ -712,6 +768,100 @@ Generated via Admin Console.`;
           }} 
         />
       </div>
+
+      {/* 🗑️ DELETE CONFIRMATION MODAL — PIN PROTECTED */}
+      <AnimatePresence>
+        {showDeleteModal && drawer && (
+          <motion.div
+            initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}}
+            style={{position:'fixed',inset:0,zIndex:2000,background:'rgba(0,0,0,0.65)',backdropFilter:'blur(8px)',display:'flex',alignItems:'center',justifyContent:'center',padding:'20px'}}
+            onClick={(e) => { if(e.target === e.currentTarget){ setShowDeleteModal(false); setDeletePin(''); setDeletePinError(false); } }}
+          >
+            <motion.div
+              initial={{scale:0.85,opacity:0,y:20}} animate={{scale:1,opacity:1,y:0}} exit={{scale:0.9,opacity:0}}
+              style={{background:T.surface,borderRadius:'28px',padding:'32px 28px',maxWidth:'390px',width:'100%',textAlign:'center',boxShadow:'0 30px 80px rgba(239,68,68,0.15), 0 10px 30px rgba(0,0,0,0.2)'}}
+            >
+              {/* Danger Icon */}
+              <motion.div
+                animate={deletePinError ? {x:[0,-8,8,-8,8,0]} : {x:0}}
+                transition={{duration:0.4}}
+                style={{width:'68px',height:'68px',borderRadius:'22px',background:'linear-gradient(135deg,#fee2e2,#fecaca)',border:'2px solid #fca5a5',display:'flex',alignItems:'center',justifyContent:'center',margin:'0 auto 20px',boxShadow:'0 8px 24px rgba(239,68,68,0.2)'}}
+              >
+                <Trash2 size={30} color={T.danger}/>
+              </motion.div>
+
+              <h2 style={{fontSize:'21px',fontWeight:900,color:T.ink,margin:'0 0 6px',letterSpacing:'-0.02em'}}>Tabbatar da Share</h2>
+              <p style={{fontSize:'13px',color:T.txt2,margin:'0 0 4px'}}>Kana gab da share dukkan bayanin:</p>
+              <div style={{fontSize:'16px',fontWeight:800,color:T.danger,padding:'10px 16px',background:T.dangerLt,borderRadius:'12px',margin:'0 0 8px',border:'1px solid #fecaca'}}>
+                {drawer.name}
+              </div>
+              <p style={{fontSize:'11px',color:T.txt3,margin:'0 0 24px',lineHeight:1.6}}>
+                ⚠️ Wannan aikin ba zai iya juya baya ba. Saka PIN ɗinka na Admin don tabbatarwa.
+              </p>
+
+              {/* PIN Input */}
+              <div style={{marginBottom:'20px',textAlign:'left'}}>
+                <label style={{fontSize:'11px',fontWeight:800,color:deletePinError?T.danger:T.txt2,textTransform:'uppercase',letterSpacing:'0.08em',display:'block',marginBottom:'8px'}}>
+                  {deletePinError ? '❌ PIN ba daidai ba ne! Gwada kuma.' : '🔐 Admin PIN'}
+                </label>
+                <input
+                  type="password"
+                  maxLength={6}
+                  value={deletePin}
+                  onChange={e => { setDeletePin(e.target.value); setDeletePinError(false); }}
+                  placeholder="Enter your admin PIN"
+                  autoFocus
+                  style={{width:'100%',boxSizing:'border-box',padding:'14px 16px',borderRadius:'14px',border:`2px solid ${deletePinError?T.danger:T.border}`,background:deletePinError?T.dangerLt:T.surface2,fontSize:'18px',fontWeight:700,color:T.ink,outline:'none',letterSpacing:'0.2em',textAlign:'center',transition:'all 0.2s'}}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') e.currentTarget.form?.requestSubmit();
+                  }}
+                />
+              </div>
+
+              <div style={{display:'flex',gap:'12px'}}>
+                <button
+                  onClick={() => { setShowDeleteModal(false); setDeletePin(''); setDeletePinError(false); }}
+                  style={{flex:1,padding:'14px',borderRadius:'14px',border:`1.5px solid ${T.border}`,background:T.surface2,color:T.txt2,fontSize:'14px',fontWeight:700,cursor:'pointer',transition:'all 0.2s'}}
+                >
+                  Soke
+                </button>
+                <button
+                  disabled={deleteLoading || !deletePin}
+                  onClick={async () => {
+                    // Validate PIN against admin PIN
+                    const correctPin = appSettings?.adminPin || '0018';
+                    if (deletePin !== correctPin) {
+                      setDeletePinError(true);
+                      setDeletePin('');
+                      return;
+                    }
+                    setDeleteLoading(true);
+                    try {
+                      if (drawer.profile_id) {
+                        await supabase.from('profiles').delete().eq('id', drawer.profile_id);
+                      }
+                      await deleteCustomer(drawer.id);
+                      setShowDeleteModal(false);
+                      setDeletePin('');
+                      setDeletePinError(false);
+                      setDrawerId(null);
+                      await refreshData();
+                    } catch (err: any) {
+                      alert('Kuskure: ' + err.message);
+                    } finally {
+                      setDeleteLoading(false);
+                    }
+                  }}
+                  style={{flex:1,padding:'14px',borderRadius:'14px',border:'none',background:(!deletePin||deleteLoading)?T.txt3:T.danger,color:'#fff',fontSize:'14px',fontWeight:800,cursor:(!deletePin||deleteLoading)?'not-allowed':'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:8,transition:'all 0.2s',boxShadow:deletePin?'0 4px 20px rgba(239,68,68,0.35)':'none'}}
+                >
+                  <Trash2 size={15}/>
+                  {deleteLoading ? 'Ana share...' : 'Share'}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </AnimatedPage>
   );
 };
