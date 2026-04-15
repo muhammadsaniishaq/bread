@@ -603,8 +603,12 @@ Generated via Admin Console.`;
                                   onClick={async () => {
                                     const newVal = !eIsVerified;
                                     setEIsVerified(newVal);
-                                    if(drawer && (drawer.profile_id || drawer.id)) {
-                                      await supabase.from('profiles').update({ is_verified: newVal }).eq('id', drawer.profile_id || drawer.id);
+                                    if(drawer) {
+                                      // Write to BOTH tables for 100% sync
+                                      await updateCustomer({ ...drawer, is_verified: newVal });
+                                      if (drawer.profile_id || drawer.id) {
+                                        await supabase.from('profiles').update({ is_verified: newVal }).eq('id', drawer.profile_id || drawer.id);
+                                      }
                                       refreshData();
                                     }
                                   }}

@@ -35,7 +35,7 @@ const lbl:React.CSSProperties={fontSize:'11px',fontWeight:700,color:T.txt3,textT
 export const CustomerProfile: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { customers, transactions, debtPayments, products, recordDebtPayment, updateCustomer, deleteCustomer } = useAppContext();
+  const { customers, transactions, debtPayments, products, recordDebtPayment, updateCustomer, deleteCustomer, refreshData } = useAppContext();
   const { user, role } = useAuth();
   const isSupplier = role === 'SUPPLIER';
   const customer = customers.find(c => c.id === id);
@@ -178,9 +178,11 @@ export const CustomerProfile: React.FC = () => {
                   <div 
                     onClick={async () => {
                        const newVal = !customer.is_verified;
+                       // Write to BOTH tables for 100% sync
                        await updateCustomer({ ...customer, is_verified: newVal });
-                       // Also sync to profiles table directly for POS/Dashboard logic
                        await supabase.from('profiles').update({ is_verified: newVal }).eq('id', customer.profile_id || customer.id);
+                       // Refresh context so UI updates immediately
+                       await refreshData();
                     }}
                     style={{width:'36px', height:'20px', borderRadius:'10px', background:customer.is_verified ? T.success : T.txt3, position:'relative', cursor:'pointer', transition:'all 0.3s'}}
                   >

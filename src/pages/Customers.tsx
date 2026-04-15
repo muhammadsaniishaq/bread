@@ -38,7 +38,7 @@ const inp:React.CSSProperties={background:T.surface2,border:`1.5px solid ${T.bor
 const lbl:React.CSSProperties={fontSize:'11px',fontWeight:700,color:T.txt3,textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:'6px',display:'block'};
 
 export const Customers: React.FC = () => {
-  const { customers, addCustomer, updateCustomer, recordDebtPayment } = useAppContext();
+  const { customers, addCustomer, updateCustomer, recordDebtPayment, refreshData } = useAppContext();
   const { user, role } = useAuth();
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -262,13 +262,15 @@ export const Customers: React.FC = () => {
                        </div>
                        <button 
                          onClick={async () => {
+                           // Write to BOTH tables for 100% sync
                            await updateCustomer({ ...customer, is_verified: true });
                            await supabase.from('profiles').update({ is_verified: true }).eq('id', customer.profile_id || customer.id);
-                           alert(`${customer.name} is now verified for credit.`);
+                           // Refresh so badge updates instantly
+                           await refreshData();
                          }}
                          style={{background:T.success, color:'#fff', border:'none', borderRadius:'8px', padding:'6px 14px', fontSize:'11px', fontWeight:800, cursor:'pointer', boxShadow:'0 2px 8px rgba(16,185,129,0.3)'}}
                        >
-                         Verify Now
+                         Verify Now ✓
                        </button>
                     </div>
                   )}
