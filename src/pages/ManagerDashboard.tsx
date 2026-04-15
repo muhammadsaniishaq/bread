@@ -217,6 +217,7 @@ export const ManagerDashboard: React.FC = () => {
       color: '#475569',
       bg: 'rgba(71,85,105,0.08)',
       modules: [
+        { label: 'My Profile',     icon: UserCircle,    color: T.primary, bg: T.pLight,   path: '/manager/profile' },
         { label: 'Audit Log',      icon: Eye,           color: '#64748b', bg: 'rgba(100,116,139,0.08)', path: '/manager/audit' },
         { label: 'Audit History',  icon: ClipboardList, color: '#94a3b8', bg: 'rgba(148,163,184,0.10)', path: '/manager/audit-history' },
         { label: 'App Settings',   icon: Settings,      color: '#475569', bg: 'rgba(71,85,105,0.08)',  path: '/manager/settings' },
@@ -245,7 +246,10 @@ export const ManagerDashboard: React.FC = () => {
           <div style={{ position: 'relative', zIndex: 10 }}>
             {/* Logo + title */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <motion.div 
+                whileTap={{ scale: 0.97 }}
+                onClick={() => navigate('/manager/profile')}
+                style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer' }}>
                 <div style={{ width: '48px', height: '48px', borderRadius: '15px', background: 'rgba(255,255,255,0.12)', border: '1.5px solid rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
                   <img src="/logo.png" alt="Logo" style={{ width: '36px', height: '36px', objectFit: 'contain' }} />
                 </div>
@@ -257,7 +261,7 @@ export const ManagerDashboard: React.FC = () => {
                   <h1 style={{ fontSize: '22px', fontWeight: 900, color: '#fff', margin: 0, letterSpacing: '-0.03em' }}>Control Panel</h1>
                   <div style={{ fontSize: '12px', color: 'rgba(196,181,253,0.7)', fontWeight: 700, marginTop: '3px', fontVariantNumeric: 'tabular-nums' }}>🕐 {clockStr}</div>
                 </div>
-              </div>
+              </motion.div>
               <motion.button whileTap={{ scale: 0.92 }}
                 onClick={async () => { logout(); await signOut(); }}
                 style={{ width: '38px', height: '38px', borderRadius: '12px', background: 'rgba(255,255,255,0.1)', border: '1.5px solid rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#fff' }}>
