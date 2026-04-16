@@ -57,7 +57,7 @@ export const CustomerStore: React.FC = () => {
   const [checkoutStep, setCheckoutStep] = useState<'review' | 'payment'>('review');
 
   // Payment
-  const [paymentMethod, setPaymentMethod] = useState<'DELIVERY' | 'TRANSFER' | 'DEBT'>('DELIVERY');
+  const [paymentMethod, setPaymentMethod] = useState<'Cash' | 'Transfer' | 'Debt'>('Cash');
   const [assignedSupplier, setAssignedSupplier] = useState<any>(null);
   const [paymentProof, setPaymentProof] = useState<File | null>(null);
 
@@ -144,7 +144,7 @@ export const CustomerStore: React.FC = () => {
         supplier_id: assignedSupplier?.id || null,
         total_price: cartTotal,
         payment_method: paymentMethod,
-        payment_status: paymentMethod === 'DEBT' ? 'DEBT' : 'PENDING',
+        payment_status: paymentMethod === 'Debt' ? 'Debt' : 'Pending',
         status: 'PENDING',
         proof_url: proofUrl,
         created_at: new Date().toISOString()
@@ -466,8 +466,8 @@ export const CustomerStore: React.FC = () => {
                       <div style={{display:'flex',flexDirection:'column',gap:8,marginBottom:20}}>
                         {/* On Delivery */}
                         {[
-                          {key:'DELIVERY', icon:<Truck size={18}/>, label:'Pay on Delivery', sub:'Cash when your order arrives', color:'#0891b2'},
-                          {key:'TRANSFER', icon:<CreditCard size={18}/>, label:'Bank Transfer', sub:'Send to supplier account', color:'#7c3aed'},
+                          {key:'Cash', icon:<Truck size={18}/>, label:'Pay on Delivery', sub:'Cash when your order arrives', color:'#0891b2'},
+                          {key:'Transfer', icon:<CreditCard size={18}/>, label:'Bank Transfer', sub:'Send to supplier account', color:'#7c3aed'},
                         ].map(opt => (
                           <button key={opt.key} onClick={()=>setPaymentMethod(opt.key as any)}
                             style={{width:'100%',padding:'14px 16px',borderRadius:'16px',border:`2px solid ${paymentMethod===opt.key?opt.color:T.border}`,background:paymentMethod===opt.key?`${opt.color}12`:'#fff',display:'flex',alignItems:'center',gap:14,cursor:'pointer',textAlign:'left',transition:'all 0.2s'}}>
@@ -485,9 +485,9 @@ export const CustomerStore: React.FC = () => {
                         ))}
 
                         {/* Debt option — verified only */}
-                        <button onClick={()=>isVerified&&setPaymentMethod('DEBT')} disabled={!isVerified}
-                          style={{width:'100%',padding:'14px 16px',borderRadius:'16px',border:`2px solid ${paymentMethod==='DEBT'?T.success:isVerified?T.border:'#e2e8f0'}`,background:paymentMethod==='DEBT'?T.successLt:isVerified?'#fff':'#fafafa',display:'flex',alignItems:'center',gap:14,cursor:isVerified?'pointer':'not-allowed',textAlign:'left',transition:'all 0.2s',opacity:isVerified?1:0.6}}>
-                          <div style={{width:40,height:40,borderRadius:'12px',background:paymentMethod==='DEBT'?'#d1fae5':isVerified?T.surface2:'#f1f5f9',display:'flex',alignItems:'center',justifyContent:'center',color:isVerified?T.success:T.txt3,flexShrink:0}}>
+                        <button onClick={()=>isVerified&&setPaymentMethod('Debt')} disabled={!isVerified}
+                          style={{width:'100%',padding:'14px 16px',borderRadius:'16px',border:`2px solid ${paymentMethod==='Debt'?T.success:isVerified?T.border:'#e2e8f0'}`,background:paymentMethod==='Debt'?T.successLt:isVerified?'#fff':'#fafafa',display:'flex',alignItems:'center',gap:14,cursor:isVerified?'pointer':'not-allowed',textAlign:'left',transition:'all 0.2s',opacity:isVerified?1:0.6}}>
+                          <div style={{width:40,height:40,borderRadius:'12px',background:paymentMethod==='Debt'?'#d1fae5':isVerified?T.surface2:'#f1f5f9',display:'flex',alignItems:'center',justifyContent:'center',color:isVerified?T.success:T.txt3,flexShrink:0}}>
                             {isVerified?<ShieldCheck size={18}/>:<Lock size={18}/>}
                           </div>
                           <div style={{flex:1}}>
@@ -496,15 +496,15 @@ export const CustomerStore: React.FC = () => {
                               {isVerified?`Current balance: ${fmtRaw(customer?.debt_balance||0)}`:'Only verified clients can use credit'}
                             </p>
                           </div>
-                          <div style={{width:18,height:18,borderRadius:'50%',border:`2px solid ${paymentMethod==='DEBT'?T.success:T.border}`,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
-                            {paymentMethod==='DEBT' && <div style={{width:8,height:8,borderRadius:'50%',background:T.success}}/>}
+                          <div style={{width:18,height:18,borderRadius:'50%',border:`2px solid ${paymentMethod==='Debt'?T.success:T.border}`,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+                            {paymentMethod==='Debt' && <div style={{width:8,height:8,borderRadius:'50%',background:T.success}}/>}
                           </div>
                         </button>
                       </div>
 
                       {/* Transfer details */}
                       <AnimatePresence>
-                        {paymentMethod==='TRANSFER' && (
+                        {paymentMethod==='Transfer' && (
                           <motion.div initial={{opacity:0,height:0}} animate={{opacity:1,height:'auto'}} exit={{opacity:0,height:0}} style={{overflow:'hidden',marginBottom:20}}>
                             <div style={{padding:'20px',borderRadius:'20px',background:'linear-gradient(135deg,#1e293b,#0f172a)',color:'#fff',boxShadow:'0 10px 30px rgba(15,23,42,0.2)'}}>
                               <p style={{margin:'0 0 14px',fontSize:'10px',color:'rgba(255,255,255,0.5)',fontWeight:800,textTransform:'uppercase',letterSpacing:'0.1em'}}>Transfer Details</p>
@@ -584,7 +584,7 @@ export const CustomerStore: React.FC = () => {
                 <h2 style={{color:'#fff',fontSize:'26px',fontWeight:900,margin:'0 0 8px',letterSpacing:'-0.03em'}}>Order Placed! 🎉</h2>
                 <p style={{color:'rgba(255,255,255,0.7)',fontSize:'14px',fontWeight:600,margin:0}}>
                   Your fresh bakery items are on the way.<br/>
-                  <span style={{fontSize:'12px',color:'rgba(255,255,255,0.5)'}}>Payment: {paymentMethod==='DELIVERY'?'Cash on Delivery':paymentMethod==='TRANSFER'?'Bank Transfer':'Added to Credit Tab'}</span>
+                  <span style={{fontSize:'12px',color:'rgba(255,255,255,0.5)'}}>Payment: {paymentMethod==='Cash'?'Cash on Delivery':paymentMethod==='Transfer'?'Bank Transfer':'Added to Credit Tab'}</span>
                 </p>
 
                 {assignedSupplier && (
