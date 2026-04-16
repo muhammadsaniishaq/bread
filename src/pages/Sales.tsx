@@ -8,7 +8,7 @@ import { useAuth } from '../store/AuthContext';
 import { QRScanner } from '../components/QRScanner';
 
 export const Sales: React.FC = () => {
-  const { customers, products, transactions, recordSale, getPersonalStock } = useAppContext();
+  const { customers, products, transactions, recordSale, getPersonalStock, inventoryLogs } = useAppContext();
   const { user, role } = useAuth();
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -23,6 +23,7 @@ export const Sales: React.FC = () => {
   // Shopping Cart State
   const [cart, setCart] = useState<TransactionItem[]>([]);
   const [showScanner, setShowScanner] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   const handleScan = (decodedId: string) => {
     setShowScanner(false);
@@ -35,15 +36,17 @@ export const Sales: React.FC = () => {
 
   const isSupplier = role === 'SUPPLIER';
   const myAccount = useMemo(() => customers.find(c => c.profile_id === user?.id), [customers, user]);
-  const myTxs = useMemo(() => transactions.filter(t => t.customerId === myAccount?.id || t.sellerId === myAccount?.id), [transactions, myAccount]);
+
 
   const activeProducts = useMemo(() => {
     let prods = products.filter(p => p.active);
     if (isSupplier && myAccount) {
+      // Optimized: Calculate all stock in one pass would be ideal, 
+      // but for now we at least ensure this is memoized correctly.
       prods = prods.map(p => ({ ...p, stock: getPersonalStock(p.id) }));
     }
     return prods;
-  }, [products, isSupplier, myAccount, myTxs]);
+  }, [products, isSupplier, myAccount, inventoryLogs, transactions]); // Added logs/transactions to dependencies for accuracy
 
   const categories = Array.from(new Set(activeProducts.map(p => p.category || 'Standard')));
   const filteredProducts = activeProducts
@@ -136,38 +139,49 @@ export const Sales: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (cart.length === 0 || totalAmount < 0) return;
-    if (paymentType === 'Debt' && !customerId) {
-      alert('Please select a customer for debt issuance.');
-      return;
-    }
+    if (cart.length === 0) return;
     
+    // Validate stock one last time
+    for (const item of cart) {
+      const p = products.find(prod => prod.id === item.productId);
+      const avail = getPersonalStock(item.productId);
+      if (p && item.quantity > avail) {
+        alert(`Not enough stock for ${p.name}! Only ${avail} available.`);
+        return;
+      }
+    }
+
     const tx: Transaction = {
       id: crypto.randomUUID(),
       date: new Date().toISOString(),
-      customerId: paymentType === 'Debt' ? customerId : (customerId || undefined), 
-      items: cart,
-      // Leaving legacy fields blank for new transactions
-      totalPrice: totalAmount,
       type: paymentType,
-      discount: totalDiscount > 0 ? totalDiscount : undefined,
-      pointsEarned: pointsEarned > 0 ? pointsEarned : undefined,
-      pointsUsed: redeemPoints ? maxPointsToUse : undefined,
-      origin: isSupplier ? 'POS_SUPPLIER' : undefined,
-      sellerId: isSupplier ? myAccount?.id : undefined
+      totalPrice: totalAmount,
+      discount: totalDiscount,
+      customerId: customerId || undefined,
+      sellerId: user?.id,
+      items: cart,
+      status: 'COMPLETED',
+      origin: 'POS_SUPPLIER'
     };
-    
-    await recordSale(tx);
-    
-    setLastTxId(tx.id);
-    setCustomerId('');
-    setCart([]);
-    setPaymentType('Cash');
-    setDiscountInput('');
-    setRedeemPoints(false);
-    
-    // Automatically navigate to receipt for printing/sharing
-    navigate(`/receipt/${tx.id}`);
+
+    setSubmitting(true);
+    try {
+      await recordSale(tx);
+      
+      setLastTxId(tx.id);
+      setCustomerId('');
+      setCart([]);
+      setPaymentType('Cash');
+      setDiscountInput('');
+      setRedeemPoints(false);
+      
+      // Automatically navigate to receipt for printing/sharing
+      navigate(`/receipt/${tx.id}`);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Sync failed');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const getProductName = (id: string) => products.find(p => p.id === id)?.name || 'Unknown';
@@ -361,12 +375,25 @@ export const Sales: React.FC = () => {
             )}
           </div>
           
+          {customerId && paymentType === 'Cash' && (
+            <div className="bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-200 p-3 rounded-lg text-xs font-bold mb-4 flex items-center gap-2 border border-amber-200 dark:border-amber-800 animate-pulse">
+              ⚠️ {t('sales.customerSelectedButCash')} - Are you sure this is not a DEBT sale?
+            </div>
+          )}
+
           <button 
             type="submit" 
             className="w-full bg-gradient-to-r from-success/90 to-emerald-600/90 text-white font-bold text-lg py-4 rounded-xl shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:grayscale flex justify-center items-center gap-2"
-            disabled={cart.length === 0 || totalAmount < 0 || (paymentType === 'Debt' && !customerId)}
+            disabled={cart.length === 0 || totalAmount < 0 || (paymentType === 'Debt' && !customerId) || submitting}
           >
-            {t('sales.completeSale')}
+            {submitting ? (
+              <>
+                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                {t('sales.processing') || 'Processing...'}
+              </>
+            ) : (
+              t('sales.completeSale')
+            )}
           </button>
         </form>
       )}

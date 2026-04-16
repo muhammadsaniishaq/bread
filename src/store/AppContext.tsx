@@ -136,6 +136,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [appSettings,    setAppSettings]    = useState<AppSettings>(loadSettings);
   const [loading,        setLoading]        = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(() => sessionStorage.getItem('isAuthenticated') === 'true');
+  const [personalStockMap, setPersonalStockMap] = useState<Record<string, number>>({});
 
   // ─── Fetch all data from Supabase ──────────────────────────────────────────
   const refreshData = async () => {
@@ -172,6 +173,48 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         loadedDPay.reduce((s, p) => s + p.amount, 0);
       const totalMoneyPaid = loadedBPay.reduce((s, p) => s + p.amount, 0);
       setCompanyMetrics({ totalValueReceived, totalMoneyPaid });
+
+      // Calculate Personal Stock Map for the current user
+      if ((role === 'SUPPLIER' || role === 'STORE_KEEPER') && user?.id) {
+        const uid = user.id;
+        const myAcc = (cust || []).map(mapCustomer).find(c => c.profile_id === uid);
+        const cid = myAcc?.id;
+        
+        const stockMap: Record<string, number> = {};
+        const completedTxs = loadedTxns.filter(t => t.status === 'COMPLETED');
+        
+        (prod || []).forEach(p => {
+          const productId = p.id;
+          
+          // 1. Logs
+          const pLogs = (invL || []).filter(l => l.product_id === productId);
+          const logsRec = pLogs.filter(l => (l.profile_id === uid || (cid && l.profile_id === cid)) && l.type !== 'Return').reduce((s, l) => s + (l.quantity_received || 0), 0);
+          const logsRet = pLogs.filter(l => (l.profile_id === uid || (cid && l.profile_id === cid)) && l.type === 'Return').reduce((s, l) => s + (l.quantity_received || 0), 0);
+          
+          // 2. Transactions (Internal movement)
+          const pTxs = completedTxs.filter(t => (t.customerId === uid || (cid && t.customerId === cid)));
+          const txsRec = pTxs.filter(t => t.type === 'Debt').reduce((s, t) => {
+            const item = getTransactionItems(t).find(i => i.productId === productId);
+            return s + (item?.quantity || 0);
+          }, 0);
+          const txsRet = pTxs.filter(t => t.type === 'Return').reduce((s, t) => {
+            const item = getTransactionItems(t).find(i => i.productId === productId);
+            return s + (item?.quantity || 0);
+          }, 0);
+
+          // 3. Sales
+          const pSales = completedTxs.filter(t => t.origin === 'POS_SUPPLIER' && (t.sellerId === uid || (cid && t.sellerId === cid)));
+          const sold = pSales.reduce((s, t) => {
+            const item = getTransactionItems(t).find(i => i.productId === productId);
+            return s + (item?.quantity || 0);
+          }, 0);
+
+          stockMap[productId] = Math.max(0, (logsRec + txsRec) - (logsRet + txsRet) - sold);
+        });
+        setPersonalStockMap(stockMap);
+      } else {
+        setPersonalStockMap({});
+      }
     } catch (err) {
       console.error('refreshData failed:', err);
     } finally {
@@ -272,7 +315,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // ─── Record Sale ─────────────────────────────────────────────────────────────
   const recordSale = async (tx: Transaction) => {
-    const { error } = await supabase.from('transactions').insert({
+    // 1. Initial Transaction Insert (Primary Record)
+    const { error: txErr } = await supabase.from('transactions').insert({
       id: tx.id, date: tx.date, type: tx.type, status: tx.status || 'COMPLETED',
       origin: tx.origin || 'STORE', total_price: tx.totalPrice,
       customer_id: tx.customerId || null, seller_id: tx.sellerId || null,
@@ -280,72 +324,88 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       items: tx.items || null, discount: tx.discount || 0,
     });
 
-    if (error) {
-      console.error('Sale Sync Error:', error);
-      throw new Error(`Cloud Sync Failed: ${error.message}`);
+    if (txErr) {
+      console.error('Sale Sync Error:', txErr);
+      throw new Error(`Cloud Sync Failed: ${txErr.message}`);
     }
 
     if (tx.status === 'PENDING_STORE') { await refreshData(); return; }
 
-    // Update customer debt balance and loyalty points (DUAL LEDGER FOR SUPPLIER POS)
+    // 2. Parallelize Side-Effect Updates (Ledgers & Stock)
+    const updates: any[] = [];
+
+    // Supplier & Retail Ledger Logic
     if (tx.origin === 'POS_SUPPLIER') {
-      // 1. Supplier's Ledger with Bakery (Supplier ALWAYS owes 90% of what they sell)
+      // Supplier's Ledger with Bakery (90% wholesale)
       if (tx.sellerId) {
         const supplier = customers.find(c => c.id === tx.sellerId);
         if (supplier) {
           const wholesaleValue = tx.totalPrice * 0.9;
-          await supabase.from('customers')
-            .update({ debt_balance: (supplier.debtBalance || 0) + wholesaleValue })
-            .eq('id', supplier.id);
+          updates.push(
+            supabase.from('customers')
+              .update({ debt_balance: (supplier.debtBalance || 0) + wholesaleValue })
+              .eq('id', supplier.id)
+          );
         }
       }
 
-      // 2. Retail Customer's Ledger with Supplier
+      // Retail Customer's Ledger with Supplier
       if (tx.customerId) {
         const retailCustomer = customers.find(c => c.id === tx.customerId);
         if (retailCustomer) {
-          const updates: any = {};
+          const custUpdates: any = {};
           if (tx.type === 'Debt') {
-            updates.debt_balance = (retailCustomer.debtBalance || 0) + tx.totalPrice;
+            custUpdates.debt_balance = (retailCustomer.debtBalance || 0) + tx.totalPrice;
           }
           if (tx.status !== 'CANCELLED') {
-            updates.loyalty_points = (retailCustomer.loyaltyPoints || 0) + Math.floor(tx.totalPrice / 1000);
+            custUpdates.loyalty_points = (retailCustomer.loyaltyPoints || 0) + Math.floor(tx.totalPrice / 1000);
           }
-          if (Object.keys(updates).length > 0) {
-             await supabase.from('customers').update(updates).eq('id', retailCustomer.id);
+          if (Object.keys(custUpdates).length > 0) {
+             updates.push(supabase.from('customers').update(custUpdates).eq('id', retailCustomer.id));
           }
         }
       }
     } else {
-      // Normal Store Sales Flow (Store sells directly to Retail Customer)
+      // Normal Store Sales Flow (Direct to Retail)
       if (tx.customerId) {
         const customer = customers.find(c => c.id === tx.customerId);
         if (customer) {
-          const updates: any = {};
+          const custUpdates: any = {};
           if (tx.type === 'Debt') {
-            updates.debt_balance = (customer.debtBalance || 0) + tx.totalPrice;
+            custUpdates.debt_balance = (customer.debtBalance || 0) + tx.totalPrice;
           }
           if (tx.status !== 'CANCELLED') {
-            updates.loyalty_points = (customer.loyaltyPoints || 0) + Math.floor(tx.totalPrice / 1000);
+            custUpdates.loyalty_points = (customer.loyaltyPoints || 0) + Math.floor(tx.totalPrice / 1000);
           }
-          if (Object.keys(updates).length > 0) {
-             await supabase.from('customers').update(updates).eq('id', customer.id);
+          if (Object.keys(custUpdates).length > 0) {
+             updates.push(supabase.from('customers').update(custUpdates).eq('id', customer.id));
           }
         }
       }
     }
 
-    // Update product stock for immediate (non-pending) sales
-    const items = getTransactionItems(tx);
-    for (const item of items) {
+    // Product Stock Updates (Batch parallelized)
+    const txItems = getTransactionItems(tx);
+    for (const item of txItems) {
       const product = products.find(p => p.id === item.productId);
       if (product) {
-        await supabase.from('products')
-          .update({ stock: Math.max(0, (product.stock || 0) - item.quantity) })
-          .eq('id', item.productId);
+        updates.push(
+          supabase.from('products')
+            .update({ stock: Math.max(0, (product.stock || 0) - item.quantity) })
+            .eq('id', item.productId)
+        );
       }
     }
 
+    // Await all updates in parallel
+    if (updates.length > 0) {
+      const results = await Promise.all(updates);
+      // Check for individual update errors
+      const failed = results.find(r => r.error);
+      if (failed) console.error('One or more background updates failed:', failed.error);
+    }
+
+    // Final Sync
     await refreshData();
   };
 
@@ -354,32 +414,42 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const tx = transactions.find(t => t.id === id);
     if (!tx || tx.status === status) return;
 
-    await supabase.from('transactions').update({ status }).eq('id', id);
+    // 1. Update primary status
+    const { error: statusErr } = await supabase.from('transactions').update({ status }).eq('id', id);
+    if (statusErr) {
+      console.error('Status update failed:', statusErr);
+      throw new Error(statusErr.message);
+    }
 
     if (status === 'COMPLETED') {
+      const updates: any[] = [];
       const items = getTransactionItems(tx);
-
+      
       for (const item of items) {
         // Update product stock
         const product = products.find(p => p.id === item.productId);
         if (product) {
           const delta = tx.type === 'Return' ? item.quantity : -item.quantity;
-          await supabase.from('products')
-            .update({ stock: Math.max(0, (product.stock || 0) + delta) })
-            .eq('id', item.productId);
+          updates.push(
+            supabase.from('products')
+              .update({ stock: Math.max(0, (product.stock || 0) + delta) })
+              .eq('id', item.productId)
+          );
         }
 
         // Create inventory log for SUPPLIER-origin transactions
         if (tx.origin === 'SUPPLIER') {
-          await supabase.from('inventory_logs').insert({
-            id: `${Date.now()}${Math.random().toString(36).slice(2)}`,
-            batch_id: null, date: new Date().toISOString(),
-            type: tx.type === 'Return' ? 'Return' : 'Receive',
-            product_id: item.productId, quantity_received: item.quantity,
-            cost_price: item.unitPrice || 0,
-            store_keeper: tx.storeKeeperId || null,
-            profile_id: tx.customerId || null,
-          });
+          updates.push(
+            supabase.from('inventory_logs').insert({
+              id: `${Date.now()}${Math.random().toString(36).slice(2)}`,
+              batch_id: null, date: new Date().toISOString(),
+              type: tx.type === 'Return' ? 'Return' : 'Receive',
+              product_id: item.productId, quantity_received: item.quantity,
+              cost_price: item.unitPrice || 0,
+              store_keeper: tx.storeKeeperId || null,
+              profile_id: tx.customerId || null,
+            })
+          );
         }
       }
 
@@ -391,11 +461,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           if (tx.type === 'Payment') delta = -tx.totalPrice;
           else if (tx.origin !== 'SUPPLIER') delta = tx.type === 'Return' ? -tx.totalPrice : tx.totalPrice;
           if (delta !== 0) {
-            await supabase.from('customers')
-              .update({ debt_balance: (customer.debtBalance || 0) + delta })
-              .eq('id', customer.id);
+            updates.push(
+              supabase.from('customers')
+                .update({ debt_balance: (customer.debtBalance || 0) + delta })
+                .eq('id', customer.id)
+            );
           }
         }
+      }
+      
+      if (updates.length > 0) {
+        const results = await Promise.all(updates);
+        const failed = results.find(r => r.error);
+        if (failed) console.error('One or more transaction side-effects failed:', failed.error);
       }
     }
 
@@ -404,18 +482,29 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // ─── Debt Payment ─────────────────────────────────────────────────────────────
   const recordDebtPayment = async (payment: DebtPayment) => {
-    await supabase.from('debt_payments').insert({
-      id: payment.id, date: payment.date, amount: payment.amount,
-      customer_id: payment.customerId, method: payment.method || null, note: payment.note || null,
-    });
+    const updates: any[] = [
+      supabase.from('debt_payments').insert({
+        id: payment.id, date: payment.date, amount: payment.amount,
+        customer_id: payment.customerId, method: payment.method || null, note: payment.note || null,
+      })
+    ];
+    
     const customer = customers.find(c => c.id === payment.customerId);
     if (customer) {
-      await supabase.from('customers')
-        .update({ debt_balance: (customer.debtBalance || 0) - payment.amount })
-        .eq('id', customer.id);
+      updates.push(
+        supabase.from('customers')
+          .update({ debt_balance: (customer.debtBalance || 0) - payment.amount })
+          .eq('id', customer.id)
+      );
     }
+    
+    const results = await Promise.all(updates);
+    const failed = results.find(r => r.error);
+    if (failed) throw new Error(`Debt payment failed: ${failed.error?.message}`);
+    
     await refreshData();
   };
+
 
   // ─── Inventory ────────────────────────────────────────────────────────────────
   const _insertInventoryLog = async (log: InventoryLog, type: 'Receive' | 'Return', batchId?: string) => {
@@ -512,43 +601,39 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const getPersonalStock = (productId: string, customRole?: string, profileId?: string) => {
     const currentRole = customRole || role;
     const uid = profileId || user?.id;
+    
+    // If it's a standard check for the active user, use the pre-calculated map
+    if (!profileId && !customRole && (currentRole === 'SUPPLIER' || currentRole === 'STORE_KEEPER')) {
+      return personalStockMap[productId] || 0;
+    }
+
     if (currentRole !== 'SUPPLIER' && currentRole !== 'STORE_KEEPER') {
       return products.find(p => p.id === productId)?.stock || 0;
     }
     if (!uid) return 0;
 
-    // Find the customer account linked to this profile
+    // Fallback for custom profile lookups (rarely used in POS)
     const myAccount = customers.find(c => c.profile_id === uid);
     const cid = myAccount?.id;
-
-    // 1. Logs (Legacy & Assignments)
     const logs = inventoryLogs.filter(l => l.productId === productId);
     const recLogs = logs.filter(l => (l.profile_id === uid || (cid && l.profile_id === cid)) && l.type !== 'Return').reduce((s, l) => s + l.quantityReceived, 0);
     const retLogs = logs.filter(l => (l.profile_id === uid || (cid && l.profile_id === cid)) && l.type === 'Return').reduce((s, l) => s + l.quantityReceived, 0);
-
-    // 2. Transactions (Legacy Debt/Return Requests)
     const txs = transactions.filter(t => t.status === 'COMPLETED');
     const recTxs = txs.filter(t => t.type === 'Debt' && (t.customerId === uid || (cid && t.customerId === cid)))
       .reduce((s, t) => { 
-        const items = getTransactionItems(t);
-        const item = items.find(i => i.productId === productId);
+        const item = getTransactionItems(t).find(i => i.productId === productId);
         return s + (item?.quantity || 0);
       }, 0);
     const retTxs = txs.filter(t => t.type === 'Return' && (t.customerId === uid || (cid && t.customerId === cid)))
       .reduce((s, t) => { 
-        const items = getTransactionItems(t);
-        const item = items.find(i => i.productId === productId);
+        const item = getTransactionItems(t).find(i => i.productId === productId);
         return s + (item?.quantity || 0);
       }, 0);
-
-    // 3. Sales (What has been sold to customers)
     const sold = txs.filter(t => t.origin === 'POS_SUPPLIER' && (t.sellerId === uid || (cid && t.sellerId === cid) || (uid && t.sellerId === uid)))
       .reduce((s, t) => {
-        const items = getTransactionItems(t);
-        const item = items.find(i => i.productId === productId);
+        const item = getTransactionItems(t).find(i => i.productId === productId);
         return s + (item?.quantity || 0);
       }, 0);
-
     return Math.max(0, (recLogs + recTxs) - (retLogs + retTxs) - sold);
   };
   return (

@@ -50,6 +50,8 @@ export const CustomerStore: React.FC = () => {
   const [isOrdering, setIsOrdering] = useState(false);
   const [showCheckout, setShowCheckout] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [lastUploadedProofUrl, setLastUploadedProofUrl] = useState<string | null>(null);
+  const [lastOrderTotal, setLastOrderTotal] = useState<number>(0);
   const [search, setSearch] = useState('');
   const [activeCategory, setActiveCategory] = useState('All');
   const [checkoutStep, setCheckoutStep] = useState<'review' | 'payment'>('review');
@@ -112,27 +114,70 @@ export const CustomerStore: React.FC = () => {
     if (cartItemCount === 0 || !customer) return;
     setIsOrdering(true);
     try {
-      const mappedItems = Object.entries(cart).map(([productId, quantity]) => ({
-        productId, quantity,
-        unitPrice: activeProducts.find(x => x.id === productId)?.price || 0
-      }));
-      const { error } = await supabase.from('orders').insert({
+      let proofUrl = null;
+      
+      // 1. Upload Proof if exists
+      if (paymentProof) {
+        const fileExt = paymentProof.name.split('.').pop();
+        const fileName = `${Math.random()}.${fileExt}`;
+        const filePath = `proofs/${fileName}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from('orders')
+          .upload(filePath, paymentProof);
+
+        if (uploadError) {
+          console.error('Proof upload failed:', uploadError);
+        } else {
+          const { data: { publicUrl } } = supabase.storage
+            .from('orders')
+            .getPublicUrl(filePath);
+          proofUrl = publicUrl;
+        }
+      }
+
+      // 2. Insert Main Order
+      const orderId = crypto.randomUUID();
+      const { error: orderError } = await supabase.from('orders').insert({
+        id: orderId,
         customer_id: customer.id,
         supplier_id: assignedSupplier?.id || null,
         total_price: cartTotal,
-        items: cart,
-        details: mappedItems,
         payment_method: paymentMethod,
+        payment_status: paymentMethod === 'DEBT' ? 'DEBT' : 'PENDING',
         status: 'PENDING',
+        proof_url: proofUrl,
         created_at: new Date().toISOString()
-      });
-      if (!error) {
-        setShowCheckout(false);
-        setShowSuccess(true);
-        setCart({});
-        setTimeout(() => { setShowSuccess(false); navigate('/customer/dashboard'); }, 3000);
-      } else throw error;
-    } catch { alert('Order failed. Please try again.'); }
+      }).select().single();
+
+      if (orderError) throw orderError;
+
+      // 3. Insert Order Items (Batched)
+      const orderItems = Object.entries(cart).map(([productId, quantity]) => ({
+        order_id: orderId,
+        product_id: productId,
+        quantity,
+        price_at_time: activeProducts.find(x => x.id === productId)?.price || 0
+      }));
+
+      const { error: itemsError } = await supabase.from('order_items').insert(orderItems);
+      if (itemsError) throw itemsError;
+
+      // Success
+      setLastOrderTotal(cartTotal);
+      setLastUploadedProofUrl(proofUrl);
+      setShowCheckout(false);
+      setShowSuccess(true);
+      setCart({});
+      setPaymentProof(null);
+      
+      // We'll leave the success screen open longer so the user can click WhatsApp
+      // or we can auto-navigate after a longer delay if they don't click anything.
+      // Removed the auto-timeout here to let user click the WhatsApp button on overlay
+    } catch (err: any) { 
+      console.error('Order error:', err);
+      alert(`Order failed: ${err.message || 'Please try again.'}`); 
+    }
     setIsOrdering(false);
   };
 
@@ -480,11 +525,18 @@ export const CustomerStore: React.FC = () => {
                               </label>
                               {/* WhatsApp notify */}
                               {assignedSupplier && (
-                                <a href={`https://wa.me/${(assignedSupplier.whatsapp_number||assignedSupplier.phone||'').replace(/\D/g,'').replace(/^0/,'234')}?text=${encodeURIComponent(`Hello ${assignedSupplier.full_name}, I've paid ${fmtRaw(cartTotal)} for my order.`)}`}
-                                  target="_blank" rel="noopener noreferrer"
-                                  style={{display:'flex',alignItems:'center',justifyContent:'center',gap:8,marginTop:12,padding:'13px',borderRadius:'14px',background:'#25D366',color:'#fff',textDecoration:'none',fontWeight:900,fontSize:'12px',boxShadow:'0 6px 20px rgba(37,211,102,0.3)'}}>
+                                <button
+                                  onClick={async () => {
+                                    const message = `Hello ${assignedSupplier.full_name}, I've paid ${fmtRaw(cartTotal)} for my order.`;
+                                    // If we have a proof file but haven't placed the order yet, we can't get the URL easily here
+                                    // So we encourage manual attachment or just send the text.
+                                    // After placing order, the user is navigated away anyway.
+                                    const encoded = encodeURIComponent(message);
+                                    window.open(`https://wa.me/${(assignedSupplier.whatsapp_number||assignedSupplier.phone||'').replace(/\D/g,'').replace(/^0/,'234')}?text=${encoded}`, '_blank');
+                                  }}
+                                  style={{width:'100%',display:'flex',alignItems:'center',justifyContent:'center',gap:8,marginTop:12,padding:'13px',borderRadius:'14px',background:'#25D366',color:'#fff',border:'none',fontWeight:900,fontSize:'12px',boxShadow:'0 6px 20px rgba(37,211,102,0.3)',cursor:'pointer'}}>
                                   <MessageSquare size={16}/> Notify Supplier on WhatsApp
-                                </a>
+                                </button>
                               )}
                             </div>
                           </motion.div>
@@ -532,6 +584,28 @@ export const CustomerStore: React.FC = () => {
                   Your fresh bakery items are on the way.<br/>
                   <span style={{fontSize:'12px',color:'rgba(255,255,255,0.5)'}}>Payment: {paymentMethod==='DELIVERY'?'Cash on Delivery':paymentMethod==='TRANSFER'?'Bank Transfer':'Added to Credit Tab'}</span>
                 </p>
+
+                {assignedSupplier && (
+                  <motion.button 
+                    whileHover={{scale:1.05}} whileTap={{scale:0.95}}
+                    onClick={() => {
+                      let msg = `Hello ${assignedSupplier.full_name}, I've just placed an order for ${fmtRaw(lastOrderTotal)}.`;
+                      if (lastUploadedProofUrl) {
+                        msg += `\n\nProof of Payment: ${lastUploadedProofUrl}`;
+                      }
+                      window.open(`https://wa.me/${(assignedSupplier.whatsapp_number||assignedSupplier.phone||'').replace(/\D/g,'').replace(/^0/,'234')}?text=${encodeURIComponent(msg)}`, '_blank');
+                    }}
+                    style={{marginTop:'24px',padding:'14px 24px',borderRadius:'16px',background:'#25D366',color:'#fff',border:'none',fontWeight:900,fontSize:'14px',display:'flex',alignItems:'center',gap:10,cursor:'pointer',boxShadow:'0 10px 30px rgba(37,211,102,0.4)',margin:'24px auto 0'}}>
+                    <MessageSquare size={18}/> Notify Supplier on WhatsApp
+                  </motion.button>
+                )}
+
+                <motion.button 
+                  whileTap={{scale:0.95}}
+                  onClick={() => { setShowSuccess(false); navigate('/customer/orders'); }}
+                  style={{marginTop:'16px',background:'none',border:'none',color:'rgba(255,255,255,0.5)',fontSize:'13px',fontWeight:700,cursor:'pointer',textDecoration:'underline'}}>
+                  Continue to History
+                </motion.button>
               </motion.div>
             </div>
           )}
