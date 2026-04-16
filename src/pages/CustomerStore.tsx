@@ -136,6 +136,12 @@ export const CustomerStore: React.FC = () => {
         }
       }
 
+      const snapshotItems = Object.entries(cart).map(([productId, quantity]) => ({
+        productId,
+        quantity,
+        unitPrice: activeProducts.find(x => x.id === productId)?.price || 0
+      }));
+
       // 2. Insert Main Order
       const orderId = crypto.randomUUID();
       const { error: orderError } = await supabase.from('orders').insert({
@@ -147,6 +153,7 @@ export const CustomerStore: React.FC = () => {
         payment_status: paymentMethod === 'Debt' ? 'Debt' : 'Pending',
         status: 'PENDING',
         proof_url: proofUrl,
+        items: snapshotItems,
         created_at: new Date().toISOString()
       });
 
