@@ -8,7 +8,7 @@ import { useAuth } from '../store/AuthContext';
 import { QRScanner } from '../components/QRScanner';
 
 export const Sales: React.FC = () => {
-  const { customers, products, transactions, recordSale, getPersonalStock, inventoryLogs } = useAppContext();
+  const { customers, products, transactions, recordSale, getPersonalStock, inventoryLogs, personalStockMap } = useAppContext();
   const { user, role } = useAuth();
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -41,12 +41,10 @@ export const Sales: React.FC = () => {
   const activeProducts = useMemo(() => {
     let prods = products.filter(p => p.active);
     if (isSupplier && myAccount) {
-      // Optimized: Calculate all stock in one pass would be ideal, 
-      // but for now we at least ensure this is memoized correctly.
       prods = prods.map(p => ({ ...p, stock: getPersonalStock(p.id) }));
     }
     return prods;
-  }, [products, isSupplier, myAccount, inventoryLogs, transactions]); // Added logs/transactions to dependencies for accuracy
+  }, [products, isSupplier, myAccount, inventoryLogs, transactions, personalStockMap]); // Added logs/transactions to dependencies for accuracy
 
   const categories = Array.from(new Set(activeProducts.map(p => p.category || 'Standard')));
   const filteredProducts = activeProducts
@@ -188,6 +186,19 @@ export const Sales: React.FC = () => {
 
   return (
     <div className="container pb-20">
+      {isSupplier && !myAccount && (
+        <div className="bg-danger/10 border border-danger/20 p-4 rounded-xl mb-6 flex items-start gap-3">
+          <div className="text-danger mt-0.5">⚠️</div>
+          <div>
+            <p className="text-danger font-bold text-sm">Profile Link Missing</p>
+            <p className="text-xs text-danger/80">
+              Your profile is not linked to a Customer/Staff record. 
+              Stock tracking will not work correctly. Please contact the Admin.
+            </p>
+          </div>
+        </div>
+      )}
+
       <h1 className="text-2xl font-bold mb-6 flex items-center gap-2">
         <ShoppingCart /> {t('sales.title')}
       </h1>

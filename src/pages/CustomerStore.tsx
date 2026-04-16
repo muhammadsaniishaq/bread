@@ -148,7 +148,7 @@ export const CustomerStore: React.FC = () => {
         status: 'PENDING',
         proof_url: proofUrl,
         created_at: new Date().toISOString()
-      }).select().single();
+      });
 
       if (orderError) throw orderError;
 
@@ -175,8 +175,10 @@ export const CustomerStore: React.FC = () => {
       // or we can auto-navigate after a longer delay if they don't click anything.
       // Removed the auto-timeout here to let user click the WhatsApp button on overlay
     } catch (err: any) { 
-      console.error('Order error:', err);
-      alert(`Order failed: ${err.message || 'Please try again.'}`); 
+      console.error('Detailed Order Error:', err);
+      // Construct a better message if possible
+      const msg = err.message || (err.error_description) || 'Please try again.';
+      alert(`Order failed: ${msg}`); 
     }
     setIsOrdering(false);
   };

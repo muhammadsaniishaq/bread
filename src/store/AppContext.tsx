@@ -40,6 +40,7 @@ interface AppContextType {
   appSettings: AppSettings;
   updateSettings: (settings: AppSettings) => Promise<void>;
   getPersonalStock: (productId: string, role?: string, profileId?: string) => number;
+  personalStockMap: Record<string, number>;
 }
 
 // ─── Supabase row → App type mappers ─────────────────────────────────────────
@@ -385,15 +386,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
 
     // Product Stock Updates (Batch parallelized)
-    const txItems = getTransactionItems(tx);
-    for (const item of txItems) {
-      const product = products.find(p => p.id === item.productId);
-      if (product) {
-        updates.push(
-          supabase.from('products')
-            .update({ stock: Math.max(0, (product.stock || 0) - item.quantity) })
-            .eq('id', item.productId)
-        );
+    // ONLY for Manager/Admin sales. Supplier sales are local to their stock map.
+    if (tx.origin !== 'POS_SUPPLIER') {
+      const txItems = getTransactionItems(tx);
+      for (const item of txItems) {
+        const product = products.find(p => p.id === item.productId);
+        if (product) {
+          updates.push(
+            supabase.from('products')
+              .update({ stock: Math.max(0, (product.stock || 0) - item.quantity) })
+              .eq('id', item.productId)
+          );
+        }
       }
     }
 
@@ -426,15 +430,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const items = getTransactionItems(tx);
       
       for (const item of items) {
-        // Update product stock
-        const product = products.find(p => p.id === item.productId);
-        if (product) {
-          const delta = tx.type === 'Return' ? item.quantity : -item.quantity;
-          updates.push(
-            supabase.from('products')
-              .update({ stock: Math.max(0, (product.stock || 0) + delta) })
-              .eq('id', item.productId)
-          );
+        // Update product stock (Main Store only)
+        if (tx.origin !== 'POS_SUPPLIER') {
+          const product = products.find(p => p.id === item.productId);
+          if (product) {
+            const delta = tx.type === 'Return' ? item.quantity : -item.quantity;
+            updates.push(
+              supabase.from('products')
+                .update({ stock: Math.max(0, (product.stock || 0) + delta) })
+                .eq('id', item.productId)
+            );
+          }
         }
 
         // Create inventory log for SUPPLIER-origin transactions
@@ -646,7 +652,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       recordSale, updateTransactionStatus, recordDebtPayment,
       addInventory, returnInventory, processInventoryBatch,
       recordBakeryPayment, addExpense,
-      appSettings, updateSettings, getPersonalStock, verifyCustomer
+      appSettings, updateSettings, getPersonalStock, verifyCustomer, personalStockMap
     }}>
       {children}
     </AppContext.Provider>
