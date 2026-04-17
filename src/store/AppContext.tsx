@@ -41,6 +41,7 @@ interface AppContextType {
   updateSettings: (settings: AppSettings) => Promise<void>;
   getPersonalStock: (productId: string, role?: string, profileId?: string) => number;
   personalStockMap: Record<string, number>;
+  linkProfileToRecord: (userId: string, email?: string, phone?: string) => Promise<any>;
 }
 
 // ─── Supabase row → App type mappers ─────────────────────────────────────────
@@ -604,6 +605,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
     await refreshData();
   };
+  const linkProfileToRecord = async (userId: string, email?: string, phone?: string) => {
+    // 1. Find a customer record matching email or phone with NO profile_id
+    const target = customers.find(c => 
+      !c.profile_id && 
+      ((email && c.email?.toLowerCase() === email.toLowerCase()) || 
+       (phone && c.phone === phone))
+    );
+
+    if (!target) return null;
+
+    // 2. Link it
+    const { error } = await supabase.from('customers').update({ profile_id: userId }).eq('id', target.id);
+    if (error) {
+       console.error('Failed to link profile:', error);
+       return null;
+    }
+
+    await refreshData();
+    return target;
+  };
+
   const getPersonalStock = (productId: string, customRole?: string, profileId?: string) => {
     const currentRole = customRole || role;
     const uid = profileId || user?.id;
@@ -652,7 +674,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       recordSale, updateTransactionStatus, recordDebtPayment,
       addInventory, returnInventory, processInventoryBatch,
       recordBakeryPayment, addExpense,
-      appSettings, updateSettings, getPersonalStock, verifyCustomer, personalStockMap
+      appSettings, updateSettings, getPersonalStock, verifyCustomer, personalStockMap,
+      linkProfileToRecord
     }}>
       {children}
     </AppContext.Provider>

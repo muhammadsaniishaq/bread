@@ -38,13 +38,29 @@ const T = {
 const fmt = (v: number) => `₦${v.toLocaleString()}`;
 
 export const StoreDashboard: React.FC = () => {
-  const { products, transactions, customers, inventoryLogs, updateTransactionStatus } = useAppContext();
-  const { signOut, user } = useAuth();
+  const { 
+    products, transactions, customers, inventoryLogs, 
+    updateTransactionStatus, linkProfileToRecord
+  } = useAppContext();
+  const { signOut, user, role } = useAuth();
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [clockStr, setClockStr] = useState('');
   const [supplierIds, setSupplierIds] = useState<Set<string>>(new Set());
   const [totalSupplierDebt, setTotalSupplierDebt] = useState(0);
+
+  // ── Auto-Link Profile if missing ──────────────────────────────────────────
+  useEffect(() => {
+    const checkLink = async () => {
+      if (!user || (role !== 'SUPPLIER' && role !== 'STORE_KEEPER')) return;
+      const linkedRecord = customers.find(c => c.profile_id === user.id);
+      if (!linkedRecord) {
+        // Try to link silently based on email/phone
+        await linkProfileToRecord(user.id, user.email || '', (user as any).user_metadata?.phone);
+      }
+    };
+    checkLink();
+  }, [user, role, customers, linkProfileToRecord]);
 
   useEffect(() => {
     const fetchSuppliers = async () => {

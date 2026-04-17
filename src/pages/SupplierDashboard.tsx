@@ -53,17 +53,33 @@ const Card: React.FC<{ children: React.ReactNode; style?: React.CSSProperties; o
 );
 
 export default function SupplierDashboard() {
-  const { transactions, products, customers, inventoryLogs, loading, refreshData, getPersonalStock, recordSale, verifyCustomer } = useAppContext();
-  const { user } = useAuth();
+  const { 
+    transactions, products, customers, inventoryLogs, loading, 
+    refreshData, getPersonalStock, recordSale, verifyCustomer,
+    linkProfileToRecord
+  } = useAppContext();
+  const { user, role } = useAuth();
   const navigate = useNavigate();
   const [refreshing, setRefreshing]   = useState(false);
   const [activeSection, setSection]   = useState<'overview'|'stock'|'activity'|'orders'>('overview');
   const [customerOrders, setCustomerOrders] = useState<any[]>([]);
   const [verifyingId, setVerifyingId] = useState<string|null>(null);
 
-  /* ── My Account ─────────────────────────────────────────────────────────── */
   const myAccount = useMemo(() =>
     customers.find(c => c.profile_id === user?.id), [customers, user]);
+
+  // ── Auto-Link Profile if missing ──────────────────────────────────────────
+  useEffect(() => {
+    const checkLink = async () => {
+      if (!user || role !== 'SUPPLIER') return;
+      const linkedRecord = customers.find(c => c.profile_id === user.id);
+      if (!linkedRecord) {
+        // Try to link silently based on email/phone
+        await linkProfileToRecord(user.id, user.email || '', (user as any).user_metadata?.phone);
+      }
+    };
+    checkLink();
+  }, [user, role, customers, linkProfileToRecord]);
 
   const mid = myAccount?.id || user?.id || '';
 
@@ -143,7 +159,7 @@ export default function SupplierDashboard() {
   const fetchCustomerOrders = async () => {
     if (!user) return;
     const { data } = await supabase.from('orders')
-      .select('*, customers(name, location)')
+      .select('*, customers(id, name, location, phone)')
       .eq('supplier_id', user.id)
       .order('created_at', { ascending: false });
     if (data) setCustomerOrders(data);
@@ -157,6 +173,16 @@ export default function SupplierDashboard() {
     const order = customerOrders.find(o => o.id === orderId);
     if (!order) return;
 
+    // Check personal stock first
+    const orderItems = order.items || [];
+    for (const it of orderItems) {
+      const avail = getPersonalStock(it.productId);
+      if (avail < it.quantity) {
+        alert(`Insufficient Stock: You only have ${avail} units of ${getProductName(it.productId)}. Please request more from the store.`);
+        return;
+      }
+    }
+
     if (!confirm(`Process this order for ${order.total_price.toLocaleString()}?`)) return;
 
     // Convert order to a Sale Transaction
@@ -164,9 +190,9 @@ export default function SupplierDashboard() {
       id: crypto.randomUUID(),
       date: new Date().toISOString(),
       customerId: order.customer_id,
-      items: order.details || [], 
+      items: orderItems, 
       totalPrice: order.total_price,
-      type: 'Debt', // Explicitly typed as 'Debt' to match the Transaction interface literals
+      type: 'Debt', 
       status: 'COMPLETED',
       origin: 'POS_SUPPLIER',
       sellerId: user?.id
@@ -174,10 +200,10 @@ export default function SupplierDashboard() {
 
     try {
       await recordSale(tx);
-      // Mark original order as COMPLETED
-      await supabase.from('orders').update({ status: 'COMPLETED' }).eq('id', orderId);
+      // Mark original order as DELIVERED
+      await supabase.from('orders').update({ status: 'DELIVERED' }).eq('id', orderId);
       await fetchCustomerOrders();
-      alert("Order processed successfully and stock updated!");
+      alert("Order delivered successfully! Stock and ledger updated.");
     } catch(e: any) {
       alert("Error: " + e.message);
     }
@@ -639,7 +665,7 @@ export default function SupplierDashboard() {
                           </div>
                           <div style={{ textAlign:'right' }}>
                              <div style={{ fontSize:'16px', fontWeight:900, color:'#4f46e5' }}>{fmt(o.total_price)}</div>
-                             <div style={{ fontSize:'9px', fontWeight:800, color: o.status==='PENDING'?'#f59e0b':'#10b981', textTransform:'uppercase' }}>{o.status}</div>
+                             <div style={{ fontSize:'9px', fontWeight:800, color: o.status==='PENDING'?'#f59e0b':'#10b981', textTransform:'uppercase' }}>{o.status === 'PENDING' ? 'New Order' : 'Delivered'}</div>
                           </div>
                        </div>
                        
