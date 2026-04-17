@@ -41,7 +41,7 @@ interface AppContextType {
   updateSettings: (settings: AppSettings) => Promise<void>;
   getPersonalStock: (productId: string, role?: string, profileId?: string) => number;
   personalStockMap: Record<string, number>;
-  linkProfileToRecord: (userId: string, email?: string, phone?: string) => Promise<any>;
+  linkProfileToRecord: (userId: string, email?: string, phone?: string, fullName?: string) => Promise<any>;
 }
 
 // ─── Supabase row → App type mappers ─────────────────────────────────────────
@@ -179,7 +179,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       // Calculate Personal Stock Map for the current user
       if ((role === 'SUPPLIER' || role === 'STORE_KEEPER') && user?.id) {
         const uid = user.id;
-        const myAcc = (cust || []).map(mapCustomer).find(c => c.profile_id === uid);
+        const userEmail = user.email || '';
+        const userPhone = (user as any).user_metadata?.phone || '';
+        const userFullName = ((user as any).user_metadata?.full_name || '').toLowerCase();
+
+        const mappedCust = (cust || []).map(mapCustomer);
+
+        // 1st priority: matched by profile_id (permanent link)
+        // 2nd priority: matched by email, phone, or name (soft link for unlinked accounts)
+        const myAcc = mappedCust.find(c => c.profile_id === uid)
+          || mappedCust.find(c =>
+              !c.profile_id && (
+                (userEmail && c.email?.toLowerCase() === userEmail.toLowerCase()) ||
+                (userPhone && c.phone === userPhone) ||
+                (userFullName && c.name?.toLowerCase() === userFullName)
+              )
+            );
         const cid = myAcc?.id;
         
         const stockMap: Record<string, number> = {};
@@ -605,22 +620,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
     await refreshData();
   };
-  const linkProfileToRecord = async (userId: string, email?: string, phone?: string) => {
-    // 1. Find a customer record matching email or phone with NO profile_id
-    const target = customers.find(c => 
-      !c.profile_id && 
-      ((email && c.email?.toLowerCase() === email.toLowerCase()) || 
-       (phone && c.phone === phone))
+  const linkProfileToRecord = async (userId: string, email?: string, phone?: string, fullName?: string) => {
+    const nameLower = fullName?.toLowerCase() || '';
+    // Find a customer record matching email, phone, OR full name — with or without an existing profile_id
+    const target = customers.find(c =>
+      !c.profile_id && (
+        (email && c.email?.toLowerCase() === email.toLowerCase()) ||
+        (phone && c.phone === phone) ||
+        (nameLower && c.name?.toLowerCase() === nameLower)
+      )
     );
 
     if (!target) return null;
 
-    // 2. Link it
+    // Link it
     const { error } = await supabase.from('customers').update({ profile_id: userId }).eq('id', target.id);
-    if (error) {
-       console.error('Failed to link profile:', error);
-       return null;
-    }
+    if (error) { console.error('Failed to link profile:', error); return null; }
 
     await refreshData();
     return target;

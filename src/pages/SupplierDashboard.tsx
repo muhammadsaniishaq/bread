@@ -74,8 +74,8 @@ export default function SupplierDashboard() {
       if (!user || role !== 'SUPPLIER') return;
       const linkedRecord = customers.find(c => c.profile_id === user.id);
       if (!linkedRecord) {
-        // Try to link silently based on email/phone
-        await linkProfileToRecord(user.id, user.email || '', (user as any).user_metadata?.phone);
+        const meta = (user as any).user_metadata || {};
+        await linkProfileToRecord(user.id, user.email || '', meta.phone, meta.full_name);
       }
     };
     checkLink();
