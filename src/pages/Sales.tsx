@@ -7,8 +7,8 @@ import { useAuth } from '../store/AuthContext';
 import { QRScanner } from '../components/QRScanner';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  ShoppingCart, Trash2, Camera, Link as LinkIcon, RefreshCw,
-  AlertTriangle, Package, ChevronUp, Zap,
+  ShoppingCart, Trash2, Camera, RefreshCw,
+  Package, ChevronUp, Zap,
   BadgeCheck, Clock, User, Banknote, CreditCard,
   Star, X, CheckCircle
 } from 'lucide-react';
@@ -41,8 +41,7 @@ const fmt = (v: number) => `₦${v.toLocaleString()}`;
 export const Sales: React.FC = () => {
   const {
     customers, products, transactions, recordSale,
-    getPersonalStock, inventoryLogs, personalStockMap,
-    linkProfileToRecord, refreshData
+    getPersonalStock, inventoryLogs, personalStockMap
   } = useAppContext();
   const { user, role } = useAuth();
   const { t } = useTranslation();
@@ -53,7 +52,6 @@ export const Sales: React.FC = () => {
   const [discountInput, setDiscountInput] = useState('');
   const [redeemPoints, setRedeemPoints]   = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
-  const [linking, setLinking]             = useState(false);
   const [cart, setCart]                   = useState<TransactionItem[]>([]);
   const [showScanner, setShowScanner]     = useState(false);
   const [submitting, setSubmitting]       = useState(false);
@@ -61,16 +59,15 @@ export const Sales: React.FC = () => {
   const [showSuccess, setShowSuccess]     = useState(false);
 
   const isSupplier = role === 'SUPPLIER';
-  const myAccount  = useMemo(() => customers.find(c => c.profile_id === user?.id), [customers, user]);
-  const needsLink  = (role === 'SUPPLIER' || role === 'STORE_KEEPER') && !myAccount;
 
   const activeProducts = useMemo(() => {
     let prods = products.filter(p => p.active);
-    if (isSupplier && myAccount) {
+    // For suppliers, always use personal stock (works by userId even without profile link)
+    if (isSupplier) {
       prods = prods.map(p => ({ ...p, stock: getPersonalStock(p.id) }));
     }
     return prods;
-  }, [products, isSupplier, myAccount, inventoryLogs, transactions, personalStockMap]);
+  }, [products, isSupplier, inventoryLogs, transactions, personalStockMap]);
 
   const categories = ['All', ...Array.from(new Set(activeProducts.map(p => p.category || 'Standard')))];
   const filteredProducts = activeProducts
@@ -175,11 +172,9 @@ export const Sales: React.FC = () => {
     const today = new Date().toDateString();
     return transactions.filter(t =>
       new Date(t.date).toDateString() === today &&
-      (isSupplier
-        ? (t.sellerId === user?.id || t.customerId === myAccount?.id)
-        : true)
+      (isSupplier ? t.sellerId === user?.id : true)
     ).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  }, [transactions, isSupplier, user, myAccount]);
+  }, [transactions, isSupplier, user]);
 
   const todayRevenue  = todayTxns.filter(t => t.type === 'Cash').reduce((s, t) => s + t.totalPrice, 0);
   const todayDebt     = todayTxns.filter(t => t.type === 'Debt').reduce((s, t) => s + t.totalPrice, 0);
@@ -249,43 +244,6 @@ export const Sales: React.FC = () => {
         </div>
       </div>
 
-      {/* ── PROFILE LINK WARNING ── */}
-      <AnimatePresence>
-        {needsLink && (
-          <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-            style={{ margin: '16px 16px 0', background: '#fffbeb', border: '1.5px solid #fcd34d', borderRadius: 16, padding: '14px 16px', display: 'flex', gap: 12, alignItems: 'flex-start', boxShadow: '0 4px 16px rgba(217,119,6,0.12)' }}
-          >
-            <div style={{ background: '#fef3c7', borderRadius: 10, padding: 8, flexShrink: 0 }}>
-              <AlertTriangle size={18} color={C.amber} />
-            </div>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 13, fontWeight: 800, color: '#92400e', marginBottom: 4 }}>Profile Not Linked</div>
-              <div style={{ fontSize: 11, color: '#b45309', lineHeight: 1.5, marginBottom: 10 }}>
-                Your account is not linked to a supplier record. Stock tracking may be inaccurate.
-              </div>
-              <motion.button
-                whileTap={{ scale: 0.96 }}
-                onClick={async () => {
-                  setLinking(true);
-                  try {
-                    const linked = await linkProfileToRecord(user!.id, user!.email!, (user as any).user_metadata?.phone);
-                    if (linked) alert('✅ Linked successfully!');
-                    else alert('No matching record found. Contact your manager.');
-                    await refreshData();
-                  } catch (e: any) {
-                    alert('Error: ' + e.message);
-                  } finally { setLinking(false); }
-                }}
-                disabled={linking}
-                style={{ background: C.amber, color: '#fff', border: 'none', borderRadius: 10, padding: '8px 16px', fontSize: 12, fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, opacity: linking ? 0.6 : 1 }}
-              >
-                {linking ? <RefreshCw size={13} className="animate-spin" /> : <LinkIcon size={13} />}
-                Link Now
-              </motion.button>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       {/* ── SUCCESS TOAST ── */}
       <AnimatePresence>
