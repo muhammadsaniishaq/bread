@@ -4,15 +4,14 @@ import { useAuth } from '../store/AuthContext';
 import { supabase } from '../lib/supabase';
 import type { InventoryLog } from '../store/types';
 import { AnimatedPage } from '../components/AnimatedPage';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useTranslation } from '../store/LanguageContext';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 
 import { 
   Trash2, Package, ArrowDownCircle, ArrowUpCircle, 
-  Wallet, TrendingDown,
-  Filter, Search, CheckCircle2,
-  LayoutGrid
+  Wallet, Clock,
+  LayoutGrid, ChevronRight, ShoppingCart, Info, RotateCcw
 } from 'lucide-react';
 
 const T = {
@@ -20,8 +19,8 @@ const T = {
   surface: '#ffffff',
   surface2: '#f1f5f9',
   border: '#eaeef4',
-  accent: '#6366f1',
-  accentLt: '#eef2ff',
+  accent: '#4f46e5',
+  accentLt: '#e0e7ff',
   success: '#10b981',
   successLt: '#dcfce7',
   textSuccess: '#166534',
@@ -35,9 +34,9 @@ const T = {
   txt: '#1e293b',
   txt2: '#475569',
   txt3: '#94a3b8',
-  shadow: '0 1px 3px rgba(0,0,0,0.05), 0 10px 15px -3px rgba(0,0,0,0.02)',
-  radius: '16px',
-  radiusLg: '24px',
+  shadow: '0 4px 20px rgba(0,0,0,0.04)',
+  radius: '20px',
+  radiusLg: '28px',
 };
 
 const Card: React.FC<{ children: React.ReactNode; style?: React.CSSProperties; onClick?: () => void }> = ({ children, style, onClick }) => (
@@ -48,8 +47,9 @@ const Card: React.FC<{ children: React.ReactNode; style?: React.CSSProperties; o
       background: T.surface,
       border: `1px solid ${T.border}`,
       borderRadius: T.radius,
-      padding: '16px',
+      padding: '20px',
       boxShadow: T.shadow,
+      cursor: onClick ? 'pointer' : 'default',
       ...style
     }}
   >
@@ -58,19 +58,19 @@ const Card: React.FC<{ children: React.ReactNode; style?: React.CSSProperties; o
 );
 
 const InpLabel: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <label style={{ fontSize: '11px', fontWeight: 700, color: T.txt2, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px', display: 'block' }}>
+  <label style={{ fontSize: '11px', fontWeight: 800, color: T.txt2, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px', display: 'block' }}>
     {children}
   </label>
 );
 
 const InpStyle: React.CSSProperties = {
   width: '100%',
-  padding: '12px 16px',
-  borderRadius: '12px',
+  padding: '14px 16px',
+  borderRadius: '14px',
   border: `1px solid ${T.border}`,
   background: T.surface,
   fontSize: '14px',
-  fontWeight: 600,
+  fontWeight: 700,
   color: T.ink,
   outline: 'none',
   boxSizing: 'border-box',
@@ -80,8 +80,8 @@ const InpStyle: React.CSSProperties = {
 export const Inventory: React.FC = () => {
   const { user, role } = useAuth();
   const { 
-    products, companyMetrics, processInventoryBatch, 
-    recordBakeryPayment, bakeryPayments, 
+    products, processInventoryBatch, 
+    recordBakeryPayment, 
     transactions, customers, recordSale, 
     loading, getPersonalStock 
   } = useAppContext();
@@ -91,13 +91,9 @@ export const Inventory: React.FC = () => {
   const isSupplier = role === 'SUPPLIER';
   
   const [activeTab, setActiveTab] = useState<'view' | 'receive' | 'return' | 'balance'>('view');
-  const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [pendingItems, setPendingItems] = useState<InventoryLog[]>([]);
   const [productId, setProductId] = useState('');
   const [quantity, setQuantity] = useState('');
-  const [costPrice, setCostPrice] = useState('');
-  const [searchTerm, setSearchTerm] = useState('');
-  
   const [storeKeepers, setStoreKeepers] = useState<any[]>([]);
   const [selectedSK, setSelectedSK] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
@@ -106,9 +102,9 @@ export const Inventory: React.FC = () => {
   const [paymentMethod, setPaymentMethod] = useState<'Cash' | 'Transfer'>('Cash');
   const [paymentReceiver, setPaymentReceiver] = useState('');
 
+  // Fetch Store Keepers and Managers explicitly for assignment
   useEffect(() => {
     const fetchSKs = async () => {
-      if (!isSupplier) return;
       try {
         const { data, error } = await supabase.from('profiles').select('id, full_name, role').in('role', ['STORE_KEEPER', 'MANAGER']);
         if (error) throw error;
@@ -118,33 +114,29 @@ export const Inventory: React.FC = () => {
       }
     };
     fetchSKs();
-  }, [isSupplier]);
+  }, []);
 
   const myAccount = useMemo(() => (customers || []).find(c => c.profile_id === user?.id), [customers, user]);
   const myId = myAccount?.id || user?.id;
-  const myTxs = useMemo(() => (transactions || []).filter(t => t.customerId === myId || t.sellerId === myId), [transactions, myId]);
 
-  const filteredProducts = useMemo(() => {
-    const active = (products || []).filter(p => p.active);
-    let res = active.map(p => {
-      if (!isSupplier || !user?.id) return p;
-      return { ...p, stock: getPersonalStock(p.id) };
-    });
-
-    if (isSupplier) res = res.filter(p => p.stock > 0);
-    if (selectedCategory !== 'All') res = res.filter(p => (p.category || 'Standard') === selectedCategory);
-    if (searchTerm) res = res.filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()));
-
-    return res.sort((a, b) => (a.category || '').localeCompare(b.category || '') || a.name.localeCompare(b.name));
-  }, [products, isSupplier, user, selectedCategory, searchTerm, getPersonalStock]);
-
-  const categories = useMemo(() => ['All', ...Array.from(new Set((products || []).map(p => p.category || 'Standard')))], [products]);
+  // Recent specific transactions
+  const myTxs = useMemo(() => (transactions || []).filter(t => t.customerId === myId || t.sellerId === myId).sort((a,b)=> new Date(b.date).getTime() - new Date(a.date).getTime()), [transactions, myId]);
+  
+  // Pending actions waiting on some Store Keeper
+  const autoPending = useMemo(() => myTxs.filter(t => t.status === 'PENDING_STORE'), [myTxs]);
+  
+  // Stock per product
+  const enrichedProducts = useMemo(() => {
+    return products.filter(p => p.active).map(p => ({
+      ...p, 
+      myStock: getPersonalStock(p.id) 
+    }));
+  }, [products, getPersonalStock]);
 
   if (loading) {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '80vh', gap: '20px' }}>
          <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: 'linear' }} style={{ width: '48px', height: '48px', border: `4px solid ${T.border}`, borderTop: `4px solid ${T.accent}`, borderRadius: '50%' }} />
-         <div style={{ fontSize: '15px', fontWeight: 800, color: T.txt2, letterSpacing: '0.02em' }}>Loading Inventory System...</div>
       </div>
     );
   }
@@ -154,33 +146,36 @@ export const Inventory: React.FC = () => {
     setPendingItems([]);
     setProductId('');
     setQuantity('');
-    setCostPrice('');
+    setSelectedSK(''); // Crucial step reset
     setPaymentAmount('');
     setPaymentReceiver('');
   };
 
   const handleAddItem = (e: React.FormEvent) => {
     e.preventDefault();
-    const prod = (products || []).find(p => p.id === productId);
+    if (!selectedSK && isSupplier) {
+      alert("Please select the Store Keeper/Manager handling this transaction first.");
+      return;
+    }
+
+    const prod = enrichedProducts.find(p => p.id === productId);
     const qty = parseInt(quantity) || 0;
     if (!prod || qty <= 0) return;
-    
-    const cost = parseInt(costPrice) || prod.price; 
 
     if (activeTab === 'return') {
-      const pendingQty = pendingItems.filter(i => i.productId === productId).reduce((s, i) => s + (i.quantityReceived || 0), 0);
-      const myStock = getPersonalStock(productId);
-      if (myStock < qty + pendingQty) {
-        alert(`Insufficient stock. You only have ${myStock} units in your personal ledger.`);
+      const alreadyPending = pendingItems.filter(i => i.productId === productId).reduce((s, i) => s + (i.quantityReceived || 0), 0);
+      if (prod.myStock < qty + alreadyPending) {
+        alert(`Insufficient stock. You only have ${prod.myStock} units in your personal ledger.`);
         return;
       }
     }
 
     if (activeTab === 'receive' && isSupplier) {
+      // Global Store Check
       const storeStock = prod.stock || 0;
       const alreadyPending = pendingItems.filter(i => i.productId === productId).reduce((s, i) => s + (i.quantityReceived || 0), 0);
       if (storeStock < qty + alreadyPending) {
-        alert(`The Store only has ${storeStock} units remaining. Contact the Manager to restock.`);
+        alert(`The Bakery only has ${storeStock} units remaining of this item. Wait for restock.`);
         return;
       }
     }
@@ -191,12 +186,13 @@ export const Inventory: React.FC = () => {
       type: activeTab === 'receive' ? 'Receive' : 'Return',
       productId,
       quantityReceived: qty,
-      costPrice: cost,
-      storeKeeper: isSupplier ? selectedSK : paymentReceiver
+      costPrice: prod.price, 
+      storeKeeper: selectedSK || paymentReceiver
     };
     
     setPendingItems([...pendingItems, log]);
-    setProductId(''); setQuantity(''); setCostPrice('');
+    setProductId(''); 
+    setQuantity(''); 
   };
 
   const handleConfirmBatch = async () => {
@@ -205,16 +201,17 @@ export const Inventory: React.FC = () => {
     
     try {
       if (isSupplier) {
-        if (!selectedSK) throw new Error("Please select a Store / Manager for verification.");
-        const mid = myAccount?.id || user?.id;
-        if (!mid) throw new Error("Profile not identified.");
+        if (!selectedSK) throw new Error("Crucial Error: You must select a Store Keeper/Manager.");
+        const mid = myAccount?.id || user?.id; // Supplier's representation
+        if (!mid) throw new Error("Profile not fully recognized. Try relogging.");
 
         for (const item of pendingItems) {
+          // Send to PENDING_STORE mapping so the specific SK sees it on their end
           await recordSale({
             id: crypto.randomUUID(),
             date: new Date().toISOString(),
             customerId: mid,
-            storeKeeperId: selectedSK,
+            storeKeeperId: selectedSK, 
             type: activeTab === 'receive' ? 'Debt' : 'Return',
             status: 'PENDING_STORE',
             origin: 'SUPPLIER',
@@ -222,7 +219,7 @@ export const Inventory: React.FC = () => {
             totalPrice: item.quantityReceived * item.costPrice
           });
         }
-        alert('Stock request sent to Store Keeper for verification.');
+        alert('Request Sent! The Store Keeper must accept it before your stock changes.');
       } else {
         const batchId = Date.now().toString();
         await processInventoryBatch(pendingItems.map(i => ({ ...i, batchId })), activeTab === 'receive' ? 'Receive' : 'Return');
@@ -237,315 +234,260 @@ export const Inventory: React.FC = () => {
     }
   };
 
-  const remainingBalance = (companyMetrics?.totalValueReceived || 0) - (companyMetrics?.totalMoneyPaid || 0);
+  const submitPayment = async (e: React.FormEvent) => {
+     e.preventDefault();
+     if (!selectedSK && isSupplier) return alert('Select the Store Keeper receiving this money.');
+     setIsProcessing(true);
+     try {
+       await recordBakeryPayment({ 
+         id: crypto.randomUUID(), 
+         date: new Date().toISOString(), 
+         amount: parseInt(paymentAmount), 
+         method: paymentMethod, 
+         receiver: storeKeepers.find(sk => sk.id === selectedSK)?.full_name || paymentReceiver 
+       });
+       alert('Payment recorded successfully.');
+       setActiveTab('view');
+     } catch(e) {
+       alert('Failed to record payment');
+     } finally {
+       setIsProcessing(false);
+     }
+  };
+
   const personalDebt = myAccount?.debtBalance || 0;
+  const totalStockCount = enrichedProducts.reduce((s,p) => s + p.myStock, 0);
   const fmt = (v: number) => "₦" + (v || 0).toLocaleString();
 
   return (
     <AnimatedPage>
-      <div style={{ background: T.bg, minHeight: '100vh', padding: '20px 16px 100px', fontFamily: "'Inter', sans-serif" }}>
+      <div style={{ background: T.bg, minHeight: '100vh', paddingBottom: '100px', fontFamily: "'Inter', sans-serif" }}>
         
-        {/* Header Section */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-          <div>
-            <h1 style={{ fontSize: '24px', fontWeight: 900, color: T.ink, margin: 0, letterSpacing: '-0.03em' }}>
-              {isSupplier ? 'Stock Portal' : 'Main Inventory'}
-            </h1>
-            <p style={{ fontSize: '13px', color: T.txt2, margin: '4px 0 0' }}>Manage product flow & ledgers</p>
-          </div>
-          {isSupplier && personalDebt > 0 && (
-            <div style={{ background: T.dangerLt, padding: '8px 12px', borderRadius: '12px', textAlign: 'right' }}>
-              <div style={{ fontSize: '9px', fontWeight: 800, color: T.textDanger, textTransform: 'uppercase' }}>Owed to Bakery</div>
-              <div style={{ fontSize: '15px', fontWeight: 900, color: T.textDanger }}>{fmt(personalDebt)}</div>
+        {/* HERO */}
+        <div style={{ padding: '32px 20px 20px', background: T.surface, borderBottom: `1px solid ${T.border}` }}>
+          <h1 style={{ fontSize: '26px', fontWeight: 900, color: T.ink, margin: '0 0 4px', letterSpacing: '-0.03em' }}>
+            {isSupplier ? 'My Inventory' : 'Store Inventory'}
+          </h1>
+          <p style={{ fontSize: '13px', color: T.txt2, margin: 0, fontWeight: 500 }}>
+            {isSupplier ? 'Manage your stock, returns, and remit payments.' : 'Global Bakery Inventory Portal'}
+          </p>
+        </div>
+
+        {/* METRICS DASHBOARD (Overview) */}
+        {activeTab === 'view' && (
+          <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} style={{ padding: '20px' }}>
+            {isSupplier && (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '24px' }}>
+                <Card style={{ background: 'linear-gradient(135deg, #0f172a, #1e293b)' }}>
+                  <div style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 800, textTransform: 'uppercase' }}>Active Stock</div>
+                  <div style={{ fontSize: '26px', fontWeight: 950, color: '#fff', margin: '4px 0' }}>{totalStockCount}</div>
+                  <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 600 }}>Units in circulation</div>
+                </Card>
+                <Card style={{ background: personalDebt > 0 ? T.dangerLt : T.successLt, borderColor: personalDebt > 0 ? '#fecaca' : '#bbf7d0' }}>
+                  <div style={{ fontSize: '11px', color: personalDebt > 0 ? T.textDanger : T.textSuccess, fontWeight: 800, textTransform: 'uppercase' }}>Owed Dept</div>
+                  <div style={{ fontSize: '24px', fontWeight: 950, color: personalDebt > 0 ? T.danger : T.textSuccess, margin: '4px 0' }}>{fmt(personalDebt)}</div>
+                  <div style={{ fontSize: '11px', color: personalDebt > 0 ? T.textDanger : T.textSuccess, fontWeight: 600 }}>Remaining to clear</div>
+                </Card>
+              </div>
+            )}
+
+            {autoPending.length > 0 && isSupplier && (
+              <Card style={{ borderLeft: `4px solid ${T.warn}`, background: T.warnLt, marginBottom: '24px', padding: '16px' }}>
+                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                   <Clock size={20} color={T.warn} />
+                   <div>
+                     <div style={{ fontSize: '13px', fontWeight: 800, color: T.textWarn }}>{autoPending.length} Request(s) Pending</div>
+                     <div style={{ fontSize: '11px', color: '#b45309' }}>Waiting for Store Keeper to accept.</div>
+                   </div>
+                 </div>
+              </Card>
+            )}
+
+            {/* INVENTORY ITEMS OVERVIEW */}
+            <h3 style={{ fontSize: '14px', fontWeight: 800, color: T.txt2, marginBottom: '12px' }}>Personal Ledger</h3>
+            <div style={{ display: 'grid', gap: '10px' }}>
+              {enrichedProducts.map(p => (
+                <Card key={p.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                     <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: T.surface2, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                       {p.image ? <img src={p.image} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '10px' }} alt="" /> : <Package size={18} color={T.txt3} />}
+                     </div>
+                     <div>
+                       <div style={{ fontSize: '14px', fontWeight: 800, color: T.ink }}>{p.name}</div>
+                       <div style={{ fontSize: '11px', color: T.txt3, fontWeight: 600 }}>{p.category}</div>
+                     </div>
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontSize: '10px', fontWeight: 800, color: T.txt3, textTransform: 'uppercase' }}>Available</div>
+                    <div style={{ fontSize: '18px', fontWeight: 900, color: isSupplier ? (p.myStock > 0 ? T.success : T.ink) : T.ink }}>{isSupplier ? p.myStock : p.stock}</div>
+                  </div>
+                </Card>
+              ))}
             </div>
-          )}
-        </div>
 
-        {/* Financial Highlights (Managers Only) */}
-        {!isSupplier && (
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '24px' }}>
-             <Card style={{ background: remainingBalance > 0 ? T.dangerLt : T.successLt, borderColor: remainingBalance > 0 ? '#fecdd3' : '#bbf7d0' }}>
-               <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
-                 <Wallet size={14} color={remainingBalance > 0 ? T.danger : T.success} />
-                 <span style={{ fontSize: '11px', fontWeight: 800, color: remainingBalance > 0 ? T.textDanger : T.textSuccess }}>Owed to Bakery</span>
-               </div>
-               <div style={{ fontSize: '20px', fontWeight: 900, color: remainingBalance > 0 ? T.textDanger : T.textSuccess }}>{fmt(remainingBalance)}</div>
-             </Card>
-             <Card>
-               <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
-                 <TrendingDown size={14} color={T.accent} />
-                 <span style={{ fontSize: '11px', fontWeight: 800, color: T.txt2 }}>Total Volume</span>
-               </div>
-               <div style={{ fontSize: '20px', fontWeight: 900, color: T.ink }}>{fmt(companyMetrics.totalValueReceived)}</div>
-             </Card>
-          </div>
-        )}
-
-        {/* Global Navigation Tabs */}
-        <div style={{ display: 'flex', gap: '8px', marginBottom: '24px', overflowX: 'auto', paddingBottom: '4px' }} className="hide-scrollbar">
-          {[
-            { id: 'view', label: 'Overview', icon: LayoutGrid, color: T.accent },
-            { id: 'receive', label: isSupplier ? 'Get Stock' : 'Receive', icon: ArrowDownCircle, color: T.success },
-            { id: 'return', label: 'Return', icon: ArrowUpCircle, color: T.danger },
-            { id: 'balance', label: 'Payment', icon: Wallet, color: T.accent }
-          ].map(tab => (
-            <motion.button
-              key={tab.id}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => handleTabChange(tab.id as any)}
-              style={{
-                background: activeTab === tab.id ? tab.color : T.surface,
-                color: activeTab === tab.id ? '#fff' : T.txt2,
-                border: `1px solid ${activeTab === tab.id ? tab.color : T.border}`,
-                padding: '10px 16px',
-                borderRadius: '12px',
-                fontSize: '13px',
-                fontWeight: 700,
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                cursor: 'pointer',
-                whiteSpace: 'nowrap',
-                boxShadow: activeTab === tab.id ? `0 4px 12px ${tab.color}33` : 'none'
-              }}
-            >
-              <tab.icon size={16} /> {tab.label}
-            </motion.button>
-          ))}
-        </div>
-
-        {/* Tab Content Rendering */}
-        <AnimatePresence mode="wait">
-          {activeTab === 'view' && (
-            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
-              {/* Filter & Search Bar */}
-              <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
-                <div style={{ position: 'relative', flex: 1 }}>
-                  <Search size={18} color={T.txt3} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
-                  <input 
-                    style={{ ...InpStyle, paddingLeft: '40px', height: '48px' }} 
-                    placeholder="Search Bread..." 
-                    value={searchTerm} 
-                    onChange={e => setSearchTerm(e.target.value)} 
-                  />
-                </div>
-                <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: '12px', padding: '0 12px', display: 'flex', alignItems: 'center' }}>
-                  <Filter size={18} color={T.txt2} />
-                </div>
-              </div>
-
-              {/* Category Bubbles */}
-              <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', marginBottom: '20px' }} className="hide-scrollbar">
-                {categories.map(cat => (
-                  <button 
-                    key={cat} 
-                    onClick={() => setSelectedCategory(cat)}
-                    style={{
-                      background: selectedCategory === cat ? T.ink : T.surface2,
-                      color: selectedCategory === cat ? '#fff' : T.txt2,
-                      padding: '6px 14px',
-                      borderRadius: '20px',
-                      fontSize: '11px',
-                      fontWeight: 700,
-                      border: 'none',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    {cat}
-                  </button>
-                ))}
-              </div>
-
-              {/* Product Grid */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '12px' }}>
-                {filteredProducts.map(p => (
-                  <Card key={p.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                       <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: T.accentLt, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-                         {p.image ? <img src={p.image} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" /> : <Package size={20} color={T.accent} />}
-                       </div>
-                       <div>
-                         <div style={{ fontSize: '15px', fontWeight: 800, color: T.ink }}>{p.name}</div>
-                         <div style={{ fontSize: '11px', color: T.txt3, fontWeight: 600 }}>{p.category || 'Standard'} • {fmt(p.price)}</div>
-                       </div>
-                    </div>
-                    <div style={{ textAlign: 'right' }}>
-                       <div style={{ fontSize: '9px', fontWeight: 800, color: T.txt3, textTransform: 'uppercase' }}>Available</div>
-                       <div style={{ fontSize: '18px', fontWeight: 900, color: p.stock > 10 ? T.success : T.danger }}>{p.stock}</div>
-                    </div>
+            <h3 style={{ fontSize: '14px', fontWeight: 800, color: T.txt2, marginTop: '32px', marginBottom: '12px' }}>Recent Activity</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {myTxs.slice(0, 5).map(tx => (
+                  <Card key={tx.id} style={{ padding: '12px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: tx.status === 'PENDING_STORE' ? T.warnLt : (tx.type === 'Return' ? T.dangerLt : T.successLt), display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        {tx.status === 'PENDING_STORE' ? <Clock size={16} color={T.warn} /> : (tx.type === 'Return' ? <ArrowUpCircle size={16} color={T.danger} /> : <ArrowDownCircle size={16} color={T.success} />)}
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: '13px', fontWeight: 700, color: T.ink }}>{tx.type === 'Debt' ? 'Stock Receive' : tx.type === 'Return' ? 'Stock Return' : 'Payment Sent'}</div>
+                        <div style={{ fontSize: '11px', color: T.txt3 }}>{new Date(tx.date).toLocaleDateString()}</div>
+                      </div>
+                      <div style={{ textAlign: 'right' }}>
+                        <div style={{ fontSize: '14px', fontWeight: 800, color: T.ink }}>{tx.type === 'Payment' ? fmt(tx.totalPrice) : `${tx.items?.[0]?.quantity || 0} pcs`}</div>
+                        <div style={{ fontSize: '9px', fontWeight: 800, padding: '2px 6px', borderRadius: '4px', background: tx.status === 'COMPLETED' ? T.successLt : T.warnLt, color: tx.status === 'COMPLETED' ? T.success : T.textWarn }}>{tx.status}</div>
+                      </div>
                   </Card>
                 ))}
-              </div>
+            </div>
+          </motion.div>
+        )}
 
-              {/* Historical Logs List (Brief) */}
-              <div style={{ marginTop: '32px' }}>
-                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                   <h3 style={{ fontSize: '16px', fontWeight: 800, color: T.ink, margin: 0 }}>Recent Activity</h3>
-                   <button onClick={() => navigate('/reports')} style={{ fontSize: '12px', fontWeight: 700, color: T.accent, background: 'none', border: 'none', cursor: 'pointer' }}>View All</button>
-                 </div>
-                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    {myTxs.slice(0, 5).map(tx => (
-                       <Card key={tx.id} style={{ padding: '12px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                          <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: tx.type === 'Return' ? T.dangerLt : T.successLt, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                             {tx.type === 'Return' ? <ArrowUpCircle size={18} color={T.danger} /> : <ArrowDownCircle size={18} color={T.success} />}
-                          </div>
-                          <div style={{ flex: 1 }}>
-                             <div style={{ fontSize: '13px', fontWeight: 700, color: T.ink }}>{tx.type === 'Debt' ? 'Stock Received' : tx.type === 'Return' ? 'Stock Returned' : 'Cash Payment'}</div>
-                             <div style={{ fontSize: '11px', color: T.txt3 }}>{new Date(tx.date).toLocaleDateString()}</div>
-                          </div>
-                          <div style={{ textAlign: 'right' }}>
-                             <div style={{ fontSize: '14px', fontWeight: 800, color: T.ink }}>{tx.type === 'Payment' ? fmt(tx.totalPrice) : `${tx.items?.[0]?.quantity || 0} pcs`}</div>
-                             <div style={{ fontSize: '10px', fontWeight: 700, color: tx.status === 'COMPLETED' ? T.success : T.warn }}>{tx.status}</div>
-                          </div>
-                       </Card>
-                    ))}
-                 </div>
+        {/* OPERATIONS (Receive / Return / Balance) */}
+        {(activeTab === 'receive' || activeTab === 'return' || activeTab === 'balance') && (
+          <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} style={{ padding: '20px' }}>
+            
+            <Card style={{ borderTop: `4px solid ${activeTab === 'receive' ? T.success : activeTab === 'return' ? T.warn : T.ink}`, marginBottom: '20px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
+                 {activeTab === 'receive' && <ShoppingCart size={20} color={T.success} />}
+                 {activeTab === 'return' && <RotateCcw size={20} color={T.warn} />}
+                 {activeTab === 'balance' && <Wallet size={20} color={T.ink} />}
+                 <h2 style={{ fontSize: '18px', fontWeight: 900, color: T.ink, margin: 0 }}>
+                   {activeTab === 'receive' ? 'Receive New Stock' : activeTab === 'return' ? 'Return Stock' : 'Settle Debt'}
+                 </h2>
               </div>
-            </motion.div>
-          )}
-
-          {(activeTab === 'receive' || activeTab === 'return') && (
-            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
-              <Card style={{ marginBottom: '20px', borderLeftWidth: '4px', borderLeftColor: activeTab === 'receive' ? T.success : T.danger }}>
-                <h3 style={{ margin: '0 0 16px', fontSize: '15px', fontWeight: 800, color: T.ink }}>
-                  {activeTab === 'receive' ? 'Create Intake Request' : 'Create Return Request'}
-                </h3>
+              
+              <form onSubmit={activeTab === 'balance' ? submitPayment : handleAddItem} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 
-                <form onSubmit={handleAddItem} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                  <div>
-                    <InpLabel>Select Bread Type</InpLabel>
-                    <select value={productId} onChange={e => setProductId(e.target.value)} required style={InpStyle}>
-                      <option value="">-- Choose Bread --</option>
-                      {products.filter(p => p.active).map(p => (
-                        <option key={p.id} value={p.id}>{p.name} ({activeTab === 'return' ? `My Stock: ${getPersonalStock(p.id)}` : `Store: ${p.stock}`})</option>
-                      ))}
+                {/* 1. Universal Delegator (Who are we dealing with?) */}
+                {isSupplier && (
+                  <div style={{ background: T.surface2, padding: '12px', borderRadius: '14px', border: `1px solid ${T.border}` }}>
+                    <InpLabel>Target Store Keeper / Manager *</InpLabel>
+                    <select value={selectedSK} onChange={e => setSelectedSK(e.target.value)} required style={InpStyle}>
+                       <option value="">-- Choose the Operator --</option>
+                       {storeKeepers.map(sk => <option key={sk.id} value={sk.id}>{sk.full_name} ({sk.role})</option>)}
                     </select>
-                  </div>
-
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                    <div>
-                      <InpLabel>Quantity (Pcs)</InpLabel>
-                      <input type="number" min="1" value={quantity} onChange={e => setQuantity(e.target.value)} required style={InpStyle} placeholder="0" />
+                    <div style={{ fontSize: '10px', color: T.txt3, marginTop: '6px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <Info size={12} /> The selected operator will receive your request for approval.
                     </div>
-                    {!isSupplier && (
-                      <div>
-                        <InpLabel>Cost Price (₦)</InpLabel>
-                        <input type="number" min="1" value={costPrice} onChange={e => setCostPrice(e.target.value)} style={InpStyle} placeholder="Auto" />
-                      </div>
-                    )}
                   </div>
+                )}
 
-                  {isSupplier ? (
+                {/* Balance Specific Inputs */}
+                {activeTab === 'balance' ? (
+                  <>
                     <div>
-                      <InpLabel>Authorize With Store Keeper</InpLabel>
-                      <select value={selectedSK} onChange={(e) => setSelectedSK(e.target.value)} required style={InpStyle}>
-                         <option value="">Choose Witness...</option>
-                         {storeKeepers.map(sk => <option key={sk.id} value={sk.id}>{sk.full_name}</option>)}
-                      </select>
+                      <InpLabel>Amount Conveyed (₦)</InpLabel>
+                      <input type="number" required value={paymentAmount} onChange={e => setPaymentAmount(e.target.value)} style={{ ...InpStyle, fontSize: '20px', fontWeight: 900 }} placeholder="0" />
                     </div>
-                  ) : (
                     <div>
-                      <InpLabel>Store Keeper Name</InpLabel>
-                      <input type="text" placeholder="Receiver Name" value={paymentReceiver} onChange={e => setPaymentReceiver(e.target.value)} style={InpStyle} />
-                    </div>
-                  )}
-
-                  <button type="submit" style={{ background: activeTab === 'receive' ? T.successLt : T.dangerLt, color: activeTab === 'receive' ? T.textSuccess : T.textDanger, padding: '14px', borderRadius: '12px', border: 'none', fontWeight: 800, fontSize: '14px', cursor: 'pointer', marginTop: '8px' }}>
-                    + Add to Batch
-                  </button>
-                </form>
-              </Card>
-
-              {pendingItems.length > 0 && (
-                <Card style={{ background: T.ink }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                    <span style={{ fontSize: '14px', fontWeight: 800, color: '#fff' }}>Requesting {pendingItems.length} Items</span>
-                    <button onClick={() => setPendingItems([])} style={{ background: 'none', border: 'none', color: '#94a3b8', fontSize: '12px', fontWeight: 700 }}>Clear All</button>
-                  </div>
-                  
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '20px' }}>
-                    {pendingItems.map((item, idx) => (
-                      <div key={idx} style={{ background: 'rgba(255,255,255,0.05)', padding: '12px', borderRadius: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <div>
-                          <div style={{ fontSize: '13px', fontWeight: 700, color: '#fff' }}>{products.find(p => p.id === item.productId)?.name}</div>
-                          <div style={{ fontSize: '11px', color: '#94a3b8' }}>{item.quantityReceived} units</div>
-                        </div>
-                        <button onClick={() => setPendingItems(pendingItems.filter((_, i) => i !== idx))} style={{ background: 'none', border: 'none' }}>
-                           <Trash2 size={16} color="#ef4444" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-
-                  <button onClick={handleConfirmBatch} disabled={isProcessing} style={{ width: '100%', padding: '16px', borderRadius: '12px', background: T.surface, color: T.ink, border: 'none', fontSize: '15px', fontWeight: 900, cursor: 'pointer' }}>
-                    {isProcessing ? 'Synchronizing...' : 'Submit Final Request'}
-                  </button>
-                </Card>
-              )}
-            </motion.div>
-          )}
-
-          {activeTab === 'balance' && (
-            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
-              <Card style={{ borderTop: `4px solid ${T.accent}` }}>
-                <h2 style={{ fontSize: '16px', fontWeight: 800, marginBottom: '20px', color: T.ink, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <TrendingDown size={18} color={T.accent} /> 
-                  {isSupplier ? 'Settle Outstanding Debt' : 'Record Bakery Remittance'}
-                </h2>
-                
-                <form onSubmit={async (e) => { e.preventDefault(); setIsProcessing(true); try { await recordBakeryPayment({ id: crypto.randomUUID(), date: new Date().toISOString(), amount: parseInt(paymentAmount), method: paymentMethod, receiver: paymentReceiver }); alert('Payment recorded successfully.'); setActiveTab('view'); } catch(e){ alert('Error'); } finally { setIsProcessing(false); } }}>
-                  <div style={{ marginBottom: '16px' }}>
-                    <InpLabel>Amount to Pay (₦)</InpLabel>
-                    <input type="number" required value={paymentAmount} onChange={e => setPaymentAmount(e.target.value)} style={{ ...InpStyle, fontSize: '20px', fontWeight: 900, textAlign: 'center' }} placeholder="0" />
-                  </div>
-
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
-                    <div>
-                      <InpLabel>Payment Mode</InpLabel>
+                      <InpLabel>Payment Form</InpLabel>
                       <select value={paymentMethod} onChange={e => setPaymentMethod(e.target.value as any)} style={InpStyle}>
                         <option value="Cash">Physical Cash</option>
                         <option value="Transfer">Bank Transfer</option>
                       </select>
                     </div>
-                    <div>
-                      <InpLabel>Authorized By</InpLabel>
-                      <input type="text" value={paymentReceiver} onChange={e => setPaymentReceiver(e.target.value)} placeholder="Full Name" style={InpStyle} />
-                    </div>
-                  </div>
-
-                  <button type="submit" disabled={isProcessing} style={{ width: '100%', padding: '16px', borderRadius: '14px', background: T.ink, color: '#fff', border: 'none', fontSize: '15px', fontWeight: 800, cursor: 'pointer', boxShadow: '0 10px 15px -3px rgba(15,23,42,0.3)' }}>
-                    {isProcessing ? 'Verifying...' : 'Record Payment Now'}
-                  </button>
-                </form>
-              </Card>
-
-              <div style={{ marginTop: '24px' }}>
-                <h3 style={{ fontSize: '14px', fontWeight: 800, color: T.txt2, marginBottom: '12px' }}>Remittance History</h3>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  {bakeryPayments.slice(0, 5).map(p => (
-                    <Card key={p.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: T.successLt, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          <CheckCircle2 size={16} color={T.success} />
-                        </div>
-                        <div>
-                          <div style={{ fontSize: '14px', fontWeight: 700, color: T.ink }}>{fmt(p.amount)}</div>
-                          <div style={{ fontSize: '11px', color: T.txt3 }}>{new Date(p.date).toLocaleDateString()} • {p.method}</div>
-                        </div>
+                    {!isSupplier && (
+                      <div>
+                        <InpLabel>Given To (Name)</InpLabel>
+                        <input type="text" value={paymentReceiver} onChange={e => setPaymentReceiver(e.target.value)} required style={InpStyle} />
                       </div>
-                      <Link to={`/bakery-receipt/${p.id}`} style={{ fontSize: '12px', fontWeight: 700, color: T.accent, textDecoration: 'none' }}>View Receipt</Link>
-                    </Card>
-                  ))}
-                </div>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+                    )}
+                  </>
+                ) : (
+                  /* Inventory Specific Inputs */
+                  <>
+                    <div>
+                      <InpLabel>Select Bread Type</InpLabel>
+                      <select value={productId} onChange={e => setProductId(e.target.value)} required style={InpStyle}>
+                        <option value="">-- Choose Bread --</option>
+                        {enrichedProducts.map(p => (
+                           <option key={p.id} value={p.id}>
+                             {p.name} 
+                             {activeTab === 'receive' 
+                               ? ` (Store Balance: ${p.stock})` 
+                               : ` (My Balance: ${p.myStock})`}
+                           </option>
+                        ))}
+                      </select>
+                    </div>
 
-        <style>{`
-          .hide-scrollbar::-webkit-scrollbar { display: none; }
-          .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        `}</style>
+                    <div>
+                      <InpLabel>Quantity (Pieces)</InpLabel>
+                      <input type="number" min="1" value={quantity} onChange={e => setQuantity(e.target.value)} required style={InpStyle} placeholder="1" />
+                    </div>
+                  </>
+                )}
+
+                <button type="submit" disabled={isProcessing} style={{ width: '100%', padding: '16px', borderRadius: '14px', background: activeTab === 'return' ? T.warn : (activeTab === 'receive' ? T.success : T.ink), color: '#fff', border: 'none', fontSize: '15px', fontWeight: 900, cursor: 'pointer', marginTop: '10px' }}>
+                  {activeTab === 'balance' ? (isProcessing ? 'Recording...' : 'Finalize Payment') : '+ Add Item to Request'}
+                </button>
+              </form>
+            </Card>
+
+            {/* PENDING ITEMS CART (Only for Receive/Return) */}
+            {pendingItems.length > 0 && activeTab !== 'balance' && (
+              <Card style={{ background: T.ink, color: '#fff' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                  <span style={{ fontSize: '14px', fontWeight: 800 }}>Draft Request ({pendingItems.length})</span>
+                  <button onClick={() => setPendingItems([])} style={{ background: 'none', border: 'none', color: '#94a3b8', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}>Clear</button>
+                </div>
+                
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '20px' }}>
+                  {pendingItems.map((item, idx) => {
+                    const prod = enrichedProducts.find(p => p.id === item.productId);
+                    return (
+                      <div key={idx} style={{ background: 'rgba(255,255,255,0.05)', padding: '12px', borderRadius: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div>
+                          <div style={{ fontSize: '13px', fontWeight: 800 }}>{prod?.name}</div>
+                          <div style={{ fontSize: '11px', color: '#94a3b8' }}>{item.quantityReceived} units requested</div>
+                        </div>
+                        <button onClick={() => setPendingItems(pendingItems.filter((_, i) => i !== idx))} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
+                           <Trash2 size={16} color="#ef4444" />
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <button onClick={handleConfirmBatch} disabled={isProcessing} style={{ width: '100%', padding: '16px', borderRadius: '12px', background: T.success, color: '#fff', border: 'none', fontSize: '15px', fontWeight: 900, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                  {isProcessing ? 'Pushing Request...' : 'Push Request to Manager'}
+                  <ChevronRight size={18} />
+                </button>
+              </Card>
+            )}
+
+          </motion.div>
+        )}
+
+        {/* BOTTOM NAVIGATION FLOATING TABS */}
+        <div style={{ position: 'fixed', bottom: '24px', left: '50%', transform: 'translateX(-50%)', background: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(10px)', padding: '6px', borderRadius: '100px', display: 'flex', gap: '6px', boxShadow: '0 10px 40px rgba(0,0,0,0.1)', border: `1px solid ${T.border}`, zIndex: 100 }}>
+          {[
+            { id: 'view', icon: LayoutGrid, label: 'Overview' },
+            { id: 'receive', icon: ArrowDownCircle, label: 'Receive' },
+            { id: 'return', icon: ArrowUpCircle, label: 'Return' },
+            { id: 'balance', icon: Wallet, label: 'Payment' }
+          ].map(tab => {
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id} onClick={() => handleTabChange(tab.id as any)}
+                style={{
+                  background: isActive ? T.ink : 'transparent',
+                  color: isActive ? '#fff' : T.txt3,
+                  border: 'none', borderRadius: '100px', padding: '10px 16px', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: 800, cursor: 'pointer', transition: 'all 0.3s'
+                }}
+              >
+                <tab.icon size={16} />
+                {isActive && <span>{tab.label}</span>}
+              </button>
+            )
+          })}
+        </div>
+
       </div>
     </AnimatedPage>
   );

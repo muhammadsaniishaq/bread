@@ -40,10 +40,10 @@ const StoreDispatch: React.FC = () => {
   const [submitting, setSubmitting]     = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('All');
 
-  // Load Supplier profiles to filter the customer list
+  // Load Supplier profiles to populate the supplier selection
   useEffect(() => {
-    supabase.from('profiles').select('id').eq('role', 'SUPPLIER')
-      .then(({ data }) => { if (data) setSupplierProfiles(data.map(d => d.id)); });
+    supabase.from('profiles').select('id, full_name, role').eq('role', 'SUPPLIER')
+      .then(({ data }) => { if (data) setSupplierProfiles(data); });
   }, []);
 
   // Handle incoming supplierId from Ledger
@@ -61,22 +61,19 @@ const StoreDispatch: React.FC = () => {
     .filter(p => selectedCategory === 'All' || (p.category || 'Standard') === selectedCategory)
     .sort((a, b) => a.price - b.price);
 
-  // Filter customers to show only those who are linked to a Supplier profile
-  const supplierCustomers = useMemo(() => {
-    return customers.filter(c => c.profile_id && supplierProfiles.includes(c.profile_id));
-  }, [customers, supplierProfiles]);
-
-  const selectedCustomer = customers.find(c => c.id === customerId);
+  // No longer filtering customers; we map supplierProfiles directly in the dropdown.
+  
+  const selectedCustomer = customers.find(c => c.profile_id === customerId || c.id === customerId);
   const maxPoints = selectedCustomer?.loyaltyPoints || 0;
 
   useEffect(() => { setRedeemPoints(false); }, [customerId]);
   
   // Set payment to Debt automatically if a Supplier is selected
   useEffect(() => {
-    if (selectedCustomer && supplierProfiles.includes(selectedCustomer.profile_id || '')) {
+    if (supplierProfiles.find(s => s.id === customerId)) {
        setPaymentType('Debt');
     }
-  }, [customerId, selectedCustomer, supplierProfiles]);
+  }, [customerId, supplierProfiles]);
 
   const subtotal = useMemo(() =>
     cart.reduce((s, item) => s + item.quantity * item.unitPrice, 0), [cart]);
@@ -279,8 +276,8 @@ const StoreDispatch: React.FC = () => {
                   <select value={customerId} onChange={e => setCustomerId(e.target.value)}
                     style={{ width: '100%', padding: '11px 12px 11px 34px', borderRadius: '12px', border: `1.5px solid ${T.borderL}`, background: T.bg, fontSize: '13px', fontWeight: 600, color: T.ink, fontFamily: 'inherit', outline: 'none', appearance: 'none', boxSizing: 'border-box' }}>
                     <option value="">{t('store.selectSupplierDila')}</option>
-                    {supplierCustomers.map(c => (
-                      <option key={c.id} value={c.id}>{c.name}{c.debtBalance > 0 ? ` (${t('store.debtShort')} ₦${c.debtBalance.toLocaleString()})` : ''}</option>
+                    {supplierProfiles.map(s => (
+                      <option key={s.id} value={s.id}>{s.full_name}</option>
                     ))}
                   </select>
                 </div>

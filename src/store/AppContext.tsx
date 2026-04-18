@@ -209,7 +209,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           
           // 2. Transactions (Internal movement)
           const pTxs = validTxs.filter(t => (t.customerId === uid || (cid && t.customerId === cid)));
-          const txsRec = pTxs.filter(t => t.type === 'Debt').reduce((s, t) => {
+          const txsRec = pTxs.filter(t => t.type === 'Debt' || t.type === 'Cash').reduce((s, t) => {
             const item = getTransactionItems(t).find(i => i.productId === productId);
             return s + (item?.quantity || 0);
           }, 0);
