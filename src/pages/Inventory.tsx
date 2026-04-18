@@ -261,16 +261,43 @@ export const Inventory: React.FC = () => {
 
   return (
     <AnimatedPage>
-      <div style={{ background: T.bg, minHeight: '100vh', paddingBottom: '100px', fontFamily: "'Inter', sans-serif" }}>
+      <div style={{ background: T.bg, minHeight: '100vh', paddingBottom: '40px', fontFamily: "'Inter', sans-serif" }}>
         
         {/* HERO */}
-        <div style={{ padding: '32px 20px 20px', background: T.surface, borderBottom: `1px solid ${T.border}` }}>
-          <h1 style={{ fontSize: '26px', fontWeight: 900, color: T.ink, margin: '0 0 4px', letterSpacing: '-0.03em' }}>
-            {isSupplier ? 'My Inventory' : 'Store Inventory'}
-          </h1>
-          <p style={{ fontSize: '13px', color: T.txt2, margin: 0, fontWeight: 500 }}>
-            {isSupplier ? 'Manage your stock, returns, and remit payments.' : 'Global Bakery Inventory Portal'}
-          </p>
+        <div style={{ padding: '32px 20px 0', background: T.surface, borderBottom: `1px solid ${T.border}` }}>
+          <div style={{ paddingBottom: '20px' }}>
+            <h1 style={{ fontSize: '26px', fontWeight: 900, color: T.ink, margin: '0 0 4px', letterSpacing: '-0.03em' }}>
+              {isSupplier ? 'My Inventory' : 'Store Inventory'}
+            </h1>
+            <p style={{ fontSize: '13px', color: T.txt2, margin: 0, fontWeight: 500 }}>
+              {isSupplier ? 'Manage your stock, returns, and remit payments.' : 'Global Bakery Inventory Portal'}
+            </p>
+          </div>
+
+          {/* TOP NAVIGATION TABS */}
+          <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '12px' }}>
+            {[
+              { id: 'view', icon: LayoutGrid, label: 'Overview' },
+              { id: 'receive', icon: ArrowDownCircle, label: 'Receive' },
+              { id: 'return', icon: ArrowUpCircle, label: 'Return' },
+              { id: 'balance', icon: Wallet, label: 'Payment' }
+            ].map(tab => {
+              const isActive = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id} onClick={() => handleTabChange(tab.id as any)}
+                  style={{
+                    background: isActive ? T.ink : T.surface2,
+                    color: isActive ? '#fff' : T.txt3,
+                    border: 'none', borderRadius: '12px', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: 800, cursor: 'pointer', transition: 'all 0.2s', flexShrink: 0
+                  }}
+                >
+                  <tab.icon size={16} />
+                  <span>{tab.label}</span>
+                </button>
+              )
+            })}
+          </div>
         </div>
 
         {/* METRICS DASHBOARD (Overview) */}
@@ -462,31 +489,6 @@ export const Inventory: React.FC = () => {
 
           </motion.div>
         )}
-
-        {/* BOTTOM NAVIGATION FLOATING TABS */}
-        <div style={{ position: 'fixed', bottom: '24px', left: '50%', transform: 'translateX(-50%)', background: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(10px)', padding: '6px', borderRadius: '100px', display: 'flex', gap: '6px', boxShadow: '0 10px 40px rgba(0,0,0,0.1)', border: `1px solid ${T.border}`, zIndex: 100 }}>
-          {[
-            { id: 'view', icon: LayoutGrid, label: 'Overview' },
-            { id: 'receive', icon: ArrowDownCircle, label: 'Receive' },
-            { id: 'return', icon: ArrowUpCircle, label: 'Return' },
-            { id: 'balance', icon: Wallet, label: 'Payment' }
-          ].map(tab => {
-            const isActive = activeTab === tab.id;
-            return (
-              <button
-                key={tab.id} onClick={() => handleTabChange(tab.id as any)}
-                style={{
-                  background: isActive ? T.ink : 'transparent',
-                  color: isActive ? '#fff' : T.txt3,
-                  border: 'none', borderRadius: '100px', padding: '10px 16px', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: 800, cursor: 'pointer', transition: 'all 0.3s'
-                }}
-              >
-                <tab.icon size={16} />
-                {isActive && <span>{tab.label}</span>}
-              </button>
-            )
-          })}
-        </div>
 
       </div>
     </AnimatedPage>
