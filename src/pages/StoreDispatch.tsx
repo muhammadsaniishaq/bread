@@ -130,7 +130,6 @@ const StoreDispatch: React.FC = () => {
     if (cart.length === 0) return;
     if (paymentType === 'Debt' && !customerId) { alert('Please select a customer for debt.'); return; }
     setSubmitting(true);
-    const isSupplier = supplierProfiles.includes(selectedCustomer?.profile_id || '');
     const tx: Transaction = {
       id: Date.now().toString(),
       date: new Date().toISOString(),
@@ -138,7 +137,7 @@ const StoreDispatch: React.FC = () => {
       items: cart,
       totalPrice: totalAmount,
       type: paymentType,
-      status: isSupplier ? 'PENDING_SUPPLIER' : 'COMPLETED',
+      status: 'COMPLETED', // Auto-complete so suppliers get stock instantly without needing manual acceptance flow
       origin: 'STORE',
       discount: totalDiscount > 0 ? totalDiscount : undefined,
       pointsEarned: pointsEarned > 0 ? pointsEarned : undefined,

@@ -196,9 +196,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               )
             );
         const cid = myAcc?.id;
-        
         const stockMap: Record<string, number> = {};
-        const completedTxs = loadedTxns.filter(t => t.status === 'COMPLETED');
+        const validTxs = loadedTxns.filter(t => t.status === 'COMPLETED' || t.status === 'PENDING_SUPPLIER');
         
         (prod || []).forEach(p => {
           const productId = p.id;
@@ -209,7 +208,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           const logsRet = pLogs.filter(l => (l.profile_id === uid || (cid && l.profile_id === cid)) && l.type === 'Return').reduce((s, l) => s + (l.quantity_received || 0), 0);
           
           // 2. Transactions (Internal movement)
-          const pTxs = completedTxs.filter(t => (t.customerId === uid || (cid && t.customerId === cid)));
+          const pTxs = validTxs.filter(t => (t.customerId === uid || (cid && t.customerId === cid)));
           const txsRec = pTxs.filter(t => t.type === 'Debt').reduce((s, t) => {
             const item = getTransactionItems(t).find(i => i.productId === productId);
             return s + (item?.quantity || 0);
@@ -220,7 +219,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           }, 0);
 
           // 3. Sales
-          const pSales = completedTxs.filter(t => t.origin === 'POS_SUPPLIER' && (t.sellerId === uid || (cid && t.sellerId === cid)));
+          const pSales = validTxs.filter(t => t.origin === 'POS_SUPPLIER' && (t.sellerId === uid || (cid && t.sellerId === cid)));
           const sold = pSales.reduce((s, t) => {
             const item = getTransactionItems(t).find(i => i.productId === productId);
             return s + (item?.quantity || 0);
