@@ -210,20 +210,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           
           // 1. Transactions (Internal movement to Supplier)
           const pTxs = validTxs.filter(t => (t.customerId === uid || (cid && t.customerId === cid)));
-          const txsRec = pTxs.filter(t => t.type === 'Debt' || t.type === 'Cash').reduce((s, t) => {
-            const item = getTransactionItems(t).find(i => i.productId === productId);
-            return s + (item?.quantity || 0);
+          const txsRec = pTxs.filter(t => t.type !== 'Return' && t.type !== 'Payment').reduce((s, t) => {
+            const items = getTransactionItems(t);
+            const matches = items.filter(i => i && i.productId === productId);
+            return s + matches.reduce((sum, item) => sum + (item.quantity || 0), 0);
           }, 0);
           const txsRet = pTxs.filter(t => t.type === 'Return').reduce((s, t) => {
-            const item = getTransactionItems(t).find(i => i.productId === productId);
-            return s + (item?.quantity || 0);
+            const items = getTransactionItems(t);
+            const matches = items.filter(i => i && i.productId === productId);
+            return s + matches.reduce((sum, item) => sum + (item.quantity || 0), 0);
           }, 0);
 
           // 2. Sales made by Supplier
           const pSales = validTxs.filter(t => t.origin === 'POS_SUPPLIER' && (t.sellerId === uid || (cid && t.sellerId === cid)));
           const sold = pSales.reduce((s, t) => {
-            const item = getTransactionItems(t).find(i => i.productId === productId);
-            return s + (item?.quantity || 0);
+            const items = getTransactionItems(t);
+            const matches = items.filter(i => i && i.productId === productId);
+            return s + matches.reduce((sum, item) => sum + (item.quantity || 0), 0);
           }, 0);
 
           // Pure transaction-based stock calculation (guaranteed precision without duplicate logic)
@@ -661,20 +664,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const myAccount = customers.find(c => c.profile_id === uid);
     const cid = myAccount?.id;
     const txs = transactions.filter(t => t.status === 'COMPLETED');
-    const recTxs = txs.filter(t => t.type === 'Debt' && (t.customerId === uid || (cid && t.customerId === cid)))
+    const recTxs = txs.filter(t => t.type !== 'Return' && t.type !== 'Payment' && (t.customerId === uid || (cid && t.customerId === cid)))
       .reduce((s, t) => { 
-        const item = getTransactionItems(t).find(i => i.productId === productId);
-        return s + (item?.quantity || 0);
+        const items = getTransactionItems(t);
+        return s + items.filter(i => i && i.productId === productId).reduce((sum, item) => sum + (item.quantity || 0), 0);
       }, 0);
     const retTxs = txs.filter(t => t.type === 'Return' && (t.customerId === uid || (cid && t.customerId === cid)))
       .reduce((s, t) => { 
-        const item = getTransactionItems(t).find(i => i.productId === productId);
-        return s + (item?.quantity || 0);
+        const items = getTransactionItems(t);
+        return s + items.filter(i => i && i.productId === productId).reduce((sum, item) => sum + (item.quantity || 0), 0);
       }, 0);
     const sold = txs.filter(t => t.origin === 'POS_SUPPLIER' && (t.sellerId === uid || (cid && t.sellerId === cid) || (uid && t.sellerId === uid)))
       .reduce((s, t) => {
-        const item = getTransactionItems(t).find(i => i.productId === productId);
-        return s + (item?.quantity || 0);
+        const items = getTransactionItems(t);
+        return s + items.filter(i => i && i.productId === productId).reduce((sum, item) => sum + (item.quantity || 0), 0);
       }, 0);
     return Math.max(0, recTxs - retTxs - sold);
   };
