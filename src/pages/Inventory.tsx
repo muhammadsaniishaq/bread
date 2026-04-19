@@ -46,8 +46,8 @@ const Card: React.FC<{ children: React.ReactNode; style?: React.CSSProperties; o
     style={{
       background: T.surface,
       border: `1px solid ${T.border}`,
-      borderRadius: T.radius,
-      padding: '20px',
+      borderRadius: '16px',
+      padding: '16px',
       boxShadow: T.shadow,
       cursor: onClick ? 'pointer' : 'default',
       ...style
@@ -65,11 +65,11 @@ const InpLabel: React.FC<{ children: React.ReactNode }> = ({ children }) => (
 
 const InpStyle: React.CSSProperties = {
   width: '100%',
-  padding: '14px 16px',
-  borderRadius: '14px',
+  padding: '12px 14px',
+  borderRadius: '12px',
   border: `1px solid ${T.border}`,
   background: T.surface,
-  fontSize: '14px',
+  fontSize: '13px',
   fontWeight: 700,
   color: T.ink,
   outline: 'none',
@@ -406,9 +406,16 @@ export const Inventory: React.FC = () => {
                 {/* Balance Specific Inputs */}
                 {activeTab === 'balance' ? (
                   <>
+                    {/* Explicit Debt Display for Payment Tab */}
+                    {isSupplier && (
+                      <div style={{ background: personalDebt > 0 ? T.dangerLt : T.successLt, padding: '14px', borderRadius: '12px', border: `1px solid ${personalDebt > 0 ? '#fecaca' : '#bbf7d0'}`, marginBottom: '4px' }}>
+                        <div style={{ fontSize: '11px', color: personalDebt > 0 ? T.textDanger : T.textSuccess, fontWeight: 800, textTransform: 'uppercase', marginBottom: '2px' }}>Current Outstanding Debt</div>
+                        <div style={{ fontSize: '20px', fontWeight: 900, color: personalDebt > 0 ? T.danger : T.textSuccess }}>{fmt(personalDebt)}</div>
+                      </div>
+                    )}
                     <div>
                       <InpLabel>Amount Conveyed (₦)</InpLabel>
-                      <input type="number" required value={paymentAmount} onChange={e => setPaymentAmount(e.target.value)} style={{ ...InpStyle, fontSize: '20px', fontWeight: 900 }} placeholder="0" />
+                      <input type="number" required value={paymentAmount} onChange={e => setPaymentAmount(e.target.value)} style={{ ...InpStyle, fontSize: '18px', fontWeight: 900 }} placeholder="0" />
                     </div>
                     <div>
                       <InpLabel>Payment Form</InpLabel>

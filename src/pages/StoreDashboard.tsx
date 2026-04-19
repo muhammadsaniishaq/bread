@@ -244,6 +244,44 @@ export const StoreDashboard: React.FC = () => {
             </div>
           </div>
 
+          {/* ─── PENDING SUPPLIER REQUESTS APPROVAL ─── */}
+          {metrics.pendingRequestsCount > 0 && (
+            <div style={{ background: '#fff7ed', borderRadius: T.radius, padding: '16px', border: '1px solid #fdba74', boxShadow: T.shadow }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                <Clock size={16} color="#f97316" />
+                <span style={{ fontSize: '13px', fontWeight: 900, color: '#9a3412', textTransform: 'uppercase' }}>Requires Your Approval ({metrics.pendingRequestsCount})</span>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {metrics.pendingRequests.map(req => {
+                  const reqItem = getTransactionItems(req)[0];
+                  const prodName = products.find(p => p.id === reqItem?.productId)?.name || 'Product';
+                  return (
+                    <div key={req.id} style={{ padding: '12px', background: T.white, borderRadius: '12px', border: '1px solid #ffedd5' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
+                        <div>
+                          <div style={{ fontSize: '13px', fontWeight: 800, color: T.ink }}>{getCustomer(req.customerId)}</div>
+                          <div style={{ fontSize: '11px', color: '#f97316', fontWeight: 700 }}>{req.type === 'Return' ? 'Stock Return' : 'Stock Request'}</div>
+                        </div>
+                        <div style={{ textAlign: 'right' }}>
+                          <div style={{ fontSize: '15px', fontWeight: 900, color: T.ink }}>{reqItem?.quantity || 0} pcs</div>
+                          <div style={{ fontSize: '10px', color: T.txt3 }}>{prodName}</div>
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <button onClick={() => updateTransactionStatus(req.id, 'COMPLETED')} style={{ flex: 1, padding: '10px', borderRadius: '10px', background: T.emerald, color: '#fff', border: 'none', fontSize: '12px', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
+                          <CheckCircle size={14} /> Accept
+                        </button>
+                        <button onClick={() => updateTransactionStatus(req.id, 'CANCELLED')} style={{ padding: '10px 14px', borderRadius: '10px', background: T.roseL, color: T.rose, border: `1px solid ${T.rose}30`, fontSize: '12px', fontWeight: 800, cursor: 'pointer' }}>
+                          Reject
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {/* ─── STAT TILES ─── */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
             {[

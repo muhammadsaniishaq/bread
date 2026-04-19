@@ -49,8 +49,8 @@ const cardAnim = (i: number) => ({
 });
 
 export const ManagerDashboard: React.FC = () => {
-  const { transactions, products, logout, expenses, customers } = useAppContext();
-  const { signOut } = useAuth();
+  const { transactions, products, logout, expenses, customers, updateTransactionStatus } = useAppContext();
+  const { signOut, user } = useAuth();
   const navigate = useNavigate();
   const [chartType, setChartType] = useState<'area' | 'bar'>('area');
   const [activeSection, setActiveSection] = useState<'overview' | 'stock' | 'activity' | 'debtors' | 'orders'>('overview');
@@ -99,26 +99,52 @@ export const ManagerDashboard: React.FC = () => {
 
   const metrics = React.useMemo(() => {
     const today = new Date().toISOString().split('T')[0];
-    const todaysTx = transactions.filter(t => t.date.startsWith(today));
+    const todaysTx = transactions.filter(t => t.date.startsWith(today) && t.status === 'COMPLETED');
 
     let totalSales = 0, totalCash = 0, totalDebt = 0, breadSold = 0;
     const breadSoldMap: Record<string, number> = {};
 
     todaysTx.forEach(t => {
-      totalSales += t.totalPrice;
-      getTransactionItems(t).forEach(item => {
-        breadSold += item.quantity;
-        breadSoldMap[item.productId] = (breadSoldMap[item.productId] || 0) + item.quantity;
-      });
-      if (t.type === 'Cash') totalCash += t.totalPrice;
-      else totalDebt += t.totalPrice;
+      // 1. Supplier making a retail sale (Consignment Accounting)
+      if (t.origin === 'POS_SUPPLIER') {
+        const wholesaleValue = t.totalPrice * 0.9;
+        totalSales += wholesaleValue;
+        
+        // From the Bakery's point of view, any sale a Supplier makes immediately becomes Debt owed by the Supplier
+        totalDebt += wholesaleValue;
+
+        getTransactionItems(t).forEach(item => {
+          breadSold += item.quantity;
+          breadSoldMap[item.productId] = (breadSoldMap[item.productId] || 0) + item.quantity;
+        });
+      } 
+      // 2. Direct Bakery retail sale
+      else if (t.origin === 'POS_BAKERY') {
+        totalSales += t.totalPrice;
+        if (t.type === 'Cash') totalCash += t.totalPrice;
+        else if (t.type === 'Debt') totalDebt += t.totalPrice;
+
+        getTransactionItems(t).forEach(item => {
+          breadSold += item.quantity;
+          breadSoldMap[item.productId] = (breadSoldMap[item.productId] || 0) + item.quantity;
+        });
+      }
+      // 3. Direct Supplier Payment/Remittance
+      else if (t.type === 'Payment') {
+        totalCash += t.totalPrice;
+      }
     });
 
     const todayExp = expenses.filter(e => e.date.startsWith(today) && e.type === 'MANAGER');
     const totalExpenses = todayExp.reduce((s, e) => s + e.amount, 0);
     const grossProfit = totalSales * 0.1;
     const netProfit = grossProfit - totalExpenses;
-    const outstandingDebt = customers.reduce((s, c) => s + (c.debtBalance || 0), 0);
+    
+    // Filter strictly for Wholesale Supplier Debt
+    const supplierProfileIds = new Set(suppliers.map(s => s.id));
+    const wholesaleCustomers = customers.filter(c => supplierProfileIds.has(c.profile_id || ''));
+    
+    const outstandingDebt = wholesaleCustomers.reduce((s, c) => s + (c.debtBalance || 0), 0);
     const stockRemaining = products.reduce((s, p) => s + p.stock, 0);
 
     let topProductId = '', highestQty = 0;
@@ -137,7 +163,7 @@ export const ManagerDashboard: React.FC = () => {
       { day: 'Today', sales: totalSales, expenses: totalExpenses },
     ];
 
-    const topDebtors = [...customers]
+    const topDebtors = [...wholesaleCustomers]
       .filter(c => (c.debtBalance || 0) > 0)
       .sort((a, b) => (b.debtBalance || 0) - (a.debtBalance || 0))
       .slice(0, 5);
@@ -145,14 +171,19 @@ export const ManagerDashboard: React.FC = () => {
     const expenseEfficiency = totalSales > 0 ? Math.round((1 - totalExpenses / totalSales) * 100) : 100;
     const targetPct = Math.min(100, Math.round((totalSales / 150000) * 100));
 
+    const pendingRequests = transactions.filter(t => 
+      t.status === 'PENDING_STORE' && (!t.storeKeeperId || t.storeKeeperId === user?.id)
+    );
+
     return {
       totalSales, totalCash, totalDebt, breadSold, grossProfit, netProfit,
       totalExpenses, outstandingDebt, stockRemaining, breadSoldMap,
       topProductId, highestQty, weekData, topDebtors, expenseEfficiency, targetPct,
+      pendingRequestsCount: pendingRequests.length, pendingRequests,
       lowStock: products.filter(p => p.stock > 0 && p.stock < 20),
       recentActivity: [...transactions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 6)
     };
-  }, [transactions, products, customers, expenses]);
+  }, [transactions, products, customers, expenses, user, suppliers]);
 
   const aiInsight = React.useMemo(() => {
     if (metrics.totalSales === 0) return { text: 'Waiting for transactions. All systems online and ready.', type: 'neutral' };
@@ -420,6 +451,44 @@ export const ManagerDashboard: React.FC = () => {
           <AnimatePresence mode="wait">
             {activeSection === 'overview' && (
               <motion.div key="overview" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+
+                {/* ─── PENDING SUPPLIER REQUESTS APPROVAL ─── */}
+                {metrics.pendingRequestsCount > 0 && (
+                  <div style={{ background: '#fff7ed', borderRadius: T.radius, padding: '16px', border: '1px solid #fdba74', boxShadow: T.shadow }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                      <Clock size={16} color="#f97316" />
+                      <span style={{ fontSize: '13px', fontWeight: 900, color: '#9a3412', textTransform: 'uppercase' }}>Supplier Requests Pending Approval ({metrics.pendingRequestsCount})</span>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      {metrics.pendingRequests.map(req => {
+                        const reqItem = getTransactionItems(req)[0];
+                        const prodName = products.find(p => p.id === reqItem?.productId)?.name || 'Product';
+                        return (
+                          <div key={req.id} style={{ padding: '12px', background: T.white, borderRadius: '12px', border: '1px solid #ffedd5' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
+                              <div>
+                                <div style={{ fontSize: '13px', fontWeight: 800, color: T.ink }}>{getCustomerName(req.customerId)}</div>
+                                <div style={{ fontSize: '11px', color: '#f97316', fontWeight: 700 }}>{req.type === 'Return' ? 'Stock Return' : 'Stock Request'}</div>
+                              </div>
+                              <div style={{ textAlign: 'right' }}>
+                                <div style={{ fontSize: '15px', fontWeight: 900, color: T.ink }}>{reqItem?.quantity || 0} pcs</div>
+                                <div style={{ fontSize: '10px', color: T.txt3 }}>{prodName}</div>
+                              </div>
+                            </div>
+                            <div style={{ display: 'flex', gap: '8px' }}>
+                              <button onClick={() => updateTransactionStatus(req.id, 'COMPLETED')} style={{ flex: 1, padding: '10px', borderRadius: '10px', background: T.emerald, color: '#fff', border: 'none', fontSize: '12px', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
+                                <CheckCircle size={14} /> Accept
+                              </button>
+                              <button onClick={() => updateTransactionStatus(req.id, 'CANCELLED')} style={{ padding: '10px 14px', borderRadius: '10px', background: T.roseL, color: T.rose, border: `1px solid ${T.rose}30`, fontSize: '12px', fontWeight: 800, cursor: 'pointer' }}>
+                                Reject
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
 
                 {/* Top Product */}
                 <div style={{ background: T.white, borderRadius: T.radius, padding: '16px', boxShadow: T.shadow, border: `1px solid ${T.borderL}` }}>
