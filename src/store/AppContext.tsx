@@ -67,13 +67,19 @@ const mapCustomer = (r: any): Customer => ({
   } : undefined,
 });
 
-const mapTransaction = (r: any): Transaction => ({
-  id: r.id, date: r.date, type: r.type, status: r.status, origin: r.origin,
-  items: r.items || [], productId: r.product_id, quantity: r.quantity,
-  totalPrice: r.total_price, discount: r.discount || 0,
-  customerId: r.customer_id, sellerId: r.seller_id,
-  storeKeeperId: r.store_keeper_id,
-});
+const mapTransaction = (r: any): Transaction => {
+  let parsedItems = r.items;
+  if (typeof parsedItems === 'string') {
+    try { parsedItems = JSON.parse(parsedItems); } catch(e) { parsedItems = []; }
+  }
+  return {
+    id: r.id, date: r.date, type: r.type, status: r.status, origin: r.origin,
+    items: parsedItems || [], productId: r.product_id, quantity: r.quantity,
+    totalPrice: r.total_price, discount: r.discount || 0,
+    customerId: r.customer_id, sellerId: r.seller_id,
+    storeKeeperId: r.store_keeper_id,
+  };
+};
 
 const mapDebtPay = (r: any): DebtPayment => ({
   id: r.id, date: r.date, customerId: r.customer_id,
