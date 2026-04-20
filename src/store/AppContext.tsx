@@ -208,18 +208,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         (prod || []).forEach(p => {
           const productId = p.id;
           
-          // 1. Transactions (Internal movement to Supplier)
-          const pTxs = validTxs.filter(t => (t.customerId === uid || (cid && t.customerId === cid)));
-          const txsRec = pTxs.filter(t => t.type !== 'Return' && t.type !== 'Payment').reduce((s, t) => {
-            const items = getTransactionItems(t);
-            const matches = items.filter(i => i && i.productId === productId);
-            return s + matches.reduce((sum, item) => sum + (item.quantity || 0), 0);
-          }, 0);
-          const txsRet = pTxs.filter(t => t.type === 'Return').reduce((s, t) => {
-            const items = getTransactionItems(t);
-            const matches = items.filter(i => i && i.productId === productId);
-            return s + matches.reduce((sum, item) => sum + (item.quantity || 0), 0);
-          }, 0);
+          // 1. Logs (Internal movement to Supplier using pure flat inventory logs)
+          const pLogs = (invL || []).filter(l => l.productId === productId);
+          const logsRec = pLogs.filter(l => (l.profile_id === uid || (cid && l.profile_id === cid)) && l.type !== 'Return').reduce((s, l) => s + (l.quantityReceived || 0), 0);
+          const logsRet = pLogs.filter(l => (l.profile_id === uid || (cid && l.profile_id === cid)) && l.type === 'Return').reduce((s, l) => s + (l.quantityReceived || 0), 0);
 
           // 2. Sales made by Supplier
           const pSales = validTxs.filter(t => t.origin === 'POS_SUPPLIER' && (t.sellerId === uid || (cid && t.sellerId === cid)));
@@ -229,8 +221,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             return s + matches.reduce((sum, item) => sum + (item.quantity || 0), 0);
           }, 0);
 
-          // Pure transaction-based stock calculation (guaranteed precision without duplicate logic)
-          stockMap[productId] = Math.max(0, txsRec - txsRet - sold);
+          // Pure database-backed calculation (guaranteed flat precision without duplicate logic)
+          stockMap[productId] = Math.max(0, logsRec - logsRet - sold);
         });
         setPersonalStockMap(stockMap);
       } else {
@@ -659,27 +651,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return products.find(p => p.id === productId)?.stock || 0;
     }
     if (!uid) return 0;
-
-    // Fallback for custom profile lookups (rarely used in POS)
+    
     const myAccount = customers.find(c => c.profile_id === uid);
     const cid = myAccount?.id;
+
+    // 1. Gather all explicit transfers through inventory_logs
+    const logs = inventoryLogs.filter(l => l.productId === productId);
+    const logsRec = logs.filter(l => (l.profile_id === uid || (cid && l.profile_id === cid)) && l.type !== 'Return').reduce((s, l) => s + (l.quantityReceived || 0), 0);
+    const logsRet = logs.filter(l => (l.profile_id === uid || (cid && l.profile_id === cid)) && l.type === 'Return').reduce((s, l) => s + (l.quantityReceived || 0), 0);
+    
+    // 2. Subtract direct POS sales from their ledger
     const txs = transactions.filter(t => t.status === 'COMPLETED');
-    const recTxs = txs.filter(t => t.type !== 'Return' && t.type !== 'Payment' && (t.customerId === uid || (cid && t.customerId === cid)))
-      .reduce((s, t) => { 
-        const items = getTransactionItems(t);
-        return s + items.filter(i => i && i.productId === productId).reduce((sum, item) => sum + (item.quantity || 0), 0);
-      }, 0);
-    const retTxs = txs.filter(t => t.type === 'Return' && (t.customerId === uid || (cid && t.customerId === cid)))
-      .reduce((s, t) => { 
-        const items = getTransactionItems(t);
-        return s + items.filter(i => i && i.productId === productId).reduce((sum, item) => sum + (item.quantity || 0), 0);
-      }, 0);
     const sold = txs.filter(t => t.origin === 'POS_SUPPLIER' && (t.sellerId === uid || (cid && t.sellerId === cid) || (uid && t.sellerId === uid)))
       .reduce((s, t) => {
         const items = getTransactionItems(t);
         return s + items.filter(i => i && i.productId === productId).reduce((sum, item) => sum + (item.quantity || 0), 0);
       }, 0);
-    return Math.max(0, recTxs - retTxs - sold);
+    return Math.max(0, logsRec - logsRet - sold);
   };
   return (
     <AppContext.Provider value={{
