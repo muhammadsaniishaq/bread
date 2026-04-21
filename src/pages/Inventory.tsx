@@ -120,7 +120,10 @@ export const Inventory: React.FC = () => {
   const myId = myAccount?.id || user?.id;
 
   // Recent specific transactions
-  const myTxs = useMemo(() => (transactions || []).filter(t => t.customerId === myId || t.sellerId === myId).sort((a,b)=> new Date(b.date).getTime() - new Date(a.date).getTime()), [transactions, myId]);
+  const myTxs = useMemo(() => (transactions || []).filter(t => 
+    t.customerId === myId || t.sellerId === myId || 
+    t.customerId === user?.id || t.sellerId === user?.id
+  ).sort((a,b)=> new Date(b.date).getTime() - new Date(a.date).getTime()), [transactions, myId, user]);
   
   // Pending actions waiting on some Store Keeper
   const autoPending = useMemo(() => myTxs.filter(t => t.status === 'PENDING_STORE'), [myTxs]);
@@ -210,7 +213,7 @@ export const Inventory: React.FC = () => {
           await recordSale({
             id: crypto.randomUUID(),
             date: new Date().toISOString(),
-            customerId: mid,
+            customerId: user?.id, // STRICTLY Auth UUID to bypass RLS failures, not Ledger ID
             storeKeeperId: selectedSK, 
             type: activeTab === 'receive' ? 'Debt' : 'Return',
             status: 'PENDING_STORE',
