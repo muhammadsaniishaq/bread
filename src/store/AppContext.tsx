@@ -460,8 +460,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           updates.push(
             supabase.from('inventory_logs').insert({
               id: `${Date.now()}${Math.random().toString(36).slice(2)}`,
-              batch_id: null, date: new Date().toISOString(),
+              batch_id: `req-${tx.id.substring(0, 8)}`, date: new Date().toISOString(),
               type: tx.type === 'Return' ? 'Return' : 'Receive',
+              category: 'ASSIGNMENT', // REQUIRED: Prevents DB rejection
               product_id: item.productId, quantity_received: item.quantity,
               cost_price: item.unitPrice || 0,
               store_keeper: tx.storeKeeperId || null,
