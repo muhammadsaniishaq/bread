@@ -457,6 +457,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
         // Create inventory log for SUPPLIER-origin transactions
         if (tx.origin === 'SUPPLIER') {
+          // Resolve actual Auth Profile ID to prevent Postgres Foreign Key rejections
+          const customerAcct = customers.find(c => c.id === tx.customerId);
+          const actualProfileId = customerAcct?.profile_id || tx.customerId;
+
           updates.push(
             supabase.from('inventory_logs').insert({
               id: `${Date.now()}${Math.random().toString(36).slice(2)}`,
@@ -466,7 +470,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               product_id: item.productId, quantity_received: item.quantity,
               cost_price: item.unitPrice || 0,
               store_keeper: tx.storeKeeperId || null,
-              profile_id: tx.customerId || null,
+              profile_id: actualProfileId || null,
             })
           );
         }
