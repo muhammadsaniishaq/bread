@@ -166,12 +166,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const loadedTxns = (txns || []).map(mapTransaction);
       const loadedDPay = (dPay || []).map(mapDebtPay);
       const loadedBPay = (bPay || []).map(mapBakeryPay);
+      const loadedInvL = (invL || []).map(mapInvLog);
 
       setProducts      ((prod || []).map(mapProduct));
       setCustomers     ((cust || []).map(mapCustomer));
       setTransactions  (loadedTxns);
       setDebtPayments  (loadedDPay);
-      setInventoryLogs ((invL || []).map(mapInvLog));
+      setInventoryLogs (loadedInvL);
       setBakeryPayments(loadedBPay);
       setExpenses      ((exps || []).map(mapExpense));
 
@@ -209,7 +210,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           const productId = p.id;
           
           // 1. Logs (Internal movement to Supplier using pure flat inventory logs)
-          const pLogs = (invL || []).filter(l => l.productId === productId);
+          const pLogs = loadedInvL.filter(l => l.productId === productId);
           const logsRec = pLogs.filter(l => (l.profile_id === uid || (cid && l.profile_id === cid)) && l.type !== 'Return').reduce((s, l) => s + (l.quantityReceived || 0), 0);
           const logsRet = pLogs.filter(l => (l.profile_id === uid || (cid && l.profile_id === cid)) && l.type === 'Return').reduce((s, l) => s + (l.quantityReceived || 0), 0);
 
