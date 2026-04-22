@@ -184,11 +184,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setCompanyMetrics({ totalValueReceived, totalMoneyPaid });
 
       // Calculate Personal Stock Map for the current user
-      if ((role === 'SUPPLIER' || role === 'STORE_KEEPER') && user?.id) {
+      // If role is undefined but we have a user, treat as Supplier for stock calculation
+      if ((role === 'SUPPLIER' || role === 'STORE_KEEPER' || !role) && user?.id) {
         const uid = user.id;
         const userEmail = user.email || '';
         const userPhone = (user as any).user_metadata?.phone || '';
         const userFullName = ((user as any).user_metadata?.full_name || '').toLowerCase();
+        console.log('refreshData → uid:', uid, 'cid (to be resolved later):', 'pending', 'role:', role);
 
         const mappedCust = (cust || []).map(mapCustomer);
 
@@ -204,34 +206,33 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             );
         const cid = myAcc?.id;
         const stockMap: Record<string, number> = {};
-        const validTxs = loadedTxns.filter(t => t.status === 'COMPLETED' || t.status === 'PENDING_SUPPLIER');
+        const validTxs = loadedTxns.filter(t => t.status === 'COMPLETED' || t.status === 'PENDING_SUPPLIER' || t.status === 'PENDING_STORE');
         
         (prod || []).forEach(p => {
           const productId = p.id;
           
-          // 1. Transactions (Internal movement to Supplier)
-          const pTxs = validTxs.filter(t => (t.customerId === uid || (cid && t.customerId === cid)));
-          const txsRec = pTxs.filter(t => t.type !== 'Return' && t.type !== 'Payment').reduce((s, t) => {
-            const items = getTransactionItems(t);
-            const matches = items.filter(i => i && i.productId === productId);
-            return s + matches.reduce((sum, item) => sum + (item.quantity || 0), 0);
-          }, 0);
-          const txsRet = pTxs.filter(t => t.type === 'Return').reduce((s, t) => {
-            const items = getTransactionItems(t);
-            const matches = items.filter(i => i && i.productId === productId);
-            return s + matches.reduce((sum, item) => sum + (item.quantity || 0), 0);
-          }, 0);
+          // 1️⃣ Incoming from Supplier requests (completed or pending‑store)
+          const incoming = validTxs
+            .filter(t => t.origin === 'SUPPLIER' && t.type !== 'Return')
+            .reduce((sum, t) => {
+              const items = getTransactionItems(t);
+              return sum + items
+                .filter(i => i && i.productId === productId)
+                .reduce((s, i) => s + (i.quantity || 0), 0);
+            }, 0);
 
-          // 2. Sales made by Supplier
-          const pSales = validTxs.filter(t => t.origin === 'POS_SUPPLIER' && (t.sellerId === uid || (cid && t.sellerId === cid)));
-          const sold = pSales.reduce((s, t) => {
-            const items = getTransactionItems(t);
-            const matches = items.filter(i => i && i.productId === productId);
-            return s + matches.reduce((sum, item) => sum + (item.quantity || 0), 0);
-          }, 0);
+          // 2️⃣ Outgoing sales made by Supplier (POS_SUPPLIER)
+          const sold = validTxs
+            .filter(t => t.origin === 'POS_SUPPLIER' && (t.sellerId === uid || (cid && t.sellerId === cid)))
+            .reduce((sum, t) => {
+              const items = getTransactionItems(t);
+              return sum + items
+                .filter(i => i && i.productId === productId)
+                .reduce((s, i) => s + (i.quantity || 0), 0);
+            }, 0);
 
           // Pure transaction-based stock calculation
-          stockMap[productId] = Math.max(0, txsRec - txsRet - sold);
+          stockMap[productId] = Math.max(0, incoming - sold);
         });
         setPersonalStockMap(stockMap);
       } else {
