@@ -213,7 +213,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           
           // 1️⃣ Incoming from Supplier requests (completed or pending‑store)
           const incoming = validTxs
-            .filter(t => t.origin === 'SUPPLIER' && t.type !== 'Return')
+            .filter(t => t.origin === 'SUPPLIER' && t.type !== 'Return' && (t.customerId === uid || (cid && t.customerId === cid)))
             .reduce((sum, t) => {
               const items = getTransactionItems(t);
               return sum + items
