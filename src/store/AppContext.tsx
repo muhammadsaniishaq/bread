@@ -209,10 +209,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         (prod || []).forEach(p => {
           const productId = p.id;
           
-          // 1. Logs (Internal movement to Supplier using pure flat inventory logs)
-          const pLogs = loadedInvL.filter(l => l.productId === productId);
-          const logsRec = pLogs.filter(l => (l.profile_id === uid || (cid && l.profile_id === cid)) && l.type !== 'Return').reduce((s, l) => s + (l.quantityReceived || 0), 0);
-          const logsRet = pLogs.filter(l => (l.profile_id === uid || (cid && l.profile_id === cid)) && l.type === 'Return').reduce((s, l) => s + (l.quantityReceived || 0), 0);
+          // 1. Transactions (Internal movement to Supplier)
+          const pTxs = validTxs.filter(t => (t.customerId === uid || (cid && t.customerId === cid)));
+          const txsRec = pTxs.filter(t => t.type !== 'Return' && t.type !== 'Payment').reduce((s, t) => {
+            const items = getTransactionItems(t);
+            const matches = items.filter(i => i && i.productId === productId);
+            return s + matches.reduce((sum, item) => sum + (item.quantity || 0), 0);
+          }, 0);
+          const txsRet = pTxs.filter(t => t.type === 'Return').reduce((s, t) => {
+            const items = getTransactionItems(t);
+            const matches = items.filter(i => i && i.productId === productId);
+            return s + matches.reduce((sum, item) => sum + (item.quantity || 0), 0);
+          }, 0);
 
           // 2. Sales made by Supplier
           const pSales = validTxs.filter(t => t.origin === 'POS_SUPPLIER' && (t.sellerId === uid || (cid && t.sellerId === cid)));
@@ -222,8 +230,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             return s + matches.reduce((sum, item) => sum + (item.quantity || 0), 0);
           }, 0);
 
-          // Pure database-backed calculation (guaranteed flat precision without duplicate logic)
-          stockMap[productId] = Math.max(0, logsRec - logsRet - sold);
+          // Pure transaction-based stock calculation
+          stockMap[productId] = Math.max(0, txsRec - txsRet - sold);
         });
         setPersonalStockMap(stockMap);
       } else {
@@ -456,25 +464,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           }
         }
 
-        // Create inventory log for SUPPLIER-origin transactions
-        if (tx.origin === 'SUPPLIER') {
-          // Resolve actual Auth Profile ID to prevent Postgres Foreign Key rejections
-          const customerAcct = customers.find(c => c.id === tx.customerId);
-          const actualProfileId = customerAcct?.profile_id || tx.customerId;
-
-          updates.push(
-            supabase.from('inventory_logs').insert({
-              id: `${Date.now()}${Math.random().toString(36).slice(2)}`,
-              batch_id: `req-${tx.id.substring(0, 8)}`, date: new Date().toISOString(),
-              type: tx.type === 'Return' ? 'Return' : 'Receive',
-              category: 'ASSIGNMENT', // REQUIRED: Prevents DB rejection
-              product_id: item.productId, quantity_received: item.quantity,
-              cost_price: item.unitPrice || 0,
-              store_keeper: tx.storeKeeperId || null,
-              profile_id: actualProfileId || null,
-            })
-          );
-        }
+        // Skip parallel inventory log push because Supplier personal stock is strictly mathematical via transactions
+        // No explicit RLS violations will happen here anymore
       }
 
       // Update customer ledger
@@ -661,19 +652,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const myAccount = customers.find(c => c.profile_id === uid);
     const cid = myAccount?.id;
 
-    // 1. Gather all explicit transfers through inventory_logs
-    const logs = inventoryLogs.filter(l => l.productId === productId);
-    const logsRec = logs.filter(l => (l.profile_id === uid || (cid && l.profile_id === cid)) && l.type !== 'Return').reduce((s, l) => s + (l.quantityReceived || 0), 0);
-    const logsRet = logs.filter(l => (l.profile_id === uid || (cid && l.profile_id === cid)) && l.type === 'Return').reduce((s, l) => s + (l.quantityReceived || 0), 0);
+    // 1. Gather all Supplier assignments via transactions securely natively
+    const txs = transactions.filter(t => t.status === 'COMPLETED');
+    const recTxs = txs.filter(t => t.type !== 'Return' && t.type !== 'Payment' && (t.customerId === uid || (cid && t.customerId === cid)))
+      .reduce((s, t) => { 
+        const items = getTransactionItems(t);
+        return s + items.filter(i => i && i.productId === productId).reduce((sum, item) => sum + (item.quantity || 0), 0);
+      }, 0);
+    const retTxs = txs.filter(t => t.type === 'Return' && (t.customerId === uid || (cid && t.customerId === cid)))
+      .reduce((s, t) => { 
+        const items = getTransactionItems(t);
+        return s + items.filter(i => i && i.productId === productId).reduce((sum, item) => sum + (item.quantity || 0), 0);
+      }, 0);
     
     // 2. Subtract direct POS sales from their ledger
-    const txs = transactions.filter(t => t.status === 'COMPLETED');
     const sold = txs.filter(t => t.origin === 'POS_SUPPLIER' && (t.sellerId === uid || (cid && t.sellerId === cid) || (uid && t.sellerId === uid)))
       .reduce((s, t) => {
         const items = getTransactionItems(t);
         return s + items.filter(i => i && i.productId === productId).reduce((sum, item) => sum + (item.quantity || 0), 0);
       }, 0);
-    return Math.max(0, logsRec - logsRet - sold);
+    return Math.max(0, recTxs - retTxs - sold);
   };
   return (
     <AppContext.Provider value={{
