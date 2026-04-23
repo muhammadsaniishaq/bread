@@ -247,8 +247,10 @@ export const Inventory: React.FC = () => {
          date: new Date().toISOString(), 
          amount: parseInt(paymentAmount), 
          method: paymentMethod, 
-         receiver: storeKeepers.find(sk => sk.id === selectedSK)?.full_name || paymentReceiver 
-       });
+         receiver: storeKeepers.find(sk => sk.id === selectedSK)?.full_name || paymentReceiver,
+          customerId: myId,
+          profileId: user?.id
+        });
        alert('Payment recorded successfully.');
        setActiveTab('view');
      } catch(e) {

@@ -90,6 +90,8 @@ export interface BakeryPayment {
   amount: number;
   method?: 'Cash' | 'Transfer';
   receiver?: string;
+  customerId?: string;
+  profileId?: string;
 }
 
 export interface InventoryLog {

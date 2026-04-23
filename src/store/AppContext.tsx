@@ -206,12 +206,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             );
         const cid = myAcc?.id;
         const stockMap: Record<string, number> = {};
-        const validTxs = loadedTxns.filter(t => t.status === 'COMPLETED' || t.status === 'PENDING_SUPPLIER' || t.status === 'PENDING_STORE');
+        const validTxs = loadedTxns.filter(t => t.status === 'COMPLETED');
         
         (prod || []).forEach(p => {
           const productId = p.id;
           
-          // 1️⃣ Incoming from Supplier requests (completed or pending‑store)
+          // 1️⃣ Incoming from Supplier requests (completed)
           const incoming = validTxs
             .filter(t => t.origin === 'SUPPLIER' && t.type !== 'Return' && (t.customerId === uid || (cid && t.customerId === cid)))
             .reduce((sum, t) => {
@@ -231,8 +231,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 .reduce((s, i) => s + (i.quantity || 0), 0);
             }, 0);
 
+          // 3️⃣ Returns made by Supplier back to Bakery
+          const returned = validTxs
+            .filter(t => t.origin === 'SUPPLIER' && t.type === 'Return' && (t.customerId === uid || (cid && t.customerId === cid)))
+            .reduce((sum, t) => {
+              const items = getTransactionItems(t);
+              return sum + items
+                .filter(i => i && i.productId === productId)
+                .reduce((s, i) => s + (i.quantity || 0), 0);
+            }, 0);
+
           // Pure transaction-based stock calculation
-          stockMap[productId] = Math.max(0, incoming - sold);
+          stockMap[productId] = Math.max(0, incoming - sold - returned);
         });
         setPersonalStockMap(stockMap);
       } else {
@@ -475,7 +485,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (customer) {
           let delta = 0;
           if (tx.type === 'Payment') delta = -tx.totalPrice;
-          else if (tx.origin !== 'SUPPLIER') delta = tx.type === 'Return' ? -tx.totalPrice : tx.totalPrice;
+          else if (tx.origin === 'SUPPLIER') {
+            // Supplier Receiving stock (increase debt) or Returning stock (decrease debt)
+            delta = tx.type === 'Return' ? -tx.totalPrice : tx.totalPrice;
+          } else {
+            // Normal Customer flows
+            delta = tx.type === 'Return' ? -tx.totalPrice : tx.totalPrice;
+          }
           if (delta !== 0) {
             updates.push(
               supabase.from('customers')
@@ -600,10 +616,28 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // ─── Bakery Payments & Expenses ───────────────────────────────────────────────
   const recordBakeryPayment = async (payment: BakeryPayment) => {
-    await supabase.from('bakery_payments').insert({
-      id: payment.id, date: payment.date, amount: payment.amount,
-      method: payment.method || null, receiver: payment.receiver || null,
-    });
+    const updates: any[] = [
+      supabase.from('bakery_payments').insert({
+        id: payment.id, date: payment.date, amount: payment.amount,
+        method: payment.method || null, receiver: payment.receiver || null,
+      })
+    ];
+
+    if (payment.customerId) {
+      const customer = customers.find(c => c.id === payment.customerId);
+      if (customer) {
+        updates.push(
+          supabase.from('customers')
+            .update({ debt_balance: Math.max(0, (customer.debtBalance || 0) - payment.amount) })
+            .eq('id', customer.id)
+        );
+      }
+    }
+
+    const results = await Promise.all(updates);
+    const failed = results.find(r => r.error);
+    if (failed) console.error('Bakery payment background update failed:', failed.error);
+
     await refreshData();
   };
 
