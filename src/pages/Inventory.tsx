@@ -116,20 +116,6 @@ export const Inventory: React.FC = () => {
     fetchSKs();
   }, []);
 
-  // ── Auto-Link Profile if missing ──────────────────────────────────────────
-  const { linkProfileToRecord } = useAppContext();
-  useEffect(() => {
-    const checkLink = async () => {
-      if (!user || role !== 'SUPPLIER') return;
-      const linkedRecord = customers.find(c => c.profile_id === user.id);
-      if (!linkedRecord) {
-        const meta = (user as any).user_metadata || {};
-        await linkProfileToRecord(user.id, user.email || '', meta.phone, meta.full_name);
-      }
-    };
-    checkLink();
-  }, [user, role, customers, linkProfileToRecord]);
-
   const myAccount = useMemo(() => (customers || []).find(c => c.profile_id === user?.id), [customers, user]);
   const myId = myAccount?.id || user?.id;
 

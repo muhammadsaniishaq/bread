@@ -41,17 +41,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.log(`AuthContext: Level 1 Resolution (Profiles Table) -> ${resolvedRole}`);
         setRole(resolvedRole);
 
-        // Auto-sync customers row only for CUSTOMER role
-        if (resolvedRole === 'CUSTOMER') {
+        // Auto-sync customers row for roles that need a ledger (CUSTOMER, SUPPLIER, STORE_KEEPER)
+        const rolesWithLedger: UserRole[] = ['CUSTOMER', 'SUPPLIER', 'STORE_KEEPER'];
+        if (rolesWithLedger.includes(resolvedRole)) {
           await supabase.from('customers').upsert({
             id:             u.id,
             profile_id:     u.id,
-            name:           data.full_name || u.user_metadata?.full_name || u.email?.split('@')[0] || 'Customer',
+            name:           data.full_name || u.user_metadata?.full_name || u.email?.split('@')[0] || 'User',
             email:          u.email || '',
             username:       data.username || u.user_metadata?.username || '',
             phone:          data.phone || u.user_metadata?.phone || '',
-            debt_balance:   0,
-            loyalty_points: 0,
           }, { onConflict: 'profile_id' });
         }
         setLoading(false);
