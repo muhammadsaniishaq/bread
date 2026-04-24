@@ -3,10 +3,11 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../store/AuthContext';
 import { useAppContext } from '../store/AppContext';
 import { useTranslation } from '../store/LanguageContext';
+import { useNavigate } from 'react-router-dom';
 import { 
   User, Mail, Phone, ShieldCheck, Languages, LogOut, 
   AlertTriangle, TrendingDown, Package, CreditCard,
-  MessageSquare, HelpCircle, ChevronRight
+  MessageSquare, HelpCircle, ChevronRight, RefreshCw
 } from 'lucide-react';
 import { AnimatedPage } from '../components/AnimatedPage';
 import { motion } from 'framer-motion';
@@ -32,8 +33,9 @@ const fmt = (v: number) => "₦" + (v || 0).toLocaleString();
 
 export default function SupplierMore() {
   const { user, signOut } = useAuth();
-  const { customers, transactions } = useAppContext();
+  const { customers, transactions, linkProfileToRecord } = useAppContext();
   const { language, setLanguage } = useTranslation();
+  const navigate = useNavigate();
   const [profile, setProfile] = useState<any>(null);
 
   useEffect(() => {
@@ -192,6 +194,45 @@ export default function SupplierMore() {
 
             <div style={{ height: '1px', background: T.border, margin: '0 14px' }} />
 
+            <motion.button whileTap={{ scale: 0.98 }} onClick={() => navigate('/supplier/profile')}
+              style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', background: 'transparent', border: 'none', cursor: 'pointer' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{ width: '36px', height: '36px', borderRadius: '11px', background: '#e0e7ff', color: '#4f46e5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <User size={18} />
+                </div>
+                <span style={{ fontSize: '13px', fontWeight: 800, color: T.ink }}>Edit Detailed Profile</span>
+              </div>
+              <ChevronRight size={16} color={T.txt3} />
+            </motion.button>
+
+            <div style={{ height: '1px', background: T.border, margin: '0 14px' }} />
+
+            {/* Manual Link Account */}
+            {!myAccount && (
+              <motion.button 
+                whileTap={{ scale: 0.98 }} 
+                onClick={async () => {
+                  const phone = prompt("Shigar da lambar wayar da aka yi maka rajista da ita a shagon (Enter phone number used for your ledger):");
+                  if (phone) {
+                    const res = await linkProfileToRecord(user?.id || '', user?.email || '', phone, profile?.full_name);
+                    if (res) alert("An yi nasara! Yanzu zaka iya ganin bashinka. (Success! You can now see your debt.)");
+                    else alert("Ba'a sami asusunka ba. Tuntuɓi Manager. (Record not found. Contact Manager.)");
+                  }
+                }}
+                style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', background: `${T.amber}10`, border: 'none', cursor: 'pointer' }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div style={{ width: '36px', height: '36px', borderRadius: '11px', background: T.amber, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <RefreshCw size={18} />
+                  </div>
+                  <span style={{ fontSize: '13px', fontWeight: 800, color: T.amber }}>Hada Asusun Bashi (Link Debt Ledger)</span>
+                </div>
+                <ChevronRight size={16} color={T.txt3} />
+              </motion.button>
+            )}
+
+            <div style={{ height: '1px', background: T.border, margin: '0 14px' }} />
+
             {/* Support */}
             <motion.button whileTap={{ scale: 0.98 }} style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', background: 'transparent', border: 'none', cursor: 'pointer' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -202,7 +243,7 @@ export default function SupplierMore() {
               </div>
               <ChevronRight size={16} color={T.txt3} />
             </motion.button>
-
+            
             <div style={{ height: '1px', background: T.border, margin: '0 14px' }} />
 
             <motion.button whileTap={{ scale: 0.98 }} style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', background: 'transparent', border: 'none', cursor: 'pointer' }}>

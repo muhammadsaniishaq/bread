@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
-  LayoutDashboard, ShoppingCart, Users, Package, Receipt, UserCircle2
+  LayoutDashboard, ShoppingCart, Users, Package, Receipt, MoreHorizontal
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 
@@ -11,7 +11,7 @@ const tabs = [
   { label: 'Clients', icon: Users,           path: '/customers' },
   { label: 'Stock',   icon: Package,         path: '/inventory' },
   { label: 'Spend',   icon: Receipt,         path: '/expenses' },
-  { label: 'Profile', icon: UserCircle2,     path: '/supplier/profile' },
+  { label: 'More',    icon: MoreHorizontal,  path: '/supplier/more' },
 ];
 
 const SupplierBottomNav: React.FC = () => {
