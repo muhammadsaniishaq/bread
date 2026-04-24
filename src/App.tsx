@@ -25,7 +25,6 @@ import CustomerOrders from './pages/CustomerOrders';
 import CustomerHistory from './pages/CustomerHistory';
 import CustomerOfficialDocs from './pages/CustomerOfficialDocs';
 import SupplierProfile from './pages/SupplierProfile';
-import SupplierMore from './pages/SupplierMore';
 import SupplierDashboard from './pages/SupplierDashboard';
 import SupplierOfficialDocs from './pages/SupplierOfficialDocs';
 import StoreOfficialDocs from './pages/StoreOfficialDocs';
@@ -161,7 +160,6 @@ const AppContent: React.FC = () => {
             <Route path="/supplier" element={<RoleGuard allowedRoles={['SUPPLIER']}><SupplierDashboard /></RoleGuard>} />
             <Route path="/supplier/docs" element={<RoleGuard allowedRoles={['SUPPLIER']}><SupplierOfficialDocs /></RoleGuard>} />
             <Route path="/supplier/profile" element={<RoleGuard allowedRoles={['SUPPLIER']}><SupplierProfile /></RoleGuard>} />
-            <Route path="/supplier/more" element={<RoleGuard allowedRoles={['SUPPLIER']}><SupplierMore /></RoleGuard>} />
           </Route>
 
             <Route path="/store" element={<RoleGuard allowedRoles={['STORE_KEEPER']}><StoreDashboard /></RoleGuard>} />
