@@ -95,6 +95,7 @@ const mapInvLog = (r: any): InventoryLog => ({
 
 const mapBakeryPay = (r: any): BakeryPayment => ({
   id: r.id, date: r.date, amount: r.amount, method: r.method, receiver: r.receiver,
+  customerId: r.customer_id, profileId: r.profile_id,
 });
 
 const mapExpense = (r: any): Expense => ({
@@ -481,7 +482,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
       // Update customer ledger
       if (tx.customerId) {
-        const customer = customers.find(c => c.id === tx.customerId);
+        const customer = customers.find(c => c.id === tx.customerId || c.profile_id === tx.customerId);
         if (customer) {
           let delta = 0;
           if (tx.type === 'Payment') delta = -tx.totalPrice;
@@ -624,7 +625,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     ];
 
     if (payment.customerId) {
-      const customer = customers.find(c => c.id === payment.customerId);
+      const customer = customers.find(c => c.id === payment.customerId || c.profile_id === payment.customerId);
       if (customer) {
         updates.push(
           supabase.from('customers')
