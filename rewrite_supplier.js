@@ -1,181 +1,31 @@
-import { useEffect, useState, useMemo, useRef } from 'react';
-import { supabase } from '../lib/supabase';
-import { useAuth } from '../store/AuthContext';
-import { useAppContext } from '../store/AppContext';
-import {
-  User, Mail, Phone, LogOut, AlertTriangle,
-  Package, TrendingUp, MessageSquare,
-  Edit2, Check,
-  Users, Landmark, Clock,
-  Camera, AtSign
-} from 'lucide-react';
-import { AnimatedPage } from '../components/AnimatedPage';
-import { ImageCropModal } from '../components/ImageCropModal';
-import { motion, AnimatePresence } from 'framer-motion';
+const fs = require('fs');
 
-const fmt = (v: number) => '₦' + (v || 0).toLocaleString();
+const T = {
+  bg:'#f8fafc', 
+  surface:'#ffffff', 
+  surface2:'#f1f5f9', 
+  border:'#e2e8f0',
+  accent:'#4f46e5', 
+  accentLt:'#eef2ff',
+  success:'#10b981', 
+  successLt:'#dcfce7', 
+  textSuccess:'#166534',
+  danger:'#ef4444', 
+  dangerLt:'#fee2e2', 
+  textDanger:'#991b1b',
+  warn:'#f59e0b', 
+  warnLt:'#fef3c7', 
+  textWarn:'#92400e',
+  ink:'#0f172a', 
+  txt2:'#475569', 
+  txt3:'#94a3b8',
+  shadow:'0 1px 3px rgba(0,0,0,0.05), 0 10px 15px -3px rgba(0,0,0,0.02)',
+  shadowMd:'0 10px 25px -5px rgba(0,0,0,0.08)',
+  radius:'16px', 
+  radiusLg:'24px',
+};
 
-export default function SupplierProfile() {
-  const { user, signOut } = useAuth();
-  const { customers, transactions, updateCustomer } = useAppContext();
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const [profile,        setProfile]        = useState<any>(null);
-  const [editing,        setEditing]        = useState(false);
-  const [editName,       setEditName]       = useState('');
-  const [editPhone,      setEditPhone]      = useState('');
-  const [editUsername,   setEditUsername]   = useState('');
-  const [editAcctNo,     setEditAcctNo]     = useState('');
-  const [editBankName,   setEditBankName]   = useState('');
-  const [editWhatsapp,   setEditWhatsapp]   = useState('');
-  const [editImage,      setEditImage]      = useState('');
-  const [saving,         setSaving]         = useState(false);
-  const [signOutConfirm, setSignOutConfirm] = useState(false);
-  const [activeTab,      setActiveTab]      = useState<'overview'|'customers'>('overview');
-  const [showCropper,    setShowCropper]    = useState(false);
-  const [cropSrc,        setCropSrc]        = useState('');
-
-  // ── Fetch profile ──────────────────────────────────────────────────────────
-  useEffect(() => {
-    if (!user) return;
-    supabase.from('profiles').select('*').eq('id', user.id).single()
-      .then(({ data }) => {
-        if (data) {
-          setProfile(data);
-          setEditName(data.full_name || '');
-          setEditPhone(data.phone || '');
-          setEditUsername(data.username || '');
-          setEditAcctNo(data.account_number || '');
-          setEditBankName(data.bank_name || '');
-          setEditWhatsapp(data.whatsapp_number || '');
-          setEditImage(data.avatar_url || '');
-        }
-      });
-  }, [user]);
-
-  // ── My account ─────────────────────────────────────────────────────────────
-  const myAccount = useMemo(() =>
-    customers.find(c => c.profile_id === user?.id), [customers, user]);
-
-  // ── My transactions ────────────────────────────────────────────────────────
-  const myTxns = useMemo(() =>
-    transactions.filter(t => t.customerId === myAccount?.id || t.sellerId === user?.id),
-    [transactions, myAccount, user]);
-
-  // ── Customers assigned to ME — dual match (profile UUID or customer record ID) ──
-  const myCustomers = useMemo(() =>
-    customers.filter(c =>
-      (user?.id && c.assignedSupplierId === user.id) ||
-      (myAccount?.id && c.assignedSupplierId === myAccount.id)
-    ),
-    [customers, user, myAccount]);
-
-  // ── Stats ──────────────────────────────────────────────────────────────────
-  const totalDispatched = useMemo(() =>
-    myTxns.filter(t => t.status === 'COMPLETED' && t.type !== 'Return')
-      .reduce((s, t) => s + t.totalPrice, 0), [myTxns]);
-
-  const pendingCount = useMemo(() =>
-    myTxns.filter(t => t.status === 'PENDING_STORE' || t.status === 'PENDING_SUPPLIER').length,
-    [myTxns]);
-
-  const completedCount = useMemo(() =>
-    myTxns.filter(t => t.status === 'COMPLETED').length, [myTxns]);
-
-  const hasDebt = (myAccount?.debtBalance || 0) > 0;
-
-  const initials = (profile?.full_name || user?.email || 'S')
-    .split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2);
-
-  // ── Image upload ──────────────────────────────────────────────────────────
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setCropSrc(reader.result as string);
-      setShowCropper(true);
-    };
-    reader.readAsDataURL(file);
-    if (e.target) e.target.value = '';
-  };
-
-  const handleCropComplete = (base64: string) => {
-    setEditImage(base64);
-    setShowCropper(false);
-  };
-
-  // ── Save profile ───────────────────────────────────────────────────────────
-  const handleSaveProfile = async () => {
-    if (!user) return;
-    setSaving(true);
-    try {
-      let unToCheck = (editUsername && editUsername.trim() && editUsername.trim().toLowerCase() !== profile?.username?.toLowerCase()) ? editUsername.trim().toLowerCase() : '';
-      let phToCheck = (editPhone && editPhone.trim() && editPhone.trim() !== profile?.phone) ? editPhone.trim() : '';
-
-      if (unToCheck || phToCheck) {
-        const { data: avail, error: availErr } = await supabase.rpc('check_account_availability', { chk_username: unToCheck, chk_phone: phToCheck });
-        if (availErr) throw new Error('Database Error: Unable to verify uniqueness.');
-        if (avail?.username_taken) throw new Error('🚨 ALREADY EXISTS! This Username is currently taken by another user.');
-        if (avail?.phone_taken) throw new Error('🚨 ALREADY EXISTS! This Phone Number is taken and cannot be duplicated.');
-      }
-
-      const { error } = await supabase.from('profiles').update({
-        full_name:      editName,
-        username:       editUsername.trim().toLowerCase().replace(/\s+/g, ''),
-        account_number: editAcctNo,
-        bank_name:      editBankName,
-        whatsapp_number: editWhatsapp,
-        avatar_url:     editImage || null,
-      }).eq('id', user.id);
-
-      if (error) throw error;
-
-      // Also save phone + name to the linked customer record (if exists)
-      if (myAccount) {
-        await updateCustomer({ ...myAccount, name: editName, phone: editPhone });
-      } else if (editPhone) {
-        // Fallback: upsert a minimal customer record linked to this profile
-        await supabase.from('customers').upsert({
-          id: user.id,
-          name: editName,
-          phone: editPhone,
-          profile_id: user.id,
-          debt_balance: 0,
-          loyalty_points: 0,
-        }, { onConflict: 'profile_id' });
-      }
-
-      setProfile((p: any) => ({
-        ...p,
-        full_name:      editName,
-        username:       editUsername.trim().toLowerCase().replace(/\s+/g, ''),
-        account_number: editAcctNo,
-        bank_name:      editBankName,
-        whatsapp_number: editWhatsapp,
-        avatar_url:     editImage || null,
-      }));
-      setEditing(false);
-    } catch (err: any) {
-      alert('Save failed: ' + (err.message || 'Unknown error'));
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleCancelEdit = () => {
-    setEditName(profile?.full_name || '');
-    setEditPhone(profile?.phone || '');
-    setEditUsername(profile?.username || '');
-    setEditAcctNo(profile?.account_number || '');
-    setEditBankName(profile?.bank_name || '');
-    setEditWhatsapp(profile?.whatsapp_number || '');
-    setEditImage(profile?.avatar_url || '');
-    setEditing(false);
-  };
-
-  const avatarUrl = profile?.avatar_url;
-
+const newJSX = `
   return (
     <AnimatedPage>
       <div style={{ minHeight: '100vh', background: '#f8fafc', paddingBottom: '100px', fontFamily: "'Inter', system-ui, sans-serif" }}>
@@ -203,7 +53,7 @@ export default function SupplierProfile() {
             <button key={tab} onClick={() => setActiveTab(tab)}
               style={{ padding: '14px 0', background: 'none', border: 'none', borderBottom: activeTab === tab ? '2px solid #4f46e5' : '2px solid transparent', color: activeTab === tab ? '#4f46e5' : '#64748b', fontSize: '13px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
               {tab === 'overview' ? <User size={14} /> : <Users size={14} />}
-              {tab === 'overview' ? 'Overview' : `Customers (${myCustomers.length})`}
+              {tab === 'overview' ? 'Overview' : \`Customers (\${myCustomers.length})\`}
             </button>
           ))}
         </div>
@@ -298,7 +148,7 @@ export default function SupplierProfile() {
                           { icon: Phone, label: 'Phone', val: profile?.phone || 'Not set' },
                           { icon: MessageSquare, label: 'WhatsApp', val: profile?.whatsapp_number || 'Not set' },
                           { icon: AtSign, label: 'Username', val: profile?.username ? '@' + profile.username : 'Not set' },
-                          { icon: Landmark, label: 'Bank Details', val: profile?.bank_name ? `${profile.bank_name} • ${profile.account_number}` : 'Not set' },
+                          { icon: Landmark, label: 'Bank Details', val: profile?.bank_name ? \`\${profile.bank_name} • \${profile.account_number}\` : 'Not set' },
                         ].map((item, i) => (
                           <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                             <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b' }}>
@@ -360,4 +210,26 @@ export default function SupplierProfile() {
       <ImageCropModal isOpen={showCropper} imageSrc={cropSrc} onClose={() => setShowCropper(false)} onCropCompleteAction={handleCropComplete} />
     </AnimatedPage>
   );
+};
+`;
+
+let content = fs.readFileSync('c:/bread/src/pages/SupplierProfile.tsx', 'utf8');
+
+// The tricky part: we need to replace everything from "return (" down to the end of the component.
+// We know "const avatarUrl = profile?.avatar_url;" is right before the return.
+
+const parts = content.split(/return\s*\(\s*<AnimatedPage>/);
+
+if (parts.length === 2) {
+  // Fix imports missing AtSign
+  let topPart = parts[0];
+  if (!topPart.includes('AtSign')) {
+    topPart = topPart.replace('AlertTriangle,', 'AlertTriangle, AtSign,');
+  }
+
+  const finalContent = topPart + newJSX;
+  fs.writeFileSync('c:/bread/src/pages/SupplierProfile.tsx', finalContent);
+  console.log("Successfully updated the SupplierProfile component to be compact and manager-style!");
+} else {
+  console.error("Could not find the return boundary. Found " + parts.length + " parts.");
 }
