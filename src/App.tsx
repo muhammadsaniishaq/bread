@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'; // Changed BrowserRouter to Router
-import { AppProvider } from './store/AppContext';
+import { AppProvider, useAppContext } from './store/AppContext';
 import { AuthProvider, useAuth } from './store/AuthContext';
 import { LanguageProvider } from './store/LanguageContext';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -71,15 +71,15 @@ import { SplashScreen } from './components/SplashScreen';
 
 const AppContent: React.FC = () => {
   const { user, loading, signOut } = useAuth();
+  const { appSettings } = useAppContext();
   const isAuthenticated = !!user;
   const [showSplash, setShowSplash] = React.useState(true);
   
-  const theme = localStorage.getItem('theme') as 'light' | 'dark' || 'light';
-
   useEffect(() => {
-    document.documentElement.setAttribute('data-theme', theme);
-    localStorage.setItem('theme', theme);
-  }, [theme]);
+    if (appSettings.theme) {
+      document.documentElement.setAttribute('data-theme', appSettings.theme);
+    }
+  }, [appSettings.theme]);
 
   // Auto-Lock Inactivity Timer (5 Minutes)
   useEffect(() => {

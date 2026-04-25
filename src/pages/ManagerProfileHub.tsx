@@ -12,7 +12,7 @@ import {
   ArrowLeft, Award, Star, Building2,
   Fingerprint, Library, BadgeCheck,
   Edit3, Eye, EyeOff, Camera,
-  ClipboardList, Target, TrendingDown, Plus, Hammer,
+  Target, TrendingDown, Plus, Hammer,
   History, BarChart3, Rocket
 } from 'lucide-react';
 
@@ -256,8 +256,8 @@ export const ManagerProfileHub: React.FC = () => {
                    <button onClick={() => setIsEditing(true)} style={{background:T.ink,color:'#fff',padding:'12px',borderRadius:'12px',display:'flex',alignItems:'center',gap:'8px',fontWeight:600,fontSize:'14px',border:'none',cursor:'pointer',flex:1,justifyContent:'center'}}>
                       <Edit3 size={16}/> Edit Identity
                    </button>
-                   <button onClick={() => alert('Official report generated for internal audit.')} style={{background:T.surface2,color:T.ink,padding:'12px',borderRadius:'12px',display:'flex',alignItems:'center',justifyContent:'center',gap:'8px',fontWeight:600,fontSize:'14px',border:`1px solid ${T.border}`,cursor:'pointer',flex:1}}>
-                      <ClipboardList size={16}/> Log Report
+                   <button onClick={() => navigate('/supplier/profile')} style={{background:T.accent,color:'#fff',padding:'12px',borderRadius:'12px',display:'flex',alignItems:'center',justifyContent:'center',gap:'8px',fontWeight:600,fontSize:'14px',border:'none',cursor:'pointer',flex:1}}>
+                      <Rocket size={16}/> Supplier Profile
                    </button>
                 </div>
 

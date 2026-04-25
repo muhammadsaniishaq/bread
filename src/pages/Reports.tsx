@@ -6,12 +6,13 @@ import { useTranslation } from '../store/LanguageContext';
 import {
   BarChart2, TrendingUp, TrendingDown, ShoppingBag, CreditCard,
   Package, Receipt, Search, ChevronRight,
-  Wallet, Users,AlertTriangle, RefreshCw, Printer, Share2,
-  ArrowUpRight, ArrowDownRight, DollarSign, Building2, Percent
+  Wallet, Users, AlertTriangle, RefreshCw, Printer, Share2,
+  ArrowUpRight, ArrowDownRight, DollarSign, Building2, Percent,
+  BadgeCheck, ClipboardList
 } from 'lucide-react';
 
 type Period = 'Today' | 'Week' | 'Month' | 'All';
-type Tab = 'overview' | 'transactions' | 'products' | 'expenses' | 'debts';
+type Tab = 'overview' | 'transactions' | 'products' | 'expenses' | 'debts' | 'history';
 
 const fmt = (n: number) => `₦${Math.round(n).toLocaleString()}`;
 const fmtDate = (iso: string) => {
@@ -53,7 +54,11 @@ const MiniBar = ({ data, color = '#4f46e5' }: { data: { label: string; value: nu
 };
 
 export const Reports: React.FC = () => {
-  const { transactions, expenses, products, customers, inventoryLogs, debtPayments, appSettings, bakeryPayments } = useAppContext();
+  const { 
+    transactions, expenses, products, customers, inventoryLogs, 
+    debtPayments, appSettings, bakeryPayments, supplierReports, 
+    submitSupplierReport 
+  } = useAppContext();
   const { t } = useTranslation();
   const navigate = useNavigate();
   const reportRef = useRef<HTMLDivElement>(null);
@@ -62,6 +67,8 @@ export const Reports: React.FC = () => {
   const [activeTab, setActiveTab] = useState<Tab>('overview');
   const [txSearch, setTxSearch] = useState('');
   const [txTypeFilter, setTxTypeFilter] = useState<'All' | 'Cash' | 'Debt'>('All');
+  const [submitting, setSubmitting] = useState(false);
+
 
   const periodLabel: Record<Period, string> = {
     Today: t('rep.period.today'),
@@ -126,6 +133,45 @@ export const Reports: React.FC = () => {
       debtCollected, totalReturnsValue,
     };
   }, [filteredTxs, filteredExps, filteredLogs, customers, products, debtPayments, bakeryPayments, period]);
+
+  const handleSubmitReport = async () => {
+    if (period !== 'Today') {
+      alert('You can only submit a formal report for "Today".');
+      return;
+    }
+    
+    if (!window.confirm('Are you sure you want to finalize and submit today\'s report to the database?')) return;
+    
+    setSubmitting(true);
+    try {
+      const reportId = Date.now().toString();
+      await submitSupplierReport({
+        id: reportId,
+        date: new Date().toISOString(),
+        supplier_id: 'CURRENT_USER',
+        total_sales: metrics.totalSales,
+        cash_sales: metrics.cashSales,
+        debt_sales: metrics.debtSales,
+        expenses: metrics.totalExpenses,
+        net_profit: metrics.netProfit,
+        bakery_owed: metrics.bakeryOwed,
+        company_paid: metrics.companyPaid,
+        remaining_balance: metrics.netBakeryOwed,
+        data: {
+          breadSold: metrics.breadSold,
+          avgSaleValue: metrics.avgSaleValue,
+          txCount: metrics.txCount,
+          debtCollected: metrics.debtCollected
+        }
+      });
+      alert('Report submitted successfully to the database!');
+      setActiveTab('history');
+    } catch (e: any) {
+      alert('Submission failed: ' + e.message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   // ── Product Performance ──
   const productStats = useMemo(() => {
@@ -313,7 +359,7 @@ export const Reports: React.FC = () => {
       </div>
 
       {/* 4-Step Company Balance Flow */}
-      <div style={{ margin: '0 16px 16px', borderRadius: '16px', overflow: 'hidden', border: '1.5px solid #92400e40' }} 
+      <div style={{ margin: '0 16px 16px', borderRadius: '16px', overflow: 'hidden', border: '1.5px solid #92400e40', background: 'var(--surface-color)', boxShadow: '0 4px 12px rgba(146, 64, 14, 0.05)' }} 
            onClick={() => {
              const diagStr = `Sales: ${metrics.totalSales}\nBakOwed: ${metrics.bakeryOwed}\nPaid: ${metrics.companyPaid}\nNet: ${metrics.netBakeryOwed}\n\nBPayments: ${bakeryPayments.length}\nFiltered: ${filterByPeriod(bakeryPayments).length}\n\nAll BPayments:\n${bakeryPayments.map(b => b.amount + ' (' + b.date.substring(0,10) + ')').join(', ')}`;
              alert(diagStr);
@@ -358,6 +404,19 @@ export const Reports: React.FC = () => {
         </div>
       </div>
 
+      {/* NEW: Submit Report Button */}
+      {period === 'Today' && (
+        <div style={{ padding: '0 16px 16px' }}>
+          <button 
+            onClick={handleSubmitReport}
+            disabled={submitting}
+            style={{ width: '100%', padding: '16px', background: 'var(--primary-color)', color: '#fff', border: 'none', borderRadius: '16px', fontWeight: 800, fontSize: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', boxShadow: '0 10px 15px -3px rgba(79, 70, 229, 0.3)', cursor: 'pointer' }}>
+            {submitting ? <RefreshCw size={18} className="animate-spin" /> : <BadgeCheck size={18} />}
+            {submitting ? 'Submitting to Database...' : 'Submit Official Daily Report'}
+          </button>
+        </div>
+      )}
+
       {/* Tabs */}
       <div className="no-print" style={{ display: 'flex', borderBottom: '1px solid var(--border-color)', margin: '0 16px 16px', overflowX: 'auto', scrollbarWidth: 'none' }}>
         {([
@@ -366,6 +425,7 @@ export const Reports: React.FC = () => {
           { id: 'products', icon: Package, key: 'rep.tab.products' },
           { id: 'expenses', icon: ArrowDownRight, key: 'rep.tab.expenses' },
           { id: 'debts', icon: CreditCard, key: 'rep.tab.debts' },
+          { id: 'history', icon: ClipboardList, key: 'History' },
         ] as { id: Tab; icon: any; key: string }[]).map(tab => (
           <button key={tab.id} style={{ ...tabStyle(activeTab === tab.id), minWidth: 60, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }} onClick={() => setActiveTab(tab.id)}>
             <tab.icon size={12} />{t(tab.key)}
@@ -590,6 +650,48 @@ export const Reports: React.FC = () => {
               </div>
             );
           })}
+        </div>
+      )}
+      {/* ══════ HISTORY ══════ */}
+      {activeTab === 'history' && (
+        <div style={{ padding: '0 16px' }}>
+          <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '12px' }}>Submitted Database Reports</div>
+          {supplierReports.length === 0 ? (
+            <div style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '48px 0' }}>
+               <ClipboardList size={48} style={{ opacity: 0.2, marginBottom: 16 }} />
+               <div style={{ fontSize: '14px', fontWeight: 600 }}>No reports submitted yet.</div>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {supplierReports.map(rep => (
+                <div key={rep.id} style={{ background: 'var(--surface-color)', border: '1px solid var(--border-color)', borderRadius: '18px', padding: '18px', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
+                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
+                      <div>
+                         <div style={{ fontSize: '15px', fontWeight: 800, color: 'var(--text-color)' }}>{new Date(rep.date).toLocaleDateString([], { weekday: 'long', month: 'short', day: 'numeric' })}</div>
+                         <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: 2 }}>{new Date(rep.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+                      </div>
+                      <div style={{ background: '#4f46e510', color: '#4f46e5', padding: '4px 10px', borderRadius: '8px', fontSize: '10px', fontWeight: 800, textTransform: 'uppercase' }}>Verified</div>
+                   </div>
+                   
+                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
+                      <div style={{ background: 'var(--background-color)', padding: '10px', borderRadius: '12px' }}>
+                         <div style={{ fontSize: '10px', color: 'var(--text-secondary)', marginBottom: 2 }}>Gross Sales</div>
+                         <div style={{ fontSize: '16px', fontWeight: 800 }}>{fmt(rep.total_sales)}</div>
+                       </div>
+                       <div style={{ background: 'var(--background-color)', padding: '10px', borderRadius: '12px' }}>
+                          <div style={{ fontSize: '10px', color: 'var(--text-secondary)', marginBottom: 2 }}>Net Profit</div>
+                          <div style={{ fontSize: '16px', fontWeight: 800, color: '#16a34a' }}>{fmt(rep.net_profit)}</div>
+                       </div>
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px dashed var(--border-color)', paddingTop: '10px' }}>
+                       <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Remaining Balance</span>
+                       <span style={{ fontSize: '12px', fontWeight: 800, color: rep.remaining_balance > 0 ? '#dc2626' : '#16a34a' }}>{fmt(rep.remaining_balance)}</span>
+                    </div>
+                 </div>
+               ))}
+             </div>
+          )}
         </div>
       )}
     </div>

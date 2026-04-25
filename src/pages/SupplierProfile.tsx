@@ -1,363 +1,361 @@
-import { useEffect, useState, useMemo, useRef } from 'react';
+import { useEffect, useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../store/AuthContext';
 import { useAppContext } from '../store/AppContext';
 import {
-  User, Mail, Phone, LogOut, AlertTriangle,
-  Package, TrendingUp, MessageSquare,
-  Edit2, Check,
-  Users, Landmark, Clock,
-  Camera, AtSign
+  LogOut, ArrowLeft,
+  Check, Key, 
+  BarChart3,
+  Users,
+  ChevronRight, Copy,
+  X, FileText, Rocket, Package, TrendingUp
 } from 'lucide-react';
 import { AnimatedPage } from '../components/AnimatedPage';
-import { ImageCropModal } from '../components/ImageCropModal';
 import { motion, AnimatePresence } from 'framer-motion';
+
+/* ─── Premium Design Tokens (Compact & Executive) ─── */
+const T = {
+  bg: '#f8fafc',
+  surface: '#ffffff',
+  surface2: '#f1f5f9',
+  border: '#e2e8f0',
+  accent: '#4f46e5',
+  accentLt: '#eef2ff',
+  success: '#10b981',
+  successLt: '#dcfce7',
+  danger: '#ef4444',
+  dangerLt: '#fee2e2',
+  warn: '#f59e0b',
+  warnLt: '#fef3c7',
+  textSuccess: '#166534',
+  textWarn: '#92400e',
+  ink: '#0f172a',
+  txt2: '#475569',
+  txt3: '#94a3b8',
+  shadow: '0 1px 3px rgba(0,0,0,0.05), 0 10px 15px -3px rgba(0,0,0,0.02)',
+  shadowMd: '0 10px 25px -5px rgba(0,0,0,0.08)',
+  shadowLg: '0 20px 50px -12px rgba(0,0,0,0.1)',
+  radius: '12px',
+  radiusLg: '20px',
+};
 
 const fmt = (v: number) => '₦' + (v || 0).toLocaleString();
 
 export default function SupplierProfile() {
+  const navigate = useNavigate();
   const { user, signOut } = useAuth();
-  const { customers, transactions, updateCustomer } = useAppContext();
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { customers, transactions, updateCustomer, refreshData } = useAppContext();
 
   const [profile,        setProfile]        = useState<any>(null);
-  const [editing,        setEditing]        = useState(false);
-  const [editName,       setEditName]       = useState('');
-  const [editPhone,      setEditPhone]      = useState('');
-  const [editUsername,   setEditUsername]   = useState('');
-  const [editAcctNo,     setEditAcctNo]     = useState('');
-  const [editBankName,   setEditBankName]   = useState('');
-  const [editWhatsapp,   setEditWhatsapp]   = useState('');
-  const [editImage,      setEditImage]      = useState('');
-  const [saving,         setSaving]         = useState(false);
-  const [signOutConfirm, setSignOutConfirm] = useState(false);
-  const [activeTab,      setActiveTab]      = useState<'overview'|'customers'>('overview');
-  const [showCropper,    setShowCropper]    = useState(false);
-  const [cropSrc,        setCropSrc]        = useState('');
+  const [dTab,           setDTab]           = useState<'analytics'|'ledger'|'security'>('analytics');
+  const [copied,         setCopied]         = useState(false);
+  const [isEditing,      setIsEditing]      = useState(false);
+  const [loading,        setLoading]        = useState(false);
+
+  // Form States
+  const [fName,          setFName]          = useState('');
+  const [fPhone,         setFPhone]         = useState('');
+  const [fAvatar,        setFAvatar]        = useState('');
+  const [fWhatsapp,      setFWhatsapp]      = useState('');
+  const [fUsername,      setFUsername]      = useState('');
+  const [fBankName,      setFBankName]      = useState('');
+  const [fAcctNo,        setFAcctNo]        = useState('');
+  const [fAcctName,      setFAcctName]      = useState('');
+  const [fPin,           setFPin]           = useState('');
 
   // ── Fetch profile ──────────────────────────────────────────────────────────
   useEffect(() => {
     if (!user) return;
-    supabase.from('profiles').select('*').eq('id', user.id).single()
-      .then(({ data }) => {
-        if (data) {
-          setProfile(data);
-          setEditName(data.full_name || '');
-          setEditPhone(data.phone || '');
-          setEditUsername(data.username || '');
-          setEditAcctNo(data.account_number || '');
-          setEditBankName(data.bank_name || '');
-          setEditWhatsapp(data.whatsapp_number || '');
-          setEditImage(data.avatar_url || '');
-        }
-      });
+    const fetchProfile = async () => {
+      const { data } = await supabase.from('profiles').select('*').eq('id', user.id).single();
+      if (data) {
+        setProfile(data);
+        setFName(data.full_name || '');
+        setFPhone(data.phone || '');
+        setFAvatar(data.avatar_url || '');
+        setFWhatsapp(data.whatsapp_number || '');
+        setFUsername(data.username || '');
+        setFBankName(data.bank_name || '');
+        setFAcctNo(data.account_number || '');
+        setFAcctName(data.account_name || '');
+        setFPin(data.pin || '');
+      }
+    };
+    fetchProfile();
   }, [user]);
 
-  // ── My account ─────────────────────────────────────────────────────────────
-  const myAccount = useMemo(() =>
-    customers.find(c => c.profile_id === user?.id), [customers, user]);
-
-  // ── My transactions ────────────────────────────────────────────────────────
-  const myTxns = useMemo(() =>
-    transactions.filter(t => t.customerId === myAccount?.id || t.sellerId === user?.id),
-    [transactions, myAccount, user]);
-
-  // ── Customers assigned to ME — dual match (profile UUID or customer record ID) ──
-  const myCustomers = useMemo(() =>
-    customers.filter(c =>
-      (user?.id && c.assignedSupplierId === user.id) ||
-      (myAccount?.id && c.assignedSupplierId === myAccount.id)
-    ),
-    [customers, user, myAccount]);
-
-  // ── Stats ──────────────────────────────────────────────────────────────────
-  const totalDispatched = useMemo(() =>
-    myTxns.filter(t => t.status === 'COMPLETED' && t.type !== 'Return')
-      .reduce((s, t) => s + t.totalPrice, 0), [myTxns]);
-
-  const pendingCount = useMemo(() =>
-    myTxns.filter(t => t.status === 'PENDING_STORE' || t.status === 'PENDING_SUPPLIER').length,
-    [myTxns]);
-
-  const completedCount = useMemo(() =>
-    myTxns.filter(t => t.status === 'COMPLETED').length, [myTxns]);
-
-  const hasDebt = (myAccount?.debtBalance || 0) > 0;
-
-  const initials = (profile?.full_name || user?.email || 'S')
-    .split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2);
-
-  // ── Image upload ──────────────────────────────────────────────────────────
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setCropSrc(reader.result as string);
-      setShowCropper(true);
+  // ── Data Logic ─────────────────────────────────────────────────────────────
+  const myAccount = useMemo(() => customers.find(c => c.profile_id === user?.id), [customers, user]);
+  const myTxns = useMemo(() => transactions.filter(t => t.customerId === myAccount?.id || t.sellerId === user?.id), [transactions, myAccount, user]);
+  
+  const stats = useMemo(() => {
+    const completed = myTxns.filter(t => t.status === 'COMPLETED');
+    const totalVolume = completed.filter(t => t.type !== 'Return').reduce((s, t) => s + t.totalPrice, 0);
+    const myCusts = customers.filter(c => c.assignedSupplierId === user?.id || c.assignedSupplierId === myAccount?.id);
+    
+    return {
+      totalVolume,
+      pendingCount: myTxns.filter(t => t.status === 'PENDING_STORE' || t.status === 'PENDING_SUPPLIER').length,
+      completedCount: completed.length,
+      debtBalance: myAccount?.debtBalance || 0,
+      custCount: myCusts.length,
+      trustScore: 98,
+      marketRank: 1,
+      txCount: myTxns.length
     };
-    reader.readAsDataURL(file);
-    if (e.target) e.target.value = '';
-  };
+  }, [myTxns, myAccount, customers, user]);
 
-  const handleCropComplete = (base64: string) => {
-    setEditImage(base64);
-    setShowCropper(false);
-  };
+  const initials = (profile?.full_name || user?.email || 'S').split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2);
 
-  // ── Save profile ───────────────────────────────────────────────────────────
-  const handleSaveProfile = async () => {
+  // ── Actions ─────────────────────────────────────────────────────────────
+  const handleSave = async () => {
     if (!user) return;
-    setSaving(true);
+    setLoading(true);
     try {
-      let unToCheck = (editUsername && editUsername.trim() && editUsername.trim().toLowerCase() !== profile?.username?.toLowerCase()) ? editUsername.trim().toLowerCase() : '';
-      let phToCheck = (editPhone && editPhone.trim() && editPhone.trim() !== profile?.phone) ? editPhone.trim() : '';
-
-      if (unToCheck || phToCheck) {
-        const { data: avail, error: availErr } = await supabase.rpc('check_account_availability', { chk_username: unToCheck, chk_phone: phToCheck });
-        if (availErr) throw new Error('Database Error: Unable to verify uniqueness.');
-        if (avail?.username_taken) throw new Error('🚨 ALREADY EXISTS! This Username is currently taken by another user.');
-        if (avail?.phone_taken) throw new Error('🚨 ALREADY EXISTS! This Phone Number is taken and cannot be duplicated.');
-      }
-
-      const { error } = await supabase.from('profiles').update({
-        full_name:      editName,
-        username:       editUsername.trim().toLowerCase().replace(/\s+/g, ''),
-        account_number: editAcctNo,
-        bank_name:      editBankName,
-        whatsapp_number: editWhatsapp,
-        avatar_url:     editImage || null,
-      }).eq('id', user.id);
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          full_name: fName,
+          phone: fPhone,
+          whatsapp_number: fWhatsapp,
+          username: fUsername,
+          bank_name: fBankName,
+          account_number: fAcctNo,
+          account_name: fAcctName,
+          pin: fPin
+        })
+        .eq('id', user.id);
 
       if (error) throw error;
 
-      // Also save phone + name to the linked customer record (if exists)
-      if (myAccount) {
-        await updateCustomer({ ...myAccount, name: editName, phone: editPhone });
-      } else if (editPhone) {
-        // Fallback: upsert a minimal customer record linked to this profile
-        await supabase.from('customers').upsert({
-          id: user.id,
-          name: editName,
-          phone: editPhone,
-          profile_id: user.id,
-          debt_balance: 0,
-          loyalty_points: 0,
-        }, { onConflict: 'profile_id' });
-      }
+      if (myAccount) await updateCustomer({ ...myAccount, name: fName, phone: fPhone });
 
-      setProfile((p: any) => ({
-        ...p,
-        full_name:      editName,
-        username:       editUsername.trim().toLowerCase().replace(/\s+/g, ''),
-        account_number: editAcctNo,
-        bank_name:      editBankName,
-        whatsapp_number: editWhatsapp,
-        avatar_url:     editImage || null,
-      }));
-      setEditing(false);
-    } catch (err: any) {
-      alert('Save failed: ' + (err.message || 'Unknown error'));
+      await refreshData();
+      setIsEditing(false);
+      setProfile((p:any) => ({ ...p, full_name: fName, avatar_url: fAvatar, username: fUsername, phone: fPhone, whatsapp_number: fWhatsapp, bank_name: fBankName, account_number: fAcctNo, account_name: fAcctName, pin: fPin }));
+    } catch (e: any) {
+      alert(e.message);
     } finally {
-      setSaving(false);
+      setLoading(false);
     }
   };
 
-  const handleCancelEdit = () => {
-    setEditName(profile?.full_name || '');
-    setEditPhone(profile?.phone || '');
-    setEditUsername(profile?.username || '');
-    setEditAcctNo(profile?.account_number || '');
-    setEditBankName(profile?.bank_name || '');
-    setEditWhatsapp(profile?.whatsapp_number || '');
-    setEditImage(profile?.avatar_url || '');
-    setEditing(false);
+  const copyToClipboard = (txt: string) => {
+    navigator.clipboard.writeText(txt);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   };
-
-  const avatarUrl = profile?.avatar_url;
 
   return (
     <AnimatedPage>
-      <div style={{ minHeight: '100vh', background: '#f8fafc', paddingBottom: '100px', fontFamily: "'Inter', system-ui, sans-serif" }}>
+      <div style={{ minHeight: '100vh', background: T.bg, paddingBottom: '30px', fontFamily: "'Inter', system-ui, sans-serif" }}>
+        
+        {/* Header - Glassmorphic & Modern */}
+        <div style={{padding:'14px 20px',display:'flex',alignItems:'center',gap:'16px',borderBottom:`1px solid ${T.border}`,background:'rgba(255,255,255,0.8)', backdropFilter: 'blur(10px)', position:'sticky', top:0, zIndex:100}}>
+           <button onClick={()=>navigate(-1)} style={{background:T.surface2,border:'none',cursor:'pointer',width:'36px',height:'36px',borderRadius:'12px',display:'flex',alignItems:'center',justifyContent:'center'}}><ArrowLeft size={20} color={T.ink}/></button>
+           <h2 style={{fontSize:'18px',fontWeight:800,color:T.ink,margin:0,flex:1}}>Supplier Hub</h2>
+           <button onClick={() => setIsEditing(true)} style={{background:T.ink, color:'#fff', border:'none', padding:'8px 14px', borderRadius:'10px', fontSize:'11px', fontWeight:800}}>EDIT</button>
+        </div>
 
-        {/* ── Header ── */}
-        <div style={{ background: '#ffffff', padding: '16px 20px', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 50 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: 'rgba(79,70,229,0.1)', border: '2px solid rgba(79,70,229,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', fontWeight: 900, color: '#4f46e5', overflow: 'hidden' }}>
-              {avatarUrl ? <img src={avatarUrl} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : initials}
+        <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          
+          {/* ─── IDENTITY BENTO ─── */}
+          <div style={{ background: 'linear-gradient(135deg, #1e293b, #0f172a)', borderRadius: '32px', padding: '32px 24px', color: '#fff', boxShadow: T.shadowLg, position: 'relative', overflow: 'hidden' }}>
+            <div style={{ position: 'absolute', top: -20, right: -20, width: 120, height: 120, background: 'rgba(79, 70, 229, 0.2)', borderRadius: '50%', filter: 'blur(30px)' }} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: '20px', position: 'relative', zIndex: 1 }}>
+              <div style={{ width: '80px', height: '80px', borderRadius: '24px', background: 'rgba(255,255,255,0.1)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '32px', fontWeight: 900 }}>
+                 {profile?.avatar_url ? <img src={profile.avatar_url} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '24px' }} alt="" /> : initials}
+              </div>
+              <div>
+                <div style={{ fontSize: '11px', fontWeight: 800, color: '#818cf8', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '4px' }}>Supplier Identity</div>
+                <h2 style={{ fontSize: '24px', fontWeight: 900, margin: 0, letterSpacing: '-0.02em' }}>{profile?.full_name || 'Personnel'}</h2>
+                <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.5)', marginTop: '4px', fontWeight: 600 }}>@{profile?.username || 'supplier'}</div>
+              </div>
             </div>
-            <div>
-              <h1 style={{ fontSize: '16px', fontWeight: 800, color: '#0f172a', margin: 0 }}>{profile?.full_name || user?.email || 'Supplier Profile'}</h1>
-              <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 600 }}>ID: {user?.id.substring(0,8).toUpperCase()}</div>
+            
+            <div style={{ marginTop: '24px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div style={{ background: 'rgba(255,255,255,0.05)', padding: '12px', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.08)' }}>
+                <div style={{ fontSize: '9px', fontWeight: 800, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', marginBottom: '4px' }}>Phone</div>
+                <div style={{ fontSize: '12px', fontWeight: 700 }}>{profile?.phone || 'N/A'}</div>
+              </div>
+              <div style={{ background: 'rgba(255,255,255,0.05)', padding: '12px', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.08)' }}>
+                <div style={{ fontSize: '9px', fontWeight: 800, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', marginBottom: '4px' }}>WhatsApp</div>
+                <div style={{ fontSize: '12px', fontWeight: 700, color: '#4ade80' }}>{profile?.whatsapp_number || 'N/A'}</div>
+              </div>
+            </div>
+
+            {/* Compact Bank Identity Card */}
+            <div style={{ marginTop: '16px', background: 'linear-gradient(135deg, #4f46e5, #7c3aed)', borderRadius: '16px', padding: '16px', border: '1px solid rgba(255,255,255,0.1)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <div>
+                  <div style={{ fontSize: '8px', fontWeight: 800, opacity: 0.6, textTransform: 'uppercase' }}>Remittance Account</div>
+                  <div style={{ fontSize: '14px', fontWeight: 900, marginTop: '4px', letterSpacing: '1px' }}>{profile?.account_number || '•••• •••• ••••'}</div>
+                  <div style={{ fontSize: '9px', fontWeight: 700, marginTop: '4px', opacity: 0.8 }}>{profile?.account_name || 'HOLDER NAME'}</div>
+                </div>
+                <div style={{ fontSize: '10px', fontWeight: 900, textAlign: 'right' }}>{profile?.bank_name || 'BANK'}</div>
+              </div>
+              {profile?.account_number && (
+                <button onClick={() => copyToClipboard(profile.account_number)} style={{marginTop: 12, width: '100%', border: 'none', background: 'rgba(255,255,255,0.15)', padding: '6px', borderRadius: 8, color: '#fff', fontSize: '10px', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6}}>
+                  {copied ? <Check size={10}/> : <Copy size={10}/>} {copied ? 'Copied' : 'Copy Account Number'}
+                </button>
+              )}
+          </div>
+        </div>
+
+          {/* ─── MARKET OPERATIONS (The requested "Supplier Report" section) ─── */}
+          <div style={{ background: '#fff', borderRadius: '28px', padding: '24px', boxShadow: T.shadow, border: `1px solid ${T.border}` }}>
+             <h3 style={{ fontSize: '16px', fontWeight: 900, color: T.ink, marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+               <Rocket size={18} color={T.accent} /> Market Operations
+             </h3>
+             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <motion.div whileTap={{ scale: 0.95 }} onClick={() => navigate('/reports')}
+                  style={{ background: '#eff6ff', padding: '20px 16px', borderRadius: '20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', cursor: 'pointer', border: '1px solid #dbeafe' }}>
+                   <div style={{ width: '44px', height: '44px', borderRadius: '14px', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 10px rgba(37,99,235,0.1)' }}>
+                     <FileText size={20} color="#2563eb" />
+                   </div>
+                   <span style={{ fontSize: '13px', fontWeight: 900, color: '#1e40af' }}>Daily Report</span>
+                   <span style={{ fontSize: '9px', fontWeight: 700, color: '#60a5fa', textAlign: 'center' }}>Submit sales activity</span>
+                </motion.div>
+
+                <motion.div whileTap={{ scale: 0.95 }} onClick={() => navigate('/supplier/inventory')}
+                  style={{ background: '#fdf2f8', padding: '20px 16px', borderRadius: '20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', cursor: 'pointer', border: '1px solid #fce7f3' }}>
+                   <div style={{ width: '44px', height: '44px', borderRadius: '14px', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 10px rgba(219,39,119,0.1)' }}>
+                     <Package size={20} color="#db2777" />
+                   </div>
+                   <span style={{ fontSize: '13px', fontWeight: 900, color: '#9d174d' }}>Stock Ledger</span>
+                   <span style={{ fontSize: '9px', fontWeight: 700, color: '#f472b6', textAlign: 'center' }}>Manage inventory</span>
+                </motion.div>
+             </div>
+          </div>
+
+          {/* ─── PERFORMANCE METRICS ─── */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+            <div style={{ background: '#fff', borderRadius: '24px', padding: '20px', border: `1px solid ${T.border}`, boxShadow: T.shadow }}>
+               <div style={{ width: 36, height: 36, borderRadius: 10, background: T.warnLt, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}><Users size={18} color={T.warn} /></div>
+               <div style={{ fontSize: '24px', fontWeight: 900, color: T.ink }}>{stats.custCount}</div>
+               <div style={{ fontSize: '10px', fontWeight: 800, color: T.txt3, textTransform: 'uppercase', marginTop: 4 }}>Active Clients</div>
+            </div>
+            <div style={{ background: '#fff', borderRadius: '24px', padding: '20px', border: `1px solid ${T.border}`, boxShadow: T.shadow }}>
+               <div style={{ width: 36, height: 36, borderRadius: 10, background: T.accentLt, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}><TrendingUp size={18} color={T.accent} /></div>
+               <div style={{ fontSize: '24px', fontWeight: 900, color: T.ink }}>{fmt(stats.totalVolume).replace('₦','')}</div>
+               <div style={{ fontSize: '10px', fontWeight: 800, color: T.txt3, textTransform: 'uppercase', marginTop: 4 }}>Revenue Yield</div>
             </div>
           </div>
-          <button onClick={() => signOutConfirm ? signOut() : setSignOutConfirm(true)}
-            style={{ padding: '8px', background: signOutConfirm ? '#fee2e2' : '#f1f5f9', color: signOutConfirm ? '#ef4444' : '#64748b', border: 'none', borderRadius: '10px', cursor: 'pointer' }}>
-            <LogOut size={16} />
-          </button>
-        </div>
 
-        {/* ── Tab Switcher ── */}
-        <div style={{ background: '#ffffff', borderBottom: '1px solid #e2e8f0', padding: '0 20px', display: 'flex', gap: '20px' }}>
-          {(['overview', 'customers'] as const).map(tab => (
-            <button key={tab} onClick={() => setActiveTab(tab)}
-              style={{ padding: '14px 0', background: 'none', border: 'none', borderBottom: activeTab === tab ? '2px solid #4f46e5' : '2px solid transparent', color: activeTab === tab ? '#4f46e5' : '#64748b', fontSize: '13px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
-              {tab === 'overview' ? <User size={14} /> : <Users size={14} />}
-              {tab === 'overview' ? 'Overview' : `Customers (${myCustomers.length})`}
-            </button>
-          ))}
-        </div>
-
-        <div style={{ padding: '20px' }}>
-          <AnimatePresence mode="wait">
-
-            {/* ══════════════ OVERVIEW TAB ══════════════ */}
-            {activeTab === 'overview' && (
-              <motion.div key="overview" initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
-                
-                {/* Compact Stats */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px', marginBottom: '20px' }}>
-                  {[
-                    { label: 'Sent', val: fmt(totalDispatched).replace('₦',''), icon: TrendingUp, color: '#4f46e5', bg: '#eef2ff' },
-                    { label: 'Wait', val: String(pendingCount), icon: Clock, color: '#f59e0b', bg: '#fef3c7' },
-                    { label: 'Done', val: String(completedCount), icon: Package, color: '#10b981', bg: '#dcfce7' },
-                    { label: 'Cust', val: String(myCustomers.length), icon: Users, color: '#ec4899', bg: '#fce7f3' },
-                  ].map((s, i) => (
-                    <div key={i} style={{ background: '#ffffff', borderRadius: '14px', padding: '10px', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                      <s.icon size={16} color={s.color} style={{ marginBottom: '6px' }} />
-                      <div style={{ fontSize: '14px', fontWeight: 800, color: '#0f172a' }}>{s.val}</div>
+          {/* ─── ANALYTICS TABBED VIEW ─── */}
+          <div style={{ background: '#fff', borderRadius: '28px', padding: '24px', boxShadow: T.shadow, border: `1px solid ${T.border}` }}>
+             <div style={{ display: 'flex', gap: '20px', borderBottom: `1px solid ${T.surface2}`, marginBottom: '20px' }}>
+                {[
+                  { id: 'analytics', label: 'Analytics' },
+                  { id: 'ledger', label: 'Ledger' },
+                  { id: 'security', label: 'Safety' }
+                ].map(tab => (
+                   <button key={tab.id} onClick={() => setDTab(tab.id as any)} 
+                     style={{ background: 'none', border: 'none', borderBottom: dTab === tab.id ? `3px solid ${T.accent}` : '3px solid transparent', padding: '10px 0', fontSize: '14px', fontWeight: 800, color: dTab === tab.id ? T.accent : T.txt3, cursor: 'pointer', transition: 'all 0.2s' }}>
+                      {tab.label}
+                   </button>
+                ))}
+             </div>
+             
+             <AnimatePresence mode="wait">
+                {dTab === 'analytics' && (
+                  <motion.div key="analytics" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                    <div style={{ fontSize: '12px', fontWeight: 700, color: T.txt2, marginBottom: '4px' }}>Cumulative Trade Volume</div>
+                    <div style={{ fontSize: '28px', fontWeight: 900, color: T.ink }}>{fmt(stats.totalVolume)}</div>
+                    <div style={{ height: '100px', marginTop: '20px', background: T.surface2, borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                       <BarChart3 size={32} color={T.txt3} opacity={0.3} />
+                       <span style={{ fontSize: '12px', color: T.txt3, fontWeight: 600, marginLeft: '8px' }}>Visualizing market performance...</span>
                     </div>
-                  ))}
-                </div>
-
-                {/* Debt Card - Compact */}
-                <div style={{ background: hasDebt ? 'linear-gradient(135deg,#ef4444,#b91c1c)' : 'linear-gradient(135deg,#10b981,#047857)', borderRadius: '16px', padding: '16px', marginBottom: '20px', color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'space-between', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}>
-                  <div>
-                    <div style={{ fontSize: '11px', fontWeight: 700, opacity: 0.8, textTransform: 'uppercase', marginBottom: '4px' }}>Debt Balance</div>
-                    <div style={{ fontSize: '24px', fontWeight: 900 }}>{fmt(myAccount?.debtBalance || 0)}</div>
-                  </div>
-                  <div style={{ background: 'rgba(255,255,255,0.2)', padding: '10px', borderRadius: '12px' }}>
-                    {hasDebt ? <AlertTriangle size={20} color="#fff" /> : <Check size={20} color="#fff" />}
-                  </div>
-                </div>
-
-                {/* Profile Card */}
-                <div style={{ background: '#ffffff', borderRadius: '16px', border: '1px solid #e2e8f0', overflow: 'hidden' }}>
-                  <div style={{ padding: '12px 16px', borderBottom: '1px solid #e2e8f0', background: '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <div style={{ fontSize: '13px', fontWeight: 700, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <User size={14} color="#4f46e5" /> Personal Details
-                    </div>
-                    {!editing && (
-                      <button onClick={() => setEditing(true)} style={{ background: 'none', border: 'none', color: '#4f46e5', fontSize: '12px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        <Edit2 size={12} /> Edit
-                      </button>
-                    )}
-                  </div>
-
-                  <div style={{ padding: '16px' }}>
-                    {editing ? (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '10px' }}>
-                          <div style={{ position: 'relative' }}>
-                            <div style={{ width: '60px', height: '60px', borderRadius: '16px', background: '#f1f5f9', border: '2px solid rgba(79,70,229,0.2)', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', fontWeight: 900, color: '#4f46e5' }}>
-                              {editImage ? <img src={editImage} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : initials}
-                            </div>
-                            <button onClick={() => fileInputRef.current?.click()} style={{ position: 'absolute', bottom: '-5px', right: '-5px', width: '24px', height: '24px', borderRadius: '8px', background: '#4f46e5', border: 'none', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-                              <Camera size={12} />
-                            </button>
-                            <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImageChange} style={{ display: 'none' }} />
-                          </div>
-                        </div>
-
-                        {[
-                          { label: 'Full Name', val: editName, set: setEditName, type: 'text', ph: 'Name' },
-                          { label: 'Username', val: editUsername, set: setEditUsername, type: 'text', ph: 'Username' },
-                          { label: 'Phone', val: editPhone, set: setEditPhone, type: 'tel', ph: 'Phone' },
-                          { label: 'Bank', val: editBankName, set: setEditBankName, type: 'text', ph: 'Bank' },
-                          { label: 'Account No', val: editAcctNo, set: setEditAcctNo, type: 'tel', ph: 'Account No' },
-                          { label: 'WhatsApp', val: editWhatsapp, set: setEditWhatsapp, type: 'tel', ph: 'WhatsApp' },
-                        ].map(f => (
-                          <div key={f.label} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                            <label style={{ width: '70px', fontSize: '11px', fontWeight: 700, color: '#64748b' }}>{f.label}</label>
-                            <input type={f.type} value={f.val} placeholder={f.ph} onChange={e => f.set(e.target.value)}
-                              style={{ flex: 1, padding: '8px 12px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '13px', fontWeight: 600, color: '#0f172a', outline: 'none' }} />
-                          </div>
-                        ))}
-
-                        <div style={{ display: 'flex', gap: '8px', marginTop: '10px' }}>
-                          <button onClick={handleCancelEdit} style={{ flex: 1, padding: '10px', background: '#f1f5f9', color: '#64748b', border: 'none', borderRadius: '8px', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}>Cancel</button>
-                          <button onClick={handleSaveProfile} disabled={saving} style={{ flex: 2, padding: '10px', background: '#4f46e5', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '12px', fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer' }}>
-                            {saving ? 'Saving...' : 'Save Changes'}
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                        {[
-                          { icon: Mail, label: 'Email', val: user?.email },
-                          { icon: Phone, label: 'Phone', val: profile?.phone || 'Not set' },
-                          { icon: MessageSquare, label: 'WhatsApp', val: profile?.whatsapp_number || 'Not set' },
-                          { icon: AtSign, label: 'Username', val: profile?.username ? '@' + profile.username : 'Not set' },
-                          { icon: Landmark, label: 'Bank Details', val: profile?.bank_name ? `${profile.bank_name} • ${profile.account_number}` : 'Not set' },
-                        ].map((item, i) => (
-                          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                            <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b' }}>
-                              <item.icon size={14} />
-                            </div>
-                            <div>
-                              <div style={{ fontSize: '10px', fontWeight: 600, color: '#94a3b8' }}>{item.label}</div>
-                              <div style={{ fontSize: '13px', fontWeight: 700, color: '#0f172a' }}>{item.val}</div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-              </motion.div>
-            )}
-
-            {/* ══════════════ CUSTOMERS TAB ══════════════ */}
-            {activeTab === 'customers' && (
-              <motion.div key="customers" initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
-                {myCustomers.length === 0 ? (
-                  <div style={{ background: '#ffffff', borderRadius: '16px', padding: '40px 20px', textAlign: 'center', border: '1px solid #e2e8f0' }}>
-                    <Users size={40} color="#cbd5e1" style={{ marginBottom: '16px' }} />
-                    <div style={{ fontSize: '15px', fontWeight: 800, color: '#0f172a', marginBottom: '8px' }}>No Customers Yet</div>
-                    <div style={{ fontSize: '12px', color: '#64748b', lineHeight: 1.5 }}>
-                      You haven't been assigned any customers. Store Keepers will link customers to you.
-                    </div>
-                  </div>
-                ) : (
-                  <div style={{ background: '#ffffff', borderRadius: '16px', border: '1px solid #e2e8f0', overflow: 'hidden' }}>
-                    {myCustomers.map((c, i) => {
-                      const hasDebtBalance = (c.debtBalance || 0) > 0;
-                      return (
-                        <div key={c.id} style={{ padding: '12px 16px', borderBottom: i < myCustomers.length - 1 ? '1px solid #e2e8f0' : 'none', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                          <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: hasDebtBalance ? '#fee2e2' : '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: 800, color: hasDebtBalance ? '#ef4444' : '#475569' }}>
-                            {c.name.charAt(0).toUpperCase()}
-                          </div>
-                          <div style={{ flex: 1 }}>
-                            <div style={{ fontSize: '13px', fontWeight: 700, color: '#0f172a' }}>{c.name}</div>
-                            {c.phone && <div style={{ fontSize: '11px', color: '#64748b' }}>{c.phone}</div>}
-                          </div>
-                          {hasDebtBalance && (
-                            <div style={{ fontSize: '12px', fontWeight: 800, color: '#ef4444' }}>{fmt(c.debtBalance || 0)}</div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
+                  </motion.div>
                 )}
-              </motion.div>
-            )}
 
-          </AnimatePresence>
+                {dTab === 'ledger' && (
+                  <motion.div key="ledger" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                    <div style={{ background: stats.debtBalance > 0 ? 'linear-gradient(135deg, #ef4444, #991b1b)' : 'linear-gradient(135deg, #10b981, #064e3b)', borderRadius: '16px', padding: '24px', color: '#fff' }}>
+                       <div style={{ fontSize: '10px', fontWeight: 700, opacity: 0.7, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Account Standing</div>
+                       <div style={{ fontSize: '32px', fontWeight: 900, marginTop: '4px' }}>{fmt(stats.debtBalance)}</div>
+                    </div>
+                  </motion.div>
+                )}
+
+                {dTab === 'security' && (
+                  <motion.div key="security" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    <div onClick={() => setIsEditing(true)} style={{ background: T.surface2, padding: '16px', borderRadius: '16px', display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer' }}>
+                       <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Key size={18} color={T.warn} /></div>
+                       <div style={{ flex: 1, fontSize: '14px', fontWeight: 700, color: T.ink }}>Security Credentials</div>
+                       <ChevronRight size={16} color={T.txt3} />
+                    </div>
+                    <button onClick={() => signOut()} style={{ width: '100%', padding: '16px', borderRadius: '16px', background: T.dangerLt, border: 'none', color: T.danger, fontSize: '14px', fontWeight: 800, marginTop: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                       <LogOut size={18} /> End Session
+                    </button>
+                  </motion.div>
+                )}
+             </AnimatePresence>
+          </div>
         </div>
+
+        {/* ─── EXECUTIVE EDIT MODAL ─── */}
+        <AnimatePresence>
+          {isEditing && (
+            <div style={{ position: 'fixed', inset: 0, zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(15,23,42,0.6)', backdropFilter: 'blur(5px)', padding: '16px' }}>
+              <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
+                style={{ background: T.surface, width: '100%', maxWidth: '400px', maxHeight: '90vh', borderRadius: '24px', display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: T.shadowMd }}>
+                <div style={{ padding: '16px 20px', borderBottom: `1px solid ${T.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                   <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 800, color: T.ink }}>Profile Configuration</h3>
+                   <button onClick={() => setIsEditing(false)} style={{ background: T.surface2, border: 'none', width: '32px', height: '32px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.ink }}><X size={18}/></button>
+                </div>
+                <div style={{ padding: '24px', overflowY: 'auto' }} className="hide-scrollbar">
+                   <div style={{display:'flex',flexDirection:'column',gap:16}}>
+                      <div>
+                         <label style={{fontSize:10,fontWeight:800,color:T.txt3,textTransform:'uppercase',marginBottom:8,display:'block'}}>Full Legal Name</label>
+                         <input value={fName} onChange={e=>setFName(e.target.value)} style={{width:'100%',background:T.surface,border:`1px solid ${T.border}`,borderRadius:10,padding:'12px',fontSize:14,fontWeight:600}}/>
+                      </div>
+                      <div>
+                         <label style={{fontSize:10,fontWeight:800,color:T.txt3,textTransform:'uppercase',marginBottom:8,display:'block'}}>Username</label>
+                         <input value={fUsername} onChange={e=>setFUsername(e.target.value.toLowerCase().replace(/\s+/g,''))} style={{width:'100%',background:T.surface,border:`1px solid ${T.border}`,borderRadius:10,padding:'12px',fontSize:14,fontWeight:600}}/>
+                      </div>
+                      <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:12}}>
+                         <div>
+                            <label style={{fontSize:10,fontWeight:800,color:T.txt3,textTransform:'uppercase',marginBottom:8,display:'block'}}>Phone</label>
+                            <input value={fPhone} onChange={e=>setFPhone(e.target.value)} style={{width:'100%',background:T.surface,border:`1px solid ${T.border}`,borderRadius:10,padding:'12px',fontSize:14,fontWeight:600}}/>
+                         </div>
+                         <div>
+                            <label style={{fontSize:10,fontWeight:800,color:T.txt3,textTransform:'uppercase',marginBottom:8,display:'block'}}>WhatsApp</label>
+                            <input value={fWhatsapp} onChange={e=>setFWhatsapp(e.target.value)} style={{width:'100%',background:T.surface,border:`1px solid ${T.border}`,borderRadius:10,padding:'12px',fontSize:14,fontWeight:600}}/>
+                         </div>
+                      </div>
+                      <div style={{height:'1px',background:T.border}}/>
+                      <div>
+                         <label style={{fontSize:10,fontWeight:800,color:T.txt3,textTransform:'uppercase',marginBottom:8,display:'block'}}>Bank Name</label>
+                         <input value={fBankName} onChange={e=>setFBankName(e.target.value)} style={{width:'100%',background:T.surface,border:`1px solid ${T.border}`,borderRadius:10,padding:'12px',fontSize:14,fontWeight:600}} placeholder="e.g. OPay, Zenith, Kuda"/>
+                      </div>
+                      <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:12}}>
+                         <div>
+                            <label style={{fontSize:10,fontWeight:800,color:T.txt3,textTransform:'uppercase',marginBottom:8,display:'block'}}>Account Number</label>
+                            <input value={fAcctNo} onChange={e=>setFAcctNo(e.target.value)} style={{width:'100%',background:T.surface,border:`1px solid ${T.border}`,borderRadius:10,padding:'12px',fontSize:14,fontWeight:600}}/>
+                         </div>
+                         <div>
+                            <label style={{fontSize:10,fontWeight:800,color:T.txt3,textTransform:'uppercase',marginBottom:8,display:'block'}}>Account Name</label>
+                            <input value={fAcctName} onChange={e=>setFAcctName(e.target.value)} style={{width:'100%',background:T.surface,border:`1px solid ${T.border}`,borderRadius:10,padding:'12px',fontSize:14,fontWeight:600}}/>
+                         </div>
+                      </div>
+                      <div style={{height:'1px',background:T.border}}/>
+                      <div>
+                         <label style={{fontSize:10,fontWeight:800,color:T.txt3,textTransform:'uppercase',marginBottom:8,display:'block'}}>Security PIN</label>
+                         <input type="password" maxLength={4} value={fPin} onChange={e=>setFPin(e.target.value.replace(/\D/g,''))} style={{width:'100%',background:T.surface,border:`1px solid ${T.border}`,borderRadius:10,padding:'12px',fontSize:16,fontWeight:900,textAlign:'center',letterSpacing:8}}/>
+                      </div>
+                      <button onClick={handleSave} disabled={loading} style={{background:T.ink,color:'#fff',border:'none',borderRadius:12,padding:16,fontWeight:800,fontSize:15,cursor:'pointer',marginTop:12}}>
+                        {loading?'Synchronizing...':'Confirm Changes'}
+                      </button>
+                   </div>
+                </div>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
 
       </div>
-      <ImageCropModal isOpen={showCropper} imageSrc={cropSrc} onClose={() => setShowCropper(false)} onCropCompleteAction={handleCropComplete} />
     </AnimatedPage>
   );
 }

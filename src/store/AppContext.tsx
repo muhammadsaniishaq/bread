@@ -2,7 +2,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { getTransactionItems } from './types';
 import type {
   Product, Customer, Transaction, DebtPayment, InventoryLog,
-  CompanyMetrics, Expense, AppSettings, BakeryPayment
+  CompanyMetrics, Expense, AppSettings, BakeryPayment, SupplierReport
 } from './types';
 import { useAuth } from './AuthContext';
 import { supabase } from '../lib/supabase';
@@ -16,6 +16,7 @@ interface AppContextType {
   bakeryPayments: BakeryPayment[];
   companyMetrics: CompanyMetrics;
   expenses: Expense[];
+  supplierReports: SupplierReport[];
   loading: boolean;
   refreshData: () => Promise<void>;
   isAuthenticated: boolean;
@@ -37,6 +38,7 @@ interface AppContextType {
   processInventoryBatch: (logs: InventoryLog[], action: 'Receive' | 'Return') => Promise<void>;
   recordBakeryPayment: (payment: BakeryPayment) => Promise<void>;
   addExpense: (expense: Expense) => Promise<void>;
+  submitSupplierReport: (report: SupplierReport) => Promise<void>;
   appSettings: AppSettings;
   updateSettings: (settings: AppSettings) => Promise<void>;
   getPersonalStock: (productId: string, role?: string, profileId?: string) => number;
@@ -122,10 +124,7 @@ const DEFAULT_SETTINGS: AppSettings = {
 };
 
 const loadSettings = (): AppSettings => {
-  try {
-    const s = localStorage.getItem('appSettings');
-    return s ? { ...DEFAULT_SETTINGS, ...JSON.parse(s) } : DEFAULT_SETTINGS;
-  } catch { return DEFAULT_SETTINGS; }
+  return DEFAULT_SETTINGS; // Initial default, will be overwritten by DB fetch
 };
 
 // ─── Context ──────────────────────────────────────────────────────────────────
@@ -141,10 +140,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [inventoryLogs,  setInventoryLogs]  = useState<InventoryLog[]>([]);
   const [bakeryPayments, setBakeryPayments] = useState<BakeryPayment[]>([]);
   const [expenses,       setExpenses]       = useState<Expense[]>([]);
+  const [supplierReports, setSupplierReports] = useState<SupplierReport[]>([]); // New state
   const [companyMetrics, setCompanyMetrics] = useState<CompanyMetrics>({ totalValueReceived: 0, totalMoneyPaid: 0 });
   const [appSettings,    setAppSettings]    = useState<AppSettings>(loadSettings);
   const [loading,        setLoading]        = useState(true);
-  const [isAuthenticated, setIsAuthenticated] = useState(() => sessionStorage.getItem('isAuthenticated') === 'true');
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [personalStockMap, setPersonalStockMap] = useState<Record<string, number>>({});
 
   // ─── Fetch all data from Supabase ──────────────────────────────────────────
@@ -153,7 +153,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try {
       const [
         { data: prod }, { data: cust }, { data: txns },
-        { data: dPay }, { data: invL }, { data: bPay }, { data: exps },
+        { data: dPay }, { data: invL }, { data: bPay }, { data: exps }, { data: sReps },
+        { data: setts },
       ] = await Promise.all([
         supabase.from('products').select('*').order('name'),
         supabase.from('customers').select('*, assigned_supplier:profiles!assigned_supplier_id(full_name, phone, email, whatsapp_number)').order('name'),
@@ -162,6 +163,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         supabase.from('inventory_logs').select('*').order('date', { ascending: false }),
         supabase.from('bakery_payments').select('*').order('date', { ascending: false }),
         supabase.from('expenses').select('*').order('date', { ascending: false }),
+        supabase.from('supplier_reports').select('*').order('date', { ascending: false }),
+        supabase.from('settings').select('*').single(),
       ]);
 
       const loadedTxns = (txns || []).map(mapTransaction);
@@ -176,6 +179,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setInventoryLogs (loadedInvL);
       setBakeryPayments(loadedBPay);
       setExpenses      ((exps || []).map(mapExpense));
+      setSupplierReports(sReps || []);
+      
+      if (setts) {
+        setAppSettings(prev => ({ ...prev, ...setts }));
+      }
 
       // Derive company metrics from live Supabase data
       const totalValueReceived =
@@ -262,18 +270,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const login = (pin: string): boolean => {
     if (pin === (appSettings.adminPin || '0018')) {
       setIsAuthenticated(true);
-      sessionStorage.setItem('isAuthenticated', 'true');
       return true;
     }
     return false;
   };
-  const logout = () => { setIsAuthenticated(false); sessionStorage.removeItem('isAuthenticated'); };
+  const logout = () => { setIsAuthenticated(false); };
   const updatePin = async (newPin: string) => updateSettings({ ...appSettings, adminPin: newPin });
 
   // ─── Settings ───────────────────────────────────────────────────────────────
   const updateSettings = async (settings: AppSettings) => {
-    localStorage.setItem('appSettings', JSON.stringify(settings));
     setAppSettings(settings);
+    const { error } = await supabase.from('settings').upsert({ id: 'main', ...settings });
+    if (error) console.error('Failed to sync settings to DB:', error);
+    
+    // Sync theme to DOM immediately if it changed
+    if (settings.theme) {
+      document.documentElement.setAttribute('data-theme', settings.theme);
+    }
   };
 
   // ─── Products ───────────────────────────────────────────────────────────────
@@ -642,6 +655,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     await refreshData();
   };
 
+  const submitSupplierReport = async (report: SupplierReport) => {
+    const { error } = await supabase.from('supplier_reports').insert([report]);
+    if (error) {
+      console.error('Error submitting report:', error);
+      throw error;
+    }
+    await refreshData();
+  };
+
   const addExpense = async (expense: Expense) => {
     await supabase.from('expenses').insert({
       id: expense.id, date: expense.date, description: expense.description,
@@ -711,14 +733,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
   return (
     <AppContext.Provider value={{
-      products, customers, transactions, debtPayments, inventoryLogs,
+      products, customers, transactions, debtPayments, inventoryLogs, supplierReports,
       bakeryPayments, companyMetrics, expenses, loading, refreshData,
       isAuthenticated, login, logout, updatePin,
       addProduct, updateProduct, deleteProduct,
       addCustomer, updateCustomer, deleteCustomer,
       recordSale, updateTransactionStatus, recordDebtPayment,
       addInventory, returnInventory, processInventoryBatch,
-      recordBakeryPayment, addExpense,
+      recordBakeryPayment, addExpense, submitSupplierReport,
       appSettings, updateSettings, getPersonalStock, verifyCustomer, personalStockMap,
       linkProfileToRecord
     }}>

@@ -96,20 +96,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     const initAuth = async () => {
-      const manualData = localStorage.getItem('bakery_manual_session');
-      if (manualData) {
-        try {
-          const { user: mUser, role: mRole } = JSON.parse(manualData);
-          if (mUser && mRole && VALID_ROLES.includes(mRole)) {
-            setUser(mUser);
-            setRole(mRole);
-            setLoading(false);
-            return;
-          }
-        } catch (e) {}
-        localStorage.removeItem('bakery_manual_session');
-      }
-
       const { data: { session } } = await supabase.auth.getSession();
       setUser(session?.user ?? null);
       if (session?.user) {
@@ -124,7 +110,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (_event === 'SIGNED_IN' || _event === 'SIGNED_OUT') {
-        localStorage.removeItem('bakery_manual_session');
         setUser(session?.user ?? null);
         if (session?.user) {
           setLoading(true);
@@ -142,11 +127,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const setManualUser = (u: any, r: UserRole) => {
     setUser(u);
     setRole(r);
-    localStorage.setItem('bakery_manual_session', JSON.stringify({ user: u, role: r }));
   };
 
   const signOut = async () => {
-    localStorage.removeItem('bakery_manual_session');
     await supabase.auth.signOut();
     setUser(null);
     setRole(null);

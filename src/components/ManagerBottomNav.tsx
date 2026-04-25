@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { LayoutDashboard, FileBarChart, Settings, Scale } from 'lucide-react';
+import { LayoutDashboard, FileBarChart, Settings, Scale, Users } from 'lucide-react';
 import './BottomNav.css';
 
 const ManagerBottomNav: React.FC = () => {
@@ -20,6 +20,10 @@ const ManagerBottomNav: React.FC = () => {
       <NavLink to="/manager/reconciliation" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
         <Scale size={22} strokeWidth={2.5} />
         <span>Reconcile</span>
+      </NavLink>
+      <NavLink to="/manager/profile" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+        <Users size={22} strokeWidth={2.5} />
+        <span>Profile</span>
       </NavLink>
       <NavLink to="/manager/settings" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
         <Settings size={22} strokeWidth={2.5} />

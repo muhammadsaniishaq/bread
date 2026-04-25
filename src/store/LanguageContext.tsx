@@ -1,6 +1,7 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 /* eslint-disable react-refresh/only-export-components */
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { useAppContext } from './AppContext';
 
 type Language = 'en' | 'ha';
 
@@ -602,19 +603,18 @@ const dictionaries: Record<Language, Record<string, string>> = { en, ha };
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
 export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { appSettings } = useAppContext();
   const [language, setLanguageState] = useState<Language>('en');
 
   useEffect(() => {
-    // Load saved lang on mount
-    const saved = localStorage.getItem('appLanguage') as Language;
-    if (saved && (saved === 'en' || saved === 'ha')) {
-      setLanguageState(saved);
+    if (appSettings.language && (appSettings.language === 'en' || appSettings.language === 'ha')) {
+      setLanguageState(appSettings.language);
     }
-  }, []);
+  }, [appSettings.language]);
 
   const setLanguage = (lang: Language) => {
     setLanguageState(lang);
-    localStorage.setItem('appLanguage', lang);
+    // Persisting will be handled by AppContext.updateSettings
   };
 
   const t = (key: string): string => {

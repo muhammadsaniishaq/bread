@@ -273,14 +273,20 @@ export const Settings: React.FC = () => {
           <label className="form-label text-sm">{t('set.language')}</label>
           <div className="grid grid-cols-2 gap-2 mt-2">
             <button
-              onClick={() => setLanguage('en')}
+              onClick={() => {
+                setLanguage('en');
+                updateSettings({ ...appSettings, language: 'en' });
+              }}
               className={`flex justify-between items-center px-4 py-3 rounded-xl border ${language === 'en' ? 'border-primary bg-primary/10 text-primary font-bold' : 'border-[var(--border-color)] bg-black/5 dark:bg-white/5 opacity-80'}`}
             >
               <span>English</span>
               {language === 'en' && <Check size={16} />}
             </button>
             <button
-              onClick={() => setLanguage('ha')}
+              onClick={() => {
+                setLanguage('ha');
+                updateSettings({ ...appSettings, language: 'ha' });
+              }}
               className={`flex justify-between items-center px-4 py-3 rounded-xl border ${language === 'ha' ? 'border-primary bg-primary/10 text-primary font-bold' : 'border-[var(--border-color)] bg-black/5 dark:bg-white/5 opacity-80'}`}
             >
               <span>Hausa</span>
@@ -294,21 +300,13 @@ export const Settings: React.FC = () => {
           <label className="form-label text-sm">{t('set.theme')}</label>
           <div className="flex gap-2 mt-2">
             <button
-              onClick={() => {
-                localStorage.setItem('theme', 'light');
-                document.documentElement.setAttribute('data-theme', 'light');
-                window.location.reload(); // Force app restart for layout sync
-              }}
+              onClick={() => updateSettings({ ...appSettings, theme: 'light' })}
               className={`flex-1 py-2 rounded-lg border text-sm ${theme === 'light' ? 'border-primary bg-primary/10 text-primary font-bold' : 'border-[var(--border-color)] bg-black/5 dark:bg-white/5 opacity-80'}`}
             >
               {t('set.light')}
             </button>
             <button
-               onClick={() => {
-                localStorage.setItem('theme', 'dark');
-                document.documentElement.setAttribute('data-theme', 'dark');
-                window.location.reload();
-              }}
+               onClick={() => updateSettings({ ...appSettings, theme: 'dark' })}
               className={`flex-1 py-2 rounded-lg border text-sm ${theme === 'dark' ? 'border-primary bg-primary/10 text-primary font-bold' : 'border-[var(--border-color)] bg-black/5 dark:bg-white/5 opacity-80'}`}
             >
               {t('set.dark')}

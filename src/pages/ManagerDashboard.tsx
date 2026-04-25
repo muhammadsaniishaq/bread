@@ -32,6 +32,14 @@ const T = {
   amberL:       'rgba(217,119,6,0.10)',
   blue:         '#2563eb',
   blueL:        'rgba(37,99,235,0.10)',
+  accent:       '#7c3aed',
+  accentLt:     'rgba(124,58,237,0.08)',
+  surface:      '#ffffff',
+  surface2:     '#f8f9fc',
+  success:      '#059669',
+  textSuccess:  '#059669',
+  warn:         '#d97706',
+  textWarn:     '#d97706',
   ink:          '#1a0a3b',
   txt2:         '#475569',
   txt3:         '#94a3b8',
@@ -137,8 +145,10 @@ export const ManagerDashboard: React.FC = () => {
 
     const todayExp = expenses.filter(e => e.date.startsWith(today) && e.type === 'MANAGER');
     const totalExpenses = todayExp.reduce((s, e) => s + e.amount, 0);
-    const grossProfit = totalSales * 0.1;
-    const netProfit = grossProfit - totalExpenses;
+    
+    // Bakery's Gross Profit is its entire Revenue (Wholesale from Suppliers + Direct Retail)
+    // Net Profit is that Revenue minus Management Expenses
+    const netProfit = totalSales - totalExpenses;
     
     // Filter strictly for Wholesale Supplier Debt
     const supplierProfileIds = new Set(suppliers.map(s => s.id));
@@ -175,10 +185,14 @@ export const ManagerDashboard: React.FC = () => {
       t.status === 'PENDING_STORE' && (!t.storeKeeperId || t.storeKeeperId === user?.id)
     );
 
+    const estimatedRetailSales = totalSales / 0.9;
+    const estimatedSupplierProfit = estimatedRetailSales * 0.1;
+
     return {
-      totalSales, totalCash, totalDebt, breadSold, grossProfit, netProfit,
+      totalSales, totalCash, totalDebt, breadSold, netProfit,
       totalExpenses, outstandingDebt, stockRemaining, breadSoldMap,
       topProductId, highestQty, weekData, topDebtors, expenseEfficiency, targetPct,
+      estimatedRetailSales, estimatedSupplierProfit,
       pendingRequestsCount: pendingRequests.length, pendingRequests,
       lowStock: products.filter(p => p.stock > 0 && p.stock < 20),
       recentActivity: [...transactions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 6)
@@ -306,8 +320,8 @@ export const ManagerDashboard: React.FC = () => {
                 <div style={{ fontSize: '11px', fontWeight: 700, color: 'rgba(255,255,255,0.55)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '6px' }}>Net Profit Today</div>
                 <div style={{ fontSize: '28px', fontWeight: 900, color: metrics.netProfit >= 0 ? '#6ee7b7' : '#fca5a5', letterSpacing: '-0.04em' }}>{fmt(metrics.netProfit)}</div>
                 <div style={{ display: 'flex', gap: '14px', marginTop: '8px' }}>
-                  <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.5)', fontWeight: 600 }}>Gross: {fmt(metrics.grossProfit)}</span>
-                  <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.5)', fontWeight: 600 }}>Exp: {fmt(metrics.totalExpenses)}</span>
+                  <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.5)', fontWeight: 600 }}>Total Revenue: {fmt(metrics.totalSales)}</span>
+                  <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.5)', fontWeight: 600 }}>Expenses: {fmt(metrics.totalExpenses)}</span>
                 </div>
               </div>
               <div style={{ textAlign: 'right' }}>
@@ -350,6 +364,42 @@ export const ManagerDashboard: React.FC = () => {
                 <div style={{ fontSize: '9px', color: T.txt3, marginTop: '2px' }}>{k.sub}</div>
               </motion.div>
             ))}
+          </div>
+
+          {/* ─── MARKET ECONOMICS BENTO ─── */}
+          <div style={{ background: '#fff', borderRadius: '24px', padding: '20px', border: `1px solid ${T.border}`, boxShadow: T.shadow }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 800, color: T.ink, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Scale size={18} color={T.accent} /> Market Economics
+              </h3>
+              <span style={{ fontSize: '10px', fontWeight: 700, color: T.txt3, textTransform: 'uppercase' }}>Consignment Analysis</span>
+            </div>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', background: T.surface2, borderRadius: '14px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: T.accent }} />
+                  <span style={{ fontSize: '13px', fontWeight: 600, color: T.txt2 }}>Total Retail Value</span>
+                </div>
+                <span style={{ fontSize: '14px', fontWeight: 800, color: T.ink }}>{fmt(metrics.estimatedRetailSales)}</span>
+              </div>
+              
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', background: 'rgba(5, 150, 105, 0.05)', borderRadius: '14px', border: '1px solid rgba(5, 150, 105, 0.1)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: T.success }} />
+                  <span style={{ fontSize: '13px', fontWeight: 600, color: T.textSuccess }}>Bakery Share (90%)</span>
+                </div>
+                <span style={{ fontSize: '14px', fontWeight: 800, color: T.textSuccess }}>{fmt(metrics.totalSales)}</span>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', background: 'rgba(217, 119, 6, 0.05)', borderRadius: '14px', border: '1px solid rgba(217, 119, 6, 0.1)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: T.warn }} />
+                  <span style={{ fontSize: '13px', fontWeight: 600, color: T.textWarn }}>Supplier Payout (10%)</span>
+                </div>
+                <span style={{ fontSize: '14px', fontWeight: 800, color: T.textWarn }}>{fmt(metrics.estimatedSupplierProfit)}</span>
+              </div>
+            </div>
           </div>
 
           {/* ─── STAT CARDS ─── */}

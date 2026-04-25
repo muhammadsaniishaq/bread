@@ -120,6 +120,22 @@ export interface Expense {
   type?: 'MANAGER' | 'SUPPLIER';
 }
 
+export interface SupplierReport {
+  id: string;
+  date: string;
+  supplier_id: string;
+  total_sales: number;
+  cash_sales: number;
+  debt_sales: number;
+  expenses: number;
+  net_profit: number;
+  bakery_owed: number;
+  company_paid: number;
+  remaining_balance: number;
+  notes?: string;
+  data?: any; // Snapshot of metrics
+}
+
 export interface AppSettings {
   companyName: string;
   adminPin: string;
@@ -130,5 +146,9 @@ export interface AppSettings {
   adminPassword?: string;
   role?: 'Admin' | 'Cashier' | 'MANAGER' | 'SUPPLIER' | 'STORE_KEEPER';
   theme?: 'dark' | 'light';
+  language?: 'en' | 'ha';
   bakeryName?: string;
+  account_name?: string;
+  bank_name?: string;
+  account_number?: string;
 }

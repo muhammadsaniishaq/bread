@@ -27,7 +27,6 @@ export const Login: React.FC = () => {
   const [loading, setLoading]     = useState(false);
 
   useEffect(() => {
-    localStorage.removeItem('bakery_manual_session');
     if (user) navigate('/', { replace: true });
   }, [user, navigate]);
 
@@ -62,7 +61,6 @@ export const Login: React.FC = () => {
             user_metadata: { full_name: legacySession.name, role: resolvedRole },
             is_manual: true
           } as any;
-          localStorage.removeItem('bakery_manual_session');
           setManualUser(manualSession, resolvedRole);
           setSuccessMsg('Welcome back! Logging you in...');
           return;
