@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../store/AuthContext';
 import { useAppContext } from '../store/AppContext';
-import { ShoppingBag, Calendar, Search, CheckCircle2, User, MapPin } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { ShoppingBag, Calendar, Search, CheckCircle2, User, MapPin, X, Phone, Package, Clock } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { AnimatedPage } from '../components/AnimatedPage';
 import { useNavigate } from 'react-router-dom';
 import SupplierBottomNav from '../components/SupplierBottomNav';
@@ -41,6 +41,7 @@ export default function SupplierOrders() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filter, setFilter] = useState<'all' | 'pending' | 'delivered'>('all');
+  const [selectedOrder, setSelectedOrder] = useState<any>(null);
 
   useEffect(() => {
     if (!user) {
@@ -179,7 +180,8 @@ export default function SupplierOrders() {
 
                       return (
                         <motion.div key={o.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.05 }}
-                           style={{ background: '#fff', borderRadius: '20px', overflow: 'hidden', border: `1px solid ${T.border}`, boxShadow: '0 4px 20px -10px rgba(0,0,0,0.05)' }}>
+                           onClick={() => setSelectedOrder(o)}
+                           style={{ background: '#fff', borderRadius: '20px', overflow: 'hidden', border: `1px solid ${T.border}`, boxShadow: '0 4px 20px -10px rgba(0,0,0,0.05)', cursor: 'pointer' }}>
                            
                            {/* Order Header */}
                            <div style={{ padding: '16px', borderBottom: `1px solid ${T.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
@@ -216,7 +218,7 @@ export default function SupplierOrders() {
                            {/* Action */}
                            {isPending && (
                              <div style={{ padding: '12px 16px', background: '#fff', borderTop: `1px solid ${T.border}` }}>
-                               <motion.button whileTap={{ scale: 0.98 }} onClick={() => processOrder(o)}
+                               <motion.button whileTap={{ scale: 0.98 }} onClick={(e) => { e.stopPropagation(); processOrder(o); }}
                                  style={{ width: '100%', padding: '12px', borderRadius: '12px', border: 'none', background: 'linear-gradient(135deg,#10b981,#059669)', color: '#fff', fontSize: '13px', fontWeight: 900, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', boxShadow: '0 4px 12px rgba(16,185,129,0.2)' }}>
                                   <CheckCircle2 size={16} /> Approve & Deliver Order
                                </motion.button>
@@ -233,6 +235,109 @@ export default function SupplierOrders() {
 
         <SupplierBottomNav />
       </div>
+
+      {/* ORDER DETAILS MODAL */}
+      <AnimatePresence>
+        {selectedOrder && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 999, background: 'rgba(15,23,42,0.4)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'flex-end' }}
+            onClick={() => setSelectedOrder(null)}
+          >
+            <motion.div
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+              onClick={e => e.stopPropagation()}
+              style={{ width: '100%', background: '#fff', borderRadius: '32px 32px 0 0', padding: '24px', maxHeight: '85vh', overflowY: 'auto' }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' }}>
+                <div>
+                  <h2 style={{ margin: '0 0 4px', fontSize: '20px', fontWeight: 900, color: T.ink }}>Order Details</h2>
+                  <div style={{ fontSize: '12px', fontWeight: 600, color: T.txt3 }}>{new Date(selectedOrder.created_at).toLocaleString()}</div>
+                </div>
+                <button onClick={() => setSelectedOrder(null)} style={{ background: '#f1f5f9', border: 'none', width: '36px', height: '36px', borderRadius: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: T.txt2 }}>
+                  <X size={18} />
+                </button>
+              </div>
+
+              {/* Customer Info Box */}
+              <div style={{ background: T.bg, borderRadius: '20px', padding: '16px', marginBottom: '20px', border: `1px solid ${T.border}` }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+                  <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: 'rgba(79,70,229,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.primary }}>
+                    <User size={20} />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '10px', fontWeight: 800, color: T.txt3, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Client Name</div>
+                    <div style={{ fontSize: '15px', fontWeight: 900, color: T.ink }}>{selectedOrder.customers?.name || 'Unknown'}</div>
+                  </div>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.txt2 }}><Phone size={14} /></div>
+                    <div style={{ fontSize: '13px', fontWeight: 700, color: T.ink }}>{selectedOrder.customers?.phone || 'N/A'}</div>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.txt2 }}><MapPin size={14} /></div>
+                    <div style={{ fontSize: '13px', fontWeight: 700, color: T.ink }}>{selectedOrder.customers?.location || 'N/A'}</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Order Items */}
+              <div style={{ marginBottom: '24px' }}>
+                <div style={{ fontSize: '14px', fontWeight: 900, color: T.ink, marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Package size={16} color={T.primary} /> Items Ordered
+                </div>
+                <div style={{ border: `1px solid ${T.border}`, borderRadius: '20px', overflow: 'hidden' }}>
+                  {(() => {
+                    const items = selectedOrder.order_items && selectedOrder.order_items.length > 0 
+                      ? selectedOrder.order_items.map((i:any) => ({ id: i.product_id, name: i.products?.name, quantity: i.quantity, price: i.price_at_time })) 
+                      : (selectedOrder.details || []).map((i:any) => ({ id: i.productId, name: getProductName(i.productId), quantity: i.quantity, price: i.unitPrice }));
+
+                    return items.map((it: any, i: number) => (
+                      <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 16px', background: i % 2 === 0 ? '#fff' : T.bg, borderBottom: i < items.length - 1 ? `1px solid ${T.border}` : 'none' }}>
+                        <div>
+                          <div style={{ fontSize: '13px', fontWeight: 800, color: T.ink }}>{it.name || 'Product'}</div>
+                          <div style={{ fontSize: '11px', fontWeight: 600, color: T.txt3 }}>{it.quantity} units x {fmtRaw(it.price || 0)}</div>
+                        </div>
+                        <div style={{ fontSize: '14px', fontWeight: 900, color: T.ink }}>
+                          {fmtRaw(it.quantity * (it.price || 0))}
+                        </div>
+                      </div>
+                    ));
+                  })()}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '16px', background: '#f1f5f9', borderTop: `2px solid ${T.border}` }}>
+                    <div style={{ fontSize: '14px', fontWeight: 900, color: T.ink }}>Total Amount</div>
+                    <div style={{ fontSize: '18px', fontWeight: 900, color: T.primary }}>{fmtRaw(selectedOrder.total_price)}</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Status & Actions */}
+              <div style={{ marginBottom: '24px' }}>
+                <div style={{ fontSize: '12px', fontWeight: 800, color: T.txt3, textTransform: 'uppercase', marginBottom: '8px' }}>Order Status</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px', borderRadius: '14px', background: selectedOrder.status === 'PENDING' ? 'rgba(245,158,11,0.1)' : 'rgba(16,185,129,0.1)', color: selectedOrder.status === 'PENDING' ? T.warn : T.success }}>
+                  {selectedOrder.status === 'PENDING' ? <Clock size={18} /> : <CheckCircle2 size={18} />}
+                  <div style={{ fontSize: '14px', fontWeight: 800 }}>
+                    {selectedOrder.status === 'PENDING' ? 'Awaiting Supplier Approval' : 'Delivered & Recorded'}
+                  </div>
+                </div>
+              </div>
+
+              {selectedOrder.status === 'PENDING' && (
+                <motion.button whileTap={{ scale: 0.98 }} onClick={() => { processOrder(selectedOrder); setSelectedOrder(null); }}
+                  style={{ width: '100%', padding: '16px', borderRadius: '16px', border: 'none', background: 'linear-gradient(135deg,#10b981,#059669)', color: '#fff', fontSize: '15px', fontWeight: 900, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', boxShadow: '0 8px 24px rgba(16,185,129,0.25)' }}>
+                  <CheckCircle2 size={20} /> Approve & Deliver Order
+                </motion.button>
+              )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </AnimatedPage>
   );
 }
