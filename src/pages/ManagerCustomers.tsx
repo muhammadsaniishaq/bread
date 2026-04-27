@@ -9,7 +9,7 @@ import {
   BadgeCheck,
   MessageCircle, Clock, AlertOctagon,
   Shield, Target, Trash2,
-  ArrowLeft, Edit2, CheckCircle2, FileText as InvoiceIcon, ClipboardList
+  ArrowLeft, Edit2, CheckCircle2, FileText as InvoiceIcon, ClipboardList, Package
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { BarChart, Bar, ResponsiveContainer } from 'recharts';
@@ -73,7 +73,9 @@ export const ManagerCustomers: React.FC = () => {
   const [eName, setEName]=useState(''); const [ePhone, setEPhone]=useState(''); const [eEmail, setEEmail]=useState(''); const [eUsername, setEUsername]=useState(''); const [ePassword, setEPassword]=useState(''); const [eLocation, setELocation]=useState(''); const [eImage, setEImage]=useState(''); const [eSup, setESup]=useState(''); const [ePin, setEPin]=useState(''); const [eNote, setENote]=useState(''); const [eCreditLimit, setECreditLimit]=useState(''); const [eSalesTarget, setESalesTarget]=useState('');
   const [eIsVerified, setEIsVerified] = useState(false);
   
-  const [dTab, setDTab] = useState<'history'|'analytics'>('history');
+  const [dTab, setDTab] = useState<'history'|'analytics'|'orders'>('history');
+  const [drawerOrders, setDrawerOrders] = useState<any[]>([]);
+  const [loadingOrders, setLoadingOrders] = useState(false);
   const [historyFilter, setHistoryFilter] = useState<'ALL'|'PURCHASES'|'PAYMENTS'>('ALL');
   const [editModalOpen, setEditModalOpen] = useState(false);
 
@@ -108,6 +110,18 @@ export const ManagerCustomers: React.FC = () => {
          setESalesTarget(parsed.salesTarget ? String(parsed.salesTarget) : '');
          setENote(parsed.memo || '');
       } catch (err) { setECreditLimit(''); setESalesTarget(''); setENote(drawer.notes || ''); }
+
+      const fetchCustomerOrders = async () => {
+         setLoadingOrders(true);
+         try {
+            const { data } = await supabase.from('orders')
+               .select('*, order_items(quantity, price_at_time, products(name))')
+               .eq('customer_id', drawer.profile_id || drawer.id)
+               .order('created_at', { ascending: false });
+            if (data) setDrawerOrders(data);
+         } catch (e) { console.error(e); } finally { setLoadingOrders(false); }
+      };
+      fetchCustomerOrders();
     }
   }, [drawer]);
 
@@ -551,7 +565,7 @@ Generated via Admin Console.`;
 
                     {/* Navigation Tabs Container */}
                     <div style={{marginTop:'12px',display:'flex',gap:'24px',borderBottom:`1px solid ${T.border}`,padding:'0 24px'}}>
-                       {['history', 'analytics'].map(tab => (
+                       {['history', 'orders', 'analytics'].map(tab => (
                           <button key={tab} onClick={()=>setDTab(tab as any)} style={{background:'none',border:'none',borderBottom:dTab===tab?`2px solid ${T.accent}`:'2px solid transparent',padding:'12px 0',fontSize:'14px',fontWeight:dTab===tab?600:500,color:dTab===tab?T.accent:T.txt2,cursor:'pointer',textTransform:'capitalize'}}>
                              {tab}
                           </button>
@@ -677,6 +691,38 @@ Generated via Admin Console.`;
                                    <div style={{width:'100%',height:'6px',background:T.surface2,borderRadius:'10px',overflow:'hidden'}}><div style={{height:'100%',background:usedPercent>=100?T.danger:usedPercent>=80?T.warn:T.success,borderRadius:'10px',width:`${usedPercent}%`}}/></div>
                                 </div>
                              )}
+                          </motion.div>
+                       )}
+
+                       {dTab === 'orders' && (
+                          <motion.div initial={{opacity:0}} animate={{opacity:1}} transition={{duration:0.2}}>
+                             <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'16px'}}>
+                                <span style={{fontSize:'14px',fontWeight:600,color:T.txt2}}>Client Orders</span>
+                                {loadingOrders && <span style={{fontSize:'12px',color:T.txt3}}>Refreshing...</span>}
+                             </div>
+                             
+                             <div style={{display:'flex',flexDirection:'column',gap:'12px'}}>
+                                {!loadingOrders && drawerOrders.length===0?<p style={{color:T.txt3,fontSize:14,textAlign:'center',padding:'20px 0'}}>No orders placed by this client.</p> : drawerOrders.map((ord) => (
+                                   <div key={ord.id} style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'16px',background:T.surface2,borderRadius:'16px'}}>
+                                      <div style={{display:'flex',alignItems:'center',gap:'12px'}}>
+                                         <div style={{width:'40px',height:'40px',borderRadius:'10px',background:'#fff',display:'flex',alignItems:'center',justifyContent:'center',boxShadow:T.shadow}}>
+                                            <Package size={18} color={T.accent}/>
+                                         </div>
+                                         <div style={{display:'flex',flexDirection:'column'}}>
+                                            <span style={{fontSize:'14px',fontWeight:800,color:T.ink}}>Order #{ord.id.toString().slice(0,6).toUpperCase()}</span>
+                                            <span style={{fontSize:'12px',color:T.txt3}}>{formatDate(ord.created_at)}</span>
+                                         </div>
+                                      </div>
+                                      
+                                      <div style={{display:'flex',flexDirection:'column',alignItems:'flex-end',gap:4}}>
+                                         <span style={{fontSize:'15px',fontWeight:900,color:T.ink}}>₦{(ord.total_price || 0).toLocaleString()}</span>
+                                         <span style={{background:ord.status==='PENDING'?'#fef3c7':ord.status==='CANCELLED'?'#fee2e2':'#dcfce7',color:ord.status==='PENDING'?'#d97706':ord.status==='CANCELLED'?'#dc2626':'#166534',padding:'4px 10px',borderRadius:'8px',fontSize:'10px',fontWeight:800,textTransform:'uppercase',letterSpacing:'0.04em'}}>
+                                            {ord.status}
+                                         </span>
+                                      </div>
+                                   </div>
+                                ))}
+                             </div>
                           </motion.div>
                        )}
 

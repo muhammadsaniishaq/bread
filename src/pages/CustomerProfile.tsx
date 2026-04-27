@@ -6,10 +6,11 @@ import { motion } from 'framer-motion';
 import { getTransactionItems } from '../store/types';
 import { AnimatedPage } from '../components/AnimatedPage';
 import { ImageCropper } from '../components/ImageCropper';
+import { supabase } from '../lib/supabase';
 import {
   ArrowLeft, Phone, MapPin, MessageCircle, MessageSquare,
   CreditCard, X, Check, AlertTriangle, Activity, BadgeCheck, Zap,
-  Shield, ShieldCheck, ShieldAlert, FileSearch,
+  Shield, ShieldCheck, ShieldAlert, FileSearch, Package,
   Edit2, FileText, Trash2, Star, TrendingUp, Camera
 } from 'lucide-react';
 
@@ -64,6 +65,26 @@ export const CustomerProfile: React.FC = () => {
   const [editImage, setEditImage] = useState(customer?.image||'');
   const [rawUpload, setRawUpload] = useState<string|null>(null);
   const assignedSupplier = customer?.supplierDetails;
+
+  const [bottomTab, setBottomTab] = useState<'ledger'|'orders'>('ledger');
+  const [customerOrders, setCustomerOrders] = useState<any[]>([]);
+  const [loadingOrders, setLoadingOrders] = useState(false);
+
+  React.useEffect(() => {
+    if (customer && bottomTab === 'orders') {
+      const fetchCustomerOrders = async () => {
+        setLoadingOrders(true);
+        try {
+          const { data } = await supabase.from('orders')
+             .select('*, order_items(quantity, price_at_time, products(name))')
+             .eq('customer_id', customer.profile_id || customer.id)
+             .order('created_at', { ascending: false });
+          if (data) setCustomerOrders(data);
+        } catch (e) { console.error(e); } finally { setLoadingOrders(false); }
+      };
+      fetchCustomerOrders();
+    }
+  }, [customer, bottomTab]);
 
   const handleImageUpload=(e:React.ChangeEvent<HTMLInputElement>)=>{
     const file=e.target.files?.[0];
@@ -369,11 +390,18 @@ export const CustomerProfile: React.FC = () => {
             </div>
           )}
 
-          {/* TIMELINE */}
-          <p style={{fontSize:'12px',fontWeight:800,color:T.txt,textTransform:'uppercase',letterSpacing:'0.1em',marginBottom:'16px',display:'flex',alignItems:'center',gap:'8px'}}>
-            <Activity size={15} color={T.accent}/> Transaction Ledger
-          </p>
-          {metrics.history.length===0?(
+          {/* TIMELINE & ORDERS TABS */}
+          <div style={{display:'flex', gap:'20px', borderBottom:`1.5px solid ${T.border}`, marginBottom:'16px'}}>
+            <button onClick={()=>setBottomTab('ledger')} style={{background:'none',border:'none',borderBottom:bottomTab==='ledger'?`2.5px solid ${T.accent}`:'2.5px solid transparent',padding:'10px 0',fontSize:'13px',fontWeight:bottomTab==='ledger'?800:600,color:bottomTab==='ledger'?T.accent:T.txt3,cursor:'pointer',display:'flex',alignItems:'center',gap:'8px',textTransform:'uppercase',letterSpacing:'0.05em'}}>
+               <Activity size={15}/> Transaction Ledger
+            </button>
+            <button onClick={()=>setBottomTab('orders')} style={{background:'none',border:'none',borderBottom:bottomTab==='orders'?`2.5px solid ${T.accent}`:'2.5px solid transparent',padding:'10px 0',fontSize:'13px',fontWeight:bottomTab==='orders'?800:600,color:bottomTab==='orders'?T.accent:T.txt3,cursor:'pointer',display:'flex',alignItems:'center',gap:'8px',textTransform:'uppercase',letterSpacing:'0.05em'}}>
+               <Package size={15}/> Client Orders
+            </button>
+          </div>
+          
+          {bottomTab === 'ledger' && (
+            metrics.history.length===0?(
             <div style={{textAlign:'center',padding:'48px 0',color:T.txt3,border:`1.5px dashed ${T.border}`,borderRadius:T.radiusLg}}>
               <FileText size={36} style={{margin:'0 auto 10px',opacity:0.2}}/>
               <p style={{fontWeight:700,fontSize:'14px',color:T.txt2}}>No History Yet</p>
@@ -431,6 +459,38 @@ export const CustomerProfile: React.FC = () => {
                 })}
               </div>
             </div>
+          ))}
+          
+          {bottomTab === 'orders' && (
+             <div style={{display:'flex',flexDirection:'column',gap:'12px'}}>
+                {loadingOrders && <p style={{color:T.txt3,fontSize:13,textAlign:'center',padding:'10px'}}>Refreshing orders...</p>}
+                {!loadingOrders && customerOrders.length===0 && (
+                   <div style={{textAlign:'center',padding:'48px 0',color:T.txt3,border:`1.5px dashed ${T.border}`,borderRadius:T.radiusLg}}>
+                     <Package size={36} style={{margin:'0 auto 10px',opacity:0.2}}/>
+                     <p style={{fontWeight:700,fontSize:'14px',color:T.txt2}}>No Orders Yet</p>
+                   </div>
+                )}
+                {!loadingOrders && customerOrders.map((ord) => (
+                   <div key={ord.id} style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'16px',background:T.surface,border:`1.5px solid ${T.border}`,borderRadius:'16px',boxShadow:T.shadow}}>
+                      <div style={{display:'flex',alignItems:'center',gap:'12px'}}>
+                         <div style={{width:'40px',height:'40px',borderRadius:'12px',background:T.accentLt,display:'flex',alignItems:'center',justifyContent:'center',border:`1.5px solid ${T.accent}40`}}>
+                            <Package size={18} color={T.accent}/>
+                         </div>
+                         <div style={{display:'flex',flexDirection:'column'}}>
+                            <span style={{fontSize:'14px',fontWeight:800,color:T.txt}}>Order #{ord.id.toString().slice(0,6).toUpperCase()}</span>
+                            <span style={{fontSize:'12px',color:T.txt3}}>{new Date(ord.created_at).toLocaleDateString(undefined, {month:'short', day:'numeric', year:'numeric'})}</span>
+                         </div>
+                      </div>
+                      
+                      <div style={{display:'flex',flexDirection:'column',alignItems:'flex-end',gap:4}}>
+                         <span style={{fontSize:'15px',fontWeight:900,color:T.txt}}>₦{(ord.total_price || 0).toLocaleString()}</span>
+                         <span style={{background:ord.status==='PENDING'?'#fef3c7':ord.status==='CANCELLED'?'#fee2e2':'#dcfce7',color:ord.status==='PENDING'?'#d97706':ord.status==='CANCELLED'?'#dc2626':'#166534',padding:'4px 10px',borderRadius:'8px',fontSize:'10px',fontWeight:800,textTransform:'uppercase',letterSpacing:'0.04em'}}>
+                            {ord.status}
+                         </span>
+                      </div>
+                   </div>
+                ))}
+             </div>
           )}
         </div>
 
