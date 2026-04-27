@@ -27,6 +27,7 @@ import CustomerOfficialDocs from './pages/CustomerOfficialDocs';
 import SupplierProfile from './pages/SupplierProfile';
 import SupplierDashboard from './pages/SupplierDashboard';
 import SupplierOfficialDocs from './pages/SupplierOfficialDocs';
+import SupplierOrders from './pages/SupplierOrders';
 import StoreOfficialDocs from './pages/StoreOfficialDocs';
 
 
@@ -159,6 +160,7 @@ const AppContent: React.FC = () => {
             {/* Supplier routes — inside Layout so SupplierBottomNav renders */}
             <Route path="/supplier" element={<RoleGuard allowedRoles={['SUPPLIER']}><SupplierDashboard /></RoleGuard>} />
             <Route path="/supplier/docs" element={<RoleGuard allowedRoles={['SUPPLIER']}><SupplierOfficialDocs /></RoleGuard>} />
+            <Route path="/supplier/orders" element={<RoleGuard allowedRoles={['SUPPLIER']}><SupplierOrders /></RoleGuard>} />
             <Route path="/supplier/profile" element={<RoleGuard allowedRoles={['SUPPLIER']}><SupplierProfile /></RoleGuard>} />
           </Route>
 

@@ -1,12 +1,13 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
-  LayoutDashboard, ShoppingCart, Users, Package, Receipt, UserCircle2
+  LayoutDashboard, ShoppingCart, Users, Package, Receipt, UserCircle2, ShoppingBag
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 const tabs = [
   { label: 'Home',    icon: LayoutDashboard, path: '/supplier' },
+  { label: 'Orders',  icon: ShoppingBag,     path: '/supplier/orders' },
   { label: 'Sales',   icon: ShoppingCart,    path: '/sales' },
   { label: 'Clients', icon: Users,           path: '/customers' },
   { label: 'Stock',   icon: Package,         path: '/inventory' },
