@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../store/AuthContext';
 import { useAppContext } from '../store/AppContext';
-import { ShoppingBag, Calendar, Search, CheckCircle2, User, MapPin, X, Phone, Package, Clock } from 'lucide-react';
+import { ShoppingBag, Calendar, Search, CheckCircle2, User, MapPin, X, Phone, Package, Clock, Navigation, MessageCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AnimatedPage } from '../components/AnimatedPage';
 import { useNavigate } from 'react-router-dom';
@@ -57,7 +57,7 @@ export default function SupplierOrders() {
       const { data: allOrds } = await supabase.from('orders')
         .select(`
            *,
-           customers ( name, location, phone ),
+           customers ( name, location, phone, image ),
            order_items (
               quantity,
               price_at_time,
@@ -267,15 +267,19 @@ export default function SupplierOrders() {
               {/* Customer Info Box */}
               <div style={{ background: T.bg, borderRadius: '20px', padding: '16px', marginBottom: '20px', border: `1px solid ${T.border}` }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
-                  <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: 'rgba(79,70,229,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.primary }}>
-                    <User size={20} />
-                  </div>
+                  {selectedOrder.customers?.image ? (
+                    <img src={selectedOrder.customers.image} alt="avatar" style={{ width: '40px', height: '40px', borderRadius: '12px', objectFit: 'cover' }} />
+                  ) : (
+                    <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: 'rgba(79,70,229,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.primary, fontSize: '16px', fontWeight: 900 }}>
+                      {selectedOrder.customers?.name ? selectedOrder.customers.name.charAt(0).toUpperCase() : <User size={20} />}
+                    </div>
+                  )}
                   <div>
                     <div style={{ fontSize: '10px', fontWeight: 800, color: T.txt3, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Client Name</div>
                     <div style={{ fontSize: '15px', fontWeight: 900, color: T.ink }}>{selectedOrder.customers?.name || 'Unknown'}</div>
                   </div>
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.txt2 }}><Phone size={14} /></div>
                     <div style={{ fontSize: '13px', fontWeight: 700, color: T.ink }}>{selectedOrder.customers?.phone || 'N/A'}</div>
@@ -284,6 +288,19 @@ export default function SupplierOrders() {
                     <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.txt2 }}><MapPin size={14} /></div>
                     <div style={{ fontSize: '13px', fontWeight: 700, color: T.ink }}>{selectedOrder.customers?.location || 'N/A'}</div>
                   </div>
+                </div>
+
+                {/* Useful Action Buttons */}
+                <div style={{ display: 'flex', gap: '8px', borderTop: `1px solid ${T.border}`, paddingTop: '16px' }}>
+                  <a href={`tel:${selectedOrder.customers?.phone || ''}`} style={{ flex: 1, padding: '10px', borderRadius: '12px', background: '#fff', border: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', textDecoration: 'none', color: T.ink, fontSize: '11px', fontWeight: 800 }}>
+                    <Phone size={14} color={T.primary} /> Call
+                  </a>
+                  <a href={`https://wa.me/${(selectedOrder.customers?.phone || '').replace(/\D/g,'')}`} target="_blank" rel="noreferrer" style={{ flex: 1, padding: '10px', borderRadius: '12px', background: '#fff', border: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', textDecoration: 'none', color: T.ink, fontSize: '11px', fontWeight: 800 }}>
+                    <MessageCircle size={14} color="#10b981" /> WhatsApp
+                  </a>
+                  <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(selectedOrder.customers?.location || '')}`} target="_blank" rel="noreferrer" style={{ flex: 1, padding: '10px', borderRadius: '12px', background: '#fff', border: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', textDecoration: 'none', color: T.ink, fontSize: '11px', fontWeight: 800 }}>
+                    <Navigation size={14} color="#f59e0b" /> Trace
+                  </a>
                 </div>
               </div>
 
