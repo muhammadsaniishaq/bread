@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../store/AuthContext';
 import { useAppContext } from '../store/AppContext';
-import { ShoppingBag, Calendar, Search, CheckCircle2, User, MapPin, X, Phone, Package, Clock, Navigation, MessageCircle, XCircle, Share2, Wallet, CalendarDays, RefreshCw, Download, ArrowDownAZ, Copy, Printer, Banknote, Target, MessageSquare } from 'lucide-react';
+import { ShoppingBag, Calendar, Search, CheckCircle2, User, MapPin, X, Phone, Package, Clock, Navigation, MessageCircle, XCircle, Share2, Wallet, CalendarDays, RefreshCw, Download, ArrowDownAZ, Printer, Banknote, Target, MessageSquare } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AnimatedPage } from '../components/AnimatedPage';
 import { useNavigate } from 'react-router-dom';
@@ -520,7 +520,7 @@ export default function SupplierOrders() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 999, background: 'rgba(15,23,42,0.4)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'flex-end' }}
+            style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 999, background: 'rgba(15,23,42,0.6)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}
             onClick={() => setSelectedOrder(null)}
           >
             <motion.div
@@ -529,8 +529,12 @@ export default function SupplierOrders() {
               exit={{ y: '100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 300 }}
               onClick={e => e.stopPropagation()}
-              style={{ width: '100%', background: '#fff', borderRadius: '32px 32px 0 0', padding: '24px', maxHeight: '85vh', overflowY: 'auto' }}
+              style={{ width: '100%', maxWidth: '500px', background: '#fff', borderRadius: '32px 32px 0 0', padding: '24px 24px 40px', maxHeight: '90vh', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}
+              className="hide-scrollbar"
             >
+              {/* Mobile Pill Handle */}
+              <div style={{ width: '40px', height: '4px', background: T.border, borderRadius: '2px', margin: '0 auto 24px' }} />
+
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' }}>
                 <div>
                   <h2 style={{ margin: '0 0 4px', fontSize: '20px', fontWeight: 900, color: T.ink, display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -547,78 +551,79 @@ export default function SupplierOrders() {
               <div style={{ background: T.bg, borderRadius: '20px', padding: '16px', marginBottom: '20px', border: `1px solid ${T.border}` }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
                   {selectedOrder.customers?.image ? (
-                    <img src={selectedOrder.customers.image} alt="avatar" style={{ width: '40px', height: '40px', borderRadius: '12px', objectFit: 'cover' }} />
+                    <img src={selectedOrder.customers.image} alt="avatar" style={{ width: '48px', height: '48px', borderRadius: '14px', objectFit: 'cover' }} />
                   ) : (
-                    <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: 'rgba(79,70,229,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.primary, fontSize: '16px', fontWeight: 900 }}>
-                      {selectedOrder.customers?.name ? selectedOrder.customers.name.charAt(0).toUpperCase() : <User size={20} />}
+                    <div style={{ width: '48px', height: '48px', borderRadius: '14px', background: 'rgba(79,70,229,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.primary, fontSize: '18px', fontWeight: 900 }}>
+                      {selectedOrder.customers?.name ? selectedOrder.customers.name.charAt(0).toUpperCase() : <User size={24} />}
                     </div>
                   )}
-                  <div>
-                    <div style={{ fontSize: '10px', fontWeight: 800, color: T.txt3, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Client Name</div>
-                    <div style={{ fontSize: '15px', fontWeight: 900, color: T.ink }}>{selectedOrder.customers?.name || 'Unknown'}</div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: '10px', fontWeight: 800, color: T.txt3, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Client Details</div>
+                    <div style={{ fontSize: '16px', fontWeight: 900, color: T.ink }}>{selectedOrder.customers?.name || 'Unknown'}</div>
                     {selectedOrder.customers?.debt_balance > 0 && (
-                      <div style={{ fontSize: '11px', fontWeight: 800, color: T.danger, marginTop: '2px' }}>
-                        Debt: {fmtRaw(selectedOrder.customers.debt_balance)}
+                      <div style={{ fontSize: '11px', fontWeight: 800, color: T.danger, marginTop: '2px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <Wallet size={10} /> Outstanding Debt: {fmtRaw(selectedOrder.customers.debt_balance)}
                       </div>
                     )}
                   </div>
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
-                  <div onClick={() => handleCopy(selectedOrder.customers?.phone, 'Phone Number')} style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', padding: '8px', borderRadius: '8px', transition: 'background 0.2s' }} className="hover-bg-gray">
-                    <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.txt2 }}><Phone size={14} /></div>
-                    <div style={{ fontSize: '13px', fontWeight: 700, color: T.ink, display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      {selectedOrder.customers?.phone || 'N/A'}
-                      <Copy size={12} color={T.txt3} />
+                  <div onClick={() => handleCopy(selectedOrder.customers?.phone, 'Phone Number')} style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', padding: '10px', borderRadius: '12px', background: '#fff', border: `1px solid ${T.border}` }}>
+                    <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: 'rgba(79,70,229,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.primary }}><Phone size={14} /></div>
+                    <div style={{ fontSize: '13px', fontWeight: 700, color: T.ink, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {selectedOrder.customers?.phone || 'No Phone'}
                     </div>
                   </div>
-                  <div onClick={() => handleCopy(selectedOrder.customers?.location, 'Location')} style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', padding: '8px', borderRadius: '8px', transition: 'background 0.2s' }} className="hover-bg-gray">
-                    <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.txt2 }}><MapPin size={14} /></div>
-                    <div style={{ fontSize: '13px', fontWeight: 700, color: T.ink, display: 'flex', alignItems: 'center', gap: '4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {selectedOrder.customers?.location || 'N/A'}
-                      <Copy size={12} color={T.txt3} style={{ flexShrink: 0 }} />
+                  <div onClick={() => handleCopy(selectedOrder.customers?.location, 'Location')} style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', padding: '10px', borderRadius: '12px', background: '#fff', border: `1px solid ${T.border}` }}>
+                    <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: 'rgba(245,158,11,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#f59e0b' }}><MapPin size={14} /></div>
+                    <div style={{ fontSize: '13px', fontWeight: 700, color: T.ink, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {selectedOrder.customers?.location || 'No Location'}
                     </div>
                   </div>
                 </div>
 
                 {/* Useful Action Buttons */}
-                <div style={{ display: 'flex', gap: '8px', borderTop: `1px solid ${T.border}`, paddingTop: '16px' }}>
-                  <a href={`tel:${selectedOrder.customers?.phone || ''}`} style={{ flex: 1, padding: '10px', borderRadius: '12px', background: '#fff', border: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', textDecoration: 'none', color: T.ink, fontSize: '11px', fontWeight: 800 }}>
+                <div style={{ display: 'flex', gap: '8px', borderTop: `1px dashed ${T.border}`, paddingTop: '16px', flexWrap: 'wrap' }}>
+                  <a href={`tel:${selectedOrder.customers?.phone || ''}`} style={{ flex: '1 1 calc(33% - 8px)', padding: '10px', borderRadius: '12px', background: '#fff', border: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', textDecoration: 'none', color: T.ink, fontSize: '11px', fontWeight: 800 }}>
                     <Phone size={14} color={T.primary} /> Call
                   </a>
-                  <a href={`https://wa.me/${(selectedOrder.customers?.phone || '').replace(/\D/g,'')}?text=${encodeURIComponent(`Hello ${selectedOrder.customers?.name || ''}, your order of ${fmtRaw(selectedOrder.total_price)} has been confirmed and is on the way!`)}`} target="_blank" rel="noreferrer" style={{ flex: 1, padding: '10px', borderRadius: '12px', background: '#fff', border: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', textDecoration: 'none', color: T.ink, fontSize: '11px', fontWeight: 800 }}>
+                  <a href={`https://wa.me/${(selectedOrder.customers?.phone || '').replace(/\D/g,'')}?text=${encodeURIComponent(`Hello ${selectedOrder.customers?.name || ''}, your order of ${fmtRaw(selectedOrder.total_price)} is received.`)}`} target="_blank" rel="noreferrer" style={{ flex: '1 1 calc(33% - 8px)', padding: '10px', borderRadius: '12px', background: '#fff', border: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', textDecoration: 'none', color: T.ink, fontSize: '11px', fontWeight: 800 }}>
                     <MessageCircle size={14} color="#10b981" /> WhatsApp
                   </a>
-                  <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(selectedOrder.customers?.location || '')}`} target="_blank" rel="noreferrer" style={{ flex: 1, padding: '10px', borderRadius: '12px', background: '#fff', border: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', textDecoration: 'none', color: T.ink, fontSize: '11px', fontWeight: 800 }}>
-                    <Navigation size={14} color="#f59e0b" /> Trace
+                  <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(selectedOrder.customers?.location || '')}`} target="_blank" rel="noreferrer" style={{ flex: '1 1 calc(33% - 8px)', padding: '10px', borderRadius: '12px', background: '#fff', border: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', textDecoration: 'none', color: T.ink, fontSize: '11px', fontWeight: 800 }}>
+                    <Navigation size={14} color="#f59e0b" /> Maps
                   </a>
-                  <button onClick={() => printReceipt(selectedOrder)} style={{ flex: 1, padding: '10px', borderRadius: '12px', background: '#fff', border: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', cursor: 'pointer', color: T.ink, fontSize: '11px', fontWeight: 800 }}>
-                    <Printer size={14} color={T.primary} /> Print
+                  <button onClick={() => printReceipt(selectedOrder)} style={{ flex: '1 1 calc(50% - 8px)', padding: '10px', borderRadius: '12px', background: '#fff', border: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', cursor: 'pointer', color: T.ink, fontSize: '11px', fontWeight: 800 }}>
+                    <Printer size={14} color={T.primary} /> Print Receipt
                   </button>
-                  <button onClick={() => handleShare(selectedOrder)} style={{ flex: 1, padding: '10px', borderRadius: '12px', background: '#fff', border: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', cursor: 'pointer', color: T.ink, fontSize: '11px', fontWeight: 800 }}>
-                    <Share2 size={14} color={T.primary} /> Share
+                  <button onClick={() => handleShare(selectedOrder)} style={{ flex: '1 1 calc(50% - 8px)', padding: '10px', borderRadius: '12px', background: '#fff', border: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', cursor: 'pointer', color: T.ink, fontSize: '11px', fontWeight: 800 }}>
+                    <Share2 size={14} color={T.primary} /> Share Details
                   </button>
                 </div>
-                </div>
+              </div>
 
-                {/* Quick Messages */}
-                {selectedOrder.status === 'PENDING' && (
-                  <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', marginTop: '16px', paddingBottom: '4px' }} className="hide-scrollbar">
-                    <a href={`https://wa.me/${(selectedOrder.customers?.phone || '').replace(/\D/g,'')}?text=${encodeURIComponent("Ina kan hanya (I'm on my way)")}`} target="_blank" rel="noreferrer" style={{ padding: '6px 12px', borderRadius: '8px', background: 'rgba(16,185,129,0.1)', color: '#059669', fontSize: '10px', fontWeight: 800, textDecoration: 'none', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <MessageSquare size={10} /> "On my way"
+              {/* Quick Messages */}
+              {selectedOrder.status === 'PENDING' && (
+                <div style={{ marginBottom: '24px' }}>
+                  <div style={{ fontSize: '11px', fontWeight: 800, color: T.txt3, textTransform: 'uppercase', marginBottom: '8px' }}>Quick Notify</div>
+                  <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px' }} className="hide-scrollbar">
+                    <a href={`https://wa.me/${(selectedOrder.customers?.phone || '').replace(/\D/g,'')}?text=${encodeURIComponent("Ina kan hanya. (I'm on my way)")}`} target="_blank" rel="noreferrer" style={{ padding: '8px 14px', borderRadius: '10px', background: 'rgba(16,185,129,0.1)', color: '#059669', fontSize: '11px', fontWeight: 800, textDecoration: 'none', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <MessageSquare size={12} /> On my way
                     </a>
-                    <a href={`https://wa.me/${(selectedOrder.customers?.phone || '').replace(/\D/g,'')}?text=${encodeURIComponent("Na iso kofar gida (I have arrived)")}`} target="_blank" rel="noreferrer" style={{ padding: '6px 12px', borderRadius: '8px', background: 'rgba(79,70,229,0.1)', color: T.primary, fontSize: '10px', fontWeight: 800, textDecoration: 'none', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <MessageSquare size={10} /> "I have arrived"
+                    <a href={`https://wa.me/${(selectedOrder.customers?.phone || '').replace(/\D/g,'')}?text=${encodeURIComponent("Na iso kofar gida. (I have arrived)")}`} target="_blank" rel="noreferrer" style={{ padding: '8px 14px', borderRadius: '10px', background: 'rgba(79,70,229,0.1)', color: T.primary, fontSize: '11px', fontWeight: 800, textDecoration: 'none', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <MessageSquare size={12} /> Arrived
                     </a>
-                    <a href={`https://wa.me/${(selectedOrder.customers?.phone || '').replace(/\D/g,'')}?text=${encodeURIComponent("Gayi hakuri, biredin ya kare (Sorry, out of stock)")}`} target="_blank" rel="noreferrer" style={{ padding: '6px 12px', borderRadius: '8px', background: 'rgba(244,63,94,0.1)', color: T.danger, fontSize: '10px', fontWeight: 800, textDecoration: 'none', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <MessageSquare size={10} /> "Out of stock"
+                    <a href={`https://wa.me/${(selectedOrder.customers?.phone || '').replace(/\D/g,'')}?text=${encodeURIComponent("Gayi hakuri, biredin ya kare. (Sorry, out of stock)")}`} target="_blank" rel="noreferrer" style={{ padding: '8px 14px', borderRadius: '10px', background: 'rgba(244,63,94,0.1)', color: T.danger, fontSize: '11px', fontWeight: 800, textDecoration: 'none', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <MessageSquare size={12} /> Out of stock
                     </a>
                   </div>
-                )}
+                </div>
+              )}
 
               {/* Order Items */}
               <div style={{ marginBottom: '24px' }}>
                 <div style={{ fontSize: '14px', fontWeight: 900, color: T.ink, marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <Package size={16} color={T.primary} /> Items Ordered
+                  <Package size={16} color={T.primary} /> Order Breakdown
                 </div>
                 <div style={{ border: `1px solid ${T.border}`, borderRadius: '20px', overflow: 'hidden' }}>
                   {(() => {
@@ -627,7 +632,7 @@ export default function SupplierOrders() {
                       : (selectedOrder.details || []).map((i:any) => ({ id: i.productId, name: getProductName(i.productId), quantity: i.quantity, price: i.unitPrice }));
 
                     return items.map((it: any, i: number) => (
-                      <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 16px', background: i % 2 === 0 ? '#fff' : T.bg, borderBottom: i < items.length - 1 ? `1px solid ${T.border}` : 'none' }}>
+                      <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '14px 16px', background: i % 2 === 0 ? '#fff' : T.bg, borderBottom: i < items.length - 1 ? `1px solid ${T.border}` : 'none' }}>
                         <div>
                           <div style={{ fontSize: '13px', fontWeight: 800, color: T.ink }}>{it.name || 'Product'}</div>
                           <div style={{ fontSize: '11px', fontWeight: 600, color: T.txt3 }}>{it.quantity} units x {fmtRaw(it.price || 0)}</div>
@@ -638,9 +643,9 @@ export default function SupplierOrders() {
                       </div>
                     ));
                   })()}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '16px', background: '#f1f5f9', borderTop: `2px solid ${T.border}` }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '16px', background: '#f1f5f9', borderTop: `2px dashed ${T.border}` }}>
                     <div style={{ fontSize: '14px', fontWeight: 900, color: T.ink }}>Total Amount</div>
-                    <div style={{ fontSize: '18px', fontWeight: 900, color: T.primary }}>{fmtRaw(selectedOrder.total_price)}</div>
+                    <div style={{ fontSize: '20px', fontWeight: 900, color: T.primary }}>{fmtRaw(selectedOrder.total_price)}</div>
                   </div>
                 </div>
               </div>
@@ -652,27 +657,27 @@ export default function SupplierOrders() {
                    {/* Step 1: Placed */}
                    <div style={{ display: 'flex', gap: '12px' }}>
                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                        <div style={{ width: '24px', height: '24px', borderRadius: '12px', background: T.primary, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><CheckCircle2 size={12}/></div>
+                        <div style={{ width: '28px', height: '28px', borderRadius: '14px', background: T.primary, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><CheckCircle2 size={14}/></div>
                         <div style={{ width: '2px', height: '24px', background: T.primary, opacity: 0.2, margin: '4px 0' }}></div>
                      </div>
-                     <div>
-                        <div style={{ fontSize: '13px', fontWeight: 800, color: T.ink }}>Order Placed</div>
+                     <div style={{ paddingBottom: '16px' }}>
+                        <div style={{ fontSize: '14px', fontWeight: 800, color: T.ink }}>Order Placed</div>
                         <div style={{ fontSize: '11px', fontWeight: 600, color: T.txt3 }}>{new Date(selectedOrder.created_at).toLocaleTimeString()}</div>
                      </div>
                    </div>
                    {/* Step 2: Status */}
                    <div style={{ display: 'flex', gap: '12px' }}>
                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                        <div style={{ width: '24px', height: '24px', borderRadius: '12px', background: selectedOrder.status === 'CANCELLED' ? T.danger : selectedOrder.status === 'PENDING' ? '#f59e0b' : T.success, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                           {selectedOrder.status === 'CANCELLED' ? <XCircle size={12}/> : selectedOrder.status === 'PENDING' ? <Clock size={12}/> : <CheckCircle2 size={12}/>}
+                        <div style={{ width: '28px', height: '28px', borderRadius: '14px', background: selectedOrder.status === 'CANCELLED' ? T.danger : selectedOrder.status === 'PENDING' ? '#f59e0b' : T.success, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 4px 12px ${selectedOrder.status === 'CANCELLED' ? 'rgba(244,63,94,0.3)' : selectedOrder.status === 'PENDING' ? 'rgba(245,158,11,0.3)' : 'rgba(16,185,129,0.3)'}` }}>
+                           {selectedOrder.status === 'CANCELLED' ? <XCircle size={14}/> : selectedOrder.status === 'PENDING' ? <Clock size={14}/> : <CheckCircle2 size={14}/>}
                         </div>
                      </div>
                      <div>
-                        <div style={{ fontSize: '13px', fontWeight: 800, color: selectedOrder.status === 'CANCELLED' ? T.danger : selectedOrder.status === 'PENDING' ? '#d97706' : T.success }}>
+                        <div style={{ fontSize: '14px', fontWeight: 800, color: selectedOrder.status === 'CANCELLED' ? T.danger : selectedOrder.status === 'PENDING' ? '#d97706' : T.success }}>
                            {selectedOrder.status === 'CANCELLED' ? 'Order Cancelled' : selectedOrder.status === 'PENDING' ? 'Awaiting Delivery' : 'Delivered'}
                         </div>
                         <div style={{ fontSize: '11px', fontWeight: 600, color: T.txt3 }}>
-                           {selectedOrder.status === 'PENDING' ? 'Supplier needs to approve' : 'Action completed'}
+                           {selectedOrder.status === 'PENDING' ? 'Waiting for your action' : 'Action completed'}
                         </div>
                      </div>
                    </div>
@@ -683,18 +688,18 @@ export default function SupplierOrders() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '16px' }}>
                   <div style={{ display: 'flex', gap: '8px' }}>
                     <motion.button whileTap={{ scale: 0.98 }} onClick={() => { processOrder(selectedOrder, 'CASH'); setSelectedOrder(null); }}
-                      style={{ flex: 1, padding: '14px', borderRadius: '16px', border: '1px solid rgba(16,185,129,0.3)', background: 'rgba(16,185,129,0.05)', color: T.success, fontSize: '13px', fontWeight: 900, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
-                      <Banknote size={16} /> Paid in Cash
+                      style={{ flex: 1, padding: '16px', borderRadius: '16px', border: '1px solid rgba(16,185,129,0.3)', background: 'rgba(16,185,129,0.05)', color: T.success, fontSize: '13px', fontWeight: 900, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                      <Banknote size={18} /> Cash Payment
                     </motion.button>
                     <motion.button whileTap={{ scale: 0.98 }} onClick={() => { processOrder(selectedOrder, 'DEBT'); setSelectedOrder(null); }}
-                      style={{ flex: 1, padding: '14px', borderRadius: '16px', border: 'none', background: 'linear-gradient(135deg,#f59e0b,#d97706)', color: '#fff', fontSize: '13px', fontWeight: 900, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', boxShadow: '0 4px 12px rgba(245,158,11,0.2)' }}>
-                      <Wallet size={16} /> Record as Debt
+                      style={{ flex: 1, padding: '16px', borderRadius: '16px', border: 'none', background: 'linear-gradient(135deg,#f59e0b,#d97706)', color: '#fff', fontSize: '13px', fontWeight: 900, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', boxShadow: '0 4px 12px rgba(245,158,11,0.2)' }}>
+                      <Wallet size={18} /> Record as Debt
                     </motion.button>
                   </div>
                   
                   <motion.button whileTap={{ scale: 0.98 }} onClick={() => { rejectOrder(selectedOrder); setSelectedOrder(null); }}
-                    style={{ width: '100%', padding: '12px', borderRadius: '16px', border: '1px solid rgba(244,63,94,0.2)', background: 'rgba(244,63,94,0.05)', color: T.danger, fontSize: '13px', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
-                    <XCircle size={16} /> Reject Order
+                    style={{ width: '100%', padding: '14px', borderRadius: '16px', border: '1px solid rgba(244,63,94,0.2)', background: 'rgba(244,63,94,0.05)', color: T.danger, fontSize: '13px', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                    <XCircle size={16} /> Cancel Order
                   </motion.button>
                 </div>
               )}
