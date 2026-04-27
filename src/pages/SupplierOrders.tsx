@@ -262,7 +262,7 @@ export default function SupplierOrders() {
     const searchStr = `${o.total_price} ${custName} ${new Date(o.created_at).toLocaleDateString()}`.toLowerCase();
     
     let dateMatch = true;
-    const oDate = o.created_at.split('T')[0];
+    const oDate = o.created_at ? o.created_at.split('T')[0] : '';
     if (dateFilter === 'today') dateMatch = oDate === today;
     if (dateFilter === 'yesterday') dateMatch = oDate === yesterday;
 
@@ -414,9 +414,9 @@ export default function SupplierOrders() {
                   ) : (
                     sortedOrders.map((o, idx) => {
                       const isPending = o.status === 'PENDING';
-                      const isOverdue = isPending && (Date.now() - new Date(o.created_at).getTime() > 12 * 60 * 60 * 1000);
-                      const isNew = isPending && (Date.now() - new Date(o.created_at).getTime() < 60 * 60 * 1000);
-                      const shortId = o.id.split('-')[0].toUpperCase();
+                      const isOverdue = isPending && o.created_at && (Date.now() - new Date(o.created_at).getTime() > 12 * 60 * 60 * 1000);
+                      const isNew = isPending && o.created_at && (Date.now() - new Date(o.created_at).getTime() < 60 * 60 * 1000);
+                      const shortId = o.id ? o.id.toString().split('-')[0].toUpperCase() : 'ORD';
                       
                       // Format items string
                       let itemsStr = 'Items';
@@ -533,9 +533,9 @@ export default function SupplierOrders() {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' }}>
                 <div>
                   <h2 style={{ margin: '0 0 4px', fontSize: '20px', fontWeight: 900, color: T.ink, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                     Order #{selectedOrder.id.split('-')[0].toUpperCase()}
+                     Order #{selectedOrder.id ? selectedOrder.id.toString().split('-')[0].toUpperCase() : 'ORD'}
                   </h2>
-                  <div style={{ fontSize: '12px', fontWeight: 600, color: T.txt3 }}>Placed: {new Date(selectedOrder.created_at).toLocaleString()}</div>
+                  <div style={{ fontSize: '12px', fontWeight: 600, color: T.txt3 }}>Placed: {selectedOrder.created_at ? new Date(selectedOrder.created_at).toLocaleString() : 'N/A'}</div>
                 </div>
                 <button onClick={() => setSelectedOrder(null)} style={{ background: '#f1f5f9', border: 'none', width: '36px', height: '36px', borderRadius: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: T.txt2 }}>
                   <X size={18} />
