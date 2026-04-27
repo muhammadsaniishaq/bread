@@ -93,10 +93,10 @@ export default function SupplierOrders() {
   const fetchOrders = async () => {
     setLoading(true);
     try {
-      const { data: allOrds } = await supabase.from('orders')
+      const { data: allOrds, error } = await supabase.from('orders')
         .select(`
            *,
-           customers ( name, location, phone, image, debtBalance ),
+           customers ( name, location, phone, image, debt_balance ),
            order_items (
               quantity,
               price_at_time,
@@ -106,6 +106,7 @@ export default function SupplierOrders() {
         .eq('supplier_id', user!.id)
         .order('created_at', { ascending: false });
 
+      if (error) console.error("Error fetching orders:", error);
       if (allOrds) setOrders(allOrds);
     } catch (e) {
       console.error(e);
@@ -555,9 +556,9 @@ export default function SupplierOrders() {
                   <div>
                     <div style={{ fontSize: '10px', fontWeight: 800, color: T.txt3, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Client Name</div>
                     <div style={{ fontSize: '15px', fontWeight: 900, color: T.ink }}>{selectedOrder.customers?.name || 'Unknown'}</div>
-                    {selectedOrder.customers?.debtBalance > 0 && (
+                    {selectedOrder.customers?.debt_balance > 0 && (
                       <div style={{ fontSize: '11px', fontWeight: 800, color: T.danger, marginTop: '2px' }}>
-                        Debt: {fmtRaw(selectedOrder.customers.debtBalance)}
+                        Debt: {fmtRaw(selectedOrder.customers.debt_balance)}
                       </div>
                     )}
                   </div>
