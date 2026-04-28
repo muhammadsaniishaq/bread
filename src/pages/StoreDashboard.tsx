@@ -10,7 +10,7 @@ import {
   Package, LogOut,
   TrendingUp, AlertTriangle, CheckCircle, ArrowRight,
   Zap, Clock, BarChart3, Wallet, ArrowUpRight, ArrowDownLeft,
-  FileText, Trash2, Send, ShoppingCart, X, Target
+  FileText, Trash2, Send, ShoppingCart, X, Target, Receipt
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ResponsiveContainer, AreaChart, Area, XAxis, Tooltip } from 'recharts';
@@ -53,6 +53,8 @@ export const StoreDashboard: React.FC = () => {
   const [showZReport, setShowZReport] = useState(false);
   const [showSpoilageModal, setShowSpoilageModal] = useState(false);
   const [spoilageItem, setSpoilageItem] = useState({ productId: '', quantity: 1, notes: '' });
+  const [showExpenseModal, setShowExpenseModal] = useState(false);
+  const [expenseItem, setExpenseItem] = useState({ amount: '', reason: '' });
   const [restockAlert, setRestockAlert] = useState('');
 
   // ── Auto-Link Profile if missing ──────────────────────────────────────────
@@ -117,6 +119,9 @@ export const StoreDashboard: React.FC = () => {
       });
     });
 
+    const allTodayTx = transactions.filter(t => t.date.startsWith(today));
+    const totalExpenses = allTodayTx.filter(t => t.type === 'Expense').reduce((s, t) => s + t.totalPrice, 0);
+
     const stock = products.filter(p => p.active).reduce((s, p) => s + p.stock, 0);
     const lowStock = products.filter(p => p.active && p.stock < 20);
     const todayLogs = inventoryLogs.filter(l => l.date.startsWith(today));
@@ -133,7 +138,7 @@ export const StoreDashboard: React.FC = () => {
     );
     const pendingRequestsCount = pendingRequests.length;
 
-    return { totalSales, totalCash, totalDebt, unitsSold, stock, lowStock, received, breadMap, weekData, pendingRequestsCount, pendingRequests,
+    return { totalSales, totalCash, totalDebt, unitsSold, stock, lowStock, received, breadMap, weekData, pendingRequestsCount, pendingRequests, totalExpenses,
       recent: [...todaysTx].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 5) };
   }, [transactions, products, inventoryLogs, user, supplierIds]);
 
@@ -275,29 +280,37 @@ export const StoreDashboard: React.FC = () => {
           </div>
 
           {/* ─── NEW QUICK ACTIONS ─── */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px' }}>
             <motion.button whileTap={{ scale: 0.95 }} onClick={() => navigate('/store/dispatch')}
-              style={{ background: T.white, borderRadius: '14px', padding: '12px', border: `1px solid ${T.borderL}`, boxShadow: T.shadow, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
+              style={{ background: T.white, borderRadius: '14px', padding: '12px 6px', border: `1px solid ${T.borderL}`, boxShadow: T.shadow, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
               <div style={{ width: '32px', height: '32px', borderRadius: '10px', background: T.emeraldL, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <ShoppingCart size={16} color={T.emerald} />
               </div>
-              <span style={{ fontSize: '11px', fontWeight: 800, color: T.ink }}>Walk-in Sale</span>
+              <span style={{ fontSize: '10px', fontWeight: 800, color: T.ink, textAlign: 'center' }}>Walk-in Sale</span>
+            </motion.button>
+
+            <motion.button whileTap={{ scale: 0.95 }} onClick={() => setShowExpenseModal(true)}
+              style={{ background: T.white, borderRadius: '14px', padding: '12px 6px', border: `1px solid ${T.borderL}`, boxShadow: T.shadow, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
+              <div style={{ width: '32px', height: '32px', borderRadius: '10px', background: T.amberL, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Receipt size={16} color={T.amber} />
+              </div>
+              <span style={{ fontSize: '10px', fontWeight: 800, color: T.ink, textAlign: 'center' }}>Log Expense</span>
             </motion.button>
             
             <motion.button whileTap={{ scale: 0.95 }} onClick={() => setShowSpoilageModal(true)}
-              style={{ background: T.white, borderRadius: '14px', padding: '12px', border: `1px solid ${T.borderL}`, boxShadow: T.shadow, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
+              style={{ background: T.white, borderRadius: '14px', padding: '12px 6px', border: `1px solid ${T.borderL}`, boxShadow: T.shadow, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
               <div style={{ width: '32px', height: '32px', borderRadius: '10px', background: T.roseL, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <Trash2 size={16} color={T.rose} />
               </div>
-              <span style={{ fontSize: '11px', fontWeight: 800, color: T.ink }}>Log Damage</span>
+              <span style={{ fontSize: '10px', fontWeight: 800, color: T.ink, textAlign: 'center' }}>Log Damage</span>
             </motion.button>
 
             <motion.button whileTap={{ scale: 0.95 }} onClick={() => setShowZReport(true)}
-              style={{ background: T.white, borderRadius: '14px', padding: '12px', border: `1px solid ${T.borderL}`, boxShadow: T.shadow, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
+              style={{ background: T.white, borderRadius: '14px', padding: '12px 6px', border: `1px solid ${T.borderL}`, boxShadow: T.shadow, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
               <div style={{ width: '32px', height: '32px', borderRadius: '10px', background: T.pLight, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <FileText size={16} color={T.primary} />
               </div>
-              <span style={{ fontSize: '11px', fontWeight: 800, color: T.ink }}>End of Day</span>
+              <span style={{ fontSize: '10px', fontWeight: 800, color: T.ink, textAlign: 'center' }}>End of Day</span>
             </motion.button>
           </div>
 
@@ -543,13 +556,13 @@ export const StoreDashboard: React.FC = () => {
                  <p style={{ margin: '0 0 4px', fontSize: '10px', fontWeight: 800, color: T.emerald, textTransform: 'uppercase' }}>Cash Collected</p>
                  <p style={{ margin: 0, fontSize: '20px', fontWeight: 900, color: T.emerald }}>{fmt(metrics.totalCash)}</p>
               </div>
-              <div style={{ background: T.roseL, padding: '14px', borderRadius: '16px', border: `1px solid ${T.rose}20` }}>
-                 <p style={{ margin: '0 0 4px', fontSize: '10px', fontWeight: 800, color: T.rose, textTransform: 'uppercase' }}>Debt Issued</p>
-                 <p style={{ margin: 0, fontSize: '20px', fontWeight: 900, color: T.rose }}>{fmt(metrics.totalDebt)}</p>
-              </div>
               <div style={{ background: T.amberL, padding: '14px', borderRadius: '16px', border: `1px solid ${T.amber}20` }}>
-                 <p style={{ margin: '0 0 4px', fontSize: '10px', fontWeight: 800, color: T.amber, textTransform: 'uppercase' }}>Stock Remaining</p>
-                 <p style={{ margin: 0, fontSize: '20px', fontWeight: 900, color: T.amber }}>{metrics.stock}</p>
+                 <p style={{ margin: '0 0 4px', fontSize: '10px', fontWeight: 800, color: T.amber, textTransform: 'uppercase' }}>Store Expenses</p>
+                 <p style={{ margin: 0, fontSize: '20px', fontWeight: 900, color: T.amber }}>{fmt(metrics.totalExpenses)}</p>
+              </div>
+              <div style={{ background: T.primary + '10', padding: '14px', borderRadius: '16px', border: `1px solid ${T.primary}20` }}>
+                 <p style={{ margin: '0 0 4px', fontSize: '10px', fontWeight: 800, color: T.primary, textTransform: 'uppercase' }}>Net Cash Handover</p>
+                 <p style={{ margin: 0, fontSize: '20px', fontWeight: 900, color: T.primary }}>{fmt(metrics.totalCash - metrics.totalExpenses)}</p>
               </div>
             </div>
 
@@ -567,7 +580,7 @@ export const StoreDashboard: React.FC = () => {
                {Object.keys(metrics.breadMap).length === 0 && <p style={{ fontSize: '11px', color: T.txt3 }}>No bread sold today.</p>}
             </div>
             
-            <a href={`https://wa.me/?text=${encodeURIComponent(`*Daily Shift Report*\nDate: ${new Date().toLocaleDateString()}\n\n*Sales Summary*\nTotal Bread Sold: ${metrics.unitsSold}\nCash Collected: ${fmt(metrics.totalCash)}\nDebt Issued: ${fmt(metrics.totalDebt)}\nRemaining Stock: ${metrics.stock}\n\n*Breakdown*\n${Object.entries(metrics.breadMap).map(([pid, qty]) => `${products.find(p => p.id === pid)?.name}: ${qty}`).join('\n')}`)}`}
+            <a href={`https://wa.me/?text=${encodeURIComponent(`*Daily Shift Report*\nDate: ${new Date().toLocaleDateString()}\n\n*Sales Summary*\nTotal Bread Sold: ${metrics.unitsSold}\nCash Collected: ${fmt(metrics.totalCash)}\nDebt Issued: ${fmt(metrics.totalDebt)}\nStore Expenses: ${fmt(metrics.totalExpenses)}\n*Net Cash Handover:* ${fmt(metrics.totalCash - metrics.totalExpenses)}\nRemaining Stock: ${metrics.stock}\n\n*Breakdown*\n${Object.entries(metrics.breadMap).map(([pid, qty]) => `${products.find(p => p.id === pid)?.name}: ${qty}`).join('\n')}`)}`}
               target="_blank" rel="noreferrer"
               style={{ width: '100%', padding: '16px', background: '#25D366', color: '#fff', border: 'none', borderRadius: '14px', fontSize: '14px', fontWeight: 900, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', textDecoration: 'none' }}>
                <Send size={16} /> Share via WhatsApp
@@ -644,6 +657,55 @@ export const StoreDashboard: React.FC = () => {
               }}
               style={{ padding: '16px', background: T.rose, color: '#fff', border: 'none', borderRadius: '14px', fontSize: '14px', fontWeight: 900, cursor: 'pointer', marginTop: '10px' }}>
                 Confirm Damage Log
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* ─── EXPENSE LOGGING MODAL ─── */}
+      {showExpenseModal && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(15,28,63,0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyItems: 'center', padding: '20px' }}>
+          <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+            style={{ width: '100%', maxWidth: '400px', background: '#fff', borderRadius: '24px', padding: '24px', margin: '0 auto' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 900, color: T.ink, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Receipt size={18} color={T.amber} /> Log Store Expense
+              </h3>
+              <button onClick={() => setShowExpenseModal(false)} style={{ background: T.bg, border: 'none', width: '32px', height: '32px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                <X size={16} color={T.txt2} />
+              </button>
+            </div>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div>
+                <label style={{ fontSize: '11px', fontWeight: 800, color: T.txt3, marginBottom: '6px', display: 'block' }}>Amount Spent (₦)</label>
+                <input type="number" min="1" placeholder="e.g. 5000" value={expenseItem.amount} onChange={e => setExpenseItem({...expenseItem, amount: e.target.value})}
+                  style={{ width: '100%', padding: '14px', borderRadius: '12px', border: `1px solid ${T.borderL}`, background: T.bg, fontSize: '16px', fontWeight: 800, outline: 'none', boxSizing: 'border-box' }} />
+              </div>
+              
+              <div>
+                <label style={{ fontSize: '11px', fontWeight: 800, color: T.txt3, marginBottom: '6px', display: 'block' }}>Reason / Details</label>
+                <input type="text" placeholder="e.g. Fuel, Transport, Loaders..." value={expenseItem.reason} onChange={e => setExpenseItem({...expenseItem, reason: e.target.value})}
+                  style={{ width: '100%', padding: '14px', borderRadius: '12px', border: `1px solid ${T.borderL}`, background: T.bg, fontSize: '13px', fontWeight: 600, outline: 'none', boxSizing: 'border-box' }} />
+              </div>
+              
+              <button onClick={async () => {
+                 if (!expenseItem.amount || !expenseItem.reason) return;
+                 await supabase.from('transactions').insert({
+                    date: new Date().toISOString(),
+                    type: 'Expense',
+                    total_price: parseInt(expenseItem.amount) || 0,
+                    status: 'COMPLETED',
+                    origin: 'STORE',
+                    notes: `EXPENSE: ${expenseItem.reason}`
+                 });
+                 setShowExpenseModal(false);
+                 setExpenseItem({ amount: '', reason: '' });
+                 window.location.reload(); // Refresh to sync
+              }}
+              style={{ padding: '16px', background: T.amber, color: '#fff', border: 'none', borderRadius: '14px', fontSize: '14px', fontWeight: 900, cursor: 'pointer', marginTop: '10px' }}>
+                Log Expense
               </button>
             </div>
           </motion.div>

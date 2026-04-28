@@ -29,6 +29,8 @@ const StoreInventory: React.FC = () => {
   const { t } = useTranslation();
   const [search, setSearch] = useState('');
 
+  const [tab, setTab] = useState<'LIVE' | 'HISTORY'>('LIVE');
+
   const [showAuditModal, setShowAuditModal] = useState(false);
   const [auditProductId, setAuditProductId] = useState('');
   const [auditQuantity, setAuditQuantity] = useState('');
@@ -67,6 +69,22 @@ const StoreInventory: React.FC = () => {
     received: receivedMap[p.id] || 0,
     isLow: p.stock < 20,
   }));
+
+  // Unified Movement History
+  const movementHistory = [
+     ...inventoryLogs.map(l => ({
+        id: l.id, date: l.date, type: l.type || 'Receive', qty: l.quantityReceived, productId: l.productId,
+        desc: `Received from Bakery`
+     })),
+     ...transactions.flatMap(tx => {
+        return getTransactionItems(tx).map(item => ({
+           id: tx.id + '-' + item.productId, date: tx.date, type: tx.type === 'Return' ? 'Return' : 'Dispatch', qty: item.quantity, productId: item.productId,
+           desc: tx.type === 'Return' ? `Returned by Customer/Supplier` : `Dispatched to ${tx.customerId ? 'Customer' : 'Walk-in'}`
+        }));
+     })
+  ].filter(m => !search || products.find(p => p.id === m.productId)?.name.toLowerCase().includes(search.toLowerCase()))
+   .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+   .slice(0, 100); // limit to 100 recent movements
 
   return (
     <AnimatedPage>
@@ -115,7 +133,19 @@ const StoreInventory: React.FC = () => {
 
         <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
 
-          {/* Alerts */}
+          {/* Tabs */}
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button onClick={() => setTab('LIVE')} style={{ flex: 1, padding: '12px', borderRadius: '14px', border: 'none', background: tab === 'LIVE' ? T.primary : T.white, color: tab === 'LIVE' ? '#fff' : T.txt3, fontWeight: 900, fontSize: '12px', cursor: 'pointer', boxShadow: T.shadow }}>
+              🍞 Live Stock
+            </button>
+            <button onClick={() => setTab('HISTORY')} style={{ flex: 1, padding: '12px', borderRadius: '14px', border: 'none', background: tab === 'HISTORY' ? T.primary : T.white, color: tab === 'HISTORY' ? '#fff' : T.txt3, fontWeight: 900, fontSize: '12px', cursor: 'pointer', boxShadow: T.shadow }}>
+              📜 Movement History
+            </button>
+          </div>
+
+          {tab === 'LIVE' && (
+            <>
+              {/* Alerts */}
           {outItems.length > 0 && (
             <div style={{ padding: '12px 14px', borderRadius: '14px', background: T.roseL, border: `1px solid ${T.rose}25`, display: 'flex', gap: '10px', alignItems: 'center' }}>
               <AlertTriangle size={16} color={T.rose} />
@@ -243,7 +273,37 @@ const StoreInventory: React.FC = () => {
               <ClipboardCheck size={16} /> Physical Audit
             </motion.button>
           </div>
-        </div>
+        </>
+        )}
+
+        {tab === 'HISTORY' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {movementHistory.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '24px', color: T.txt3, fontSize: '13px', background: T.white, borderRadius: T.radius, border: `1px dashed ${T.borderL}` }}>No movement records found.</div>
+            ) : movementHistory.map((m, i) => {
+              const isGain = m.type === 'Receive' || m.type === 'Return';
+              const p = products.find(x => x.id === m.productId);
+              return (
+                <motion.div key={m.id} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: Math.min(i * 0.02, 0.5) }}
+                  style={{ background: T.white, borderRadius: '16px', padding: '12px 14px', boxShadow: T.shadow, border: `1px solid ${T.borderL}`, display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div style={{ width: '38px', height: '38px', borderRadius: '12px', background: isGain ? T.emeraldL : T.amberL, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    {isGain ? <TrendingUp size={16} color={T.emerald} /> : <TrendingDown size={16} color={T.amber} />}
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                      <div style={{ fontSize: '13px', fontWeight: 800, color: T.ink }}>{p?.name || 'Item'}</div>
+                      <div style={{ fontSize: '14px', fontWeight: 900, color: isGain ? T.emerald : T.ink }}>{isGain ? '+' : '-'}{m.qty}</div>
+                    </div>
+                    <div style={{ fontSize: '10px', color: T.txt3, fontWeight: 600, marginTop: '2px' }}>{m.desc}</div>
+                    <div style={{ fontSize: '9px', color: T.txt3, fontWeight: 700, marginTop: '4px' }}>
+                      {new Date(m.date).toLocaleDateString()} • {new Date(m.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </div>
+                  </div>
+                </motion.div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* ─── PHYSICAL AUDIT MODAL ─── */}
@@ -320,6 +380,7 @@ const StoreInventory: React.FC = () => {
         </div>
       )}
 
+      </div>
       <StoreBottomNav />
     </AnimatedPage>
   );

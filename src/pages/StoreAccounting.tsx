@@ -5,7 +5,7 @@ import { useAuth } from '../store/AuthContext';
 import { useTranslation } from '../store/LanguageContext';
 import { 
   Search, Clock, 
-  CheckCircle2, Wallet, PackageOpen, ArrowUpRight, ArrowDownLeft, Send
+  CheckCircle2, Wallet, PackageOpen, ArrowUpRight, ArrowDownLeft, Send, X
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AnimatedPage } from '../components/AnimatedPage';
@@ -40,6 +40,12 @@ export default function StoreAccounting() {
   const [searchSup, setSearchSup] = useState('');
   const [selectedSup, setSelectedSup] = useState<any>(null);
   const [tab, setTab] = useState<'LEDGER' | 'REQUESTS'>('LEDGER');
+  
+  const [showReturnModal, setShowReturnModal] = useState(false);
+  const [returnSup, setReturnSup] = useState<any>(null);
+  const [returnProductId, setReturnProductId] = useState('');
+  const [returnQuantity, setReturnQuantity] = useState('');
+
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -177,6 +183,10 @@ export default function StoreAccounting() {
                                       style={{ flex: 1, padding: '8px', borderRadius: '10px', border: 'none', background: T.primary, color: '#fff', fontSize: '11px', fontWeight: 900, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
                                        {t('store.issueStock')}
                                     </button>
+                                    <button onClick={(e) => { e.stopPropagation(); setReturnSup(s); setShowReturnModal(true); }}
+                                      style={{ flex: 1, padding: '8px', borderRadius: '10px', border: 'none', background: T.amber, color: '#fff', fontSize: '11px', fontWeight: 900, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                                       <ArrowDownLeft size={12} /> Receive Return
+                                    </button>
                                     {s.debt > 0 && (
                                       <a href={`https://wa.me/?text=${encodeURIComponent(`Hello ${s.full_name || 'Supplier'},\n\nThis is a friendly reminder from the Store that your current debt balance is ₦${s.debt.toLocaleString()}.\n\nPlease arrange for payment at your earliest convenience.\n\nThank you!`)}`}
                                         target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}
@@ -258,6 +268,91 @@ export default function StoreAccounting() {
             </div>
           )}
         </div>
+
+        {/* ─── RETURN MODAL ─── */}
+        {showReturnModal && returnSup && (
+          <div style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(15,28,63,0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyItems: 'center', padding: '20px' }}>
+            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+              style={{ width: '100%', maxWidth: '400px', background: '#fff', borderRadius: '24px', padding: '24px', margin: '0 auto' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 900, color: T.ink, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <ArrowDownLeft size={18} color={T.amber} /> Receive Return from {returnSup.full_name?.split(' ')[0]}
+                </h3>
+                <button onClick={() => { setShowReturnModal(false); setReturnSup(null); }} style={{ background: T.bg, border: 'none', width: '32px', height: '32px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                  <X size={16} color={T.txt2} />
+                </button>
+              </div>
+              
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                <div>
+                  <label style={{ fontSize: '11px', fontWeight: 800, color: T.txt3, marginBottom: '6px', display: 'block' }}>Select Bread Returned</label>
+                  <select value={returnProductId} onChange={e => setReturnProductId(e.target.value)}
+                    style={{ width: '100%', padding: '14px', borderRadius: '12px', border: `1px solid ${T.border}`, background: T.bg, fontSize: '14px', fontWeight: 600, outline: 'none' }}>
+                    <option value="">-- Choose Product --</option>
+                    {products.filter(p => p.active).map(p => (
+                      <option key={p.id} value={p.id}>{p.name} (₦{p.price})</option>
+                    ))}
+                  </select>
+                </div>
+                
+                <div>
+                  <label style={{ fontSize: '11px', fontWeight: 800, color: T.txt3, marginBottom: '6px', display: 'block' }}>Quantity</label>
+                  <input type="number" min="1" placeholder="0" value={returnQuantity} onChange={e => setReturnQuantity(e.target.value)}
+                    style={{ width: '100%', padding: '14px', borderRadius: '12px', border: `1px solid ${T.border}`, background: T.bg, fontSize: '16px', fontWeight: 800, outline: 'none', boxSizing: 'border-box' }} />
+                </div>
+
+                {returnProductId && returnQuantity && (() => {
+                   const p = products.find(x => x.id === returnProductId);
+                   const qty = parseInt(returnQuantity) || 0;
+                   const refund = (p?.price || 0) * qty;
+                   return (
+                     <div style={{ fontSize: '12px', color: T.ink, fontWeight: 800, background: T.bg, padding: '10px', borderRadius: '10px', display: 'flex', justifyContent: 'space-between' }}>
+                       <span>Debt Reduction:</span>
+                       <span style={{ color: T.success }}>₦{refund.toLocaleString()}</span>
+                     </div>
+                   );
+                })()}
+                
+                <button onClick={async () => {
+                   if (!returnProductId || !returnQuantity || !returnSup.custId) return;
+                   const p = products.find(x => x.id === returnProductId);
+                   if (!p) return;
+                   const qty = parseInt(returnQuantity);
+                   const refund = p.price * qty;
+
+                   // 1. Log return transaction
+                   await supabase.from('transactions').insert({
+                      customer_id: returnSup.custId,
+                      store_keeper_id: user?.id,
+                      type: 'Return',
+                      total_price: refund,
+                      date: new Date().toISOString(),
+                      status: 'COMPLETED',
+                      items: [{ productId: p.id, quantity: qty, price: p.price }]
+                   });
+
+                   // 2. Reduce Customer Debt
+                   // Ensure customer exists in database
+                   const { data: custData } = await supabase.from('customers').select('debt_balance').eq('id', returnSup.custId).single();
+                   if (custData) {
+                     await supabase.from('customers').update({ debt_balance: Math.max(0, custData.debt_balance - refund) }).eq('id', returnSup.custId);
+                   }
+
+                   // 3. Increase stock
+                   await supabase.from('products').update({ stock: p.stock + qty }).eq('id', p.id);
+
+                   setShowReturnModal(false);
+                   setReturnProductId(''); setReturnQuantity('');
+                   window.location.reload(); // Refresh to sync
+                }}
+                style={{ padding: '16px', background: T.primary, color: '#fff', border: 'none', borderRadius: '14px', fontSize: '14px', fontWeight: 900, cursor: 'pointer', marginTop: '10px' }}>
+                  Confirm Return & Sync
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+
         <StoreBottomNav />
       </div>
     </AnimatedPage>
