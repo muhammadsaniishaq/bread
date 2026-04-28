@@ -9,7 +9,8 @@ import { supabase } from '../lib/supabase';
 import {
   Package, LogOut,
   TrendingUp, AlertTriangle, CheckCircle, ArrowRight,
-  Zap, Clock, BarChart3, Wallet, ArrowUpRight, ArrowDownLeft
+  Zap, Clock, BarChart3, Wallet, ArrowUpRight, ArrowDownLeft,
+  FileText, Trash2, Send, ShoppingCart, X, Target
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ResponsiveContainer, AreaChart, Area, XAxis, Tooltip } from 'recharts';
@@ -48,6 +49,11 @@ export const StoreDashboard: React.FC = () => {
   const [clockStr, setClockStr] = useState('');
   const [supplierIds, setSupplierIds] = useState<Set<string>>(new Set());
   const [totalSupplierDebt, setTotalSupplierDebt] = useState(0);
+
+  const [showZReport, setShowZReport] = useState(false);
+  const [showSpoilageModal, setShowSpoilageModal] = useState(false);
+  const [spoilageItem, setSpoilageItem] = useState({ productId: '', quantity: 1, notes: '' });
+  const [restockAlert, setRestockAlert] = useState('');
 
   // ── Auto-Link Profile if missing ──────────────────────────────────────────
   useEffect(() => {
@@ -134,6 +140,10 @@ export const StoreDashboard: React.FC = () => {
   const staffName = (user as any)?.user_metadata?.full_name || 'Store Keeper';
   const getCustomer = (id?: string) => customers.find(c => c.id === id)?.name || 'Walk-in';
 
+  // Gamification Target
+  const targetUnits = 2000;
+  const progressPct = Math.min(100, (metrics.unitsSold / targetUnits) * 100);
+
   return (
     <AnimatedPage>
       <div style={{ minHeight: '100vh', background: T.bg, fontFamily: "'Inter', -apple-system, sans-serif", paddingBottom: '100px' }}>
@@ -206,6 +216,26 @@ export const StoreDashboard: React.FC = () => {
 
         <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
 
+          {/* ─── DAILY DISPATCH TARGET ─── */}
+          <div style={{ background: T.white, borderRadius: T.radius, padding: '16px', boxShadow: T.shadow, border: `1px solid ${T.borderL}` }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Target size={16} color={T.primary} />
+                <span style={{ fontSize: '13px', fontWeight: 800, color: T.ink }}>Daily Target</span>
+              </div>
+              <span style={{ fontSize: '12px', fontWeight: 900, color: progressPct === 100 ? T.emerald : T.primary }}>
+                {metrics.unitsSold} / {targetUnits} pcs
+              </span>
+            </div>
+            <div style={{ height: '8px', background: T.pLight, borderRadius: '4px', overflow: 'hidden' }}>
+              <motion.div initial={{ width: 0 }} animate={{ width: `${progressPct}%` }} transition={{ duration: 1, ease: "easeOut" }}
+                style={{ height: '100%', background: progressPct === 100 ? T.emerald : `linear-gradient(90deg, ${T.primary}, #3b82f6)`, borderRadius: '4px' }} />
+            </div>
+            <p style={{ margin: '8px 0 0', fontSize: '10px', color: T.txt3, fontWeight: 600, textAlign: 'right' }}>
+              {progressPct === 100 ? '🎉 Target reached! Great job!' : `${targetUnits - metrics.unitsSold} more to reach your goal`}
+            </p>
+          </div>
+
           {/* ─── QUICK ACTION BUTTONS ─── */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
             <motion.button whileTap={{ scale: 0.96 }} onClick={() => navigate('/store/accounting')}
@@ -244,40 +274,99 @@ export const StoreDashboard: React.FC = () => {
             </div>
           </div>
 
-          {/* ─── PENDING SUPPLIER REQUESTS APPROVAL ─── */}
-          {metrics.pendingRequestsCount > 0 && (
-            <div style={{ background: '#fff7ed', borderRadius: T.radius, padding: '16px', border: '1px solid #fdba74', boxShadow: T.shadow }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-                <Clock size={16} color="#f97316" />
-                <span style={{ fontSize: '13px', fontWeight: 900, color: '#9a3412', textTransform: 'uppercase' }}>Requires Your Approval ({metrics.pendingRequestsCount})</span>
+          {/* ─── NEW QUICK ACTIONS ─── */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
+            <motion.button whileTap={{ scale: 0.95 }} onClick={() => navigate('/store/dispatch')}
+              style={{ background: T.white, borderRadius: '14px', padding: '12px', border: `1px solid ${T.borderL}`, boxShadow: T.shadow, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
+              <div style={{ width: '32px', height: '32px', borderRadius: '10px', background: T.emeraldL, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <ShoppingCart size={16} color={T.emerald} />
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {metrics.pendingRequests.map(req => {
-                  const reqItem = getTransactionItems(req)[0];
-                  const prodName = products.find(p => p.id === reqItem?.productId)?.name || 'Product';
-                  return (
-                    <div key={req.id} style={{ padding: '12px', background: T.white, borderRadius: '12px', border: '1px solid #ffedd5' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
-                        <div>
-                          <div style={{ fontSize: '13px', fontWeight: 800, color: T.ink }}>{getCustomer(req.customerId)}</div>
-                          <div style={{ fontSize: '11px', color: '#f97316', fontWeight: 700 }}>{req.type === 'Return' ? 'Stock Return' : 'Stock Request'}</div>
+              <span style={{ fontSize: '11px', fontWeight: 800, color: T.ink }}>Walk-in Sale</span>
+            </motion.button>
+            
+            <motion.button whileTap={{ scale: 0.95 }} onClick={() => setShowSpoilageModal(true)}
+              style={{ background: T.white, borderRadius: '14px', padding: '12px', border: `1px solid ${T.borderL}`, boxShadow: T.shadow, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
+              <div style={{ width: '32px', height: '32px', borderRadius: '10px', background: T.roseL, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Trash2 size={16} color={T.rose} />
+              </div>
+              <span style={{ fontSize: '11px', fontWeight: 800, color: T.ink }}>Log Damage</span>
+            </motion.button>
+
+            <motion.button whileTap={{ scale: 0.95 }} onClick={() => setShowZReport(true)}
+              style={{ background: T.white, borderRadius: '14px', padding: '12px', border: `1px solid ${T.borderL}`, boxShadow: T.shadow, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
+              <div style={{ width: '32px', height: '32px', borderRadius: '10px', background: T.pLight, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <FileText size={16} color={T.primary} />
+              </div>
+              <span style={{ fontSize: '11px', fontWeight: 800, color: T.ink }}>End of Day</span>
+            </motion.button>
+          </div>
+
+          {/* ─── PENDING SUPPLIER REQUESTS APPROVAL ─── */}
+          {metrics.pendingRequests.length > 0 && (
+            <div style={{ background: T.white, borderRadius: T.radius, padding: '16px', boxShadow: T.shadow, border: `1.5px solid ${T.amberL}` }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px' }}>
+                <div style={{ width: '30px', height: '30px', borderRadius: '9px', background: T.amberL, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Clock size={14} color={T.amber} />
+                </div>
+                <span style={{ fontSize: '13px', fontWeight: 800, color: T.ink }}>{t('store.supplierRequests')} ({metrics.pendingRequestsCount})</span>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <AnimatePresence>
+                  {metrics.pendingRequests.map((tx) => {
+                    const sup = customers.find(c => c.id === tx.customerId);
+                    const txItems = getTransactionItems(tx);
+                    return (
+                      <motion.div key={tx.id} initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
+                        style={{ border: `1px solid ${T.borderL}`, borderRadius: '16px', padding: '12px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
+                          <div style={{ display: 'flex', gap: '10px' }}>
+                            <div style={{ width: '32px', height: '32px', borderRadius: '10px', background: tx.type === 'Return' ? T.roseL : tx.type === 'Payment' ? T.emeraldL : T.pLight, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              {tx.type === 'Return' ? <ArrowUpRight size={14} color={T.rose} /> : tx.type === 'Payment' ? <Wallet size={14} color={T.emerald} /> : <ArrowDownLeft size={14} color={T.primary} />}
+                            </div>
+                            <div>
+                              <div style={{ fontSize: '13px', fontWeight: 800, color: T.ink }}>{sup?.name || 'Supplier'}</div>
+                              <div style={{ fontSize: '10px', fontWeight: 700, color: tx.type === 'Return' ? T.rose : T.emerald }}>
+                                {tx.type === 'Return' ? t('inv.return') : tx.type === 'Payment' ? t('store.paymentRequest') : t('dash.receiveBread')}
+                              </div>
+                            </div>
+                          </div>
+                          <div style={{ textAlign: 'right' }}>
+                            <div style={{ fontSize: '14px', fontWeight: 900, color: T.ink }}>{fmt(tx.totalPrice)}</div>
+                          </div>
                         </div>
-                        <div style={{ textAlign: 'right' }}>
-                          <div style={{ fontSize: '15px', fontWeight: 900, color: T.ink }}>{reqItem?.quantity || 0} pcs</div>
-                          <div style={{ fontSize: '10px', color: T.txt3 }}>{prodName}</div>
+
+                        {tx.type !== 'Payment' && (
+                          <div style={{ background: T.bg, borderRadius: '10px', padding: '8px', marginBottom: '10px' }}>
+                            {txItems.map((it, i) => {
+                              const p = products.find(pr => pr.id === it.productId);
+                              const isShort = p && p.stock < it.quantity;
+                              return (
+                                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '11px', fontWeight: 700 }}>
+                                  <span style={{ color: T.txt2 }}>{p?.name}: {it.quantity} pcs</span>
+                                  <span style={{ color: isShort ? T.rose : T.emerald, background: isShort ? T.roseL : T.emeraldL, padding: '2px 6px', borderRadius: '4px', fontSize: '9px' }}>
+                                    {t('store.liveStock')}: {p?.stock || 0}
+                                  </span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                          <motion.button whileTap={{ scale: 0.95 }} onClick={() => updateTransactionStatus(tx.id, 'COMPLETED')}
+                            style={{ flex: 1, padding: '8px', borderRadius: '10px', border: 'none', background: T.emerald, color: '#fff', fontSize: '11px', fontWeight: 800, cursor: 'pointer' }}>
+                            {t('dash.accept')}
+                          </motion.button>
+                          <motion.button whileTap={{ scale: 0.95 }} onClick={() => updateTransactionStatus(tx.id, 'CANCELLED')}
+                            style={{ flex: 1, padding: '8px', borderRadius: '10px', border: `1px solid ${T.rose}20`, background: '#fff', color: T.rose, fontSize: '11px', fontWeight: 800, cursor: 'pointer' }}>
+                            {t('dash.reject')}
+                          </motion.button>
                         </div>
-                      </div>
-                      <div style={{ display: 'flex', gap: '8px' }}>
-                        <button onClick={() => updateTransactionStatus(req.id, 'COMPLETED')} style={{ flex: 1, padding: '10px', borderRadius: '10px', background: T.emerald, color: '#fff', border: 'none', fontSize: '12px', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
-                          <CheckCircle size={14} /> Accept
-                        </button>
-                        <button onClick={() => updateTransactionStatus(req.id, 'CANCELLED')} style={{ padding: '10px 14px', borderRadius: '10px', background: T.roseL, color: T.rose, border: `1px solid ${T.rose}30`, fontSize: '12px', fontWeight: 800, cursor: 'pointer' }}>
-                          Reject
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
+                      </motion.div>
+                    );
+                  })}
+                </AnimatePresence>
               </div>
             </div>
           )}
@@ -352,9 +441,16 @@ export const StoreDashboard: React.FC = () => {
                           style={{ height: '100%', background: isLow ? T.rose : T.primary, borderRadius: '2px' }} />
                       </div>
                     </div>
-                    <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                    <div style={{ textAlign: 'right', flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
                       <div style={{ fontSize: '16px', fontWeight: 900, color: isLow ? T.rose : T.primary }}>{p.stock}</div>
-                      {sold > 0 && <div style={{ fontSize: '9px', color: T.txt3, fontWeight: 700 }}>-{sold} out</div>}
+                      {isLow ? (
+                        <button onClick={() => { setRestockAlert(`Restock requested for ${p.name}!`); setTimeout(() => setRestockAlert(''), 3000); }}
+                          style={{ background: T.rose, color: '#fff', border: 'none', borderRadius: '6px', padding: '3px 6px', fontSize: '9px', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '2px' }}>
+                          <Send size={8}/> Request
+                        </button>
+                      ) : (
+                        sold > 0 && <div style={{ fontSize: '9px', color: T.txt3, fontWeight: 700 }}>-{sold} out</div>
+                      )}
                     </div>
                   </div>
                 );
@@ -363,6 +459,11 @@ export const StoreDashboard: React.FC = () => {
                 <div style={{ textAlign: 'center', padding: '20px', color: T.txt3, fontSize: '12px' }}>No active products.</div>
               )}
             </div>
+            {restockAlert && (
+               <motion.div initial={{opacity:0, y:10}} animate={{opacity:1, y:0}} style={{marginTop:'12px', padding:'10px', background:T.emeraldL, color:T.emerald, borderRadius:'8px', fontSize:'11px', fontWeight:800, textAlign:'center'}}>
+                  ✅ {restockAlert}
+               </motion.div>
+            )}
           </div>
 
           {/* ─── RECENT DISPATCHES ─── */}
@@ -410,78 +511,145 @@ export const StoreDashboard: React.FC = () => {
             )}
           </div>
 
-          {/* ─── PENDING SUPPLIER REQUESTS (BOTTOM SECTION) ─── */}
-          {metrics.pendingRequests.length > 0 && (
-            <div style={{ background: T.white, borderRadius: T.radius, padding: '16px', boxShadow: T.shadow, border: `1.5px solid ${T.amberL}` }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px' }}>
-                <div style={{ width: '30px', height: '30px', borderRadius: '9px', background: T.amberL, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <Clock size={14} color={T.amber} />
-                </div>
-                <span style={{ fontSize: '13px', fontWeight: 800, color: T.ink }}>{t('store.supplierRequests')}</span>
-              </div>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                <AnimatePresence>
-                  {metrics.pendingRequests.map((tx) => {
-                    const sup = customers.find(c => c.id === tx.customerId);
-                    const txItems = getTransactionItems(tx);
-                    return (
-                      <motion.div key={tx.id} initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
-                        style={{ border: `1px solid ${T.borderL}`, borderRadius: '16px', padding: '12px' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
-                          <div style={{ display: 'flex', gap: '10px' }}>
-                            <div style={{ width: '32px', height: '32px', borderRadius: '10px', background: tx.type === 'Return' ? T.roseL : tx.type === 'Payment' ? T.emeraldL : T.pLight, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                              {tx.type === 'Return' ? <ArrowUpRight size={14} color={T.rose} /> : tx.type === 'Payment' ? <Wallet size={14} color={T.emerald} /> : <ArrowDownLeft size={14} color={T.primary} />}
-                            </div>
-                            <div>
-                              <div style={{ fontSize: '13px', fontWeight: 800, color: T.ink }}>{sup?.name || 'Supplier'}</div>
-                              <div style={{ fontSize: '10px', fontWeight: 700, color: tx.type === 'Return' ? T.rose : T.emerald }}>
-                                {tx.type === 'Return' ? t('inv.return') : tx.type === 'Payment' ? t('store.paymentRequest') : t('dash.receiveBread')}
-                              </div>
-                            </div>
-                          </div>
-                          <div style={{ textAlign: 'right' }}>
-                            <div style={{ fontSize: '14px', fontWeight: 900, color: T.ink }}>{fmt(tx.totalPrice)}</div>
-                          </div>
-                        </div>
-
-                        {tx.type !== 'Payment' && (
-                          <div style={{ background: T.bg, borderRadius: '10px', padding: '8px', marginBottom: '10px' }}>
-                            {txItems.map((it, i) => {
-                              const p = products.find(pr => pr.id === it.productId);
-                              const isShort = p && p.stock < it.quantity;
-                              return (
-                                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '11px', fontWeight: 700 }}>
-                                  <span style={{ color: T.txt2 }}>{p?.name}: {it.quantity} pcs</span>
-                                  <span style={{ color: isShort ? T.rose : T.emerald, background: isShort ? T.roseL : T.emeraldL, padding: '2px 6px', borderRadius: '4px', fontSize: '9px' }}>
-                                    {t('store.liveStock')}: {p?.stock || 0}
-                                  </span>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        )}
-
-                        <div style={{ display: 'flex', gap: '8px' }}>
-                          <motion.button whileTap={{ scale: 0.95 }} onClick={() => updateTransactionStatus(tx.id, 'COMPLETED')}
-                            style={{ flex: 1, padding: '8px', borderRadius: '10px', border: 'none', background: T.emerald, color: '#fff', fontSize: '11px', fontWeight: 800, cursor: 'pointer' }}>
-                            {t('dash.accept')}
-                          </motion.button>
-                          <motion.button whileTap={{ scale: 0.95 }} onClick={() => updateTransactionStatus(tx.id, 'CANCELLED')}
-                            style={{ flex: 1, padding: '8px', borderRadius: '10px', border: `1px solid ${T.rose}20`, background: '#fff', color: T.rose, fontSize: '11px', fontWeight: 800, cursor: 'pointer' }}>
-                            {t('dash.reject')}
-                          </motion.button>
-                        </div>
-                      </motion.div>
-                    );
-                  })}
-                </AnimatePresence>
-              </div>
-            </div>
-          )}
-
         </div>
       </div>
+
+      {/* ─── Z-REPORT MODAL (END OF DAY) ─── */}
+      {showZReport && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(15,28,63,0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'flex-end' }}>
+          <motion.div initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+            style={{ width: '100%', background: '#fff', borderRadius: '24px 24px 0 0', padding: '24px', maxHeight: '85vh', overflowY: 'auto' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: T.pLight, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <FileText size={18} color={T.primary} />
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 900, color: T.ink }}>Daily Shift Summary</h3>
+                  <p style={{ margin: 0, fontSize: '11px', color: T.txt3 }}>{new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })}</p>
+                </div>
+              </div>
+              <button onClick={() => setShowZReport(false)} style={{ background: T.bg, border: 'none', width: '32px', height: '32px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                <X size={16} color={T.txt2} />
+              </button>
+            </div>
+            
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '20px' }}>
+              <div style={{ background: T.bg, padding: '14px', borderRadius: '16px', border: `1px solid ${T.borderL}` }}>
+                 <p style={{ margin: '0 0 4px', fontSize: '10px', fontWeight: 800, color: T.txt3, textTransform: 'uppercase' }}>Total Bread Sold</p>
+                 <p style={{ margin: 0, fontSize: '20px', fontWeight: 900, color: T.ink }}>{metrics.unitsSold}</p>
+              </div>
+              <div style={{ background: T.emeraldL, padding: '14px', borderRadius: '16px', border: `1px solid ${T.emerald}20` }}>
+                 <p style={{ margin: '0 0 4px', fontSize: '10px', fontWeight: 800, color: T.emerald, textTransform: 'uppercase' }}>Cash Collected</p>
+                 <p style={{ margin: 0, fontSize: '20px', fontWeight: 900, color: T.emerald }}>{fmt(metrics.totalCash)}</p>
+              </div>
+              <div style={{ background: T.roseL, padding: '14px', borderRadius: '16px', border: `1px solid ${T.rose}20` }}>
+                 <p style={{ margin: '0 0 4px', fontSize: '10px', fontWeight: 800, color: T.rose, textTransform: 'uppercase' }}>Debt Issued</p>
+                 <p style={{ margin: 0, fontSize: '20px', fontWeight: 900, color: T.rose }}>{fmt(metrics.totalDebt)}</p>
+              </div>
+              <div style={{ background: T.amberL, padding: '14px', borderRadius: '16px', border: `1px solid ${T.amber}20` }}>
+                 <p style={{ margin: '0 0 4px', fontSize: '10px', fontWeight: 800, color: T.amber, textTransform: 'uppercase' }}>Stock Remaining</p>
+                 <p style={{ margin: 0, fontSize: '20px', fontWeight: 900, color: T.amber }}>{metrics.stock}</p>
+              </div>
+            </div>
+
+            <div style={{ background: T.bg, borderRadius: '16px', padding: '16px', marginBottom: '20px', border: `1px solid ${T.borderL}` }}>
+               <h4 style={{ margin: '0 0 12px', fontSize: '12px', fontWeight: 800, color: T.ink }}>Bread Breakdown</h4>
+               {Object.entries(metrics.breadMap).map(([pid, qty]) => {
+                  const pName = products.find(p => p.id === pid)?.name || 'Unknown';
+                  return (
+                    <div key={pid} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', fontWeight: 700, padding: '6px 0', borderBottom: `1px dashed ${T.borderL}` }}>
+                       <span style={{ color: T.txt2 }}>{pName}</span>
+                       <span style={{ color: T.ink }}>{qty} sold</span>
+                    </div>
+                  );
+               })}
+               {Object.keys(metrics.breadMap).length === 0 && <p style={{ fontSize: '11px', color: T.txt3 }}>No bread sold today.</p>}
+            </div>
+            
+            <a href={`https://wa.me/?text=${encodeURIComponent(`*Daily Shift Report*\nDate: ${new Date().toLocaleDateString()}\n\n*Sales Summary*\nTotal Bread Sold: ${metrics.unitsSold}\nCash Collected: ${fmt(metrics.totalCash)}\nDebt Issued: ${fmt(metrics.totalDebt)}\nRemaining Stock: ${metrics.stock}\n\n*Breakdown*\n${Object.entries(metrics.breadMap).map(([pid, qty]) => `${products.find(p => p.id === pid)?.name}: ${qty}`).join('\n')}`)}`}
+              target="_blank" rel="noreferrer"
+              style={{ width: '100%', padding: '16px', background: '#25D366', color: '#fff', border: 'none', borderRadius: '14px', fontSize: '14px', fontWeight: 900, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', textDecoration: 'none' }}>
+               <Send size={16} /> Share via WhatsApp
+            </a>
+          </motion.div>
+        </div>
+      )}
+
+      {/* ─── SPOILAGE/DAMAGE MODAL ─── */}
+      {showSpoilageModal && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(15,28,63,0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyItems: 'center', padding: '20px' }}>
+          <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+            style={{ width: '100%', maxWidth: '400px', background: '#fff', borderRadius: '24px', padding: '24px', margin: '0 auto' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 900, color: T.ink, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Trash2 size={18} color={T.rose} /> Log Damaged Goods
+              </h3>
+              <button onClick={() => setShowSpoilageModal(false)} style={{ background: T.bg, border: 'none', width: '32px', height: '32px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                <X size={16} color={T.txt2} />
+              </button>
+            </div>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div>
+                <label style={{ fontSize: '11px', fontWeight: 800, color: T.txt3, marginBottom: '6px', display: 'block' }}>Select Bread</label>
+                <select value={spoilageItem.productId} onChange={e => setSpoilageItem({...spoilageItem, productId: e.target.value})}
+                  style={{ width: '100%', padding: '14px', borderRadius: '12px', border: `1px solid ${T.borderL}`, background: T.bg, fontSize: '14px', fontWeight: 600, outline: 'none' }}>
+                  <option value="">-- Choose Product --</option>
+                  {products.filter(p => p.active && p.stock > 0).map(p => (
+                    <option key={p.id} value={p.id}>{p.name} ({p.stock} in stock)</option>
+                  ))}
+                </select>
+              </div>
+              
+              <div>
+                <label style={{ fontSize: '11px', fontWeight: 800, color: T.txt3, marginBottom: '6px', display: 'block' }}>Quantity Damaged</label>
+                <input type="number" min="1" value={spoilageItem.quantity} onChange={e => setSpoilageItem({...spoilageItem, quantity: parseInt(e.target.value) || 0})}
+                  style={{ width: '100%', padding: '14px', borderRadius: '12px', border: `1px solid ${T.borderL}`, background: T.bg, fontSize: '16px', fontWeight: 800, outline: 'none', boxSizing: 'border-box' }} />
+              </div>
+              
+              <div>
+                <label style={{ fontSize: '11px', fontWeight: 800, color: T.txt3, marginBottom: '6px', display: 'block' }}>Reason / Notes</label>
+                <input type="text" placeholder="e.g. Burnt, crushed, expired..." value={spoilageItem.notes} onChange={e => setSpoilageItem({...spoilageItem, notes: e.target.value})}
+                  style={{ width: '100%', padding: '14px', borderRadius: '12px', border: `1px solid ${T.borderL}`, background: T.bg, fontSize: '13px', fontWeight: 600, outline: 'none', boxSizing: 'border-box' }} />
+              </div>
+              
+              <button onClick={async () => {
+                 if (!spoilageItem.productId || spoilageItem.quantity <= 0) return;
+                 // We log this as a Return transaction but without a customer, or with a generic tag.
+                 // Ideally, we'd use a robust inventory API. Since we have supabase, let's just insert a transaction.
+                 await supabase.from('transactions').insert({
+                    date: new Date().toISOString(),
+                    type: 'Return',
+                    total_price: 0,
+                    status: 'COMPLETED',
+                    origin: 'STORE',
+                    notes: `SPOILAGE: ${spoilageItem.notes}`
+                 }).select().single().then(async ({data: txData}) => {
+                    if (txData) {
+                       await supabase.from('transaction_items').insert({
+                          transaction_id: txData.id,
+                          product_id: spoilageItem.productId,
+                          quantity: spoilageItem.quantity,
+                          unit_price: 0
+                       });
+                       // Force stock update
+                       const p = products.find(x => x.id === spoilageItem.productId);
+                       if (p) await supabase.from('products').update({ stock: p.stock - spoilageItem.quantity }).eq('id', p.id);
+                    }
+                 });
+                 setShowSpoilageModal(false);
+                 setSpoilageItem({ productId: '', quantity: 1, notes: '' });
+                 window.location.reload(); // Refresh to sync stock
+              }}
+              style={{ padding: '16px', background: T.rose, color: '#fff', border: 'none', borderRadius: '14px', fontSize: '14px', fontWeight: 900, cursor: 'pointer', marginTop: '10px' }}>
+                Confirm Damage Log
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
       <StoreBottomNav />
     </AnimatedPage>
   );

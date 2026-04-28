@@ -4,9 +4,11 @@ import { useAppContext } from '../store/AppContext';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from '../store/LanguageContext';
 import { getTransactionItems } from '../store/types';
+import { supabase } from '../lib/supabase';
 import {
   ArrowLeft, Package, AlertTriangle, CheckCircle,
-  Search, ChevronRight, TrendingUp, TrendingDown, BarChart3
+  Search, TrendingUp, TrendingDown, BarChart3,
+  ClipboardCheck, X
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Cell } from 'recharts';
@@ -26,6 +28,11 @@ const StoreInventory: React.FC = () => {
   const { products, transactions, inventoryLogs } = useAppContext();
   const { t } = useTranslation();
   const [search, setSearch] = useState('');
+
+  const [showAuditModal, setShowAuditModal] = useState(false);
+  const [auditProductId, setAuditProductId] = useState('');
+  const [auditQuantity, setAuditQuantity] = useState('');
+  const [auditNotes, setAuditNotes] = useState('');
 
   const today = new Date().toISOString().split('T')[0];
 
@@ -225,13 +232,94 @@ const StoreInventory: React.FC = () => {
             </div>
           </div>
 
-          {/* Go to receive stock */}
-          <motion.button whileTap={{ scale: 0.97 }} onClick={() => navigate('/inventory')}
-            style={{ padding: '15px', borderRadius: '16px', background: `linear-gradient(135deg, ${T.primary}, #3b82f6)`, border: 'none', color: '#fff', fontWeight: 900, fontSize: '14px', cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', boxShadow: '0 8px 24px rgba(37,99,235,0.25)' }}>
-            <Package size={16} /> {t('store.receiveStockBakery')} <ChevronRight size={15} />
-          </motion.button>
+          {/* Actions */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+            <motion.button whileTap={{ scale: 0.97 }} onClick={() => navigate('/inventory')}
+              style={{ padding: '15px', borderRadius: '16px', background: `linear-gradient(135deg, ${T.primary}, #3b82f6)`, border: 'none', color: '#fff', fontWeight: 900, fontSize: '12px', cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', boxShadow: '0 8px 24px rgba(37,99,235,0.25)' }}>
+              <Package size={16} /> Receive Stock
+            </motion.button>
+            <motion.button whileTap={{ scale: 0.97 }} onClick={() => setShowAuditModal(true)}
+              style={{ padding: '15px', borderRadius: '16px', background: T.white, border: `1px solid ${T.borderL}`, color: T.primary, fontWeight: 900, fontSize: '12px', cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', boxShadow: T.shadow }}>
+              <ClipboardCheck size={16} /> Physical Audit
+            </motion.button>
+          </div>
         </div>
       </div>
+
+      {/* ─── PHYSICAL AUDIT MODAL ─── */}
+      {showAuditModal && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(15,28,63,0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyItems: 'center', padding: '20px' }}>
+          <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+            style={{ width: '100%', maxWidth: '400px', background: '#fff', borderRadius: '24px', padding: '24px', margin: '0 auto' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 900, color: T.ink, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <ClipboardCheck size={18} color={T.primary} /> Run Physical Audit
+              </h3>
+              <button onClick={() => setShowAuditModal(false)} style={{ background: T.bg, border: 'none', width: '32px', height: '32px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                <X size={16} color={T.txt2} />
+              </button>
+            </div>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div>
+                <label style={{ fontSize: '11px', fontWeight: 800, color: T.txt3, marginBottom: '6px', display: 'block' }}>Select Bread to Count</label>
+                <select value={auditProductId} onChange={e => setAuditProductId(e.target.value)}
+                  style={{ width: '100%', padding: '14px', borderRadius: '12px', border: `1px solid ${T.borderL}`, background: T.bg, fontSize: '14px', fontWeight: 600, outline: 'none' }}>
+                  <option value="">-- Choose Product --</option>
+                  {products.filter(p => p.active).map(p => (
+                    <option key={p.id} value={p.id}>{p.name} (System: {p.stock})</option>
+                  ))}
+                </select>
+              </div>
+              
+              <div>
+                <label style={{ fontSize: '11px', fontWeight: 800, color: T.txt3, marginBottom: '6px', display: 'block' }}>Actual Count (Physical)</label>
+                <input type="number" min="0" placeholder="0" value={auditQuantity} onChange={e => setAuditQuantity(e.target.value)}
+                  style={{ width: '100%', padding: '14px', borderRadius: '12px', border: `1px solid ${T.borderL}`, background: T.bg, fontSize: '16px', fontWeight: 800, outline: 'none', boxSizing: 'border-box' }} />
+              </div>
+              
+              <div>
+                <label style={{ fontSize: '11px', fontWeight: 800, color: T.txt3, marginBottom: '6px', display: 'block' }}>Audit Notes (Optional)</label>
+                <input type="text" placeholder="e.g. Found extra in back room..." value={auditNotes} onChange={e => setAuditNotes(e.target.value)}
+                  style={{ width: '100%', padding: '14px', borderRadius: '12px', border: `1px solid ${T.borderL}`, background: T.bg, fontSize: '13px', fontWeight: 600, outline: 'none', boxSizing: 'border-box' }} />
+              </div>
+
+              {auditProductId && auditQuantity !== '' && (() => {
+                 const p = products.find(x => x.id === auditProductId);
+                 const diff = parseInt(auditQuantity) - (p?.stock || 0);
+                 if (diff === 0) return <div style={{ fontSize: '12px', color: T.emerald, fontWeight: 800 }}>✅ Stock matches perfectly!</div>;
+                 return (
+                   <div style={{ fontSize: '12px', color: diff < 0 ? T.rose : T.amber, fontWeight: 800, background: diff < 0 ? T.roseL : T.amberL, padding: '10px', borderRadius: '10px' }}>
+                     {diff < 0 ? `⚠️ Shortage: ${Math.abs(diff)} missing` : `⚠️ Overage: ${diff} extra found`}
+                   </div>
+                 );
+              })()}
+              
+              <button onClick={async () => {
+                 if (!auditProductId || auditQuantity === '') return;
+                 const p = products.find(x => x.id === auditProductId);
+                 if (!p) return;
+                 const actual = parseInt(auditQuantity);
+                 const diff = actual - p.stock;
+                 if (diff === 0) {
+                    setShowAuditModal(false);
+                    return;
+                 }
+                 // Update stock directly since this is an audit
+                 // In a real app we would log an "Audit" transaction
+                 await supabase.from('products').update({ stock: actual }).eq('id', p.id);
+                 setShowAuditModal(false);
+                 setAuditProductId(''); setAuditQuantity(''); setAuditNotes('');
+                 window.location.reload(); // Refresh to sync stock
+              }}
+              style={{ padding: '16px', background: T.primary, color: '#fff', border: 'none', borderRadius: '14px', fontSize: '14px', fontWeight: 900, cursor: 'pointer', marginTop: '10px' }}>
+                Confirm Audit & Sync Stock
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
       <StoreBottomNav />
     </AnimatedPage>
   );

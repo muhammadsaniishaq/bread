@@ -5,7 +5,7 @@ import { useAuth } from '../store/AuthContext';
 import { useTranslation } from '../store/LanguageContext';
 import { 
   Search, Clock, 
-  CheckCircle2, Wallet, PackageOpen, ArrowUpRight, ArrowDownLeft
+  CheckCircle2, Wallet, PackageOpen, ArrowUpRight, ArrowDownLeft, Send
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AnimatedPage } from '../components/AnimatedPage';
@@ -174,9 +174,16 @@ export default function StoreAccounting() {
                                 style={{ overflow: 'hidden', marginTop: '10px', paddingTop: '10px', borderTop: `1px solid ${T.border}` }}>
                                  <div style={{ display: 'flex', gap: '8px' }}>
                                     <button onClick={(e) => { e.stopPropagation(); navigate('/store/dispatch', { state: { supplierId: s.custId } }); }}
-                                      style={{ flex: 1, padding: '8px', borderRadius: '10px', border: 'none', background: T.primary, color: '#fff', fontSize: '11px', fontWeight: 900, cursor: 'pointer' }}>
+                                      style={{ flex: 1, padding: '8px', borderRadius: '10px', border: 'none', background: T.primary, color: '#fff', fontSize: '11px', fontWeight: 900, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
                                        {t('store.issueStock')}
                                     </button>
+                                    {s.debt > 0 && (
+                                      <a href={`https://wa.me/?text=${encodeURIComponent(`Hello ${s.full_name || 'Supplier'},\n\nThis is a friendly reminder from the Store that your current debt balance is ₦${s.debt.toLocaleString()}.\n\nPlease arrange for payment at your earliest convenience.\n\nThank you!`)}`}
+                                        target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}
+                                        style={{ flex: 1, padding: '8px', borderRadius: '10px', border: 'none', background: '#25D366', color: '#fff', fontSize: '11px', fontWeight: 900, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', textDecoration: 'none' }}>
+                                         <Send size={12} /> Send Reminder
+                                      </a>
+                                    )}
                                  </div>
                               </motion.div>
                             )}

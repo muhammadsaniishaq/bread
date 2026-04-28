@@ -4,7 +4,7 @@ import { AnimatedPage } from '../components/AnimatedPage';
 import { useAppContext } from '../store/AppContext';
 import { useTranslation } from '../store/LanguageContext';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, ClipboardList, Search, Filter, Calendar } from 'lucide-react';
+import { ArrowLeft, ClipboardList, Search, Filter, Calendar, ExternalLink } from 'lucide-react';
 import { motion } from 'framer-motion';
 import StoreBottomNav from '../components/StoreBottomNav';
 
@@ -165,6 +165,12 @@ const StoreRecords: React.FC = () => {
                     {new Date(tx.date).toLocaleDateString()} · {new Date(tx.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </div>
                 </div>
+              </div>
+              <div style={{ borderTop: `1px solid ${T.borderL}`, marginTop: '10px', paddingTop: '10px', display: 'flex', justifyContent: 'flex-end' }}>
+                <button onClick={() => navigate(`/receipt/${tx.id}`)}
+                  style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '6px 12px', borderRadius: '8px', border: `1px solid ${T.pLight}`, background: T.white, color: T.primary, fontSize: '10px', fontWeight: 800, cursor: 'pointer' }}>
+                  <ExternalLink size={12} /> View Receipt
+                </button>
               </div>
             </motion.div>
           ))}
