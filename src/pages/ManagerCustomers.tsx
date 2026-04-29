@@ -9,23 +9,25 @@ import {
   BadgeCheck,
   MessageCircle, Clock, AlertOctagon,
   Shield, Target, Trash2,
-  ArrowLeft, Edit2, CheckCircle2, FileText as InvoiceIcon, ClipboardList, Package
+  ArrowLeft, Edit2, FileText as InvoiceIcon, ClipboardList, Package
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { BarChart, Bar, ResponsiveContainer } from 'recharts';
 import { ImageCropModal } from '../components/ImageCropModal';
 
 const T = {
-  bg:'#f8fafc', surface:'#ffffff', surface2:'#f1f5f9', border:'#e2e8f0',
-  accent:'#4f46e5', accentLt:'#eef2ff',
-  success:'#10b981', successLt:'#dcfce7', textSuccess:'#166534',
-  danger:'#ef4444', dangerLt:'#fee2e2', textDanger:'#991b1b',
-  warn:'#f59e0b', warnLt:'#fef3c7', textWarn:'#92400e',
-  txt:'#0f172a', txt2:'#475569', txt3:'#94a3b8',
-  ink:'#0f172a',
-  shadow:'0 1px 3px rgba(0,0,0,0.05), 0 10px 15px -3px rgba(0,0,0,0.02)',
-  shadowMd:'0 10px 25px -5px rgba(0,0,0,0.08)',
-  radius:'16px', radiusLg:'24px',
+  primary: '#4f46e5', primaryLt: 'rgba(79,70,229,0.05)',
+  success: '#10b981', successLt: 'rgba(16,185,129,0.1)', textSuccess: '#166534',
+  danger: '#ef4444', dangerLt: 'rgba(239,68,68,0.1)', textDanger: '#991b1b',
+  warn: '#f59e0b', warnLt: 'rgba(245,158,11,0.1)', textWarn: '#92400e',
+  amber: '#f59e0b',
+  ink: '#0f172a', txt: '#0f172a', txt2: '#475569', txt3: '#94a3b8',
+  bg: '#f1f5f9', surface: '#ffffff', surface2: '#f8fafc', white: '#ffffff',
+  border: 'rgba(0,0,0,0.06)', borderL: 'rgba(0,0,0,0.04)',
+  radius: '16px', radiusLg: '16px',
+  shadow: '0 4px 12px rgba(0,0,0,0.05)', shadowMd: '0 10px 25px -5px rgba(0,0,0,0.08)',
+  glassDark: 'rgba(0,0,0,0.05)',
+  accent: '#4f46e5', accentLt: 'rgba(79,70,229,0.05)'
 };
 
 const avatarPalette=[['#4f46e5','#e0e7ff'],['#0891b2','#e0f7fa'],['#059669','#d1fae5'],['#d97706','#fef3c7'],['#dc2626','#fee2e2'],['#7c3aed','#ede9fe']];
@@ -45,8 +47,8 @@ const formatDate = (dateString: string) => {
    return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 };
 
-const inp:React.CSSProperties={background:T.surface,border:`1px solid ${T.border}`,borderRadius:'10px',padding:'12px 14px',fontSize:'14px',fontWeight:500,color:T.txt,outline:'none',width:'100%',boxSizing:'border-box',transition:'all 0.2s'};
-const lbl:React.CSSProperties={fontSize:'11px',fontWeight:700,color:T.txt2,textTransform:'uppercase',letterSpacing:'0.04em',marginBottom:'8px',display:'block'};
+const inp:React.CSSProperties={background:T.surface,border:`1px solid ${T.borderL}`,borderRadius:'10px',padding:'10px 12px',fontSize:'12px',fontWeight:500,color:T.ink,outline:'none',width:'100%',boxSizing:'border-box',transition:'all 0.2s'};
+const lbl:React.CSSProperties={fontSize:'10px',fontWeight:800,color:T.txt2,textTransform:'uppercase',letterSpacing:'0.04em',marginBottom:'6px',display:'block'};
 
 export const ManagerCustomers: React.FC = () => {
   const { customers, transactions, debtPayments, addCustomer, updateCustomer, verifyCustomer, deleteCustomer, refreshData, appSettings } = useAppContext();
@@ -332,27 +334,27 @@ Generated via Admin Console.`;
         
         {/* MAIN DASHBOARD LIST VIEW */}
         <div style={{padding:'16px'}}>
-          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'24px'}}>
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'16px'}}>
             <div>
-              <h1 style={{fontSize:'24px',fontWeight:800,color:T.ink,margin:0,letterSpacing:'-0.02em'}}>Customers</h1>
-              <p style={{color:T.txt2,fontSize:'14px',margin:'4px 0 0'}}>Manage your client directory</p>
+              <h1 style={{fontSize:'18px',fontWeight:800,color:T.ink,margin:0,letterSpacing:'-0.02em'}}>Customers</h1>
+              <p style={{color:T.txt2,fontSize:'12px',margin:'2px 0 0'}}>Manage your client directory</p>
             </div>
-            <button onClick={()=>setIsAdding(true)} style={{display:'flex',alignItems:'center',gap:'8px',background:T.txt,color:'#fff',padding:'10px 16px',borderRadius:'12px',fontWeight:600,fontSize:'14px',border:'none',cursor:'pointer',boxShadow:T.shadow}}>
-               <UserPlus size={16}/> Add Client
+            <button onClick={()=>setIsAdding(true)} style={{display:'flex',alignItems:'center',gap:'6px',background:T.ink,color:'#fff',padding:'8px 12px',borderRadius:'10px',fontWeight:700,fontSize:'12px',border:'none',cursor:'pointer',boxShadow:T.shadow}}>
+               <UserPlus size={14}/> Add Client
             </button>
           </div>
 
-          <div style={{display:'flex',gap:'12px',marginBottom:'16px',flexWrap:'wrap'}}>
+          <div style={{display:'flex',gap:'8px',marginBottom:'16px',flexWrap:'wrap'}}>
             <div style={{position:'relative',flex:'1 1 200px'}}>
-              <Search size={18} color={T.txt3} style={{position:'absolute',left:'14px',top:'50%',transform:'translateY(-50%)',pointerEvents:'none'}}/>
-              <input style={{...inp,paddingLeft:'44px',height:'48px'}} placeholder="Search name, phone, email..." value={search} onChange={e=>setSearch(e.target.value)}/>
+              <Search size={16} color={T.txt3} style={{position:'absolute',left:'12px',top:'50%',transform:'translateY(-50%)',pointerEvents:'none'}}/>
+              <input style={{...inp,paddingLeft:'36px',height:'40px'}} placeholder="Search name, phone..." value={search} onChange={e=>setSearch(e.target.value)}/>
             </div>
-            <select style={{...inp, flex:'0 1 auto', width:'auto', height:'48px', padding:'0 16px', fontSize:'14px'}} value={sortMode} onChange={e=>setSortMode(e.target.value as any)}>
+            <select style={{...inp, flex:'0 1 auto', width:'auto', height:'40px', padding:'0 12px', fontSize:'12px'}} value={sortMode} onChange={e=>setSortMode(e.target.value as any)}>
                <option value="A-Z">Sort A-Z</option><option value="DEBT">Highest Debt</option><option value="VIP">Top loyalty</option>
             </select>
           </div>
 
-          <div style={{display:'flex',flexDirection:'column',gap:'12px'}}>
+          <div style={{display:'flex',flexDirection:'column',gap:'8px'}}>
             {list.map(customer=>{
               const [ac,lc]=getAvatar(customer.name);
               const isDebt=customer.debtBalance>0;
@@ -360,21 +362,21 @@ Generated via Admin Console.`;
 
               return(
                 <motion.div key={customer.id} whileTap={{scale:0.98}} onClick={()=>setDrawerId(customer.id)}
-                  style={{background:T.surface,border:`1px solid ${T.border}`,borderRadius:'16px',padding:'16px',boxShadow:T.shadow,cursor:'pointer',display:'flex',alignItems:'center',gap:'16px'}}>
-                  <div style={{width:'50px',height:'50px',borderRadius:'50%',background:lc,display:'flex',alignItems:'center',justifyContent:'center',fontSize:'20px',fontWeight:700,color:ac,flexShrink:0,overflow:'hidden'}}>
+                  style={{background:T.surface,border:`1px solid ${T.borderL}`,borderRadius:'14px',padding:'12px 14px',boxShadow:T.shadow,cursor:'pointer',display:'flex',alignItems:'center',gap:'12px'}}>
+                  <div style={{width:'36px',height:'36px',borderRadius:'50%',background:lc,display:'flex',alignItems:'center',justifyContent:'center',fontSize:'14px',fontWeight:700,color:ac,flexShrink:0,overflow:'hidden'}}>
                     {customer.image?<img src={customer.image} alt={customer.name} style={{width:'100%',height:'100%',objectFit:'cover'}}/>:customer.name.charAt(0)}
                   </div>
                   
                   <div style={{flex:1,minWidth:0}}>
-                    <div style={{display:'flex',alignItems:'center',gap:'8px',marginBottom:'4px'}}>
-                      <span style={{color:T.ink,fontWeight:700,fontSize:'16px',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{customer.name}</span>
-                      {overLimit&&<span style={{display:'flex',alignItems:'center',gap:'2px',fontSize:'10px',fontWeight:700,padding:'2px 6px',borderRadius:'6px',background:T.dangerLt,color:T.textDanger}}><AlertOctagon size={10}/> Limit</span>}
+                    <div style={{display:'flex',alignItems:'center',gap:'6px',marginBottom:'2px'}}>
+                      <span style={{color:T.ink,fontWeight:700,fontSize:'14px',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{customer.name}</span>
+                      {overLimit&&<span style={{display:'flex',alignItems:'center',gap:'2px',fontSize:'9px',fontWeight:700,padding:'2px 4px',borderRadius:'4px',background:T.dangerLt,color:T.textDanger}}><AlertOctagon size={10}/> Limit</span>}
                     </div>
-                    <div style={{display:'flex',gap:'12px',alignItems:'center'}}>
-                      <span style={{color:T.txt2,fontSize:'13px'}}>{customer.phone || 'No phone'}</span>
-                      <span style={{width:4,height:4,borderRadius:'50%',background:T.border}}/>
-                      <span style={{color:customer.assignedSupplierId ? T.accent : T.txt3, fontSize:'11px', fontWeight:700}}>
-                        {suppliers.find(s => s.id === customer.assignedSupplierId)?.full_name || 'Direct Bakery Client'}
+                    <div style={{display:'flex',gap:'8px',alignItems:'center'}}>
+                      <span style={{color:T.txt2,fontSize:'11px'}}>{customer.phone || 'No phone'}</span>
+                      <span style={{width:3,height:3,borderRadius:'50%',background:T.border}}/>
+                      <span style={{color:customer.assignedSupplierId ? T.primary : T.txt3, fontSize:'10px', fontWeight:700}}>
+                        {suppliers.find(s => s.id === customer.assignedSupplierId)?.full_name || 'Direct Bakery'}
                       </span>
                     </div>
                   </div>
@@ -382,12 +384,12 @@ Generated via Admin Console.`;
                   <div style={{textAlign:'right',flexShrink:0}}>
                     {isDebt?(
                        <div style={{display:'flex',flexDirection:'column',alignItems:'flex-end'}}>
-                          <p style={{color:T.textWarn,fontWeight:700,fontSize:'15px',margin:0}}>₦{customer.debtBalance.toLocaleString()}</p>
-                          <p style={{color:T.txt3,fontSize:'11px',margin:0}}>Pending</p>
+                          <p style={{color:T.textWarn,fontWeight:800,fontSize:'13px',margin:0}}>₦{customer.debtBalance.toLocaleString()}</p>
+                          <p style={{color:T.txt3,fontSize:'9px',margin:0}}>Pending</p>
                        </div>
                     ):(
                        <div style={{display:'flex',flexDirection:'column',alignItems:'flex-end'}}>
-                          <p style={{color:T.textSuccess,fontWeight:700,fontSize:'13px',margin:0,background:T.successLt,padding:'4px 8px',borderRadius:'8px'}}>Settled</p>
+                          <p style={{color:T.textSuccess,fontWeight:800,fontSize:'11px',margin:0,background:T.successLt,padding:'4px 8px',borderRadius:'8px'}}>Settled</p>
                        </div>
                     )}
                   </div>
@@ -402,13 +404,13 @@ Generated via Admin Console.`;
           {isAdding&&(
             <div style={{ position: 'fixed', inset: 0, zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(5px)', padding: '20px' }}>
               <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
-                style={{ background: T.surface, width: '100%', maxWidth: '440px', maxHeight: '90vh', borderRadius: '24px', display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: T.shadowMd }}>
-                <div style={{ padding: '18px 24px', borderBottom: `1px solid ${T.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: T.surface }}>
-                   <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 800, color: T.ink }}>Add New Client</h3>
-                   <button type="button" onClick={() => setIsAdding(false)} style={{ background: T.surface2, border: 'none', width: '32px', height: '32px', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: T.ink }}><X size={16}/></button>
+                style={{ background: T.surface, width: '100%', maxWidth: '380px', maxHeight: '90vh', borderRadius: '16px', display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: T.shadowMd }}>
+                <div style={{ padding: '14px 18px', borderBottom: `1px solid ${T.borderL}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                   <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 800, color: T.ink }}>Add New Client</h3>
+                   <button type="button" onClick={() => setIsAdding(false)} style={{ background: T.bg, border: 'none', width: '28px', height: '28px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: T.ink }}><X size={14}/></button>
                 </div>
-                <div style={{ padding: '24px', overflowY: 'auto' }} className="hide-scrollbar">
-                   <form onSubmit={handleAdd} style={{display:'flex',flexDirection:'column',gap:16}}>
+                <div style={{ padding: '16px', overflowY: 'auto' }} className="hide-scrollbar">
+                   <form onSubmit={handleAdd} style={{display:'flex',flexDirection:'column',gap:10}}>
                       <div style={{display:'flex',flexDirection:'column',gap:12}}>
                          <div><label style={lbl}>Legal/Business Name</label><input style={inp} value={fName} onChange={e=>setFName(e.target.value)} required/></div>
                          <div><label style={lbl}>Phone Number</label><input style={inp} value={fPhone} onChange={e=>setFPhone(e.target.value)}/></div>
@@ -447,7 +449,7 @@ Generated via Admin Console.`;
                          </div>
                       </div>
 
-                      <button type="submit" disabled={loading} style={{background:T.ink,color:'#fff',border:'none',borderRadius:'12px',padding:'16px',fontWeight:600,fontSize:'14px',cursor:'pointer',marginTop:8}}>
+                      <button type="submit" disabled={loading} style={{background:T.ink,color:'#fff',border:'none',borderRadius:'10px',padding:'12px',fontWeight:700,fontSize:'12px',cursor:'pointer',marginTop:4}}>
                         {loading?'Enrolling...':'Create Client Account'}
                       </button>
                    </form>
@@ -464,11 +466,11 @@ Generated via Admin Console.`;
                <motion.div initial={{y:'100%'}} animate={{y:0}} exit={{y:'100%'}} transition={{type:'spring',damping:26,stiffness:300}} style={{background:T.surface,height:'100vh',display:'flex',flexDirection:'column'}}>
                  
                  {/* Header: Client details */}
-                 <div style={{padding:'16px 20px',display:'flex',alignItems:'center',gap:'16px',borderBottom:`1px solid ${T.border}`,background:T.surface}}>
-                    <button onClick={()=>setDrawerId(null)} style={{background:'none',border:'none',cursor:'pointer',padding:'8px',marginLeft:'-8px'}}><ArrowLeft size={20} color={T.ink}/></button>
-                    <h2 style={{fontSize:'18px',fontWeight:600,color:T.ink,margin:0,flex:1}}>Client details</h2>
-                    <button onClick={()=>setShowDeleteModal(true)} style={{background:T.dangerLt,border:'none',padding:'8px 14px',borderRadius:'10px',display:'flex',alignItems:'center',gap:6,cursor:'pointer',color:T.danger,fontSize:'13px',fontWeight:700}}>
-                       <Trash2 size={14}/> Delete
+                 <div style={{padding:'12px 16px',display:'flex',alignItems:'center',gap:'12px',borderBottom:`1px solid ${T.borderL}`,background:T.surface}}>
+                    <button onClick={()=>setDrawerId(null)} style={{background:'none',border:'none',cursor:'pointer',padding:'6px',marginLeft:'-6px'}}><ArrowLeft size={18} color={T.ink}/></button>
+                    <h2 style={{fontSize:'15px',fontWeight:700,color:T.ink,margin:0,flex:1}}>Client Details</h2>
+                    <button onClick={()=>setShowDeleteModal(true)} style={{background:T.dangerLt,border:'none',padding:'6px 10px',borderRadius:'8px',display:'flex',alignItems:'center',gap:4,cursor:'pointer',color:T.danger,fontSize:'11px',fontWeight:800}}>
+                       <Trash2 size={12}/> Delete
                     </button>
                  </div>
 
@@ -476,87 +478,87 @@ Generated via Admin Console.`;
                     
                     <div style={{padding:'20px'}}>
                        {/* Banner & Avatar Container */}
-                       <div style={{background:'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)',height:'110px',borderRadius:'16px',position:'relative'}}>
+                       <div style={{background:'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)',height:'70px',borderRadius:'12px',position:'relative'}}>
                          {/* Network Level Stars */}
                          {drawer.loyaltyPoints && drawer.loyaltyPoints > 0 && (
-                            <div style={{position:'absolute', bottom:10, right:16, display:'flex', gap:2}} title={`Loyalty: ${drawer.loyaltyPoints}`}>
-                               {Array.from({length: Math.min(5, Math.ceil(drawer.loyaltyPoints/50))}).map((_,index)=> <Star key={index} size={14} color="#f59e0b" fill="#fcd34d" />)}
+                            <div style={{position:'absolute', bottom:8, right:12, display:'flex', gap:2}} title={`Loyalty: ${drawer.loyaltyPoints}`}>
+                               {Array.from({length: Math.min(5, Math.ceil(drawer.loyaltyPoints/50))}).map((_,index)=> <Star key={index} size={12} color="#f59e0b" fill="#fcd34d" />)}
                             </div>
                          )}
                        </div>
                        
                        {/* Overlapping Avatar */}
-                       <div style={{display:'flex',padding:'0 16px',marginTop:'-40px',position:'relative'}}>
-                           <div style={{width:'84px',height:'84px',borderRadius:'50%',background:getAvatar(drawer.name)[1],display:'flex',alignItems:'center',justifyContent:'center',fontSize:'32px',fontWeight:700,color:getAvatar(drawer.name)[0],border:`4px solid ${T.surface}`,boxShadow:T.shadow,overflow:'hidden'}}>
+                       <div style={{display:'flex',padding:'0 16px',marginTop:'-28px',position:'relative'}}>
+                           <div style={{width:'56px',height:'56px',borderRadius:'50%',background:getAvatar(drawer.name)[1],display:'flex',alignItems:'center',justifyContent:'center',fontSize:'20px',fontWeight:700,color:getAvatar(drawer.name)[0],border:`3px solid ${T.surface}`,boxShadow:T.shadow,overflow:'hidden'}}>
                              {drawer.image?<img src={drawer.image} alt={drawer.name} style={{width:'100%',height:'100%',objectFit:'cover'}}/>:drawer.name.charAt(0)}
                            </div>
                        </div>
 
                        {/* Customer Info Block */}
-                       <div style={{marginTop:'12px'}}>
-                          <h1 style={{fontSize:'22px',fontWeight:700,color:T.ink,margin:0,display:'flex',alignItems:'center',gap:6}}>{drawer.name} {drawer.pin && <BadgeCheck size={16} color={T.success}/>}</h1>
-                          <p style={{color:T.accent,fontSize:'14px',fontWeight:500,margin:'4px 0 0'}}>@{drawer.username || 'client_'+drawer.id.substring(0,4)}</p>
+                       <div style={{marginTop:'8px'}}>
+                          <h1 style={{fontSize:'18px',fontWeight:800,color:T.ink,margin:0,display:'flex',alignItems:'center',gap:4}}>{drawer.name} {drawer.pin && <BadgeCheck size={14} color={T.success}/>}</h1>
+                          <p style={{color:T.primary,fontSize:'12px',fontWeight:600,margin:'2px 0 0'}}>@{drawer.username || 'client_'+drawer.id.substring(0,4)}</p>
                           
                           {/* AI Segmentation Tags */}
                           {aiTags.length > 0 && (
                              <div style={{display:'flex', gap:6, marginTop:8, flexWrap:'wrap'}}>
                                 {aiTags.map((tag,idx) => (
-                                   <span key={idx} style={{background:tag.bg, color:tag.color, padding:'4px 8px', borderRadius:'6px', fontSize:'11px', fontWeight:600, display:'flex', alignItems:'center', gap:4}}>
+                                   <span key={idx} style={{background:tag.bg, color:tag.color, padding:'2px 6px', borderRadius:'6px', fontSize:'9px', fontWeight:700, display:'flex', alignItems:'center', gap:4}}>
                                       {tag.label}
                                    </span>
                                 ))}
                              </div>
                           )}
 
-                          <div style={{display:'flex',flexDirection:'column',gap:'6px',marginTop:'12px'}}>
-                             {drawer.email && <span style={{color:T.txt2,fontSize:'14px'}}>Email: {drawer.email}</span>}
-                             {drawer.phone && <span style={{color:T.txt2,fontSize:'14px'}}>Phone: {drawer.phone}</span>}
+                          <div style={{display:'flex',flexDirection:'column',gap:'4px',marginTop:'10px'}}>
+                             {drawer.email && <span style={{color:T.txt2,fontSize:'12px',fontWeight:500}}>Email: {drawer.email}</span>}
+                             {drawer.phone && <span style={{color:T.txt2,fontSize:'12px',fontWeight:500}}>Phone: {drawer.phone}</span>}
                           </div>
 
                           {/* Quick Actions */}
-                          <div style={{display:'flex',gap:'10px',marginTop:'20px'}}>
-                             <button onClick={()=>window.open(`https://wa.me/${drawer.phone?.replace(/\D/g,'')}`)} style={{background:'#f59e0b',color:'#fff',padding:'10px',borderRadius:'10px',display:'flex',alignItems:'center',gap:'8px',fontWeight:600,fontSize:'14px',border:'none',cursor:'pointer',flex:1,justifyContent:'center',whiteSpace:'nowrap'}}>
-                                <MessageCircle size={16}/> Message
+                          <div style={{display:'flex',gap:'8px',marginTop:'16px'}}>
+                             <button onClick={()=>window.open(`https://wa.me/${drawer.phone?.replace(/\D/g,'')}`)} style={{background:'#f59e0b',color:'#fff',padding:'8px',borderRadius:'8px',display:'flex',alignItems:'center',gap:'6px',fontWeight:700,fontSize:'12px',border:'none',cursor:'pointer',flex:1,justifyContent:'center',whiteSpace:'nowrap',boxShadow:`0 4px 10px rgba(245,158,11,0.2)`}}>
+                                <MessageCircle size={14}/> Message
                              </button>
-                             <button onClick={copyCustomerReport} style={{background:T.surface2,color:T.ink,padding:'10px',borderRadius:'10px',display:'flex',alignItems:'center',justifyContent:'center',gap:'8px',fontWeight:600,fontSize:'14px',border:`1px solid ${T.border}`,cursor:'pointer',flex:1,whiteSpace:'nowrap'}}>
-                                <ClipboardList size={16}/> Report
+                             <button onClick={copyCustomerReport} style={{background:T.surface,color:T.ink,padding:'8px',borderRadius:'8px',display:'flex',alignItems:'center',justifyContent:'center',gap:'6px',fontWeight:700,fontSize:'12px',border:`1px solid ${T.borderL}`,cursor:'pointer',flex:1,whiteSpace:'nowrap',boxShadow:T.shadow}}>
+                                <ClipboardList size={14}/> Report
                              </button>
-                             <button onClick={()=>setEditModalOpen(true)} style={{background:T.surface,color:T.ink,padding:'10px',borderRadius:'10px',display:'flex',alignItems:'center',justifyContent:'center',border:`1px solid ${T.border}`,cursor:'pointer'}} title="Edit Client">
-                                <Edit2 size={16}/>
+                             <button onClick={()=>setEditModalOpen(true)} style={{background:T.surface,color:T.ink,padding:'8px',borderRadius:'8px',display:'flex',alignItems:'center',justifyContent:'center',border:`1px solid ${T.borderL}`,cursor:'pointer',boxShadow:T.shadow}} title="Edit Client">
+                                <Edit2 size={14}/>
                              </button>
                           </div>
                           
                           {/* Notes Preview Block */}
-                          <div style={{marginTop:'28px'}}>
-                             <h3 style={{fontSize:'15px',fontWeight:600,color:T.ink,margin:'0 0 8px',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-                                Notes <button onClick={()=>setEditModalOpen(true)} style={{background:'none',border:'none',color:T.accent,fontSize:'12px',cursor:'pointer'}}>Edit</button>
+                          <div style={{marginTop:'20px', background:T.bg, padding:'12px', borderRadius:'12px'}}>
+                             <h3 style={{fontSize:'12px',fontWeight:700,color:T.ink,margin:'0 0 6px',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                                Notes <button onClick={()=>setEditModalOpen(true)} style={{background:'none',border:'none',color:T.primary,fontSize:'11px',cursor:'pointer',fontWeight:600}}>Edit</button>
                              </h3>
-                             <p style={{color:T.txt2,fontSize:'14px',lineHeight:1.6,margin:0}}>{eNote || 'No internal notes captured for this client.'}</p>
+                             <p style={{color:T.txt2,fontSize:'12px',lineHeight:1.5,margin:0}}>{eNote || 'No internal notes captured for this client.'}</p>
                           </div>
 
                           {/* Address / Map Placeholder Block */}
-                          <div style={{marginTop:'24px'}}>
-                             <h3 style={{fontSize:'15px',fontWeight:600,color:T.ink,margin:'0 0 8px'}}>Address</h3>
-                             <p style={{color:T.txt2,fontSize:'14px',margin:'0 0 12px'}}>{drawer.location || 'No location saved.'}</p>
-                             <div onClick={()=>window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(drawer.location||'')}`)} style={{background:'#e5e7eb',height:'100px',borderRadius:'12px',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',backgroundImage:'url("https://maps.googleapis.com/maps/api/staticmap?center=location&zoom=13&size=600x300&maptype=roadmap&color=gray")',backgroundSize:'cover'}}>
-                                <span style={{background:T.surface,padding:'8px 16px',borderRadius:'8px',fontSize:'13px',fontWeight:600,color:T.ink,boxShadow:T.shadow}}>View map</span>
+                          <div style={{marginTop:'16px'}}>
+                             <h3 style={{fontSize:'12px',fontWeight:700,color:T.ink,margin:'0 0 6px'}}>Address</h3>
+                             <p style={{color:T.txt2,fontSize:'12px',margin:'0 0 8px'}}>{drawer.location || 'No location saved.'}</p>
+                             <div onClick={()=>window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(drawer.location||'')}`)} style={{background:'#e5e7eb',height:'70px',borderRadius:'10px',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',backgroundImage:'url("https://maps.googleapis.com/maps/api/staticmap?center=location&zoom=13&size=600x300&maptype=roadmap&color=gray")',backgroundSize:'cover'}}>
+                                <span style={{background:T.surface,padding:'6px 12px',borderRadius:'8px',fontSize:'11px',fontWeight:700,color:T.ink,boxShadow:T.shadow}}>View map</span>
                              </div>
                           </div>
 
                           {/* Pastel Badges (Trust Score, Rank) */}
-                          <div style={{display:'flex',gap:12,marginTop:24,flexWrap:'wrap'}}>
-                              <div style={{background:trustScore>=80?'#fdf2f8':'#fff1f2',border:`1px solid ${trustScore>=80?'#fbcfe8':'#fecdd3'}`,borderRadius:'12px',padding:'12px 16px',display:'flex',alignItems:'center',gap:10,flex:'1 1 140px'}}>
-                                 <div style={{width:32,height:32,borderRadius:'50%',background:trustScore>=80?'#f472b6':'#fb7185',display:'flex',alignItems:'center',justifyContent:'center'}}><Shield size={16} color="#fff"/></div>
+                          <div style={{display:'flex',gap:8,marginTop:16,flexWrap:'wrap'}}>
+                              <div style={{background:trustScore>=80?'#fdf2f8':'#fff1f2',border:`1px solid ${trustScore>=80?'#fbcfe8':'#fecdd3'}`,borderRadius:'10px',padding:'10px 12px',display:'flex',alignItems:'center',gap:8,flex:'1 1 130px'}}>
+                                 <div style={{width:28,height:28,borderRadius:'50%',background:trustScore>=80?'#f472b6':'#fb7185',display:'flex',alignItems:'center',justifyContent:'center'}}><Shield size={14} color="#fff"/></div>
                                  <div style={{display:'flex',flexDirection:'column'}}>
-                                   <span style={{fontSize:'11px',fontWeight:700,color:T.txt2}}>Trust Score</span>
-                                   <span style={{fontSize:'14px',fontWeight:700,color:T.ink}}>{trustScore}%</span>
+                                   <span style={{fontSize:'9px',fontWeight:800,color:T.txt2}}>TRUST SCORE</span>
+                                   <span style={{fontSize:'13px',fontWeight:800,color:T.ink}}>{trustScore}%</span>
                                  </div>
                               </div>
-                              <div style={{background:'#eff6ff',border:'1px solid #bfdbfe',borderRadius:'12px',padding:'12px 16px',display:'flex',alignItems:'center',gap:10,flex:'1 1 140px'}}>
-                                 <div style={{width:32,height:32,borderRadius:'50%',background:'#3b82f6',display:'flex',alignItems:'center',justifyContent:'center'}}><Target size={16} color="#fff"/></div>
+                              <div style={{background:'#eff6ff',border:'1px solid #bfdbfe',borderRadius:'10px',padding:'10px 12px',display:'flex',alignItems:'center',gap:8,flex:'1 1 130px'}}>
+                                 <div style={{width:28,height:28,borderRadius:'50%',background:'#3b82f6',display:'flex',alignItems:'center',justifyContent:'center'}}><Target size={14} color="#fff"/></div>
                                  <div style={{display:'flex',flexDirection:'column'}}>
-                                   <span style={{fontSize:'11px',fontWeight:700,color:T.txt2}}>Network Rank</span>
-                                   <span style={{fontSize:'14px',fontWeight:700,color:T.ink}}>Top {networkRank}%</span>
+                                   <span style={{fontSize:'9px',fontWeight:800,color:T.txt2}}>NETWORK RANK</span>
+                                   <span style={{fontSize:'13px',fontWeight:800,color:T.ink}}>Top {networkRank}%</span>
                                  </div>
                               </div>
                           </div>
@@ -564,27 +566,27 @@ Generated via Admin Console.`;
                     </div>
 
                     {/* Navigation Tabs Container */}
-                    <div style={{marginTop:'12px',display:'flex',gap:'24px',borderBottom:`1px solid ${T.border}`,padding:'0 24px'}}>
+                    <div style={{marginTop:'8px',display:'flex',gap:'16px',borderBottom:`1px solid ${T.borderL}`,padding:'0 16px'}}>
                        {['history', 'orders', 'analytics'].map(tab => (
-                          <button key={tab} onClick={()=>setDTab(tab as any)} style={{background:'none',border:'none',borderBottom:dTab===tab?`2px solid ${T.accent}`:'2px solid transparent',padding:'12px 0',fontSize:'14px',fontWeight:dTab===tab?600:500,color:dTab===tab?T.accent:T.txt2,cursor:'pointer',textTransform:'capitalize'}}>
+                          <button key={tab} onClick={()=>setDTab(tab as any)} style={{background:'none',border:'none',borderBottom:dTab===tab?`2px solid ${T.primary}`:'2px solid transparent',padding:'10px 0',fontSize:'12px',fontWeight:dTab===tab?700:500,color:dTab===tab?T.primary:T.txt2,cursor:'pointer',textTransform:'capitalize'}}>
                              {tab}
                           </button>
                        ))}
                     </div>
 
                     {/* TAB CONTENTS */}
-                    <div style={{padding:'24px'}}>
+                    <div style={{padding:'16px'}}>
                        
                        {dTab === 'history' && (
                           <motion.div initial={{opacity:0}} animate={{opacity:1}} transition={{duration:0.2}}>
-                             <div style={{display:'flex',gap:'12px',marginBottom:'24px'}}>
-                                <div style={{background:T.surface2,padding:'16px',borderRadius:'12px',flex:1}}>
-                                   <p style={{fontSize:'20px',fontWeight:700,margin:0,color:T.ink}}>{drawerMetrics.txCount}</p>
-                                   <p style={{fontSize:'13px',color:T.txt2,margin:'4px 0 0'}}>Invoices total</p>
+                             <div style={{display:'flex',gap:'8px',marginBottom:'16px'}}>
+                                <div style={{background:T.bg,padding:'12px',borderRadius:'10px',flex:1}}>
+                                   <p style={{fontSize:'18px',fontWeight:800,margin:0,color:T.ink}}>{drawerMetrics.txCount}</p>
+                                   <p style={{fontSize:'10px',color:T.txt2,margin:'2px 0 0',fontWeight:600}}>Invoices</p>
                                 </div>
-                                <div style={{background:T.successLt,padding:'16px',borderRadius:'12px',flex:1}}>
-                                   <p style={{fontSize:'20px',fontWeight:700,margin:0,color:T.textSuccess}}>₦{drawerMetrics.lifetimeValue.toLocaleString()}</p>
-                                   <p style={{fontSize:'13px',color:T.textSuccess,margin:'4px 0 0'}}>Total volume</p>
+                                <div style={{background:T.successLt,padding:'12px',borderRadius:'10px',flex:1}}>
+                                   <p style={{fontSize:'14px',fontWeight:800,margin:0,color:T.textSuccess}}>₦{drawerMetrics.lifetimeValue.toLocaleString()}</p>
+                                   <p style={{fontSize:'10px',color:T.textSuccess,margin:'2px 0 0',fontWeight:600}}>Total vol.</p>
                                 </div>
                              </div>
 
@@ -632,28 +634,27 @@ Generated via Admin Console.`;
                                 </div>
                              </div>
 
-                             <div style={{display:'flex',flexDirection:'column',gap:'12px'}}>
-                                {timelineFull.length===0?<p style={{color:T.txt3,fontSize:14,textAlign:'center'}}>No items recorded.</p> : timelineFull.map((item,i) => (
-                                   <div key={i} style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'12px 0',borderBottom:i!==timelineFull.length-1?`1px solid ${T.border}`:'none'}}>
-                                      <div style={{display:'flex',alignItems:'center',gap:'12px'}}>
-                                         <div style={{width:'36px',height:'36px',borderRadius:'8px',background:T.surface2,display:'flex',alignItems:'center',justifyContent:'center'}}>
-                                            <InvoiceIcon size={16} color={T.txt3}/>
+                             <div style={{display:'flex',flexDirection:'column',gap:'6px'}}>
+                                {timelineFull.length===0?<p style={{color:T.txt3,fontSize:12,textAlign:'center'}}>No items recorded.</p> : timelineFull.map((item,i) => (
+                                   <div key={i} style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'10px 12px',background:T.surface,borderRadius:'10px',border:`1px solid ${T.borderL}`}}>
+                                      <div style={{display:'flex',alignItems:'center',gap:'10px'}}>
+                                         <div style={{width:'30px',height:'30px',borderRadius:'8px',background:T.bg,display:'flex',alignItems:'center',justifyContent:'center'}}>
+                                            <InvoiceIcon size={14} color={T.txt3}/>
                                          </div>
                                          <div style={{display:'flex',flexDirection:'column'}}>
-                                            <span style={{fontSize:'14px',fontWeight:600,color:T.ink}}>Record #{item.id.slice(0,5).toUpperCase()}</span>
-                                            <span style={{fontSize:'12px',color:T.txt3}}>{formatDate(item.date)}</span>
+                                            <span style={{fontSize:'12px',fontWeight:700,color:T.ink}}>#{item.id.slice(0,5).toUpperCase()}</span>
+                                            <span style={{fontSize:'10px',color:T.txt3}}>{formatDate(item.date)}</span>
                                          </div>
                                       </div>
-                                      
-                                      <div style={{display:'flex',flexDirection:'column',alignItems:'flex-end',gap:4}}>
-                                         <span style={{fontSize:'14px',fontWeight:700,color:T.ink}}>₦{item.amt.toLocaleString()}</span>
+                                      <div style={{display:'flex',flexDirection:'column',alignItems:'flex-end',gap:2}}>
+                                         <span style={{fontSize:'13px',fontWeight:800,color:T.ink}}>₦{item.amt.toLocaleString()}</span>
                                          {item.type==='PURCHASE' ? (
                                             item.isDebt ? 
-                                               <span style={{background:T.warnLt,color:T.textWarn,padding:'4px 10px',borderRadius:'20px',fontSize:'11px',fontWeight:600,display:'flex',alignItems:'center',gap:4}}><Clock size={10}/> Pending</span> 
+                                               <span style={{background:T.warnLt,color:T.textWarn,padding:'2px 6px',borderRadius:'6px',fontSize:'9px',fontWeight:700}}><Clock size={8}/> Pending</span> 
                                             : 
-                                               <span style={{background:T.successLt,color:T.textSuccess,padding:'4px 10px',borderRadius:'20px',fontSize:'11px',fontWeight:600,display:'flex',alignItems:'center',gap:4}}><CheckCircle2 size={10}/> Done</span>
+                                               <span style={{background:T.successLt,color:T.textSuccess,padding:'2px 6px',borderRadius:'6px',fontSize:'9px',fontWeight:700}}>Done</span>
                                          ) : (
-                                            <span style={{background:T.successLt,color:T.textSuccess,padding:'4px 10px',borderRadius:'20px',fontSize:'11px',fontWeight:600,display:'flex',alignItems:'center',gap:4}}><CheckCircle2 size={10}/> Paid</span>
+                                            <span style={{background:T.successLt,color:T.textSuccess,padding:'2px 6px',borderRadius:'6px',fontSize:'9px',fontWeight:700}}>Paid</span>
                                          )}
                                       </div>
                                    </div>
@@ -663,16 +664,13 @@ Generated via Admin Console.`;
                        )}
 
                        {dTab === 'analytics' && (
-                          <motion.div initial={{opacity:0}} animate={{opacity:1}} transition={{duration:0.2}} style={{display:'flex',flexDirection:'column',gap:16}}>
-                             <div style={{background:T.surface,borderRadius:'16px',padding:'20px',border:`1px solid ${T.border}`}}>
-                                <h4 style={{fontSize:'14px',fontWeight:600,color:T.txt2,margin:'0 0 16px'}}>AOV / Volume Metrics</h4>
-                                <div style={{display:'flex',justifyContent:'space-between',alignItems:'baseline',marginBottom:6}}>
-                                   <p style={{fontSize:'28px',fontWeight:700,margin:0,color:T.ink}}>₦{aov.toLocaleString()}</p>
-                                </div>
-                                <p style={{fontSize:'13px',color:T.txt3,margin:0}}>Average Order Value over {drawerMetrics.txCount} transactions</p>
-
+                          <motion.div initial={{opacity:0}} animate={{opacity:1}} transition={{duration:0.2}} style={{display:'flex',flexDirection:'column',gap:12}}>
+                             <div style={{background:T.surface,borderRadius:'12px',padding:'14px',border:`1px solid ${T.borderL}`}}>
+                                <h4 style={{fontSize:'11px',fontWeight:700,color:T.txt2,margin:'0 0 10px',textTransform:'uppercase'}}>AOV / Volume</h4>
+                                <p style={{fontSize:'24px',fontWeight:800,margin:'0 0 2px',color:T.ink}}>₦{aov.toLocaleString()}</p>
+                                <p style={{fontSize:'11px',color:T.txt3,margin:0}}>Avg. over {drawerMetrics.txCount} transactions</p>
                                 {visualChartData && (
-                                   <div style={{height:'100px',marginTop:'20px'}}>
+                                   <div style={{height:'80px',marginTop:'12px'}}>
                                       <ResponsiveContainer width="100%" height="100%">
                                          <BarChart data={visualChartData}>
                                             <Bar dataKey="amt" fill={T.txt3} radius={[4,4,0,0]} />
@@ -681,14 +679,13 @@ Generated via Admin Console.`;
                                    </div>
                                 )}
                              </div>
-
                              {limitNum > 0 && (
-                                <div style={{background:T.surface,borderRadius:'16px',padding:'20px',border:`1px solid ${T.border}`}}>
-                                   <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-end',marginBottom:'12px'}}>
-                                      <div><p style={{fontSize:'13px',fontWeight:600,color:T.txt2,margin:'0 0 4px'}}>Credit Utilization</p><p style={{fontSize:'20px',fontWeight:700,color:T.ink,margin:0}}>{usedPercent}%</p></div>
-                                      <div style={{textAlign:'right'}}><p style={{fontSize:'12px',fontWeight:500,color:T.txt3,margin:'0 0 4px'}}>Available</p><p style={{fontSize:'14px',fontWeight:600,color:T.ink,margin:0}}>₦{(limitNum - drawer.debtBalance).toLocaleString()}</p></div>
+                                <div style={{background:T.surface,borderRadius:'12px',padding:'14px',border:`1px solid ${T.borderL}`}}>
+                                   <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-end',marginBottom:'10px'}}>
+                                      <div><p style={{fontSize:'11px',fontWeight:700,color:T.txt2,margin:'0 0 2px',textTransform:'uppercase'}}>Credit Used</p><p style={{fontSize:'20px',fontWeight:800,color:T.ink,margin:0}}>{usedPercent}%</p></div>
+                                      <div style={{textAlign:'right'}}><p style={{fontSize:'10px',fontWeight:600,color:T.txt3,margin:'0 0 2px'}}>Available</p><p style={{fontSize:'13px',fontWeight:700,color:T.ink,margin:0}}>₦{(limitNum - drawer.debtBalance).toLocaleString()}</p></div>
                                    </div>
-                                   <div style={{width:'100%',height:'6px',background:T.surface2,borderRadius:'10px',overflow:'hidden'}}><div style={{height:'100%',background:usedPercent>=100?T.danger:usedPercent>=80?T.warn:T.success,borderRadius:'10px',width:`${usedPercent}%`}}/></div>
+                                   <div style={{width:'100%',height:'6px',background:T.bg,borderRadius:'10px',overflow:'hidden'}}><div style={{height:'100%',background:usedPercent>=100?T.danger:usedPercent>=80?T.warn:T.success,borderRadius:'10px',width:`${usedPercent}%`}}/></div>
                                 </div>
                              )}
                           </motion.div>
@@ -696,29 +693,25 @@ Generated via Admin Console.`;
 
                        {dTab === 'orders' && (
                           <motion.div initial={{opacity:0}} animate={{opacity:1}} transition={{duration:0.2}}>
-                             <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'16px'}}>
-                                <span style={{fontSize:'14px',fontWeight:600,color:T.txt2}}>Client Orders</span>
-                                {loadingOrders && <span style={{fontSize:'12px',color:T.txt3}}>Refreshing...</span>}
+                             <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'12px'}}>
+                                <span style={{fontSize:'12px',fontWeight:700,color:T.txt2}}>Client Orders</span>
+                                {loadingOrders && <span style={{fontSize:'11px',color:T.txt3}}>Refreshing...</span>}
                              </div>
-                             
-                             <div style={{display:'flex',flexDirection:'column',gap:'12px'}}>
-                                {!loadingOrders && drawerOrders.length===0?<p style={{color:T.txt3,fontSize:14,textAlign:'center',padding:'20px 0'}}>No orders placed by this client.</p> : drawerOrders.map((ord) => (
-                                   <div key={ord.id} style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'16px',background:T.surface2,borderRadius:'16px'}}>
-                                      <div style={{display:'flex',alignItems:'center',gap:'12px'}}>
-                                         <div style={{width:'40px',height:'40px',borderRadius:'10px',background:'#fff',display:'flex',alignItems:'center',justifyContent:'center',boxShadow:T.shadow}}>
-                                            <Package size={18} color={T.accent}/>
+                             <div style={{display:'flex',flexDirection:'column',gap:'8px'}}>
+                                {!loadingOrders && drawerOrders.length===0?<p style={{color:T.txt3,fontSize:12,textAlign:'center',padding:'16px 0'}}>No orders placed.</p> : drawerOrders.map((ord) => (
+                                   <div key={ord.id} style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'10px 12px',background:T.bg,borderRadius:'10px',border:`1px solid ${T.borderL}`}}>
+                                      <div style={{display:'flex',alignItems:'center',gap:'10px'}}>
+                                         <div style={{width:'32px',height:'32px',borderRadius:'8px',background:T.surface,display:'flex',alignItems:'center',justifyContent:'center',boxShadow:T.shadow}}>
+                                            <Package size={15} color={T.primary}/>
                                          </div>
                                          <div style={{display:'flex',flexDirection:'column'}}>
-                                            <span style={{fontSize:'14px',fontWeight:800,color:T.ink}}>Order #{ord.id.toString().slice(0,6).toUpperCase()}</span>
-                                            <span style={{fontSize:'12px',color:T.txt3}}>{formatDate(ord.created_at)}</span>
+                                            <span style={{fontSize:'12px',fontWeight:800,color:T.ink}}>#{ord.id.toString().slice(0,6).toUpperCase()}</span>
+                                            <span style={{fontSize:'10px',color:T.txt3}}>{formatDate(ord.created_at)}</span>
                                          </div>
                                       </div>
-                                      
                                       <div style={{display:'flex',flexDirection:'column',alignItems:'flex-end',gap:4}}>
-                                         <span style={{fontSize:'15px',fontWeight:900,color:T.ink}}>₦{(ord.total_price || 0).toLocaleString()}</span>
-                                         <span style={{background:ord.status==='PENDING'?'#fef3c7':ord.status==='CANCELLED'?'#fee2e2':'#dcfce7',color:ord.status==='PENDING'?'#d97706':ord.status==='CANCELLED'?'#dc2626':'#166534',padding:'4px 10px',borderRadius:'8px',fontSize:'10px',fontWeight:800,textTransform:'uppercase',letterSpacing:'0.04em'}}>
-                                            {ord.status}
-                                         </span>
+                                         <span style={{fontSize:'13px',fontWeight:900,color:T.ink}}>₦{(ord.total_price || 0).toLocaleString()}</span>
+                                         <span style={{background:ord.status==='PENDING'?'#fef3c7':ord.status==='CANCELLED'?'#fee2e2':'#dcfce7',color:ord.status==='PENDING'?'#d97706':ord.status==='CANCELLED'?'#dc2626':'#166534',padding:'2px 6px',borderRadius:'6px',fontSize:'9px',fontWeight:800,textTransform:'uppercase'}}>{ord.status}</span>
                                       </div>
                                    </div>
                                 ))}
@@ -738,13 +731,13 @@ Generated via Admin Console.`;
           {editModalOpen && drawer && (
             <div style={{ position: 'fixed', inset: 0, zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(5px)', padding: '20px' }}>
               <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
-                style={{ background: T.surface, width: '100%', maxWidth: '440px', maxHeight: '90vh', borderRadius: '24px', display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: T.shadowMd }}>
-                <div style={{ padding: '18px 24px', borderBottom: `1px solid ${T.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: T.surface }}>
-                   <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 800, color: T.ink }}>Edit Client Profile</h3>
-                   <button type="button" onClick={() => setEditModalOpen(false)} style={{ background: T.surface2, border: 'none', width: '32px', height: '32px', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: T.ink }}><X size={16}/></button>
+                style={{ background: T.surface, width: '100%', maxWidth: '380px', maxHeight: '90vh', borderRadius: '16px', display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: T.shadowMd }}>
+                <div style={{ padding: '14px 18px', borderBottom: `1px solid ${T.borderL}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                   <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 800, color: T.ink }}>Edit Client Profile</h3>
+                   <button type="button" onClick={() => setEditModalOpen(false)} style={{ background: T.bg, border: 'none', width: '28px', height: '28px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: T.ink }}><X size={14}/></button>
                 </div>
-                <div style={{ padding: '24px', overflowY: 'auto' }} className="hide-scrollbar">
-                   <form onSubmit={saveEdit} style={{display:'flex',flexDirection:'column',gap:16}}>
+                <div style={{ padding: '16px', overflowY: 'auto' }} className="hide-scrollbar">
+                   <form onSubmit={saveEdit} style={{display:'flex',flexDirection:'column',gap:10}}>
                       <div style={{display:'flex',flexDirection:'column',gap:12}}>
                          <div><label style={lbl}>Legal/Business Name</label><input style={inp} value={eName} onChange={e=>setEName(e.target.value)} required/></div>
                          <div><label style={lbl}>Business Registration No. (Optional)</label><input style={inp} placeholder="RC-123456" /></div>
@@ -797,7 +790,7 @@ Generated via Admin Console.`;
                          <div><label style={lbl}>Override Memo / Internal Note</label><textarea style={{...inp,resize:'none',height:100}} value={eNote} onChange={e=>setENote(e.target.value)}></textarea></div>
                       </div>
 
-                      <button type="submit" disabled={loading} style={{background:T.ink,color:'#fff',border:'none',borderRadius:'12px',padding:'16px',fontWeight:600,fontSize:'14px',cursor:'pointer',marginTop:8}}>
+                      <button type="submit" disabled={loading} style={{background:T.ink,color:'#fff',border:'none',borderRadius:'10px',padding:'12px',fontWeight:700,fontSize:'12px',cursor:'pointer',marginTop:4}}>
                         {loading?'Saving updates...':'Save Configuration'}
                       </button>
                    </form>

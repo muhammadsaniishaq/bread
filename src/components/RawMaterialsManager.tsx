@@ -381,25 +381,25 @@ export const RawMaterialsManager: React.FC = () => {
                  </button>
 
                  {filteredVendors.map(v => (
-                   <Card key={v.id} style={{ padding: '14px' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                            <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: T.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: 800, color: T.ink }}>{v.name.charAt(0)}</div>
+                   <Card key={v.id} style={{ padding: '12px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: T.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 800, color: T.ink }}>{v.name.charAt(0)}</div>
                             <div>
                                <div style={{ fontSize: '13px', fontWeight: 800, color: T.ink }}>{v.name}</div>
                                <div style={{ fontSize: '10px', color: T.txt3, fontWeight: 600 }}>{v.phone || 'No phone'}</div>
                             </div>
                          </div>
-                         <button onClick={() => { setVName(v.name); setVPhone(v.phone); setVEditId(v.id); setAddVenOpen(true); }} style={{ color: T.txt3, border: 'none', background: 'none', cursor: 'pointer' }}><Edit2 size={14}/></button>
+                         <button onClick={() => { setVName(v.name); setVPhone(v.phone); setVEditId(v.id); setAddVenOpen(true); }} style={{ color: T.txt3, border: 'none', background: 'none', cursor: 'pointer' }}><Edit2 size={13}/></button>
                       </div>
-                      <div style={{ background: T.dangerLt, padding: '10px', borderRadius: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div style={{ background: v.debt_balance > 0 ? T.dangerLt : T.successLt, padding: '8px 10px', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                          <div>
-                            <span style={{ fontSize: '9px', fontWeight: 800, color: T.danger, textTransform: 'uppercase' }}>Debt Balance</span>
-                            <div style={{ fontSize: '16px', fontWeight: 900, color: T.danger }}>{fmt(v.debt_balance)}</div>
+                            <span style={{ fontSize: '8px', fontWeight: 800, color: v.debt_balance > 0 ? T.danger : T.success, textTransform: 'uppercase' }}>Debt Balance</span>
+                            <div style={{ fontSize: '14px', fontWeight: 900, color: v.debt_balance > 0 ? T.danger : T.success }}>{fmt(v.debt_balance)}</div>
                          </div>
                          <button onClick={() => setPaymentVen(v)} disabled={v.debt_balance <= 0}
-                            style={{ background: v.debt_balance > 0 ? T.danger : T.border, color: '#fff', border: 'none', padding: '8px 14px', borderRadius: '8px', fontSize: '10px', fontWeight: 800, cursor: 'pointer' }}>
-                            Settle Pay
+                            style={{ background: v.debt_balance > 0 ? T.danger : T.border, color: '#fff', border: 'none', padding: '6px 10px', borderRadius: '8px', fontSize: '10px', fontWeight: 800, cursor: 'pointer', opacity: v.debt_balance <= 0 ? 0.5 : 1 }}>
+                            Pay
                          </button>
                       </div>
                    </Card>
@@ -412,24 +412,22 @@ export const RawMaterialsManager: React.FC = () => {
                  {logs.map(log => {
                     const vendor = vendors.find(v => v.id === log.supplier_id);
                     return (
-                       <div key={log.id} style={{ display: 'flex', gap: '10px', padding: '12px', background: T.surface, borderRadius: '14px', border: `1px solid ${T.borderL}`, boxShadow: T.shadow }}>
-                          <div style={{ width: '32px', height: '32px', borderRadius: '10px', background: log.type === 'RESTOCK' ? T.primaryLt : log.type === 'USAGE' ? T.warnLt : T.successLt, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                             {log.type === 'RESTOCK' ? <ShoppingCart size={14} color={T.primary}/> : log.type === 'USAGE' ? <Activity size={14} color={T.warn}/> : <Banknote size={14} color={T.success}/>}
+                       <div key={log.id} style={{ display: 'flex', gap: '10px', padding: '10px 12px', background: T.surface, borderRadius: '12px', border: `1px solid ${T.borderL}` }}>
+                          <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: log.type === 'RESTOCK' ? T.primaryLt : log.type === 'USAGE' ? T.warnLt : T.successLt, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                             {log.type === 'RESTOCK' ? <ShoppingCart size={12} color={T.primary}/> : log.type === 'USAGE' ? <Activity size={12} color={T.warn}/> : <Banknote size={12} color={T.success}/>}
                           </div>
-                          <div style={{ flex: 1 }}>
+                          <div style={{ flex: 1, minWidth: 0 }}>
                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                                <span style={{ fontSize: '12px', fontWeight: 800, color: T.ink }}>{log.type} {log.type === 'RESTOCK' ? 'Receipt' : ''}</span>
+                                <span style={{ fontSize: '11px', fontWeight: 800, color: T.ink }}>{log.type}{log.type === 'RESTOCK' ? ' Receipt' : ''}</span>
                                 <span style={{ fontSize: '9px', fontWeight: 700, color: T.txt3 }}>{fmtDate(log.created_at)}</span>
                              </div>
                              <div style={{ fontSize: '10px', color: T.txt2, marginTop: '2px', fontWeight: 500 }}>
                                 {log.type === 'RESTOCK' && `From ${vendor?.name || 'Suppliers'}: ${log.items?.length || 0} items`}
-                                {log.type === 'USAGE' && `${log.quantity} units of material removed.`}
-                                {log.type === 'PAYMENT' && `Settled ${fmt(log.amount_paid)} with ${vendor?.name}.`}
+                                {log.type === 'USAGE' && `${log.quantity} units removed`}
+                                {log.type === 'PAYMENT' && `Paid ${fmt(log.amount_paid)} to ${vendor?.name}`}
                              </div>
                              {log.type === 'RESTOCK' && (
-                                <div style={{ marginTop: '6px', fontSize: '11px', fontWeight: 900, color: T.primary }}>
-                                   {fmt(log.cost_total || 0)}
-                                </div>
+                                <div style={{ marginTop: '4px', fontSize: '11px', fontWeight: 900, color: T.primary }}>{fmt(log.cost_total || 0)}</div>
                              )}
                           </div>
                        </div>
