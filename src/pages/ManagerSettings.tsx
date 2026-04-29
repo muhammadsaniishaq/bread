@@ -87,6 +87,7 @@ export const ManagerSettings: React.FC = () => {
 
   const [saved, setSaved] = useState('');
   const showSaved = (id: string) => { setSaved(id); setTimeout(() => setSaved(''), 2200); };
+  const [activeTab, setActiveTab] = useState<'account'|'bakery'|'system'>('account');
 
   // Profile
   const [profile, setProfile] = useState<any>(null);
@@ -98,6 +99,9 @@ export const ManagerSettings: React.FC = () => {
   const [adminPin, setAdminPin] = useState(appSettings?.adminPin || '0018');
   const [cashierPin, setCashierPin] = useState(appSettings?.cashierPin || '1234');
   const [receiptFooter, setReceiptFooter] = useState(appSettings?.receiptFooter || 'Thank you for your business!');
+  const [accountName, setAccountName] = useState(appSettings?.account_name || '');
+  const [bankName, setBankName] = useState(appSettings?.bank_name || '');
+  const [accountNumber, setAccountNumber] = useState(appSettings?.account_number || '');
   const [savingBakery, setSavingBakery] = useState(false);
 
   // Business Rules (localStorage — not in AppSettings type)
@@ -141,7 +145,7 @@ export const ManagerSettings: React.FC = () => {
 
   const handleSaveBakery = async () => {
     setSavingBakery(true);
-    await updateSettings({ ...appSettings, bakeryName: storeName, adminPin, cashierPin, receiptFooter });
+    await updateSettings({ ...appSettings, bakeryName: storeName, adminPin, cashierPin, receiptFooter, account_name: accountName, bank_name: bankName, account_number: accountNumber });
     setSavingBakery(false);
     showSaved('bakery');
   };
@@ -171,19 +175,101 @@ export const ManagerSettings: React.FC = () => {
       <div style={{ minHeight: '100vh', background: T.bg, paddingBottom: '100px', fontFamily: "'Inter', system-ui, sans-serif" }}>
 
         {/* HEADER */}
-        <div style={{ background: T.surface, borderBottom: `1px solid ${T.borderL}`, padding: '12px 16px', position: 'sticky', top: 0, zIndex: 100, display: 'flex', alignItems: 'center', gap: '10px', boxShadow: T.shadow }}>
-          <button onClick={() => navigate(-1)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '6px', borderRadius: '8px' }}>
-            <ArrowLeft size={18} color={T.ink} />
-          </button>
-          <div style={{ flex: 1 }}>
-            <h1 style={{ margin: 0, fontSize: '15px', fontWeight: 900, color: T.ink }}>System Settings</h1>
-            <p style={{ margin: 0, fontSize: '10px', color: T.txt3, fontWeight: 600 }}>Manage all preferences & configuration</p>
+        <div style={{ background: T.surface, borderBottom: `1px solid ${T.borderL}`, padding: '12px 16px 0', position: 'sticky', top: 0, zIndex: 100, boxShadow: T.shadow }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
+            <button onClick={() => navigate(-1)} style={{ background: T.bg, border: `1px solid ${T.borderL}`, cursor: 'pointer', padding: '7px', borderRadius: '10px', display: 'flex' }}>
+              <ArrowLeft size={16} color={T.ink} />
+            </button>
+            <div style={{ flex: 1 }}>
+              <h1 style={{ margin: 0, fontSize: '16px', fontWeight: 900, color: T.ink, letterSpacing: '-0.02em' }}>System Settings</h1>
+              <p style={{ margin: 0, fontSize: '10px', color: T.txt3, fontWeight: 600 }}>Preferences & Configuration</p>
+            </div>
+            <div style={{ display: 'flex', gap: '6px' }}>
+              <div style={{ padding: '5px 9px', background: T.successLt, borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <Wifi size={10} color={T.success} />
+                <span style={{ fontSize: '10px', fontWeight: 800, color: T.success }}>Live</span>
+              </div>
+            </div>
+          </div>
+          {/* TAB NAV */}
+          <div style={{ display: 'flex', gap: '4px', background: T.bg, padding: '4px', borderRadius: '12px', marginBottom: '1px' }}>
+            {([['account','👤 Account',UserIcon],['bakery','🏪 Bakery',Store],['system','⚙️ System',Database]] as any[]).map(([id,label]) => (
+              <motion.button key={id} onClick={() => setActiveTab(id)}
+                animate={{ background: activeTab===id ? T.surface : 'transparent', color: activeTab===id ? T.primary : T.txt3, boxShadow: activeTab===id ? T.shadow : 'none' }}
+                transition={{ duration: 0.2 }}
+                style={{ flex:1, padding:'8px 4px', borderRadius:'9px', border:'none', fontWeight:800, fontSize:'10px', cursor:'pointer', letterSpacing:'0.01em' }}>
+                {label}
+              </motion.button>
+            ))}
           </div>
         </div>
 
         <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
 
-          {/* MY PROFILE */}
+          {/* HERO PROFILE CARD */}
+          {activeTab === 'account' && (
+            <div style={{ background: `linear-gradient(135deg, ${T.primary} 0%, #7c3aed 100%)`, borderRadius: '18px', padding: '20px 16px', color: '#fff', position: 'relative', overflow: 'hidden' }}>
+              <div style={{ position: 'absolute', top: '-20px', right: '-20px', width: '100px', height: '100px', borderRadius: '50%', background: 'rgba(255,255,255,0.06)' }} />
+              <div style={{ position: 'absolute', bottom: '-30px', left: '40%', width: '120px', height: '120px', borderRadius: '50%', background: 'rgba(255,255,255,0.04)' }} />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '14px', position: 'relative' }}>
+                <div style={{ width: '54px', height: '54px', borderRadius: '50%', background: 'rgba(255,255,255,0.2)', border: '2px solid rgba(255,255,255,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px', fontWeight: 900, flexShrink: 0 }}>
+                  {(profile?.full_name || 'M').charAt(0).toUpperCase()}
+                </div>
+                <div>
+                  <div style={{ fontSize: '16px', fontWeight: 900, letterSpacing: '-0.01em' }}>{profile?.full_name || 'Manager'}</div>
+                  <div style={{ fontSize: '11px', opacity: 0.8, fontWeight: 600, marginTop: '2px' }}>@{profile?.username || 'manager'}</div>
+                  <div style={{ fontSize: '10px', opacity: 0.7, marginTop: '4px', display: 'flex', gap: '8px' }}>
+                    <span>📞 {profile?.phone || 'No phone'}</span>
+                  </div>
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: '8px', marginTop: '14px', position: 'relative' }}>
+                {[
+                  { label: 'Bakery', value: appSettings?.bakeryName || 'Central' },
+                  { label: 'PIN', value: '●'.repeat((appSettings?.adminPin||'0018').length) },
+                  { label: 'Lang', value: language === 'ha' ? 'Hausa' : 'English' },
+                ].map((s,i) => (
+                  <div key={i} style={{ flex:1, background:'rgba(255,255,255,0.12)', borderRadius:'10px', padding:'8px', textAlign:'center' }}>
+                    <div style={{ fontSize:'9px', fontWeight:700, opacity:0.75, marginBottom:'2px', textTransform:'uppercase' }}>{s.label}</div>
+                    <div style={{ fontSize:'11px', fontWeight:900, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{s.value}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'bakery' && (
+            <div style={{ background: `linear-gradient(135deg, ${T.amber} 0%, #ea580c 100%)`, borderRadius: '18px', padding: '16px', color: '#fff', display: 'flex', alignItems: 'center', gap: '14px', position: 'relative', overflow: 'hidden' }}>
+              <div style={{ position: 'absolute', top: '-15px', right: '-15px', width: '80px', height: '80px', borderRadius: '50%', background: 'rgba(255,255,255,0.1)' }} />
+              <div style={{ width: '46px', height: '46px', borderRadius: '14px', background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <Store size={22} color="#fff" />
+              </div>
+              <div>
+                <div style={{ fontSize: '15px', fontWeight: 900 }}>{appSettings?.bakeryName || 'Central Bakery'}</div>
+                <div style={{ fontSize: '10px', opacity: 0.8, fontWeight: 600, marginTop: '2px' }}>{appSettings?.account_name || 'Banking not configured'}</div>
+                <div style={{ fontSize: '10px', opacity: 0.7, marginTop: '2px' }}>{appSettings?.bank_name || ''}{appSettings?.account_number ? ` · ${appSettings.account_number}` : ''}</div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'system' && (
+            <div style={{ background: `linear-gradient(135deg, #0f172a 0%, #1e293b 100%)`, borderRadius: '18px', padding: '16px', color: '#fff', display: 'flex', gap: '10px' }}>
+              {[
+                { label: 'Version', value: 'v2.4.1', icon: '📱' },
+                { label: 'Database', value: 'Supabase', icon: '☁️' },
+                { label: 'Status', value: 'Online', icon: '🟢' },
+              ].map((s,i) => (
+                <div key={i} style={{ flex:1, background:'rgba(255,255,255,0.07)', borderRadius:'10px', padding:'10px 8px', textAlign:'center', borderRight: i<2 ? '1px solid rgba(255,255,255,0.06)' : 'none' }}>
+                  <div style={{ fontSize:'14px', marginBottom:'4px' }}>{s.icon}</div>
+                  <div style={{ fontSize:'9px', fontWeight:700, opacity:0.6, textTransform:'uppercase', marginBottom:'2px' }}>{s.label}</div>
+                  <div style={{ fontSize:'11px', fontWeight:900 }}>{s.value}</div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* ACCOUNT TAB */}
+          {activeTab === 'account' && <>
           <Section title="My Account" icon={UserIcon}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 12px', background: T.primaryLt, borderRadius: '10px', border: `1px solid ${T.primary}20` }}>
               <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: T.primary, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', fontWeight: 900, color: '#fff', flexShrink: 0 }}>
@@ -202,8 +288,11 @@ export const ManagerSettings: React.FC = () => {
               <Save size={13} /> {savingP ? 'Saving...' : 'Save Profile'}
             </button>
           </Section>
+          </>
+          }
 
-          {/* BAKERY PROFILE */}
+          {/* BAKERY TAB */}
+          {activeTab === 'bakery' && <>
           <Section title="Bakery Profile" icon={Store} color={T.amber}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <label style={{ fontSize: '10px', fontWeight: 800, color: T.txt3, textTransform: 'uppercase' }}>Bakery Name</label>
@@ -228,6 +317,31 @@ export const ManagerSettings: React.FC = () => {
               <Save size={13} /> {savingBakery ? 'Saving...' : 'Save Bakery Settings'}
             </button>
           </Section>
+
+          <Section title="Banking Details" icon={CreditCard} color={T.success}>
+            <div>
+              <label style={{ fontSize:'9px', fontWeight:800, color:T.txt3, display:'block', marginBottom:'4px' }}>ACCOUNT NAME</label>
+              <input style={inp} placeholder="e.g. Central Bakery Ltd" value={accountName} onChange={e => setAccountName(e.target.value)} />
+            </div>
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'8px' }}>
+              <div>
+                <label style={{ fontSize:'9px', fontWeight:800, color:T.txt3, display:'block', marginBottom:'4px' }}>BANK NAME</label>
+                <input style={inp} placeholder="e.g. GTBank" value={bankName} onChange={e => setBankName(e.target.value)} />
+              </div>
+              <div>
+                <label style={{ fontSize:'9px', fontWeight:800, color:T.txt3, display:'block', marginBottom:'4px' }}>ACCOUNT NO.</label>
+                <input style={inp} placeholder="0123456789" value={accountNumber} onChange={e => setAccountNumber(e.target.value)} />
+              </div>
+            </div>
+            <button onClick={handleSaveBakery} style={{ padding:'10px', background:T.success, color:'#fff', border:'none', borderRadius:'10px', fontWeight:800, fontSize:'12px', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:'6px' }}>
+              <Save size={13} /> Save Banking Info
+            </button>
+          </Section>
+          </>
+          }
+
+          {/* SYSTEM TAB */}
+          {activeTab === 'system' && <>
 
           {/* BUSINESS RULES */}
           <Section title="Business Rules" icon={CreditCard} color={T.success} badge="Smart">
@@ -316,7 +430,6 @@ export const ManagerSettings: React.FC = () => {
             </button>
           </Section>
 
-          {/* DANGER ZONE */}
           <Section title="Danger Zone" icon={AlertTriangle} color={T.danger}>
             <div style={{ padding: '10px 12px', background: T.dangerLt, borderRadius: '10px', display: 'flex', gap: '8px' }}>
               <AlertTriangle size={12} color={T.danger} style={{ flexShrink: 0, marginTop: '1px' }} />
@@ -325,6 +438,8 @@ export const ManagerSettings: React.FC = () => {
             <Row label="Reset All Settings to Default" sub="Does not delete customer data" icon={RefreshCw} danger onClick={() => { if (window.confirm('Reset all settings to factory defaults?')) { updateSettings({ companyName: 'Central Bakery', adminPin: '0018', cashierPin: '1234', receiptFooter: 'Thank you for your business!' }); window.location.reload(); } }} />
             <Row label="Clear All Transaction History" sub="Permanently removes all logs" icon={FileText} danger onClick={() => alert('Contact admin to perform this operation.')} />
           </Section>
+          </>
+          }
 
           {/* SIGN OUT */}
           <button onClick={() => { if (window.confirm('Sign out of your account?')) signOut?.(); }}
