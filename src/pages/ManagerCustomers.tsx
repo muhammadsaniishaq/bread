@@ -53,7 +53,7 @@ export const ManagerCustomers: React.FC = () => {
   // const navigate = useNavigate();
 
   const [search, setSearch]       = useState('');
-  const [filterMode] = useState<'ALL'|'DEBT'|'CLEAN'|'VIP'|'RISK'>('ALL');
+  const [filterMode] = useState<'ALL'|'DEBT'|'CLEAN'|'VIP'|'RISK'>('ALL');   
   const [sortMode, setSortMode]     = useState<'A-Z'|'DEBT'|'VIP'|'NEWEST'>('A-Z');
   
   const [isAdding, setIsAdding]   = useState(false);
