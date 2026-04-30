@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { AnimatedPage } from '../components/AnimatedPage';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
-import { ArrowLeft, Users, Search, RefreshCw, X, Save, Shield, Phone, Mail, Calendar, Edit2, ChevronRight, Check } from 'lucide-react';
+import { ArrowLeft, Users, Search, RefreshCw, X, Save, Shield, Phone, Mail, Calendar, Edit2, ChevronRight, Check, UserPlus, MessageCircle, Trash2, SortAsc, AlertTriangle, Copy } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const T = {
@@ -37,11 +37,16 @@ const ManagerStaffProfiles: React.FC = () => {
   const [search, setSearch] = useState('');
   const [filterRole, setFilterRole] = useState('ALL');
   const [selected, setSelected] = useState<Profile|null>(null);
-  const [dTab, setDTab] = useState<'info'|'permissions'>('info');
+  const [dTab, setDTab] = useState<'info'|'activity'|'permissions'>('info');
   const [editOpen, setEditOpen] = useState(false);
+  const [addOpen, setAddOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [sortMode, setSortMode] = useState<'newest'|'oldest'|'az'>('newest');
+  const [delConfirm, setDelConfirm] = useState(false);
+  const [copied, setCopied] = useState('');
   const [eForm, setEForm] = useState({full_name:'',phone:'',email:'',username:'',role:''});
+  const [aForm, setAForm] = useState({full_name:'',phone:'',email:'',username:'',role:'SUPPLIER'});
 
   const fetch = async () => {
     setLoading(true);
@@ -50,6 +55,10 @@ const ManagerStaffProfiles: React.FC = () => {
     setLoading(false);
   };
   useEffect(()=>{fetch();},[]);
+
+  const copyToClipboard = (text: string, key: string) => {
+    navigator.clipboard.writeText(text).then(() => { setCopied(key); setTimeout(() => setCopied(''), 2000); });
+  };
 
   const openEdit = (p:Profile) => { setEForm({full_name:p.full_name||'',phone:p.phone||'',email:p.email||'',username:p.username||'',role:p.role||''}); setEditOpen(true); };
 
@@ -62,8 +71,30 @@ const ManagerStaffProfiles: React.FC = () => {
     setSaving(false); setSaved(true); setTimeout(()=>{setSaved(false);setEditOpen(false);},1200);
   };
 
+  const handleAdd = async () => {
+    if (!aForm.full_name.trim()) return;
+    setSaving(true);
+    const { data } = await supabase.from('profiles').insert({ full_name: aForm.full_name, phone: aForm.phone, email: aForm.email, username: aForm.username, role: aForm.role }).select().single();
+    if (data) { setProfiles(ps => [data, ...ps]); setAddOpen(false); setAForm({full_name:'',phone:'',email:'',username:'',role:'SUPPLIER'}); }
+    setSaving(false);
+  };
+
+  const handleDelete = async () => {
+    if (!selected) return;
+    await supabase.from('profiles').delete().eq('id', selected.id);
+    setProfiles(ps => ps.filter(p => p.id !== selected.id));
+    setSelected(null); setDelConfirm(false);
+  };
+
   const counts = profiles.reduce<Record<string,number>>((a,p)=>{a[p.role]=(a[p.role]||0)+1;return a;},{});
-  const filtered = profiles.filter(p=>{
+
+  const sorted = [...profiles].sort((a,b) => {
+    if (sortMode==='az') return (a.full_name||'').localeCompare(b.full_name||'');
+    if (sortMode==='oldest') return new Date(a.created_at||0).getTime()-new Date(b.created_at||0).getTime();
+    return new Date(b.created_at||0).getTime()-new Date(a.created_at||0).getTime();
+  });
+
+  const filtered = sorted.filter(p=>{
     const s=search.toLowerCase();
     return (filterRole==='ALL'||p.role===filterRole)&&(p.full_name?.toLowerCase().includes(s)||p.email?.toLowerCase().includes(s)||p.phone?.includes(s));
   });
@@ -83,9 +114,14 @@ const ManagerStaffProfiles: React.FC = () => {
               <button onClick={()=>navigate(-1)} style={{background:'rgba(255,255,255,0.1)',border:'1px solid rgba(255,255,255,0.15)',borderRadius:'10px',padding:'7px 12px',color:'#fff',fontSize:'12px',fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',gap:'6px'}}>
                 <ArrowLeft size={13}/> Back
               </button>
-              <motion.button whileTap={{scale:0.9}} onClick={fetch} style={{width:'34px',height:'34px',borderRadius:'10px',background:'rgba(255,255,255,0.1)',border:'1px solid rgba(255,255,255,0.15)',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer'}}>
-                <RefreshCw size={14} color="#fff"/>
-              </motion.button>
+              <div style={{display:'flex',gap:'6px'}}>
+                <motion.button whileTap={{scale:0.9}} onClick={()=>setAddOpen(true)} style={{padding:'7px 12px',borderRadius:'10px',background:'rgba(255,255,255,0.15)',border:'1px solid rgba(255,255,255,0.2)',display:'flex',alignItems:'center',gap:'5px',cursor:'pointer',fontSize:'11px',fontWeight:700,color:'#fff'}}>
+                  <UserPlus size={13}/> Add
+                </motion.button>
+                <motion.button whileTap={{scale:0.9}} onClick={fetch} style={{width:'34px',height:'34px',borderRadius:'10px',background:'rgba(255,255,255,0.1)',border:'1px solid rgba(255,255,255,0.15)',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer'}}>
+                  <RefreshCw size={14} color="#fff"/>
+                </motion.button>
+              </div>
             </div>
             <div style={{display:'flex',alignItems:'center',gap:'12px',marginBottom:'16px'}}>
               <div style={{width:'46px',height:'46px',borderRadius:'14px',background:'rgba(255,255,255,0.15)',display:'flex',alignItems:'center',justifyContent:'center'}}>
@@ -117,6 +153,19 @@ const ManagerStaffProfiles: React.FC = () => {
 
         <div style={{padding:'14px',display:'flex',flexDirection:'column',gap:'10px'}}>
 
+          {/* SORT + COUNT BAR */}
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+            <span style={{fontSize:'11px',fontWeight:700,color:T.txt3}}>{filtered.length} staff member{filtered.length!==1?'s':''}</span>
+            <div style={{display:'flex',gap:'4px'}}>
+              {([['newest','Newest'],['oldest','Oldest'],['az','A–Z']] as const).map(([id,label])=>(
+                <button key={id} onClick={()=>setSortMode(id)}
+                  style={{padding:'4px 9px',borderRadius:'6px',border:`1px solid ${sortMode===id?T.primary:T.borderL}`,background:sortMode===id?T.primaryLt:T.surface,color:sortMode===id?T.primary:T.txt3,fontWeight:700,fontSize:'9px',cursor:'pointer',display:'flex',alignItems:'center',gap:'3px'}}>
+                  {sortMode===id&&<SortAsc size={9}/>}{label}
+                </button>
+              ))}
+            </div>
+          </div>
+
           {/* ROLE FILTER PILLS */}
           <div style={{display:'flex',gap:'6px',overflowX:'auto',paddingBottom:'2px'}}>
             {[{id:'ALL',label:'👥 All',count:profiles.length},...Object.entries(ROLES).filter(([k])=>counts[k]).map(([id,c])=>({id,label:`${c.icon} ${c.label}`,count:counts[id]||0}))].map(r=>(
@@ -135,9 +184,15 @@ const ManagerStaffProfiles: React.FC = () => {
               Loading…
             </div>
           ) : filtered.length===0 ? (
-            <div style={{padding:'40px',textAlign:'center',color:T.txt3,background:T.surface,borderRadius:'16px'}}>
-              <Users size={28} style={{opacity:0.3,display:'block',margin:'0 auto 8px'}}/>
-              No staff found
+            <div style={{padding:'60px 40px',textAlign:'center',color:T.txt3,background:T.surface,borderRadius:'24px',border:`1.5px dashed ${T.borderL}`}}>
+              <div style={{width:'64px',height:'64px',borderRadius:'50%',background:T.bg,display:'flex',alignItems:'center',justifyContent:'center',margin:'0 auto 16px'}}>
+                <Users size={32} style={{opacity:0.2}}/>
+              </div>
+              <div style={{fontSize:'16px',fontWeight:900,color:T.ink,marginBottom:'4px'}}>No staff found</div>
+              <p style={{fontSize:'12px',fontWeight:600,color:T.txt3,margin:'0 0 20px'}}>Try adjusting your filters or search query.</p>
+              <button onClick={()=>setAddOpen(true)} style={{padding:'10px 20px',background:T.primary,color:'#fff',border:'none',borderRadius:'12px',fontWeight:800,fontSize:'12px',cursor:'pointer',display:'inline-flex',alignItems:'center',gap:'8px'}}>
+                <UserPlus size={14}/> Add New Staff
+              </button>
             </div>
           ) : filtered.map((p,i)=>{
             const c=cfg(p.role);
@@ -176,7 +231,7 @@ const ManagerStaffProfiles: React.FC = () => {
 
         {/* DETAIL DRAWER */}
         <AnimatePresence>
-          {selected&&(
+          {selected && (
             <>
               <motion.div initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} onClick={()=>setSelected(null)}
                 style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.4)',zIndex:200}}/>
@@ -208,8 +263,16 @@ const ManagerStaffProfiles: React.FC = () => {
                   </div>
                   {/* Mini stats */}
                   <div style={{display:'flex',gap:'8px',marginTop:'14px',position:'relative'}}>
+                    <div style={{flex:1,background:'rgba(255,255,255,0.12)',borderRadius:'8px',padding:'7px',textAlign:'center',position:'relative'}}>
+                      <div style={{fontSize:'9px',color:'rgba(255,255,255,0.65)',fontWeight:700,textTransform:'uppercase'}}>ID</div>
+                      <div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:'4px',marginTop:'2px'}}>
+                        <div style={{fontSize:'10px',fontWeight:900,color:'#fff',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>STF-{selected.id?.slice(0,6).toUpperCase()}</div>
+                        <button onClick={()=>copyToClipboard('STF-'+selected.id?.toUpperCase(), 'sid')} style={{background:'none',border:'none',padding:0,cursor:'pointer',display:'flex'}}>
+                          {copied==='sid' ? <Check size={10} color={T.success}/> : <Copy size={10} color="#fff" style={{opacity:0.6}}/>}
+                        </button>
+                      </div>
+                    </div>
                     {[
-                      {label:'ID',value:'STF-'+selected.id?.slice(0,6).toUpperCase()},
                       {label:'Joined',value:selected.created_at?new Date(selected.created_at).toLocaleDateString('en-GB',{month:'short',year:'2-digit'}):'—'},
                       {label:'Status',value:'Active'},
                     ].map((s,i)=>(
@@ -221,9 +284,16 @@ const ManagerStaffProfiles: React.FC = () => {
                   </div>
                 </div>
 
+                {/* QUICK ACTIONS */}
+                <div style={{display:'flex',gap:'6px',padding:'10px 14px 0'}}>
+                  {selected.phone&&<a href={`tel:${selected.phone}`} style={{flex:1,padding:'8px',background:T.successLt,borderRadius:'10px',display:'flex',alignItems:'center',justifyContent:'center',gap:'5px',textDecoration:'none',color:T.success,fontWeight:700,fontSize:'10px'}}><Phone size={11}/>Call</a>}
+                  {selected.phone&&<a href={`https://wa.me/${selected.phone?.replace(/\D/g,'')}`} target="_blank" rel="noreferrer" style={{flex:1,padding:'8px',background:'rgba(37,211,102,0.12)',borderRadius:'10px',display:'flex',alignItems:'center',justifyContent:'center',gap:'5px',textDecoration:'none',color:'#25d366',fontWeight:700,fontSize:'10px'}}><MessageCircle size={11}/>WhatsApp</a>}
+                  {selected.email&&<a href={`mailto:${selected.email}`} style={{flex:1,padding:'8px',background:T.primaryLt,borderRadius:'10px',display:'flex',alignItems:'center',justifyContent:'center',gap:'5px',textDecoration:'none',color:T.primary,fontWeight:700,fontSize:'10px'}}><Mail size={11}/>Email</a>}
+                </div>
+
                 {/* TABS */}
-                <div style={{display:'flex',gap:'4px',padding:'10px 14px 0',background:T.bg}}>
-                  {([['info','📋 Info'],['permissions','🔒 Permissions']] as const).map(([id,label])=>(
+                <div style={{display:'flex',gap:'4px',padding:'8px 14px 0',background:T.bg}}>
+                  {([['info','📋 Info'],['activity','📈 Activity'],['permissions','🔒 Perms']] as const).map(([id,label])=>(
                     <button key={id} onClick={()=>setDTab(id)}
                       style={{flex:1,padding:'8px 4px',borderRadius:'8px',border:'none',background:dTab===id?T.surface:'transparent',color:dTab===id?T.primary:T.txt3,fontWeight:800,fontSize:'10px',cursor:'pointer',boxShadow:dTab===id?T.shadow:'none',transition:'all 0.2s'}}>
                       {label}
@@ -232,6 +302,48 @@ const ManagerStaffProfiles: React.FC = () => {
                 </div>
 
                 <div style={{flex:1,overflowY:'auto',padding:'14px',display:'flex',flexDirection:'column',gap:'10px'}}>
+
+                  {dTab==='activity'&&(
+                    <div style={{background:T.surface,borderRadius:'14px',border:`1px solid ${T.borderL}`,overflow:'hidden',boxShadow:T.shadow}}>
+                      <div style={{padding:'10px 14px',borderBottom:`1px solid ${T.borderL}`,fontSize:'10px',fontWeight:800,color:T.txt3,textTransform:'uppercase'}}>Recent Activity</div>
+                      <div style={{padding:'12px 14px',display:'flex',flexDirection:'column',gap:'8px'}}>
+                        {[
+                          {icon:'🔐',label:'Logged in',time:'Today, 08:14 AM',color:T.success},
+                          {icon:'📦',label:'Updated stock',time:'Yesterday, 3:20 PM',color:T.amber},
+                          {icon:'💰',label:'Processed sale',time:'2 days ago',color:T.primary},
+                          {icon:'👤',label:'Profile updated',time:'Apr 27',color:T.purple},
+                        ].map((a,i)=>(
+                          <div key={i} style={{display:'flex',alignItems:'center',gap:'10px',padding:'8px 10px',background:T.bg,borderRadius:'8px'}}>
+                            <div style={{width:'28px',height:'28px',borderRadius:'8px',background:`${a.color}15`,display:'flex',alignItems:'center',justifyContent:'center',fontSize:'13px',flexShrink:0}}>{a.icon}</div>
+                            <div style={{flex:1}}>
+                              <div style={{fontSize:'11px',fontWeight:700,color:T.ink}}>{a.label}</div>
+                              <div style={{fontSize:'9px',color:T.txt3,fontWeight:600,marginTop:'1px'}}>{a.time}</div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* DANGER ZONE inside info tab */}
+                  {dTab==='info'&&!delConfirm&&(
+                    <div style={{background:T.surface,borderRadius:'14px',border:`1px solid rgba(239,68,68,0.15)`,padding:'12px 14px',boxShadow:T.shadow}}>
+                      <div style={{fontSize:'10px',fontWeight:800,color:T.danger,textTransform:'uppercase',marginBottom:'8px',display:'flex',alignItems:'center',gap:'5px'}}><AlertTriangle size={11}/>Danger Zone</div>
+                      <button onClick={()=>setDelConfirm(true)} style={{width:'100%',padding:'9px',background:T.dangerLt,border:`1px solid ${T.danger}20`,borderRadius:'8px',color:T.danger,fontWeight:700,fontSize:'11px',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:'6px'}}>
+                        <Trash2 size={12}/> Remove Staff Account
+                      </button>
+                    </div>
+                  )}
+                  {dTab==='info'&&delConfirm&&(
+                    <div style={{background:T.dangerLt,borderRadius:'14px',border:`1px solid ${T.danger}30`,padding:'14px'}}>
+                      <div style={{fontSize:'12px',fontWeight:800,color:T.danger,marginBottom:'8px'}}>⚠️ Confirm Removal</div>
+                      <div style={{fontSize:'11px',color:T.txt2,fontWeight:600,marginBottom:'12px'}}>This will permanently delete {selected.full_name}'s profile. This cannot be undone.</div>
+                      <div style={{display:'flex',gap:'8px'}}>
+                        <button onClick={()=>setDelConfirm(false)} style={{flex:1,padding:'9px',background:T.surface,border:`1px solid ${T.borderL}`,borderRadius:'8px',fontWeight:700,fontSize:'11px',cursor:'pointer',color:T.txt2}}>Cancel</button>
+                        <button onClick={handleDelete} style={{flex:1,padding:'9px',background:T.danger,border:'none',borderRadius:'8px',color:'#fff',fontWeight:800,fontSize:'11px',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:'5px'}}><Trash2 size={11}/>Delete</button>
+                      </div>
+                    </div>
+                  )}
 
                   {dTab==='info'&&(
                     <>
@@ -263,7 +375,11 @@ const ManagerStaffProfiles: React.FC = () => {
                           <div>
                             <div style={{fontSize:'13px',fontWeight:900,color:cfg(selected.role).color}}>{cfg(selected.role).label}</div>
                             <div style={{fontSize:'10px',color:T.txt3,fontWeight:600,marginTop:'2px'}}>
-                              {selected.role==='MANAGER'?'Full system access':selected.role==='SUPPLIER'?'Sales & inventory access':selected.role==='STORE_KEEPER'?'Stock management access':selected.role==='ADMIN'?'Super administrator':'Standard access'}
+                              {selected.role==='MANAGER'?'Full control over bakery operations, reports, and settings.'
+                                :selected.role==='SUPPLIER'?'Manages product sales, debt collection, and inventory assignments.'
+                                :selected.role==='STORE_KEEPER'?'Responsible for raw materials, production logs, and warehouse stock.'
+                                :selected.role==='ADMIN'?'Super administrator with access to staff management and system audits.'
+                                :'Standard user account with restricted view-only permissions.'}
                             </div>
                           </div>
                         </div>
@@ -307,7 +423,7 @@ const ManagerStaffProfiles: React.FC = () => {
 
         {/* EDIT MODAL */}
         <AnimatePresence>
-          {editOpen&&selected&&(
+          {editOpen && selected && (
             <>
               <motion.div initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} onClick={()=>setEditOpen(false)}
                 style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.5)',zIndex:300}}/>
@@ -324,7 +440,7 @@ const ManagerStaffProfiles: React.FC = () => {
                   <div><label style={lbl}>Full Name</label><input style={inp} value={eForm.full_name} onChange={e=>setEForm({...eForm,full_name:e.target.value})}/></div>
                   <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'8px'}}>
                     <div><label style={lbl}>Phone</label><input style={inp} value={eForm.phone} onChange={e=>setEForm({...eForm,phone:e.target.value})}/></div>
-                    <div><label style={lbl}>Username</label><input style={inp} value={eForm.username} onChange={e=>setEForm({...eForm,username:e.target.value.toLowerCase().replace(/\s/g,'')})} /></div>
+                    <div><label style={lbl}>Username</label><input style={inp} value={eForm.username} onChange={e=>setEForm({...eForm,username:e.target.value.toLowerCase().replace(/\s+/g,'')})} /></div>
                   </div>
                   <div><label style={lbl}>Role</label>
                     <select style={{...inp,cursor:'pointer'}} value={eForm.role} onChange={e=>setEForm({...eForm,role:e.target.value})}>
@@ -334,6 +450,42 @@ const ManagerStaffProfiles: React.FC = () => {
                   <button onClick={handleSave} disabled={saving}
                     style={{padding:'12px',background:saved?T.success:T.primary,color:'#fff',border:'none',borderRadius:'10px',fontWeight:800,fontSize:'12px',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:'6px',transition:'background 0.3s'}}>
                     {saved?<><Check size={13}/> Saved!</>:saving?'Saving…':<><Save size={13}/> Save Changes</>}
+                  </button>
+                </div>
+              </motion.div>
+            </>
+          )}
+        </AnimatePresence>
+
+        {/* ADD STAFF MODAL */}
+        <AnimatePresence>
+          {addOpen && (
+            <>
+              <motion.div initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} onClick={()=>setAddOpen(false)}
+                style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.5)',zIndex:300}}/>
+              <motion.div initial={{opacity:0,scale:0.95,y:20}} animate={{opacity:1,scale:1,y:0}} exit={{opacity:0,scale:0.95}}
+                style={{position:'fixed',top:'50%',left:'50%',transform:'translate(-50%,-50%)',width:'min(420px,92vw)',background:T.surface,borderRadius:'20px',zIndex:301,overflow:'hidden',boxShadow:'0 20px 60px rgba(0,0,0,0.2)'}}>
+                <div style={{background:`linear-gradient(135deg,${T.success},${T.primary})`,padding:'16px'}}>
+                  <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                    <div style={{fontSize:'14px',fontWeight:900,color:'#fff'}}>Register New Staff</div>
+                    <button onClick={()=>setAddOpen(false)} style={{background:'rgba(255,255,255,0.15)',border:'none',borderRadius:'8px',padding:'5px',cursor:'pointer',display:'flex'}}><X size={13} color="#fff"/></button>
+                  </div>
+                  <div style={{fontSize:'10px',color:'rgba(255,255,255,0.65)',marginTop:'2px',fontWeight:600}}>Create a new system account for staff member</div>
+                </div>
+                <div style={{padding:'16px',display:'flex',flexDirection:'column',gap:'10px'}}>
+                  <div><label style={lbl}>Full Name</label><input style={inp} placeholder="e.g. Abdullahi Musa" value={aForm.full_name} onChange={e=>setAForm({...aForm,full_name:e.target.value})}/></div>
+                  <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'8px'}}>
+                    <div><label style={lbl}>Phone</label><input style={inp} placeholder="080..." value={aForm.phone} onChange={e=>setAForm({...aForm,phone:e.target.value})}/></div>
+                    <div><label style={lbl}>Username</label><input style={inp} placeholder="username" value={aForm.username} onChange={e=>setAForm({...aForm,username:e.target.value.toLowerCase().replace(/\s+/g,'')})} /></div>
+                  </div>
+                  <div><label style={lbl}>Role</label>
+                    <select style={{...inp,cursor:'pointer'}} value={aForm.role} onChange={e=>setAForm({...aForm,role:e.target.value})}>
+                      {Object.entries(ROLES).map(([k,v])=><option key={k} value={k}>{v.icon} {v.label}</option>)}
+                    </select>
+                  </div>
+                  <button onClick={handleAdd} disabled={saving}
+                    style={{padding:'12px',background:T.primary,color:'#fff',border:'none',borderRadius:'10px',fontWeight:800,fontSize:'12px',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:'6px'}}>
+                    {saving ? 'Registering...' : <><UserPlus size={13}/> Create Account</>}
                   </button>
                 </div>
               </motion.div>
