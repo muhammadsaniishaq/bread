@@ -4,7 +4,9 @@ import {
   ArrowLeft, Languages, Store, Save, User as UserIcon,
   Shield, Bell, Key, ChevronRight, Check, Database,
   Smartphone, Info, LogOut, RefreshCw, CreditCard,
-  AlertTriangle, Palette, FileText, Wifi, Download
+  AlertTriangle, Palette, FileText, Wifi, Download,
+  Eye, EyeOff, Users, BarChart2, Link, HelpCircle,
+  Star, Clock, Copy, Phone, Mail, MapPin
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../store/AppContext';
@@ -120,6 +122,35 @@ export const ManagerSettings: React.FC = () => {
   const [showCostPrice, setShowCostPrice] = useState(localStorage.getItem('showCostPrice') === 'true');
   const [requirePinDelete, setRequirePinDelete] = useState(localStorage.getItem('requirePinDelete') !== 'false');
   const [accentColor, setAccentColor] = useState(() => localStorage.getItem('accentColor') || '#4f46e5');
+  const [pinVisible, setPinVisible] = useState(false);
+  const [copied, setCopied] = useState('');
+
+  // Bakery extras (localStorage)
+  const [whatsapp, setWhatsapp] = useState(() => localStorage.getItem('whatsappNumber') || '');
+  const [address, setAddress] = useState(() => localStorage.getItem('bakeryAddress') || '');
+  const [openTime, setOpenTime] = useState(() => localStorage.getItem('openTime') || '06:00');
+  const [closeTime, setCloseTime] = useState(() => localStorage.getItem('closeTime') || '18:00');
+  const [workDays, setWorkDays] = useState<string[]>(() => JSON.parse(localStorage.getItem('workDays') || '["Mon","Tue","Wed","Thu","Fri","Sat"]'));
+  const [printSize, setPrintSize] = useState(() => localStorage.getItem('printSize') || 'A5');
+  const [sessionInfo] = useState(() => ({ loginTime: localStorage.getItem('lastLogin') || new Date().toISOString(), device: navigator.userAgent.includes('Mobile') ? 'Mobile' : 'Desktop' }));
+
+  const toggleWorkDay = (day: string) => {
+    const updated = workDays.includes(day) ? workDays.filter(d => d !== day) : [...workDays, day];
+    setWorkDays(updated);
+    localStorage.setItem('workDays', JSON.stringify(updated));
+  };
+
+  const saveExtras = () => {
+    localStorage.setItem('whatsappNumber', whatsapp);
+    localStorage.setItem('bakeryAddress', address);
+    localStorage.setItem('openTime', openTime);
+    localStorage.setItem('closeTime', closeTime);
+    showSaved('extras');
+  };
+
+  const copyToClipboard = (text: string, key: string) => {
+    navigator.clipboard.writeText(text).then(() => { setCopied(key); setTimeout(() => setCopied(''), 2000); });
+  };
 
   useEffect(() => {
     if (user) supabase.from('profiles').select('*').eq('id', user.id).single().then(({ data }) => {
@@ -270,6 +301,25 @@ export const ManagerSettings: React.FC = () => {
 
           {/* ACCOUNT TAB */}
           {activeTab === 'account' && <>
+
+          {/* QUICK ACTIONS */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+            {[
+              { label: 'View Reports', icon: BarChart2, color: T.primary, path: '/manager/reports' },
+              { label: 'Customers', icon: Users, color: T.success, path: '/manager/customers' },
+              { label: 'Staff Profiles', icon: Star, color: T.amber, path: '/manager/staff' },
+              { label: 'Audit History', icon: Clock, color: T.purple, path: '/manager/audit' },
+            ].map((q, i) => (
+              <motion.button key={i} whileTap={{ scale: 0.96 }} onClick={() => navigate(q.path)}
+                style={{ background: T.surface, border: `1px solid ${T.borderL}`, borderRadius: '14px', padding: '14px 12px', display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', boxShadow: T.shadow }}>
+                <div style={{ width: '32px', height: '32px', borderRadius: '10px', background: `${q.color}15`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <q.icon size={15} color={q.color} />
+                </div>
+                <span style={{ fontSize: '11px', fontWeight: 800, color: T.ink, textAlign: 'left', lineHeight: 1.3 }}>{q.label}</span>
+              </motion.button>
+            ))}
+          </div>
+
           <Section title="My Account" icon={UserIcon}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 12px', background: T.primaryLt, borderRadius: '10px', border: `1px solid ${T.primary}20` }}>
               <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: T.primary, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', fontWeight: 900, color: '#fff', flexShrink: 0 }}>
@@ -281,12 +331,51 @@ export const ManagerSettings: React.FC = () => {
               </div>
               <SavedBadge show={saved === 'profile'} />
             </div>
-            <input style={inp} placeholder="Full Name" value={pForm.full_name} onChange={e => setPForm({ ...pForm, full_name: e.target.value })} />
-            <input style={inp} placeholder="Phone Number" value={pForm.phone} onChange={e => setPForm({ ...pForm, phone: e.target.value })} />
-            <input style={inp} placeholder="Username" value={pForm.username} onChange={e => setPForm({ ...pForm, username: e.target.value.toLowerCase().replace(/\s+/g, '') })} />
+            <div>
+              <label style={{ fontSize: '9px', fontWeight: 800, color: T.txt3, display: 'block', marginBottom: '4px', textTransform: 'uppercase' }}>Full Name</label>
+              <input style={inp} placeholder="Full Name" value={pForm.full_name} onChange={e => setPForm({ ...pForm, full_name: e.target.value })} />
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+              <div>
+                <label style={{ fontSize: '9px', fontWeight: 800, color: T.txt3, display: 'block', marginBottom: '4px', textTransform: 'uppercase' }}>Phone</label>
+                <div style={{ position: 'relative' }}>
+                  <Phone size={12} color={T.txt3} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)' }} />
+                  <input style={{ ...inp, paddingLeft: '28px' }} placeholder="Phone" value={pForm.phone} onChange={e => setPForm({ ...pForm, phone: e.target.value })} />
+                </div>
+              </div>
+              <div>
+                <label style={{ fontSize: '9px', fontWeight: 800, color: T.txt3, display: 'block', marginBottom: '4px', textTransform: 'uppercase' }}>Username</label>
+                <input style={inp} placeholder="username" value={pForm.username} onChange={e => setPForm({ ...pForm, username: e.target.value.toLowerCase().replace(/\s+/g, '') })} />
+              </div>
+            </div>
             <button onClick={handleSaveProfile} disabled={savingP} style={{ padding: '12px', background: T.primary, color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 800, fontSize: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
               <Save size={13} /> {savingP ? 'Saving...' : 'Save Profile'}
             </button>
+          </Section>
+
+          <Section title="Contact & Location" icon={MapPin} color={T.success} badge="Profile">
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+              <div>
+                <label style={{ fontSize: '9px', fontWeight: 800, color: T.txt3, display: 'block', marginBottom: '4px' }}>EMAIL</label>
+                <div style={{ position: 'relative' }}>
+                  <Mail size={11} color={T.txt3} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)' }} />
+                  <input style={{ ...inp, paddingLeft: '28px', fontSize: '11px' }} placeholder="email@example.com" value={profile?.email || user?.email || ''} readOnly />
+                </div>
+              </div>
+              <div>
+                <label style={{ fontSize: '9px', fontWeight: 800, color: T.txt3, display: 'block', marginBottom: '4px' }}>USER ID</label>
+                <div style={{ position: 'relative' }}>
+                  <input style={{ ...inp, fontSize: '10px', paddingRight: '36px', color: T.txt3 }} value={(user?.id || '').slice(0, 12) + '...'} readOnly />
+                  <button onClick={() => copyToClipboard(user?.id || '', 'uid')} style={{ position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer' }}>
+                    {copied === 'uid' ? <Check size={12} color={T.success} /> : <Copy size={12} color={T.txt3} />}
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div style={{ padding: '10px 12px', background: T.bg, borderRadius: '10px', display: 'flex', gap: '8px', alignItems: 'center' }}>
+              <Info size={12} color={T.txt3} />
+              <span style={{ fontSize: '10px', color: T.txt3, fontWeight: 600 }}>Email is managed through your Supabase auth account.</span>
+            </div>
           </Section>
           </>
           }
@@ -302,11 +391,16 @@ export const ManagerSettings: React.FC = () => {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
               <div>
                 <label style={{ fontSize: '9px', fontWeight: 800, color: T.txt3, display: 'block', marginBottom: '4px' }}>CASHIER PIN</label>
-                <input style={{ ...inp, letterSpacing: '0.15em', fontWeight: 900 }} type="password" maxLength={6} placeholder="••••" value={cashierPin} onChange={e => setCashierPin(e.target.value)} />
+                <div style={{ position: 'relative' }}>
+                  <input style={{ ...inp, letterSpacing: '0.15em', fontWeight: 900, paddingRight: '36px' }} type={pinVisible ? 'text' : 'password'} maxLength={6} placeholder="••••" value={cashierPin} onChange={e => setCashierPin(e.target.value)} />
+                  <button onClick={() => setPinVisible(!pinVisible)} style={{ position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer' }}>
+                    {pinVisible ? <EyeOff size={13} color={T.txt3} /> : <Eye size={13} color={T.txt3} />}
+                  </button>
+                </div>
               </div>
               <div>
                 <label style={{ fontSize: '9px', fontWeight: 800, color: T.txt3, display: 'block', marginBottom: '4px' }}>ADMIN PIN</label>
-                <input style={{ ...inp, letterSpacing: '0.15em', fontWeight: 900 }} type="password" maxLength={6} placeholder="••••" value={adminPin} onChange={e => setAdminPin(e.target.value)} />
+                <input style={{ ...inp, letterSpacing: '0.15em', fontWeight: 900 }} type={pinVisible ? 'text' : 'password'} maxLength={6} placeholder="••••" value={adminPin} onChange={e => setAdminPin(e.target.value)} />
               </div>
             </div>
             <div>
@@ -330,11 +424,68 @@ export const ManagerSettings: React.FC = () => {
               </div>
               <div>
                 <label style={{ fontSize:'9px', fontWeight:800, color:T.txt3, display:'block', marginBottom:'4px' }}>ACCOUNT NO.</label>
-                <input style={inp} placeholder="0123456789" value={accountNumber} onChange={e => setAccountNumber(e.target.value)} />
+                <div style={{ position: 'relative' }}>
+                  <input style={inp} placeholder="0123456789" value={accountNumber} onChange={e => setAccountNumber(e.target.value)} />
+                  <button onClick={() => copyToClipboard(accountNumber, 'acct')} style={{ position:'absolute', right:'8px', top:'50%', transform:'translateY(-50%)', background:'none', border:'none', cursor:'pointer' }}>
+                    {copied === 'acct' ? <Check size={12} color={T.success} /> : <Copy size={12} color={T.txt3} />}
+                  </button>
+                </div>
               </div>
             </div>
             <button onClick={handleSaveBakery} style={{ padding:'10px', background:T.success, color:'#fff', border:'none', borderRadius:'10px', fontWeight:800, fontSize:'12px', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:'6px' }}>
               <Save size={13} /> Save Banking Info
+            </button>
+          </Section>
+
+          <Section title="Working Hours" icon={Clock} color={T.primary} badge="Schedule">
+            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+              <label style={{ fontSize:'10px', fontWeight:800, color:T.txt3, textTransform:'uppercase' }}>Active Days</label>
+              <SavedBadge show={saved === 'extras'} />
+            </div>
+            <div style={{ display:'flex', gap:'6px', flexWrap:'wrap' }}>
+              {['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map(day => (
+                <button key={day} onClick={() => toggleWorkDay(day)}
+                  style={{ padding:'6px 10px', borderRadius:'8px', border:`1.5px solid ${workDays.includes(day) ? T.primary : T.borderL}`, background: workDays.includes(day) ? T.primaryLt : T.bg, color: workDays.includes(day) ? T.primary : T.txt3, fontWeight:800, fontSize:'10px', cursor:'pointer', transition:'all 0.15s' }}>
+                  {day}
+                </button>
+              ))}
+            </div>
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'8px' }}>
+              <div>
+                <label style={{ fontSize:'9px', fontWeight:800, color:T.txt3, display:'block', marginBottom:'4px' }}>OPEN TIME</label>
+                <input style={inp} type="time" value={openTime} onChange={e => setOpenTime(e.target.value)} />
+              </div>
+              <div>
+                <label style={{ fontSize:'9px', fontWeight:800, color:T.txt3, display:'block', marginBottom:'4px' }}>CLOSE TIME</label>
+                <input style={inp} type="time" value={closeTime} onChange={e => setCloseTime(e.target.value)} />
+              </div>
+            </div>
+            <div style={{ padding:'10px 12px', background:T.primaryLt, borderRadius:'10px', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+              <div style={{ fontSize:'11px', fontWeight:700, color:T.primary }}>⏰ {openTime} — {closeTime}</div>
+              <div style={{ fontSize:'10px', fontWeight:800, color:T.primary }}>{workDays.length} days/week</div>
+            </div>
+            <button onClick={saveExtras} style={{ padding:'10px', background:T.primary, color:'#fff', border:'none', borderRadius:'10px', fontWeight:800, fontSize:'12px', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:'6px' }}>
+              <Save size={13} /> Save Hours
+            </button>
+          </Section>
+
+          <Section title="Contact & WhatsApp" icon={Phone} color={T.success} badge="Business">
+            <div>
+              <label style={{ fontSize:'9px', fontWeight:800, color:T.txt3, display:'block', marginBottom:'4px' }}>WHATSAPP BUSINESS NUMBER</label>
+              <div style={{ position:'relative' }}>
+                <span style={{ position:'absolute', left:'12px', top:'50%', transform:'translateY(-50%)', fontSize:'12px' }}>📱</span>
+                <input style={{ ...inp, paddingLeft:'32px' }} placeholder="e.g. 08012345678" value={whatsapp} onChange={e => setWhatsapp(e.target.value)} />
+              </div>
+            </div>
+            <div>
+              <label style={{ fontSize:'9px', fontWeight:800, color:T.txt3, display:'block', marginBottom:'4px' }}>BAKERY ADDRESS</label>
+              <div style={{ position:'relative' }}>
+                <MapPin size={12} color={T.txt3} style={{ position:'absolute', left:'10px', top:'12px' }} />
+                <textarea style={{ ...inp, paddingLeft:'28px', minHeight:'60px', resize:'vertical' as any, lineHeight:1.5 }} placeholder="Full address..." value={address} onChange={e => setAddress(e.target.value)} />
+              </div>
+            </div>
+            <button onClick={saveExtras} style={{ padding:'10px', background:T.success, color:'#fff', border:'none', borderRadius:'10px', fontWeight:800, fontSize:'12px', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:'6px' }}>
+              <Save size={13} /> Save Contact Info
             </button>
           </Section>
           </>
@@ -372,7 +523,46 @@ export const ManagerSettings: React.FC = () => {
             </button>
           </Section>
 
-          {/* SECURITY */}
+          <Section title="Print & Receipt" icon={Smartphone} color={T.ink} badge="Output">
+            <div>
+              <label style={{ fontSize:'9px', fontWeight:800, color:T.txt3, display:'block', marginBottom:'6px', textTransform:'uppercase' }}>Paper Size</label>
+              <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:'6px' }}>
+                {['A4','A5','80mm'].map(size => (
+                  <button key={size} onClick={() => { setPrintSize(size); localStorage.setItem('printSize', size); showSaved('print'); }}
+                    style={{ padding:'8px', borderRadius:'8px', border:`1.5px solid ${printSize===size ? T.ink : T.borderL}`, background: printSize===size ? T.ink : T.bg, color: printSize===size ? '#fff' : T.txt2, fontWeight:800, fontSize:'11px', cursor:'pointer' }}>
+                    {size}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <Toggle label="Print Customer Name on Receipt" sub="Shows buyer name on every receipt" value={localStorage.getItem('printCustName') !== 'false'}
+              onChange={() => { const v = localStorage.getItem('printCustName') !== 'false' ? 'false' : 'true'; localStorage.setItem('printCustName', v); showSaved('print'); }} />
+            <Toggle label="Print Bakery Logo" sub="Include logo on printed receipts" value={localStorage.getItem('printLogo') === 'true'}
+              onChange={() => { const v = localStorage.getItem('printLogo') !== 'true' ? 'true' : 'false'; localStorage.setItem('printLogo', v); showSaved('print'); }} />
+            <SavedBadge show={saved === 'print'} />
+          </Section>
+
+          <Section title="Session Info" icon={Shield} color={T.purple}>
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'8px' }}>
+              {[
+                { label:'Last Login', value: new Date(sessionInfo.loginTime).toLocaleDateString(), icon:'🕐' },
+                { label:'Device', value: sessionInfo.device, icon:'💻' },
+                { label:'Role', value: 'Manager', icon:'🛡️' },
+                { label:'Status', value: 'Active', icon:'🟢' },
+              ].map((s, i) => (
+                <div key={i} style={{ padding:'10px 12px', background:T.bg, borderRadius:'10px' }}>
+                  <div style={{ fontSize:'14px', marginBottom:'2px' }}>{s.icon}</div>
+                  <div style={{ fontSize:'9px', color:T.txt3, fontWeight:700, textTransform:'uppercase', marginBottom:'2px' }}>{s.label}</div>
+                  <div style={{ fontSize:'11px', fontWeight:800, color:T.ink }}>{s.value}</div>
+                </div>
+              ))}
+            </div>
+            <button onClick={() => { if(window.confirm('Sign out of all devices?')) signOut?.(); }}
+              style={{ padding:'10px 12px', background:T.dangerLt, border:`1px solid ${T.danger}20`, borderRadius:'10px', fontWeight:700, fontSize:'12px', cursor:'pointer', color:T.danger, display:'flex', alignItems:'center', gap:'6px', width:'100%', justifyContent:'center' }}>
+              <LogOut size={13} /> Sign Out All Sessions
+            </button>
+          </Section>
+
           <Section title="Security & Access" icon={Shield} color={T.danger}>
             <Toggle label="Require PIN to Delete Records" sub="Protects sensitive operations" value={requirePinDelete}
               onChange={() => { setRequirePinDelete(!requirePinDelete); saveToggle('requirePinDelete', !requirePinDelete); }} />
@@ -420,7 +610,6 @@ export const ManagerSettings: React.FC = () => {
             </div>
           </Section>
 
-          {/* DATA & SYSTEM */}
           <Section title="Data & System" icon={Database} color={T.txt3}>
             <Row label="App Version" value="v2.4.1" icon={Smartphone} color={T.txt3} />
             <Row label="Database" value="Supabase · Live" icon={Wifi} color={T.success} />
@@ -428,6 +617,34 @@ export const ManagerSettings: React.FC = () => {
             <button onClick={() => window.location.reload()} style={{ padding: '10px 12px', background: T.bg, border: `1px solid ${T.borderL}`, borderRadius: '10px', fontWeight: 700, fontSize: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', color: T.txt2, width: '100%' }}>
               <RefreshCw size={13} color={T.txt3} /> Force Refresh App
             </button>
+          </Section>
+
+          <Section title="Quick Navigation" icon={Link} color={T.primary} badge="Shortcuts">
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+              {[
+                { label: '📊 Reports', path: '/manager/reports' },
+                { label: '👥 Customers', path: '/manager/customers' },
+                { label: '📦 Raw Materials', path: '/manager/raw-materials' },
+                { label: '🏭 Production', path: '/manager/production-load' },
+                { label: '💰 Transactions', path: '/manager/transactions' },
+                { label: '👤 Staff', path: '/manager/staff' },
+              ].map((s, i) => (
+                <button key={i} onClick={() => navigate(s.path)}
+                  style={{ padding: '10px 12px', background: T.bg, border: `1px solid ${T.borderL}`, borderRadius: '10px', fontWeight: 700, fontSize: '11px', color: T.ink, cursor: 'pointer', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  {s.label}
+                </button>
+              ))}
+            </div>
+          </Section>
+
+          <Section title="Help & Support" icon={HelpCircle} color={T.purple}>
+            <Row label="Documentation" sub="How-to guides and tutorials" icon={FileText} color={T.purple} onClick={() => alert('Documentation coming soon.')} />
+            <Row label="Report a Bug" sub="Send us feedback" icon={AlertTriangle} color={T.amber} onClick={() => alert('Bug report: Contact your system administrator.')} />
+            <div style={{ padding: '12px', background: T.purpleLt, borderRadius: '10px', border: `1px solid ${T.purple}20` }}>
+              <div style={{ fontSize: '11px', fontWeight: 800, color: T.purple, marginBottom: '4px' }}>BreadBox Manager v2.4.1</div>
+              <div style={{ fontSize: '10px', color: T.txt3, fontWeight: 600, lineHeight: 1.5 }}>Built with React + Supabase · Cloud-synced · Real-time</div>
+              <div style={{ fontSize: '10px', color: T.txt3, marginTop: '6px' }}>© 2025 BreadBox Systems. All rights reserved.</div>
+            </div>
           </Section>
 
           <Section title="Danger Zone" icon={AlertTriangle} color={T.danger}>
