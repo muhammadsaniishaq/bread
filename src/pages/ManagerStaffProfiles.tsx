@@ -3,34 +3,65 @@ import { AnimatedPage } from '../components/AnimatedPage';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { 
-  ArrowLeft, Users, Search, X, Shield, Phone, 
-  Edit2, UserPlus, MessageCircle, 
-  Trash2, UserCheck, Download
+  ArrowLeft, Search, X, Shield, Phone, 
+  Edit2, UserPlus, 
+  Trash2, UserCheck, Download, 
+  ChevronRight
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const T = {
-  primary: '#4f46e5', primaryLt: 'rgba(79,70,229,0.06)',
-  success: '#10b981', successLt: 'rgba(16,185,129,0.08)',
-  danger: '#ef4444', dangerLt: 'rgba(239,68,68,0.08)',
-  amber: '#f59e0b', amberLt: 'rgba(245,158,11,0.08)',
-  purple: '#7c3aed', purpleLt: 'rgba(124,58,237,0.06)',
-  blue: '#0891b2', blueLt: 'rgba(8,145,178,0.08)',
-  ink: '#0f172a', txt2: '#475569', txt3: '#94a3b8',
-  bg: '#f8fafc', surface: '#ffffff',
-  borderL: 'rgba(0,0,0,0.06)', shadow: '0 4px 20px rgba(0,0,0,0.05)',
+  primary: '#4f46e5',
+  primaryLt: '#eef2ff',
+  success: '#10b981',
+  successLt: '#ecfdf5',
+  danger: '#f43f5e',
+  dangerLt: '#fff1f2',
+  amber: '#f59e0b',
+  amberLt: '#fffbeb',
+  purple: '#8b5cf6',
+  purpleLt: '#f5f3ff',
+  blue: '#3b82f6',
+  blueLt: '#eff6ff',
+  ink: '#1e293b',
+  txt2: '#475569',
+  txt3: '#94a3b8',
+  bg: '#f8fafc',
+  surface: '#ffffff',
+  border: '#f1f5f9',
+  shadow: '0 10px 30px rgba(0,0,0,0.04)',
 };
 
-const ROLES: Record<string,{color:string;bg:string;label:string;icon:string;desc:string}> = {
-  MANAGER:      {color:T.purple, bg:T.purpleLt, label:'Manager',      icon:'🛡️', desc:'Full Admin Control'},
-  SUPPLIER:     {color:T.amber,  bg:T.amberLt,  label:'Supplier',     icon:'📦', desc:'Sales & Delivery'},
-  STORE_KEEPER: {color:T.blue,   bg:T.blueLt,   label:'Store Keeper', icon:'🏪', desc:'Stock Control'},
-  CUSTOMER:     {color:T.success,bg:T.successLt,label:'Customer',     icon:'👤', desc:'Standard Access'},
-  ADMIN:        {color:T.danger, bg:T.dangerLt, label:'Admin',        icon:'⚡', desc:'Root Access'},
+const ROLES: Record<string,{color:string;bg:string;label:string;icon:string}> = {
+  MANAGER:      {color:T.purple,  bg:T.purpleLt,  label:'Manager',      icon:'🛡️'},
+  SUPPLIER:     {color:T.amber,   bg:T.amberLt,   label:'Supplier',     icon:'📦'},
+  STORE_KEEPER: {color:T.blue,    bg:T.blueLt,    label:'Store Keeper', icon:'🏪'},
+  CUSTOMER:     {color:T.success, bg:T.successLt, label:'Customer',     icon:'👤'},
+  ADMIN:        {color:T.danger,  bg:T.dangerLt,  label:'Admin',        icon:'⚡'},
 };
 
-const inp:React.CSSProperties={width:'100%',padding:'10px 12px',background:T.bg,border:`1px solid ${T.borderL}`,borderRadius:'10px',fontSize:'13px',fontWeight:600,color:T.ink,outline:'none',boxSizing:'border-box'};
-const lbl:React.CSSProperties={fontSize:'10px',fontWeight:800,color:T.txt3,textTransform:'uppercase',display:'block',marginBottom:'4px',letterSpacing:'0.02em'};
+const inpStyle: React.CSSProperties = {
+  width: '100%',
+  padding: '14px',
+  background: '#f8fafc',
+  border: '1px solid #e2e8f0',
+  borderRadius: '16px',
+  fontSize: '14px',
+  fontWeight: 600,
+  color: T.ink,
+  outline: 'none',
+  boxSizing: 'border-box',
+};
+
+const labelStyle: React.CSSProperties = {
+  fontSize: '11px',
+  fontWeight: 800,
+  color: T.txt3,
+  textTransform: 'uppercase',
+  marginBottom: '6px',
+  display: 'block',
+  letterSpacing: '0.05em',
+};
 
 interface Profile { id:string; full_name:string; phone?:string; email?:string; role:string; created_at?:string; username?:string; notes?:string; }
 
@@ -42,12 +73,9 @@ const ManagerStaffProfiles: React.FC = () => {
   const [search, setSearch] = useState('');
   const [filterRole, setFilterRole] = useState('ALL');
   const [selected, setSelected] = useState<Profile|null>(null);
-  const [dTab, setDTab] = useState<'info'|'stats'|'security'>('info');
   const [editOpen, setEditOpen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
-  const [delConfirm, setDelConfirm] = useState(false);
   const [eForm, setEForm] = useState({full_name:'',phone:'',email:'',username:'',role:'',notes:''});
   const [aForm, setAForm] = useState({full_name:'',phone:'',email:'',username:'',role:'SUPPLIER'});
 
@@ -69,15 +97,12 @@ const ManagerStaffProfiles: React.FC = () => {
   };
   useEffect(()=>{fetch();},[]);
 
-  const openEdit = (p:Profile) => { setEForm({full_name:p.full_name||'',phone:p.phone||'',email:p.email||'',username:p.username||'',role:p.role||'',notes:p.notes||''}); setEditOpen(true); };
-
   const handleSave = async () => {
     if(!selected) return;
     setSaving(true);
     await supabase.from('profiles').update({full_name:eForm.full_name,phone:eForm.phone,username:eForm.username,role:eForm.role,notes:eForm.notes}).eq('id',selected.id);
     setProfiles(ps=>ps.map(p=>p.id===selected.id?{...p,...eForm}:p));
-    setSelected({...selected,...eForm});
-    setSaving(false); setSaved(true); setTimeout(()=>{setSaved(false);setEditOpen(false);},1200);
+    setSaving(false); setEditOpen(false); setSelected(null);
   };
 
   const handleAdd = async () => {
@@ -88,91 +113,89 @@ const ManagerStaffProfiles: React.FC = () => {
     setSaving(false);
   };
 
-  const handleDelete = async () => {
-    if (!selected) return;
-    await supabase.from('profiles').delete().eq('id', selected.id);
-    setProfiles(ps => ps.filter(p => p.id !== selected.id));
-    setSelected(null); setDelConfirm(false);
+  const handleDelete = async (id:string) => {
+    await supabase.from('profiles').delete().eq('id', id);
+    setProfiles(ps => ps.filter(p => p.id !== id));
+    setSelected(null);
   };
 
-  const exportCSV = () => {
-    const headers = "ID,Name,Role,Phone,Email\n";
-    const rows = filtered.map(p => `${p.id},"${p.full_name}",${p.role},${p.phone},${p.email}`).join("\n");
-    const blob = new Blob([headers + rows], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; a.download = `staff_list.csv`; a.click();
-  };
-
-  const counts = profiles.reduce<Record<string,number>>((a,p)=>{a[p.role]=(a[p.role]||0)+1;return a;},{});
-  const filtered = [...profiles].filter(p=>{
+  const filtered = profiles.filter(p=>{
     const s=search.toLowerCase();
-    return (filterRole==='ALL'||p.role===filterRole)&&(p.full_name?.toLowerCase().includes(s)||p.phone?.includes(s)||p.username?.toLowerCase().includes(s));
+    return (filterRole==='ALL'||p.role===filterRole)&&(p.full_name?.toLowerCase().includes(s)||p.phone?.includes(s));
   });
-
-  const cfg = (role:string)=>ROLES[role]||{color:T.txt3,bg:T.bg,label:role,icon:'👤', desc:''};
 
   return (
     <AnimatedPage>
-      <div style={{minHeight:'100vh',background:T.bg,fontFamily:"'Inter', system-ui, sans-serif",paddingBottom:'80px'}}>
-
-        {/* COMPACT DASHBOARD HEADER */}
-        <div style={{background:'#1e293b',padding:'30px 16px 20px',position:'relative'}}>
-          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'16px'}}>
-            <button onClick={()=>navigate(-1)} style={{background:'rgba(255,255,255,0.1)',border:'none',borderRadius:'8px',padding:'6px 10px',color:'#fff',fontSize:'12px',fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',gap:'5px'}}>
-              <ArrowLeft size={14}/> Back
-            </button>
-            <div style={{display:'flex',gap:'8px'}}>
-              <button onClick={exportCSV} style={{background:'rgba(255,255,255,0.05)',border:'none',borderRadius:'8px',padding:'6px',color:'#fff'}}><Download size={16}/></button>
-              <button onClick={()=>setAddOpen(true)} style={{background:T.primary,border:'none',borderRadius:'8px',padding:'6px 12px',color:'#fff',fontSize:'12px',fontWeight:800,cursor:'pointer',display:'flex',alignItems:'center',gap:'6px'}}>
-                <UserPlus size={14}/> Add Staff
-              </button>
+      <div style={{minHeight:'100vh', background:T.bg, color:T.ink, fontFamily:"'Plus Jakarta Sans', sans-serif", paddingBottom:'100px'}}>
+        
+        <div style={{background:T.surface, padding:'40px 20px 30px', borderBottom:`1px solid ${T.border}`, position:'relative', overflow:'hidden'}}>
+          <div style={{position:'absolute', top:'-50px', right:'-50px', width:'200px', height:'200px', background:T.primaryLt, borderRadius:'50%', filter:'blur(60px)', zIndex:0}}/>
+          
+          <div style={{maxWidth:'1000px', margin:'0 auto', position:'relative', zIndex:1}}>
+            <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'24px'}}>
+              <button onClick={()=>navigate(-1)} style={{background:T.bg, border:'none', borderRadius:'14px', padding:'12px', color:T.ink, cursor:'pointer'}}><ArrowLeft size={20}/></button>
+              <div style={{display:'flex', gap:'10px'}}>
+                <button onClick={()=>{const headers="ID,Name,Role\n";const rows=filtered.map(p=>`${p.id},${p.full_name},${p.role}`).join("\n");const blob=new Blob([headers+rows],{type:'text/csv'});const url=window.URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='staff.csv';a.click();}} style={{background:T.bg, border:'none', borderRadius:'14px', padding:'12px', color:T.ink}}><Download size={20}/></button>
+                <button onClick={()=>setAddOpen(true)} style={{background:T.primary, border:'none', borderRadius:'16px', padding:'12px 24px', color:'#fff', fontWeight:800, fontSize:'14px', display:'flex', alignItems:'center', gap:'8px', cursor:'pointer', boxShadow:`0 10px 25px ${T.primary}40`}}>
+                  <UserPlus size={18}/> <span>Add New</span>
+                </button>
+              </div>
             </div>
-          </div>
 
-          <div style={{display:'flex',alignItems:'center',gap:'12px',marginBottom:'16px'}}>
-            <div style={{width:'40px',height:'40px',borderRadius:'10px',background:T.primary,display:'flex',alignItems:'center',justifyContent:'center'}}><Users size={20} color="#fff"/></div>
-            <div>
-              <h1 style={{margin:0,fontSize:'18px',fontWeight:900,color:'#fff',letterSpacing:'-0.02em'}}>Staff Management</h1>
-              <p style={{margin:0,fontSize:'11px',color:'rgba(255,255,255,0.5)',fontWeight:600}}>{profiles.length} total active accounts</p>
+            <h1 style={{margin:0, fontSize:'28px', fontWeight:900, letterSpacing:'-0.03em'}}>Staff Profiles</h1>
+            <p style={{margin:'4px 0 24px', fontSize:'14px', color:T.txt2, fontWeight:600}}>{profiles.length} total staff members managed.</p>
+
+            <div style={{position:'relative', marginBottom:'24px'}}>
+              <Search size={18} style={{position:'absolute', left:'16px', top:'50%', transform:'translateY(-50%)', color:T.txt3}}/>
+              <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search name or phone..." 
+                style={{...inpStyle, paddingLeft:'48px', border:'none', boxShadow:T.shadow, background:T.surface}}/>
             </div>
-          </div>
 
-          <div style={{position:'relative'}}>
-            <Search size={14} style={{position:'absolute',left:'12px',top:'50%',transform:'translateY(-50%)',color:'rgba(255,255,255,0.4)'}}/>
-            <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search by name or role..."
-              style={{width:'100%',padding:'10px 12px 10px 34px',borderRadius:'10px',border:'1px solid rgba(255,255,255,0.1)',background:'rgba(255,255,255,0.05)',color:'#fff',fontSize:'13px',fontWeight:600,boxSizing:'border-box',outline:'none'}}/>
+            <div style={{display:'flex', gap:'8px', overflowX:'auto', paddingBottom:'10px', scrollbarWidth:'none'}}>
+              {['ALL', 'MANAGER', 'SUPPLIER', 'STORE_KEEPER'].map(r=>(
+                <button key={r} onClick={()=>setFilterRole(r)}
+                  style={{padding:'10px 18px', borderRadius:'14px', border:'none', background:filterRole===r?T.primary:T.surface, color:filterRole===r?'#fff':T.txt2, fontWeight:800, fontSize:'12px', whiteSpace:'nowrap', boxShadow:T.shadow, cursor:'pointer'}}>
+                  {r==='ALL'?'All Staff':ROLES[r]?.label}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 
-        <div style={{padding:'12px'}}>
-          <div style={{display:'flex',gap:'8px',overflowX:'auto',paddingBottom:'10px',marginBottom:'4px',msOverflowStyle:'none',scrollbarWidth:'none'}}>
-            {[{id:'ALL',label:'Global'},...Object.entries(ROLES).filter(([k])=>counts[k]).map(([id,c])=>({id,label:c.label}))].map(r=>(
-              <button key={r.id} onClick={()=>setFilterRole(r.id)}
-                style={{padding:'6px 12px',borderRadius:'20px',border:'none',background:filterRole===r.id?T.primary:T.surface,color:filterRole===r.id?'#fff':T.txt2,fontWeight:800,fontSize:'11px',cursor:'pointer',boxShadow:T.shadow,whiteSpace:'nowrap'}}>
-                {r.label}
-              </button>
-            ))}
-          </div>
-
+        <div style={{maxWidth:'1000px', margin:'20px auto', padding:'0 20px'}}>
           {loading ? (
-            <div style={{padding:'40px',textAlign:'center',color:T.txt3,fontSize:'12px'}}>Loading records...</div>
+            <div style={{textAlign:'center', padding:'100px 0', color:T.txt3}}>Loading accounts...</div>
           ) : (
-            <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill, minmax(160px, 1fr))',gap:'10px'}}>
+            <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(280px, 1fr))', gap:'20px'}}>
               {filtered.map((p,i)=>(
-                <motion.div key={p.id} initial={{opacity:0,y:10}} animate={{opacity:1,y:0}} transition={{delay:i*0.03}}
+                <motion.div key={p.id} initial={{opacity:0, y:20}} animate={{opacity:1, y:0}} transition={{delay:i*0.05}}
                   onClick={()=>setSelected(p)}
-                  style={{background:T.surface,borderRadius:'14px',padding:'12px',boxShadow:T.shadow,cursor:'pointer',border:`1px solid ${T.borderL}`,position:'relative'}}>
-                  <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:'10px'}}>
-                    <div style={{width:'32px',height:'32px',borderRadius:'8px',background:cfg(p.role).bg,display:'flex',alignItems:'center',justifyContent:'center',fontSize:'16px'}}>{cfg(p.role).icon}</div>
-                    <div style={{width:'6px',height:'6px',borderRadius:'50%',background:T.success}}/>
+                  whileTap={{scale:0.98}}
+                  style={{background:T.surface, borderRadius:'28px', padding:'24px', boxShadow:T.shadow, border:`1px solid ${T.border}`, cursor:'pointer', position:'relative', overflow:'hidden'}}>
+                  <div style={{display:'flex', alignItems:'center', gap:'16px', marginBottom:'20px'}}>
+                    <div style={{width:'56px', height:'56px', borderRadius:'20px', background:ROLES[p.role]?.bg, display:'flex', alignItems:'center', justifyContent:'center', fontSize:'24px'}}>
+                      {ROLES[p.role]?.icon}
+                    </div>
+                    <div>
+                      <h3 style={{margin:0, fontSize:'16px', fontWeight:800}}>{p.full_name}</h3>
+                      <div style={{fontSize:'12px', fontWeight:700, color:ROLES[p.role]?.color, marginTop:'2px'}}>{ROLES[p.role]?.label}</div>
+                    </div>
                   </div>
-                  <h3 style={{margin:0,fontSize:'13px',fontWeight:900,color:T.ink,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{p.full_name}</h3>
-                  <p style={{margin:'2px 0 0',fontSize:'10px',fontWeight:700,color:cfg(p.role).color,textTransform:'uppercase'}}>{cfg(p.role).label}</p>
                   
-                  <div style={{marginTop:'8px',display:'flex',alignItems:'center',gap:'4px'}}>
-                    <UserCheck size={10} color={T.txt3}/>
-                    <span style={{fontSize:'10px',fontWeight:700,color:T.txt3}}>{custCounts[p.id]||0} assigned</span>
+                  <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:'12px', background:T.bg, padding:'16px', borderRadius:'20px'}}>
+                    <div>
+                      <div style={{fontSize:'10px', fontWeight:800, color:T.txt3, textTransform:'uppercase'}}>Clients</div>
+                      <div style={{fontSize:'15px', fontWeight:800, display:'flex', alignItems:'center', gap:'4px'}}><UserCheck size={14} color={T.primary}/> {custCounts[p.id]||0}</div>
+                    </div>
+                    <div>
+                      <div style={{fontSize:'10px', fontWeight:800, color:T.txt3, textTransform:'uppercase'}}>Status</div>
+                      <div style={{fontSize:'11px', fontWeight:800, color:T.success, display:'flex', alignItems:'center', gap:'4px'}}><div style={{width:'6px', height:'6px', borderRadius:'50%', background:T.success}}/> ACTIVE</div>
+                    </div>
+                  </div>
+
+                  <div style={{marginTop:'16px', display:'flex', justifyContent:'space-between', alignItems:'center'}}>
+                    <span style={{fontSize:'12px', fontWeight:700, color:T.txt3}}>@{p.username || 'user'}</span>
+                    <ChevronRight size={18} color={T.txt3}/>
                   </div>
                 </motion.div>
               ))}
@@ -180,109 +203,43 @@ const ManagerStaffProfiles: React.FC = () => {
           )}
         </div>
 
-        {/* SIDE DRAWER */}
         <AnimatePresence>
           {selected && (
             <>
               <motion.div initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} onClick={()=>setSelected(null)}
-                style={{position:'fixed',inset:0,background:'rgba(15,23,42,0.4)',backdropFilter:'blur(4px)',zIndex:200}}/>
-              <motion.div initial={{x:'100%'}} animate={{x:0}} exit={{x:'100%'}} transition={{type:'spring',damping:25,stiffness:200}}
-                style={{position:'fixed',top:0,right:0,bottom:0,width:'min(380px, 100vw)',background:T.surface,zIndex:201,display:'flex',flexDirection:'column',boxShadow:'-10px 0 30px rgba(0,0,0,0.1)'}}>
-                
-                <div style={{padding:'20px 16px',borderBottom:`1px solid ${T.borderL}`,display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-                  <div style={{display:'flex',alignItems:'center',gap:'10px'}}>
-                    <div style={{width:'36px',height:'36px',borderRadius:'10px',background:cfg(selected.role).bg,display:'flex',alignItems:'center',justifyContent:'center',fontSize:'18px'}}>{cfg(selected.role).icon}</div>
-                    <div>
-                      <div style={{fontSize:'14px',fontWeight:900,color:T.ink}}>{selected.full_name}</div>
-                      <div style={{fontSize:'10px',fontWeight:700,color:cfg(selected.role).color,textTransform:'uppercase'}}>{cfg(selected.role).label}</div>
+                style={{position:'fixed', inset:0, background:'rgba(0,0,0,0.3)', backdropFilter:'blur(8px)', zIndex:200}}/>
+              <motion.div initial={{y:'100%'}} animate={{y:0}} exit={{y:'100%'}} transition={{type:'spring', damping:25, stiffness:200}}
+                style={{position:'fixed', bottom:0, left:0, right:0, background:T.surface, borderTopLeftRadius:'40px', borderTopRightRadius:'40px', zIndex:201, maxHeight:'90vh', overflowY:'auto', boxShadow:'0 -10px 40px rgba(0,0,0,0.1)'}}>
+                <div style={{width:'40px', height:'4px', background:'#e2e8f0', borderRadius:'2px', margin:'16px auto'}}/>
+                <div style={{padding:'0 24px 40px'}}>
+                  <div style={{display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:'32px'}}>
+                    <div style={{display:'flex', alignItems:'center', gap:'20px'}}>
+                      <div style={{width:'72px', height:'72px', borderRadius:'24px', background:ROLES[selected.role]?.bg, display:'flex', alignItems:'center', justifyContent:'center', fontSize:'32px'}}>{ROLES[selected.role]?.icon}</div>
+                      <div>
+                        <h2 style={{margin:0, fontSize:'22px', fontWeight:900}}>{selected.full_name}</h2>
+                        <div style={{fontSize:'13px', fontWeight:700, color:ROLES[selected.role]?.color}}>{ROLES[selected.role]?.label}</div>
+                      </div>
+                    </div>
+                    <button onClick={()=>setSelected(null)} style={{background:T.bg, border:'none', borderRadius:'50%', width:'40px', height:'40px', color:T.ink, cursor:'pointer'}}><X size={20}/></button>
+                  </div>
+
+                  <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:'16px', marginBottom:'32px'}}>
+                    <button onClick={()=>{setEForm({full_name:selected.full_name||'',phone:selected.phone||'',email:selected.email||'',username:selected.username||'',role:selected.role||'',notes:selected.notes||''}); setEditOpen(true);}} style={{background:T.primary, border:'none', borderRadius:'20px', padding:'16px', color:'#fff', fontWeight:800, fontSize:'14px', display:'flex', alignItems:'center', justifyContent:'center', gap:'10px'}}><Edit2 size={18}/> Edit Profile</button>
+                    <button onClick={()=>{if(window.confirm('Delete?')){handleDelete(selected.id)}}} style={{background:T.dangerLt, border:'none', borderRadius:'20px', padding:'16px', color:T.danger, fontWeight:800, fontSize:'14px', display:'flex', alignItems:'center', justifyContent:'center', gap:'10px'}}><Trash2 size={18}/> Delete</button>
+                  </div>
+
+                  <div style={{display:'flex', flexDirection:'column', gap:'20px'}}>
+                    <div style={{background:T.bg, borderRadius:'24px', padding:'20px'}}>
+                      <div style={{display:'flex', alignItems:'center', gap:'12px', marginBottom:'16px'}}><Phone size={20} color={T.primary}/> <span style={{fontSize:'14px', fontWeight:800}}>Contact Details</span></div>
+                      <div style={{display:'flex', justifyContent:'space-between', marginBottom:'12px'}}><span style={{fontSize:'13px', color:T.txt2}}>Phone</span><span style={{fontSize:'13px', fontWeight:700}}>{selected.phone || 'N/A'}</span></div>
+                      <div style={{display:'flex', justifyContent:'space-between'}}><span style={{fontSize:'13px', color:T.txt2}}>Username</span><span style={{fontSize:'13px', fontWeight:700}}>@{selected.username || 'user'}</span></div>
+                    </div>
+
+                    <div style={{background:T.bg, borderRadius:'24px', padding:'20px'}}>
+                      <div style={{display:'flex', alignItems:'center', gap:'12px', marginBottom:'16px'}}><Shield size={20} color={T.purple}/> <span style={{fontSize:'14px', fontWeight:800}}>Administrative Notes</span></div>
+                      <p style={{margin:0, fontSize:'14px', color:T.txt2, lineHeight:'1.6'}}>{selected.notes || 'No notes added for this staff member.'}</p>
                     </div>
                   </div>
-                  <div style={{display:'flex',gap:'6px'}}>
-                    <button onClick={()=>openEdit(selected)} style={{padding:'8px',borderRadius:'8px',background:T.bg,border:'none',color:T.txt2}}><Edit2 size={14}/></button>
-                    <button onClick={()=>setSelected(null)} style={{padding:'8px',borderRadius:'8px',background:T.bg,border:'none',color:T.txt2}}><X size={14}/></button>
-                  </div>
-                </div>
-
-                <div style={{display:'flex',padding:'4px 16px',background:T.bg}}>
-                  {([['info','Profile'],['stats','Activity'],['security','Control']] as const).map(([id,label])=>(
-                    <button key={id} onClick={()=>setDTab(id)}
-                      style={{flex:1,padding:'10px 0',fontSize:'11px',fontWeight:800,border:'none',background:'transparent',color:dTab===id?T.primary:T.txt3,borderBottom:dTab===id?`2px solid ${T.primary}`:'none'}}>
-                      {label}
-                    </button>
-                  ))}
-                </div>
-
-                <div style={{flex:1,overflowY:'auto',padding:'16px'}}>
-                  {dTab==='info' && (
-                    <div style={{display:'flex',flexDirection:'column',gap:'16px'}}>
-                      <div>
-                        <label style={lbl}>Basic Information</label>
-                        <div style={{background:T.bg,borderRadius:'12px',padding:'12px',display:'flex',flexDirection:'column',gap:'10px'}}>
-                          <div style={{display:'flex',justifyContent:'space-between'}}><span style={{fontSize:'12px',color:T.txt3}}>Username</span><span style={{fontSize:'12px',fontWeight:700}}>@{selected.username||'none'}</span></div>
-                          <div style={{display:'flex',justifyContent:'space-between'}}><span style={{fontSize:'12px',color:T.txt3}}>ID Code</span><span style={{fontSize:'12px',fontWeight:700,color:T.primary}}>{selected.id.slice(0,8).toUpperCase()}</span></div>
-                        </div>
-                      </div>
-                      <div>
-                        <label style={lbl}>Contact</label>
-                        <div style={{display:'flex',gap:'8px'}}>
-                          <a href={`tel:${selected.phone}`} style={{flex:1,padding:'10px',background:T.successLt,borderRadius:'10px',textAlign:'center',textDecoration:'none',fontSize:'12px',fontWeight:800,color:T.success,display:'flex',alignItems:'center',justifyContent:'center',gap:'6px'}}><Phone size={14}/> Call</a>
-                          <a href={`https://wa.me/${selected.phone}`} target="_blank" rel="noreferrer" style={{flex:1,padding:'10px',background:'rgba(37,211,102,0.1)',borderRadius:'10px',textAlign:'center',textDecoration:'none',fontSize:'12px',fontWeight:800,color:'#25d366',display:'flex',alignItems:'center',justifyContent:'center',gap:'6px'}}><MessageCircle size={14}/> Chat</a>
-                        </div>
-                      </div>
-                      <div>
-                        <label style={lbl}>Administrative Notes</label>
-                        <div style={{padding:'12px',background:T.bg,borderRadius:'12px',fontSize:'12px',color:T.txt2,lineHeight:'1.5',fontWeight:500}}>{selected.notes || 'No notes available.'}</div>
-                      </div>
-                    </div>
-                  )}
-
-                  {dTab==='stats' && (
-                    <div style={{display:'flex',flexDirection:'column',gap:'12px'}}>
-                      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'10px'}}>
-                        <div style={{background:T.bg,padding:'12px',borderRadius:'12px'}}>
-                          <div style={{fontSize:'9px',fontWeight:800,color:T.txt3}}>CUSTOMERS</div>
-                          <div style={{fontSize:'18px',fontWeight:900}}>{custCounts[selected.id]||0}</div>
-                        </div>
-                        <div style={{background:T.bg,padding:'12px',borderRadius:'12px'}}>
-                          <div style={{fontSize:'9px',fontWeight:800,color:T.txt3}}>PERFORMANCE</div>
-                          <div style={{fontSize:'18px',fontWeight:900,color:T.success}}>High</div>
-                        </div>
-                      </div>
-                      <label style={lbl}>System Logs</label>
-                      {[1,2,3].map(i=>(
-                        <div key={i} style={{padding:'10px',borderLeft:`2px solid ${T.primary}`,background:T.bg,fontSize:'11px',fontWeight:600}}>
-                          <div style={{color:T.ink}}>Security Login detected</div>
-                          <div style={{color:T.txt3,fontSize:'10px',marginTop:'2px'}}>May 0{i}, 2026 • 09:15 AM</div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {dTab==='security' && (
-                    <div style={{display:'flex',flexDirection:'column',gap:'20px'}}>
-                      <div style={{background:T.bg,padding:'16px',borderRadius:'12px'}}>
-                        <div style={{display:'flex',alignItems:'center',gap:'8px',marginBottom:'12px'}}><Shield size={16} color={T.primary}/> <span style={{fontSize:'13px',fontWeight:800}}>Access Level</span></div>
-                        <div style={{fontSize:'12px',color:T.txt2,fontWeight:600,lineHeight:'1.4'}}>{cfg(selected.role).desc}. Account has active cloud synchronization.</div>
-                      </div>
-                      {!delConfirm ? (
-                        <button onClick={()=>setDelConfirm(true)} style={{padding:'12px',background:T.dangerLt,border:'none',borderRadius:'10px',color:T.danger,fontWeight:800,fontSize:'12px',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:'8px'}}>
-                          <Trash2 size={14}/> Terminate Account
-                        </button>
-                      ) : (
-                        <div style={{padding:'16px',background:T.dangerLt,borderRadius:'12px',textAlign:'center'}}>
-                          <div style={{fontSize:'12px',fontWeight:800,color:T.danger,marginBottom:'12px'}}>Are you sure? This is permanent.</div>
-                          <div style={{display:'flex',gap:'8px'}}>
-                            <button onClick={()=>setDelConfirm(false)} style={{flex:1,padding:'8px',background:T.surface,border:'none',borderRadius:'8px',fontSize:'11px',fontWeight:800}}>Cancel</button>
-                            <button onClick={handleDelete} style={{flex:1,padding:'8px',background:T.danger,border:'none',borderRadius:'8px',fontSize:'11px',fontWeight:800,color:'#fff'}}>Delete</button>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-
-                <div style={{padding:'16px',borderTop:`1px solid ${T.borderL}`}}>
-                  <button onClick={()=>setSelected(null)} style={{width:'100%',padding:'12px',background:T.ink,color:'#fff',border:'none',borderRadius:'10px',fontSize:'12px',fontWeight:800,cursor:'pointer'}}>Close Profile</button>
                 </div>
               </motion.div>
             </>
@@ -290,31 +247,46 @@ const ManagerStaffProfiles: React.FC = () => {
         </AnimatePresence>
 
         <AnimatePresence>
-          {(editOpen || addOpen) && (
+          {(addOpen || editOpen) && (
             <>
-              <motion.div initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} onClick={()=>{setEditOpen(false);setAddOpen(false);}}
-                style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.5)',zIndex:300}}/>
-              <motion.div initial={{opacity:0,scale:0.9}} animate={{opacity:1,scale:1}} exit={{opacity:0,scale:0.9}}
-                style={{position:'fixed',top:'50%',left:'50%',transform:'translate(-50%,-50%)',width:'min(380px, 92vw)',background:T.surface,borderRadius:'20px',zIndex:301,overflow:'hidden'}}>
-                <div style={{padding:'16px',background:T.ink,color:'#fff',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-                  <span style={{fontSize:'14px',fontWeight:900}}>{addOpen?'Add New Staff':'Update Profile'}</span>
-                  <button onClick={()=>{setEditOpen(false);setAddOpen(false);}} style={{background:'rgba(255,255,255,0.1)',border:'none',borderRadius:'6px',padding:'4px',color:'#fff'}}><X size={14}/></button>
+              <motion.div initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} onClick={()=>{setAddOpen(false);setEditOpen(false);}}
+                style={{position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', backdropFilter:'blur(10px)', zIndex:300}}/>
+              <motion.div initial={{y:'100%', opacity:0}} animate={{y:0, opacity:1}} exit={{y:'100%', opacity:0}} transition={{type:'spring', damping:25, stiffness:200}}
+                style={{position:'fixed', bottom:0, left:0, right:0, top: '10vh', background:T.surface, borderTopLeftRadius:'40px', borderTopRightRadius:'40px', zIndex:301, overflowY:'auto', display:'flex', flexDirection:'column'}}>
+                
+                <div style={{padding:'24px', borderBottom:`1px solid ${T.border}`, display:'flex', justifyContent:'space-between', alignItems:'center', position:'sticky', top:0, background:T.surface, zIndex:2}}>
+                  <h3 style={{margin:0, fontSize:'20px', fontWeight:900}}>{addOpen?'New Staff Member':'Edit Profile'}</h3>
+                  <button onClick={()=>{setAddOpen(false);setEditOpen(false);}} style={{background:T.bg, border:'none', borderRadius:'50%', width:'40px', height:'40px', color:T.ink}}><X size={20}/></button>
                 </div>
-                <div style={{padding:'16px',display:'flex',flexDirection:'column',gap:'12px'}}>
-                  <div><label style={lbl}>Full Name</label><input style={inp} value={addOpen?aForm.full_name:eForm.full_name} onChange={e=>addOpen?setAForm({...aForm,full_name:e.target.value}):setEForm({...eForm,full_name:e.target.value})}/></div>
-                  <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'8px'}}>
-                    <div><label style={lbl}>Phone</label><input style={inp} value={addOpen?aForm.phone:eForm.phone} onChange={e=>addOpen?setAForm({...aForm,phone:e.target.value}):setEForm({...eForm,phone:e.target.value})}/></div>
-                    <div><label style={lbl}>Username</label><input style={inp} value={addOpen?aForm.username:eForm.username} onChange={e=>addOpen?setAForm({...aForm,username:e.target.value.toLowerCase().replace(/\s+/g,'')}):setEForm({...eForm,username:e.target.value.toLowerCase().replace(/\s+/g,'')})}/></div>
+
+                <div style={{padding:'32px', maxWidth:'600px', margin:'0 auto', width:'100%', boxSizing:'border-box'}}>
+                  <div style={{display:'flex', flexDirection:'column', gap:'24px'}}>
+                    <div><label style={labelStyle}>Full Name</label><input style={inpStyle} placeholder="Enter full name" value={addOpen?aForm.full_name:eForm.full_name} onChange={e=>addOpen?setAForm({...aForm,full_name:e.target.value}):setEForm({...eForm,full_name:e.target.value})}/></div>
+                    
+                    <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:'16px'}}>
+                      <div><label style={labelStyle}>Phone</label><input style={inpStyle} placeholder="080..." value={addOpen?aForm.phone:eForm.phone} onChange={e=>addOpen?setAForm({...aForm,phone:e.target.value}):setEForm({...eForm,phone:e.target.value})}/></div>
+                      <div><label style={labelStyle}>Username</label><input style={inpStyle} placeholder="user123" value={addOpen?aForm.username:eForm.username} onChange={e=>addOpen?setAForm({...aForm,username:e.target.value.toLowerCase()}):setEForm({...eForm,username:e.target.value.toLowerCase()})}/></div>
+                    </div>
+
+                    <div>
+                      <label style={labelStyle}>Assigned Role</label>
+                      <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(100px, 1fr))', gap:'10px'}}>
+                        {Object.entries(ROLES).map(([k,v])=>(
+                          <button key={k} onClick={()=>addOpen?setAForm({...aForm,role:k}):setEForm({...eForm,role:k})}
+                            style={{padding:'16px 10px', borderRadius:'16px', border:`2px solid ${(addOpen?aForm.role:eForm.role)===k?v.color:T.border}`, background:(addOpen?aForm.role:eForm.role)===k?v.bg:'transparent', cursor:'pointer', transition:'all 0.2s'}}>
+                            <div style={{fontSize:'20px', marginBottom:'4px'}}>{v.icon}</div>
+                            <div style={{fontSize:'10px', fontWeight:800, color:(addOpen?aForm.role:eForm.role)===k?v.color:T.txt3}}>{v.label}</div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {editOpen && <div><label style={labelStyle}>Internal Notes</label><textarea style={{...inpStyle, height:'100px', resize:'none'}} placeholder="Administrative notes..." value={eForm.notes} onChange={e=>setEForm({...eForm,notes:e.target.value})}/></div>}
+
+                    <button onClick={addOpen?handleAdd:handleSave} disabled={saving} style={{padding:'18px', background:T.primary, color:'#fff', border:'none', borderRadius:'20px', fontWeight:800, fontSize:'16px', cursor:'pointer', marginTop:'10px', boxShadow:`0 10px 25px ${T.primary}40`}}>
+                      {saving?'Processing...':addOpen?'Create Account':'Save Changes'}
+                    </button>
                   </div>
-                  <div><label style={lbl}>Role</label>
-                    <select style={inp} value={addOpen?aForm.role:eForm.role} onChange={e=>addOpen?setAForm({...aForm,role:e.target.value}):setEForm({...eForm,role:e.target.value})}>
-                      {Object.entries(ROLES).map(([k,v])=><option key={k} value={k}>{v.label}</option>)}
-                    </select>
-                  </div>
-                  {editOpen && <div><label style={lbl}>Notes</label><textarea style={{...inp,height:'60px',resize:'none'}} value={eForm.notes} onChange={e=>setEForm({...eForm,notes:e.target.value})}/></div>}
-                  <button onClick={addOpen?handleAdd:handleSave} disabled={saving} style={{padding:'12px',background:T.primary,color:'#fff',border:'none',borderRadius:'10px',fontSize:'13px',fontWeight:800,cursor:'pointer',marginTop:'8px'}}>
-                    {saving?'Processing...':saved?'Saved!':addOpen?'Create Account':'Save Changes'}
-                  </button>
                 </div>
               </motion.div>
             </>
