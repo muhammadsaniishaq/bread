@@ -3,60 +3,54 @@ import { AnimatedPage } from '../components/AnimatedPage';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { 
-  ArrowLeft, Search, X, Shield, 
-  Edit2, UserPlus, Trash2, Download, 
-  ChevronRight, Activity
+  Search, UserPlus, X, 
+  Trash2,
+  ArrowLeft, Edit2, Download, ChevronRight,
+  MessageCircle, BadgeCheck, Activity,
+  Phone, Mail, TrendingUp
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const T = {
-  primary: '#4f46e5',
-  primaryLt: '#eef2ff',
-  success: '#10b981',
-  successLt: '#ecfdf5',
-  danger: '#f43f5e',
-  dangerLt: '#fff1f2',
-  amber: '#f59e0b',
-  amberLt: '#fffbeb',
-  purple: '#8b5cf6',
-  purpleLt: '#f5f3ff',
-  blue: '#3b82f6',
-  blueLt: '#eff6ff',
-  ink: '#0f172a',
-  txt2: '#475569',
-  txt3: '#94a3b8',
-  bg: '#f8fafc',
-  surface: '#ffffff',
-  border: '#f1f5f9',
-  shadow: '0 10px 30px rgba(0,0,0,0.04)',
+  primary: '#4f46e5', primaryLt: 'rgba(79,70,229,0.05)',
+  success: '#10b981', successLt: 'rgba(16,185,129,0.1)', textSuccess: '#166534',
+  danger: '#ef4444', dangerLt: 'rgba(239,68,68,0.1)', textDanger: '#991b1b',
+  warn: '#f59e0b', warnLt: 'rgba(245,158,11,0.1)', textWarn: '#92400e',
+  ink: '#0f172a', txt2: '#475569', txt3: '#94a3b8',
+  bg: '#f1f5f9', surface: '#ffffff', surface2: '#f8fafc',
+  border: 'rgba(0,0,0,0.06)', borderL: 'rgba(0,0,0,0.04)',
+  shadow: '0 4px 12px rgba(0,0,0,0.05)', shadowMd: '0 10px 25px -5px rgba(0,0,0,0.08)'
 };
 
-const ROLES: Record<string,{color:string;bg:string;label:string;icon:string}> = {
-  MANAGER:      {color:T.purple,  bg:T.purpleLt,  label:'Manager',      icon:'🛡️'},
-  SUPPLIER:     {color:T.amber,   bg:T.amberLt,   label:'Supplier',     icon:'📦'},
-  STORE_KEEPER: {color:T.blue,    bg:T.blueLt,    label:'Store Keeper', icon:'🏪'},
-  CUSTOMER:     {color:T.success, bg:T.successLt, label:'Customer',     icon:'👤'},
-  ADMIN:        {color:T.danger,  bg:T.dangerLt,  label:'Admin',        icon:'⚡'},
+const ROLES: Record<string,{color:string;bg:string;label:string;icon:string;banner:string}> = {
+  MANAGER:      {color:T.primary, bg:'#e0e7ff', label:'Manager',      icon:'🛡️', banner:'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)'},
+  SUPPLIER:     {color:T.warn,    bg:'#fef3c7', label:'Supplier',     icon:'📦', banner:'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)'},
+  STORE_KEEPER: {color:'#3b82f6', bg:'#eff6ff', label:'Store Keeper', icon:'🏪', banner:'linear-gradient(135deg, #e0c3fc 0%, #8ec5fc 100%)'},
+  CUSTOMER:     {color:T.success, bg:'#d1fae5', label:'Customer',     icon:'👤', banner:'linear-gradient(135deg, #84ffc9 0%, #aab2ff 100%)'},
+  ADMIN:        {color:T.danger,  bg:'#fee2e2', label:'Admin',        icon:'⚡', banner:'linear-gradient(135deg, #ff9a9e 0%, #fecfef 99%, #fecfef 100%)'},
 };
+
+const avatarPalette=[['#4f46e5','#e0e7ff'],['#0891b2','#e0f7fa'],['#059669','#d1fae5'],['#d97706','#fef3c7'],['#dc2626','#fee2e2'],['#7c3aed','#ede9fe']];
+const getAvatar=(n:string)=>avatarPalette[n.charCodeAt(0)%avatarPalette.length];
 
 const inpStyle: React.CSSProperties = {
-  width: '100%', padding: '14px 16px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '16px',
-  fontSize: '14px', fontWeight: 600, color: T.ink, outline: 'none', boxSizing: 'border-box'
+  background: T.surface, border: `1px solid ${T.borderL}`, borderRadius: '10px', padding: '10px 12px',
+  fontSize: '12px', fontWeight: 500, color: T.ink, outline: 'none', width: '100%', boxSizing: 'border-box', transition: 'all 0.2s'
 };
 
 const labelStyle: React.CSSProperties = {
-  fontSize: '11px', fontWeight: 800, color: T.txt3, textTransform: 'uppercase', marginBottom: '6px', display: 'block', letterSpacing: '0.05em'
+  fontSize: '10px', fontWeight: 800, color: T.txt2, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '6px', display: 'block'
 };
 
 interface Profile { id:string; full_name:string; phone?:string; email?:string; role:string; created_at?:string; username?:string; notes?:string; }
 
 const ManagerStaffProfiles: React.FC = () => {
-  const navigate = useNavigate();
+  useNavigate();
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [custCounts, setCustCounts] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [filterRole, setFilterRole] = useState('ALL');
+  const [filterRole] = useState('ALL');
   const [selected, setSelected] = useState<Profile|null>(null);
   const [editOpen, setEditOpen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
@@ -82,7 +76,8 @@ const ManagerStaffProfiles: React.FC = () => {
   };
   useEffect(()=>{fetch();},[]);
 
-  const handleSave = async () => {
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
     if(!selected) return;
     setSaving(true);
     await supabase.from('profiles').update({full_name:eForm.full_name,phone:eForm.phone,username:eForm.username,role:eForm.role,notes:eForm.notes}).eq('id',selected.id);
@@ -90,12 +85,20 @@ const ManagerStaffProfiles: React.FC = () => {
     setSaving(false); setEditOpen(false); setSelected(null);
   };
 
-  const handleAdd = async () => {
+  const handleAdd = async (e: React.FormEvent) => {
+    e.preventDefault();
     if (!aForm.full_name.trim()) return;
     setSaving(true);
     const { data } = await supabase.from('profiles').insert({ ...aForm }).select().single();
     if (data) { setProfiles(ps => [data, ...ps]); setAddOpen(false); setAForm({full_name:'',phone:'',email:'',username:'',role:'SUPPLIER'}); }
     setSaving(false);
+  };
+
+  const handleDelete = async (id:string) => {
+    if(!window.confirm('Delete this profile permanently?')) return;
+    await supabase.from('profiles').delete().eq('id', id);
+    setProfiles(ps => ps.filter(p => p.id !== id));
+    setSelected(null);
   };
 
   const filtered = profiles.filter(p=>{
@@ -105,157 +108,163 @@ const ManagerStaffProfiles: React.FC = () => {
 
   return (
     <AnimatedPage>
-      <div style={{minHeight:'100vh', background:T.bg, color:T.ink, fontFamily:"'Plus Jakarta Sans', sans-serif", paddingBottom:'100px'}}>
+      <div style={{background:T.bg, minHeight:'100vh', fontFamily:"'Inter',system-ui,sans-serif", paddingBottom:'110px', paddingTop:'env(safe-area-inset-top)'}}>
         
-        {/* MOBILE-FIRST VIBRANT HEADER */}
-        <div style={{background:T.surface, padding:'24px 20px 20px', borderBottom:`1px solid ${T.border}`, position:'sticky', top:0, zIndex:100}}>
+        {/* HEADER */}
+        <div style={{padding:'16px'}}>
           <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'16px'}}>
-            <button onClick={()=>navigate(-1)} style={{background:T.bg, border:'none', borderRadius:'14px', padding:'10px', color:T.ink, cursor:'pointer'}}><ArrowLeft size={20}/></button>
-            <div style={{display:'flex', gap:'8px'}}>
-              <button onClick={()=>{}} style={{background:T.bg, border:'none', borderRadius:'14px', padding:'10px', color:T.ink}}><Download size={20}/></button>
-              <button onClick={()=>setAddOpen(true)} style={{background:T.primary, border:'none', borderRadius:'14px', padding:'10px 16px', color:'#fff', fontWeight:800, fontSize:'13px', display:'flex', alignItems:'center', gap:'6px', cursor:'pointer'}}>
-                <UserPlus size={16}/> Add
-              </button>
+            <div>
+              <h1 style={{fontSize:'18px', fontWeight:800, color:T.ink, margin:0, letterSpacing:'-0.02em'}}>Staff Profiles</h1>
+              <p style={{color:T.txt2, fontSize:'12px', margin:'2px 0 0'}}>Manage your team directory</p>
             </div>
-          </div>
-          
-          <h1 style={{margin:0, fontSize:'22px', fontWeight:900, letterSpacing:'-0.02em'}}>Staff Directory</h1>
-          <div style={{fontSize:'12px', fontWeight:700, color:T.txt3, marginTop:'2px'}}>{profiles.length} Verified Personnel</div>
-
-          <div style={{position:'relative', marginTop:'16px'}}>
-            <Search size={18} style={{position:'absolute', left:'14px', top:'50%', transform:'translateY(-50%)', color:T.txt3}}/>
-            <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search name, phone, or role..." 
-              style={{...inpStyle, paddingLeft:'44px', border:'none', background:T.bg}}/>
-          </div>
-        </div>
-
-        {/* ROLE TABS (HORIZONTAL SCROLL) */}
-        <div style={{display:'flex', gap:'8px', overflowX:'auto', padding:'16px 20px', scrollbarWidth:'none'}}>
-          {['ALL', 'MANAGER', 'SUPPLIER', 'STORE_KEEPER'].map(r=>(
-            <button key={r} onClick={()=>setFilterRole(r)}
-              style={{padding:'10px 18px', borderRadius:'20px', border:'none', background:filterRole===r?T.primary:T.surface, color:filterRole===r?'#fff':T.txt2, fontWeight:800, fontSize:'12px', whiteSpace:'nowrap', boxShadow:T.shadow, cursor:'pointer'}}>
-              {r==='ALL'?'All Staff':ROLES[r]?.label}
+            <button onClick={()=>setAddOpen(true)} style={{display:'flex', alignItems:'center', gap:'6px', background:T.ink, color:'#fff', padding:'8px 12px', borderRadius:'10px', fontWeight:700, fontSize:'12px', border:'none', cursor:'pointer', boxShadow:T.shadow}}>
+               <UserPlus size={14}/> Add Staff
             </button>
-          ))}
-        </div>
+          </div>
 
-        {/* COMPACT MOBILE-FIRST LIST */}
-        <div style={{padding:'0 16px'}}>
-          {loading ? (
-            <div style={{textAlign:'center', padding:'60px 0', color:T.txt3, fontSize:'14px', fontWeight:600}}>Loading accounts...</div>
-          ) : (
-            <div style={{display:'flex', flexDirection:'column', gap:'12px'}}>
-              {filtered.map((p,i)=>(
-                <motion.div key={p.id} initial={{opacity:0, y:15}} animate={{opacity:1, y:0}} transition={{delay:i*0.03}}
-                  onClick={()=>setSelected(p)}
-                  whileTap={{scale:0.98}}
-                  style={{background:T.surface, borderRadius:'24px', padding:'16px', boxShadow:T.shadow, border:`1px solid ${T.border}`, display:'flex', alignItems:'center', gap:'14px', cursor:'pointer'}}>
-                  <div style={{width:'52px', height:'52px', borderRadius:'18px', background:ROLES[p.role]?.bg, display:'flex', alignItems:'center', justifyContent:'center', fontSize:'22px'}}>
-                    {ROLES[p.role]?.icon}
+          <div style={{display:'flex', gap:'8px', marginBottom:'16px'}}>
+            <div style={{position:'relative', flex:1}}>
+              <Search size={16} color={T.txt3} style={{position:'absolute', left:'12px', top:'50%', transform:'translateY(-50%)', pointerEvents:'none'}}/>
+              <input style={{...inpStyle, paddingLeft:'36px', height:'40px'}} placeholder="Search name, phone..." value={search} onChange={e=>setSearch(e.target.value)}/>
+            </div>
+            <button onClick={()=>fetch()} style={{background:T.surface, border:`1px solid ${T.borderL}`, borderRadius:'10px', width:'40px', display:'flex', alignItems:'center', justifyContent:'center', color:T.ink}}><Download size={16}/></button>
+          </div>
+
+          {/* LIST VIEW */}
+          <div style={{display:'flex', flexDirection:'column', gap:'8px'}}>
+            {loading ? <div style={{textAlign:'center', padding:'40px', color:T.txt3, fontSize:'13px'}}>Syncing profiles...</div> : filtered.map(p => {
+              const [ac, lc] = getAvatar(p.full_name);
+              return (
+                <motion.div key={p.id} whileTap={{scale:0.98}} onClick={()=>setSelected(p)}
+                  style={{background:T.surface, border:`1px solid ${T.borderL}`, borderRadius:'14px', padding:'12px 14px', boxShadow:T.shadow, cursor:'pointer', display:'flex', alignItems:'center', gap:'12px'}}>
+                  <div style={{width:'36px', height:'36px', borderRadius:'50%', background:lc, display:'flex', alignItems:'center', justifyContent:'center', fontSize:'14px', fontWeight:700, color:ac, flexShrink:0}}>
+                    {p.full_name.charAt(0)}
                   </div>
                   <div style={{flex:1, minWidth:0}}>
-                    <div style={{fontSize:'15px', fontWeight:800, color:T.ink, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>{p.full_name}</div>
-                    <div style={{display:'flex', alignItems:'center', gap:'6px', marginTop:'2px'}}>
-                      <span style={{fontSize:'11px', fontWeight:800, color:ROLES[p.role]?.color, textTransform:'uppercase'}}>{ROLES[p.role]?.label}</span>
-                      <div style={{width:'3px', height:'3px', borderRadius:'50%', background:T.txt3}}/>
-                      <span style={{fontSize:'12px', fontWeight:600, color:T.txt3}}>@{p.username || 'user'}</span>
+                    <div style={{display:'flex', alignItems:'center', gap:'6px', marginBottom:'2px'}}>
+                      <span style={{color:T.ink, fontWeight:700, fontSize:'14px', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis'}}>{p.full_name}</span>
+                      <span style={{fontSize:'9px', fontWeight:800, padding:'2px 6px', borderRadius:'6px', background:ROLES[p.role]?.bg, color:ROLES[p.role]?.color}}>{ROLES[p.role]?.label}</span>
+                    </div>
+                    <div style={{display:'flex', gap:'8px', alignItems:'center'}}>
+                      <span style={{color:T.txt2, fontSize:'11px'}}>{p.phone || 'No phone'}</span>
+                      <span style={{width:3, height:3, borderRadius:'50%', background:T.borderL}}/>
+                      <span style={{color:T.txt3, fontSize:'10px', fontWeight:700}}>@{p.username || 'user'}</span>
                     </div>
                   </div>
-                  <div style={{textAlign:'right'}}>
-                    <div style={{fontSize:'14px', fontWeight:900, color:T.primary}}>{custCounts[p.id]||0}</div>
-                    <div style={{fontSize:'9px', fontWeight:800, color:T.txt3}}>CLIENTS</div>
-                  </div>
-                  <ChevronRight size={18} color={T.txt3}/>
+                  <ChevronRight size={16} color={T.txt3}/>
                 </motion.div>
-              ))}
-            </div>
-          )}
+              )
+            })}
+          </div>
         </div>
 
-        {/* MOBILE BOTTOM SHEET (DETAILS) */}
+        {/* DETAIL DRAWER (MATCHING MANAGER CUSTOMERS) */}
         <AnimatePresence>
           {selected && (
-            <>
-              <motion.div initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} onClick={()=>setSelected(null)}
-                style={{position:'fixed', inset:0, background:'rgba(0,0,0,0.3)', backdropFilter:'blur(8px)', zIndex:200}}/>
-              <motion.div initial={{y:'100%'}} animate={{y:0}} exit={{y:'100%'}} transition={{type:'spring', damping:25, stiffness:200}}
-                style={{position:'fixed', bottom:0, left:0, right:0, background:T.surface, borderTopLeftRadius:'40px', borderTopRightRadius:'40px', zIndex:201, maxHeight:'90vh', overflowY:'auto', boxShadow:'0 -10px 40px rgba(0,0,0,0.1)'}}>
-                <div style={{width:'40px', height:'4px', background:'#e2e8f0', borderRadius:'2px', margin:'16px auto'}}/>
-                <div style={{padding:'0 24px 40px'}}>
-                  <div style={{display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:'24px'}}>
-                    <div style={{display:'flex', alignItems:'center', gap:'16px'}}>
-                      <div style={{width:'64px', height:'64px', borderRadius:'22px', background:ROLES[selected.role]?.bg, display:'flex', alignItems:'center', justifyContent:'center', fontSize:'28px'}}>{ROLES[selected.role]?.icon}</div>
-                      <div>
-                        <h2 style={{margin:0, fontSize:'20px', fontWeight:900}}>{selected.full_name}</h2>
-                        <div style={{fontSize:'12px', fontWeight:700, color:ROLES[selected.role]?.color}}>{ROLES[selected.role]?.label} • @{selected.username}</div>
+            <div style={{position:'fixed', inset:0, background:'rgba(15,23,42,0.4)', backdropFilter:'blur(4px)', zIndex:200, display:'flex', flexDirection:'column', justifyContent:'flex-end'}}>
+              <motion.div initial={{y:'100%'}} animate={{y:0}} exit={{y:'100%'}} transition={{type:'spring', damping:26, stiffness:300}} style={{background:T.surface, height:'100vh', display:'flex', flexDirection:'column'}}>
+                
+                <div style={{padding:'12px 16px', display:'flex', alignItems:'center', gap:'12px', borderBottom:`1px solid ${T.borderL}`, background:T.surface}}>
+                  <button onClick={()=>setSelected(null)} style={{background:'none', border:'none', cursor:'pointer', padding:'6px', marginLeft:'-6px'}}><ArrowLeft size={18} color={T.ink}/></button>
+                  <h2 style={{fontSize:'15px', fontWeight:700, color:T.ink, margin:0, flex:1}}>Staff Details</h2>
+                  <button onClick={()=>handleDelete(selected.id)} style={{background:T.dangerLt, border:'none', padding:'6px 10px', borderRadius:'8px', display:'flex', alignItems:'center', gap:4, cursor:'pointer', color:T.danger, fontSize:'11px', fontWeight:800}}>
+                    <Trash2 size={12}/> Terminate
+                  </button>
+                </div>
+
+                <div style={{flex:1, overflowY:'auto'}}>
+                  <div style={{padding:'20px'}}>
+                    {/* Banner */}
+                    <div style={{background: ROLES[selected.role]?.banner || ROLES.MANAGER.banner, height:'70px', borderRadius:'12px', position:'relative'}}/>
+                    
+                    {/* Avatar */}
+                    <div style={{display:'flex', padding:'0 16px', marginTop:'-28px', position:'relative'}}>
+                      <div style={{width:'56px', height:'56px', borderRadius:'50%', background:getAvatar(selected.full_name)[1], display:'flex', alignItems:'center', justifyContent:'center', fontSize:'20px', fontWeight:700, color:getAvatar(selected.full_name)[0], border:`3px solid ${T.surface}`, boxShadow:T.shadow}}>
+                        {selected.full_name.charAt(0)}
                       </div>
                     </div>
-                    <button onClick={()=>setSelected(null)} style={{background:T.bg, border:'none', borderRadius:'50%', width:'36px', height:'36px', color:T.ink}}><X size={18}/></button>
-                  </div>
 
-                  <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:'12px', marginBottom:'24px'}}>
-                    <button onClick={()=>{setEForm({full_name:selected.full_name||'',phone:selected.phone||'',email:selected.email||'',username:selected.username||'',role:selected.role||'',notes:selected.notes||''}); setEditOpen(true);}} style={{background:T.primary, border:'none', borderRadius:'20px', padding:'14px', color:'#fff', fontWeight:800, fontSize:'14px', display:'flex', alignItems:'center', justifyContent:'center', gap:'8px'}}><Edit2 size={16}/> Edit</button>
-                    <button onClick={()=>{if(window.confirm('Delete?')){setProfiles(ps=>ps.filter(p=>p.id!==selected.id)); setSelected(null);}}} style={{background:T.dangerLt, border:'none', borderRadius:'20px', padding:'14px', color:T.danger, fontWeight:800, fontSize:'14px', display:'flex', alignItems:'center', justifyContent:'center', gap:'8px'}}><Trash2 size={16}/> Delete</button>
-                  </div>
+                    <div style={{marginTop:'8px'}}>
+                      <h1 style={{fontSize:'18px', fontWeight:800, color:T.ink, margin:0, display:'flex', alignItems:'center', gap:4}}>{selected.full_name} <BadgeCheck size={14} color={T.success}/></h1>
+                      <p style={{color:T.primary, fontSize:'12px', fontWeight:600, margin:'2px 0 0'}}>@{selected.username || 'user'}</p>
+                      
+                      <div style={{display:'flex', gap:6, marginTop:8}}>
+                        <span style={{background:ROLES[selected.role]?.bg, color:ROLES[selected.role]?.color, padding:'2px 6px', borderRadius:'6px', fontSize:'9px', fontWeight:700}}>{ROLES[selected.role]?.label} Authority</span>
+                        <span style={{background:T.successLt, color:T.textSuccess, padding:'2px 6px', borderRadius:'6px', fontSize:'9px', fontWeight:700}}>Active Sync</span>
+                      </div>
 
-                  <div style={{display:'flex', flexDirection:'column', gap:'16px'}}>
-                    <div style={{background:T.bg, borderRadius:'24px', padding:'20px', display:'flex', flexDirection:'column', gap:'12px'}}>
-                      <div style={{display:'flex', alignItems:'center', gap:'10px'}}><Activity size={16} color={T.primary}/> <span style={{fontSize:'13px', fontWeight:800}}>Operations</span></div>
-                      <div style={{display:'flex', justifyContent:'space-between'}}><span style={{fontSize:'13px', color:T.txt2}}>Phone</span><span style={{fontSize:'13px', fontWeight:700}}>{selected.phone || 'N/A'}</span></div>
-                      <div style={{display:'flex', justifyContent:'space-between'}}><span style={{fontSize:'13px', color:T.txt2}}>Managed Customers</span><span style={{fontSize:'13px', fontWeight:700, color:T.primary}}>{custCounts[selected.id]||0} Clients</span></div>
-                    </div>
-                    <div style={{background:T.bg, borderRadius:'24px', padding:'20px'}}>
-                      <div style={{display:'flex', alignItems:'center', gap:'10px', marginBottom:'10px'}}><Shield size={16} color={T.purple}/> <span style={{fontSize:'13px', fontWeight:800}}>Internal Notes</span></div>
-                      <p style={{margin:0, fontSize:'13px', color:T.txt2, lineHeight:'1.5'}}>{selected.notes || 'No notes added for this member.'}</p>
+                      <div style={{display:'flex', flexDirection:'column', gap:'4px', marginTop:'10px'}}>
+                        <span style={{color:T.txt2, fontSize:'12px', fontWeight:500}}><Mail size={12} style={{verticalAlign:'middle', marginRight:6}}/> {selected.email || 'No email registered'}</span>
+                        <span style={{color:T.txt2, fontSize:'12px', fontWeight:500}}><Phone size={12} style={{verticalAlign:'middle', marginRight:6}}/> {selected.phone || 'No phone'}</span>
+                      </div>
+
+                      <div style={{display:'flex', gap:'8px', marginTop:'16px'}}>
+                        <button onClick={()=>window.open(`tel:${selected.phone}`)} style={{background:T.warn, color:'#fff', padding:'8px', borderRadius:'8px', display:'flex', alignItems:'center', gap:'6px', fontWeight:700, fontSize:'12px', border:'none', cursor:'pointer', flex:1, justifyContent:'center', boxShadow:`0 4px 10px ${T.warn}40`}}>
+                          <MessageCircle size={14}/> Contact
+                        </button>
+                        <button onClick={()=>setEditOpen(true)} style={{background:T.surface, color:T.ink, padding:'8px', borderRadius:'8px', display:'flex', alignItems:'center', justifyContent:'center', gap:'6px', fontWeight:700, fontSize:'12px', border:`1px solid ${T.borderL}`, cursor:'pointer', flex:1, boxShadow:T.shadow}}>
+                          <Edit2 size={14}/> Edit Profile
+                        </button>
+                      </div>
+
+                      <div style={{marginTop:'20px', background:T.surface2, padding:'12px', borderRadius:'12px', border:`1px solid ${T.borderL}`}}>
+                        <h3 style={{fontSize:'12px', fontWeight:700, color:T.ink, margin:'0 0 6px'}}>Admin Notes</h3>
+                        <p style={{color:T.txt2, fontSize:'12px', lineHeight:1.5, margin:0}}>{selected.notes || 'No internal notes captured for this personnel member.'}</p>
+                      </div>
+
+                      {/* Performance Metrics */}
+                      <div style={{display:'flex', gap:8, marginTop:16}}>
+                        <div style={{background:T.primaryLt, border:`1px solid ${T.primary}20`, borderRadius:'10px', padding:'10px 12px', flex:1}}>
+                          <div style={{width:28, height:28, borderRadius:'50%', background:T.primary, display:'flex', alignItems:'center', justifyContent:'center', marginBottom:6}}><Activity size={14} color="#fff"/></div>
+                          <span style={{fontSize:'9px', fontWeight:800, color:T.txt2, textTransform:'uppercase'}}>Client Load</span>
+                          <div style={{fontSize:'16px', fontWeight:800, color:T.ink}}>{custCounts[selected.id]||0} Assigned</div>
+                        </div>
+                        <div style={{background:T.successLt, border:`1px solid ${T.success}20`, borderRadius:'10px', padding:'10px 12px', flex:1}}>
+                          <div style={{width:28, height:28, borderRadius:'50%', background:T.success, display:'flex', alignItems:'center', justifyContent:'center', marginBottom:6}}><TrendingUp size={14} color="#fff"/></div>
+                          <span style={{fontSize:'9px', fontWeight:800, color:T.txt2, textTransform:'uppercase'}}>Efficiency</span>
+                          <div style={{fontSize:'16px', fontWeight:800, color:T.ink}}>High Rank</div>
+                        </div>
+                      </div>
+
                     </div>
                   </div>
                 </div>
               </motion.div>
-            </>
+            </div>
           )}
         </AnimatePresence>
 
-        {/* BOTTOM SHEET (ADD / EDIT) */}
+        {/* MODAL: ADD / EDIT STAFF */}
         <AnimatePresence>
           {(addOpen || editOpen) && (
-            <>
-              <motion.div initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} onClick={()=>{setAddOpen(false);setEditOpen(false);}}
-                style={{position:'fixed', inset:0, background:'rgba(0,0,0,0.4)', backdropFilter:'blur(10px)', zIndex:300}}/>
-              <motion.div initial={{y:'100%'}} animate={{y:0}} exit={{y:'100%'}} transition={{type:'spring', damping:25, stiffness:200}}
-                style={{position:'fixed', bottom:0, left:0, right:0, background:T.surface, borderTopLeftRadius:'40px', borderTopRightRadius:'40px', zIndex:301, maxHeight:'90vh', overflowY:'auto'}}>
-                <div style={{width:'40px', height:'4px', background:'#e2e8f0', borderRadius:'2px', margin:'16px auto'}}/>
-                <div style={{padding:'0 24px 40px'}}>
-                  <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'24px'}}>
-                    <h3 style={{margin:0, fontSize:'20px', fontWeight:900}}>{addOpen?'New Staff Member':'Update Profile'}</h3>
-                    <button onClick={()=>{setAddOpen(false);setEditOpen(false);}} style={{background:T.bg, border:'none', borderRadius:'50%', width:'36px', height:'36px', color:T.ink}}><X size={18}/></button>
-                  </div>
-                  
-                  <div style={{display:'flex', flexDirection:'column', gap:'20px'}}>
-                    <div><label style={labelStyle}>Full Legal Name</label><input style={inpStyle} placeholder="Full Name" value={addOpen?aForm.full_name:eForm.full_name} onChange={e=>addOpen?setAForm({...aForm,full_name:e.target.value}):setEForm({...eForm,full_name:e.target.value})}/></div>
-                    <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:'12px'}}>
-                      <div><label style={labelStyle}>Phone</label><input style={inpStyle} placeholder="080..." value={addOpen?aForm.phone:eForm.phone} onChange={e=>addOpen?setAForm({...aForm,phone:e.target.value}):setEForm({...eForm,phone:e.target.value})}/></div>
-                      <div><label style={labelStyle}>Username</label><input style={inpStyle} placeholder="user123" value={addOpen?aForm.username:eForm.username} onChange={e=>addOpen?setAForm({...aForm,username:e.target.value.toLowerCase()}):setEForm({...eForm,username:e.target.value.toLowerCase()})}/></div>
-                    </div>
-                    <div>
-                      <label style={labelStyle}>Assigned Role</label>
-                      <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(100px, 1fr))', gap:'8px'}}>
-                        {Object.entries(ROLES).map(([k,v])=>(
-                          <button key={k} onClick={()=>addOpen?setAForm({...aForm,role:k}):setEForm({...eForm,role:k})}
-                            style={{padding:'14px 8px', borderRadius:'16px', border:`2px solid ${(addOpen?aForm.role:eForm.role)===k?v.color:T.border}`, background:(addOpen?aForm.role:eForm.role)===k?v.bg:'transparent', cursor:'pointer'}}>
-                            <div style={{fontSize:'18px', marginBottom:'4px'}}>{v.icon}</div>
-                            <div style={{fontSize:'10px', fontWeight:800, color:(addOpen?aForm.role:eForm.role)===k?v.color:T.txt3}}>{v.label}</div>
-                          </button>
-                        ))}
+            <div style={{position:'fixed', inset:0, zIndex:1000, display:'flex', alignItems:'center', justifyContent:'center', background:'rgba(0,0,0,0.6)', backdropFilter:'blur(5px)', padding:'20px'}}>
+              <motion.div initial={{scale:0.9, opacity:0}} animate={{scale:1, opacity:1}} exit={{scale:0.95, opacity:0}}
+                style={{background:T.surface, width:'100%', maxWidth:'380px', maxHeight:'90vh', borderRadius:'16px', display:'flex', flexDirection:'column', overflow:'hidden', boxShadow:T.shadowMd}}>
+                <div style={{padding:'14px 18px', borderBottom:`1px solid ${T.borderL}`, display:'flex', justifyContent:'space-between', alignItems:'center'}}>
+                   <h3 style={{margin:0, fontSize:'15px', fontWeight:800, color:T.ink}}>{addOpen ? 'Add Staff Member' : 'Edit Personnel'}</h3>
+                   <button onClick={()=>{setAddOpen(false); setEditOpen(false);}} style={{background:T.bg, border:'none', width:'28px', height:'28px', borderRadius:'8px', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', color:T.ink}}><X size={14}/></button>
+                </div>
+                <div style={{padding:'16px', overflowY:'auto'}} className="hide-scrollbar">
+                   <form onSubmit={addOpen?handleAdd:handleSave} style={{display:'flex', flexDirection:'column', gap:12}}>
+                      <div><label style={labelStyle}>Full Name</label><input style={inpStyle} value={addOpen?aForm.full_name:eForm.full_name} onChange={e=>addOpen?setAForm({...aForm,full_name:e.target.value}):setEForm({...eForm,full_name:e.target.value})} required/></div>
+                      <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:12}}>
+                        <div><label style={labelStyle}>Phone</label><input style={inpStyle} value={addOpen?aForm.phone:eForm.phone} onChange={e=>addOpen?setAForm({...aForm,phone:e.target.value}):setEForm({...eForm,phone:e.target.value})}/></div>
+                        <div><label style={labelStyle}>Username</label><input style={inpStyle} value={addOpen?aForm.username:eForm.username} onChange={e=>addOpen?setAForm({...aForm,username:e.target.value.toLowerCase()}):setEForm({...eForm,username:e.target.value.toLowerCase()})}/></div>
                       </div>
-                    </div>
-                    {editOpen && <div><label style={labelStyle}>Notes</label><textarea style={{...inpStyle, height:'80px', resize:'none'}} placeholder="Notes..." value={eForm.notes} onChange={e=>setEForm({...eForm,notes:e.target.value})}/></div>}
-                    <button onClick={addOpen?handleAdd:handleSave} disabled={saving} style={{padding:'16px', background:T.primary, color:'#fff', border:'none', borderRadius:'20px', fontWeight:800, fontSize:'15px', cursor:'pointer', marginTop:'10px'}}>
-                      {saving?'Processing...':addOpen?'Onboard Staff':'Save Changes'}
-                    </button>
-                  </div>
+                      <div>
+                        <label style={labelStyle}>Staff Role</label>
+                        <select style={inpStyle} value={addOpen?aForm.role:eForm.role} onChange={e=>addOpen?setAForm({...aForm,role:e.target.value}):setEForm({...eForm,role:e.target.value})}>
+                          {Object.entries(ROLES).map(([k,v])=><option key={k} value={k}>{v.label}</option>)}
+                        </select>
+                      </div>
+                      {editOpen && <div><label style={labelStyle}>Administrative Notes</label><textarea style={{...inpStyle, resize:'none', height:100}} value={eForm.notes} onChange={e=>setEForm({...eForm,notes:e.target.value})}/></div>}
+                      <button type="submit" disabled={saving} style={{background:T.ink, color:'#fff', border:'none', borderRadius:'10px', padding:'12px', fontWeight:700, fontSize:'12px', cursor:'pointer', marginTop:4}}>
+                        {saving ? 'Saving...' : addOpen ? 'Create Account' : 'Save Changes'}
+                      </button>
+                   </form>
                 </div>
               </motion.div>
-            </>
+            </div>
           )}
         </AnimatePresence>
 
