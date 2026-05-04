@@ -48,7 +48,7 @@ interface Profile { id:string; full_name:string; phone?:string; email?:string; r
 
 const ManagerStaffProfiles: React.FC = () => {
   useNavigate();
-  const { customers, products, getPersonalStock, transactions } = useAppContext();
+  const { customers, products, getPersonalStock, transactions, getSupplierDebt } = useAppContext();
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [custCounts, setCustCounts] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
@@ -225,7 +225,7 @@ const ManagerStaffProfiles: React.FC = () => {
               customers.find(c => c.name.toLowerCase() === (selected.full_name||'').toLowerCase()) ||
               customers.find(c => c.phone && c.phone === selected.phone)
             ) : null;
-            const supplierDebt = supplierRecord?.debtBalance || 0;
+            const supplierDebt = isSupplier ? getSupplierDebt(selected.id) : 0;
             const assignedCustomers = isSupplier ? customers.filter(c => c.assignedSupplierId === selected.id || (supplierRecord && c.assignedSupplierId === supplierRecord.id)) : [];
             const supplierStock = isSupplier ? products.reduce((acc, p) => acc + getPersonalStock(p.id, 'SUPPLIER', selected.id), 0) : 0;
             

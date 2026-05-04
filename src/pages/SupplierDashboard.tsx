@@ -56,7 +56,7 @@ export default function SupplierDashboard() {
   const { 
     transactions, products, customers, inventoryLogs, loading, 
     refreshData, getPersonalStock, recordSale, verifyCustomer,
-    linkProfileToRecord
+    linkProfileToRecord, getSupplierDebt
   } = useAppContext();
   const { user, role } = useAuth();
   const navigate = useNavigate();
@@ -146,7 +146,8 @@ export default function SupplierDashboard() {
 
   const totalDispatched  = completedTxns.filter(t=>t.type!=='Return').reduce((s,t)=>s+t.totalPrice,0);
   const totalStock       = myStock.reduce((s,p)=>s+p.myStock,0);
-  const hasDebt          = (myAccount?.debtBalance||0) > 0;
+  const myDebt           = getSupplierDebt(user?.id || '');
+  const hasDebt          = myDebt > 0;
   const debtors          = myCustomers.filter(c=>c.debtBalance>0);
   const totalCustomerDebt= myCustomers.reduce((s,c)=>s+(c.debtBalance||0),0);
 
@@ -310,7 +311,7 @@ export default function SupplierDashboard() {
                    {hasDebt && <button onClick={()=>setSettleOpen(true)} style={{background:'#ef4444', color:'#fff', border:'none', padding:'2px 8px', borderRadius:'6px', fontSize:'9px', fontWeight:800, cursor:'pointer', letterSpacing:0}}>Pay Now</button>}
                 </div>
                 <div style={{ fontSize:'30px', fontWeight:900, color: hasDebt?'#fca5a5':'#6ee7b7', letterSpacing:'-0.02em', lineHeight:1.1 }}>
-                  {fmt(myAccount?.debtBalance||0)}
+                  {fmt(myDebt)}
                 </div>
                 <div style={{ fontSize:'11px', color:'rgba(255,255,255,0.4)', fontWeight:600, marginTop:'3px' }}>
                   {hasDebt ? 'Settle with store to reduce balance' : 'No outstanding debt — great! 🎉'}
@@ -804,7 +805,7 @@ export default function SupplierDashboard() {
               <div style={{padding:'16px'}}>
                  <div style={{background:'#f8fafc', padding:'12px', borderRadius:'10px', marginBottom:16, border:`1px solid #e2e8f0`}}>
                     <div style={{fontSize:'11px', color:'#64748b', fontWeight:700, marginBottom:4}}>Current Outstanding Debt</div>
-                    <div style={{fontSize:'16px', color:'#ef4444', fontWeight:800}}>₦{myAccount.debtBalance.toLocaleString()}</div>
+                    <div style={{fontSize:'16px', color:'#ef4444', fontWeight:800}}>₦{myDebt.toLocaleString()}</div>
                  </div>
                  <form onSubmit={handleSettleDebt} style={{display:'flex', flexDirection:'column', gap:12}}>
                     <div>

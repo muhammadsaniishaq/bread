@@ -44,6 +44,7 @@ interface AppContextType {
   getPersonalStock: (productId: string, role?: string, profileId?: string) => number;
   personalStockMap: Record<string, number>;
   linkProfileToRecord: (userId: string, email?: string, phone?: string, fullName?: string) => Promise<any>;
+  getSupplierDebt: (profileId: string) => number;
 }
 
 // ─── Supabase row → App type mappers ─────────────────────────────────────────
@@ -676,21 +677,58 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const nameLower = fullName?.toLowerCase() || '';
     // Find a customer record matching email, phone, OR full name — with or without an existing profile_id
     const target = customers.find(c =>
-      !c.profile_id && (
+      c.profile_id === userId ||
+      (!c.profile_id && (
         (email && c.email?.toLowerCase() === email.toLowerCase()) ||
         (phone && c.phone === phone) ||
         (nameLower && c.name?.toLowerCase() === nameLower)
-      )
+      ))
     );
 
-    if (!target) return null;
+    if (target) {
+       if (!target.profile_id) {
+          await supabase.from('customers').update({ profile_id: userId }).eq('id', target.id);
+          await refreshData();
+       }
+       return target;
+    }
 
-    // Link it
-    const { error } = await supabase.from('customers').update({ profile_id: userId }).eq('id', target.id);
-    if (error) { console.error('Failed to link profile:', error); return null; }
+    // IF NOT FOUND, CREATE IT SO THEY HAVE A LEDGER!
+    if (fullName) {
+       const newCustomer = {
+          name: fullName,
+          email: email || null,
+          phone: phone || null,
+          profile_id: userId,
+          debt_balance: 0,
+          loyalty_points: 0
+       };
+       const { data, error } = await supabase.from('customers').insert([newCustomer]).select().single();
+       if (!error && data) {
+         await refreshData();
+         return data;
+       }
+    }
+    return null;
+  };
 
-    await refreshData();
-    return target;
+  const getSupplierDebt = (profileId: string) => {
+    if (!profileId) return 0;
+    const myAccount = customers.find(c => c.profile_id === profileId);
+    const cid = myAccount?.id;
+
+    // 1. All POS Sales made by this supplier
+    const sales = transactions.filter(t => t.status === 'COMPLETED' && t.origin === 'POS_SUPPLIER' && (t.sellerId === profileId || (cid && t.sellerId === cid)))
+      .reduce((sum, t) => sum + (t.totalPrice * 0.9), 0);
+      
+    // 2. All Debt Payments made by this supplier
+    const payments = transactions.filter(t => t.status === 'COMPLETED' && t.type === 'Payment' && (t.origin === 'SUPPLIER_SELF_REMIT' || t.origin === 'ADMIN_SETTLEMENT') && (t.sellerId === profileId || (cid && t.sellerId === cid)))
+      .reduce((sum, t) => sum + t.totalPrice, 0);
+
+    // Fallback: If dynamically calculated debt is <= 0, and they have an old manual debt_balance, use it
+    // But honestly, the dynamic one is the most accurate for sales. Let's return dynamic + fallback logic.
+    const dynamicDebt = Math.max(0, sales - payments);
+    return dynamicDebt > 0 ? dynamicDebt : Math.max(0, myAccount?.debtBalance || 0);
   };
 
   const getPersonalStock = (productId: string, customRole?: string, profileId?: string) => {
@@ -742,7 +780,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       addInventory, returnInventory, processInventoryBatch,
       recordBakeryPayment, addExpense, submitSupplierReport,
       appSettings, updateSettings, getPersonalStock, verifyCustomer, personalStockMap,
-      linkProfileToRecord
+      linkProfileToRecord, getSupplierDebt
     }}>
       {children}
     </AppContext.Provider>

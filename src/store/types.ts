@@ -47,7 +47,7 @@ export interface Transaction {
   date: string;
   type: 'Cash' | 'Debt' | 'Return' | 'Payment' | 'Expense'; // Added Return, Payment, Expense
   status?: 'PENDING_SUPPLIER' | 'PENDING_STORE' | 'COMPLETED' | 'CANCELLED'; // Added statuses
-  origin?: 'STORE' | 'SUPPLIER' | 'POS_SUPPLIER' | 'POS_BAKERY'; // Where the transaction was initiated
+  origin?: 'STORE' | 'SUPPLIER' | 'POS_SUPPLIER' | 'POS_BAKERY' | 'SUPPLIER_SELF_REMIT' | 'ADMIN_SETTLEMENT'; // Where the transaction was initiated
   items?: TransactionItem[]; // V3 Shopping Cart
   productId?: string;        // Legacy
   quantity?: number;         // Legacy
