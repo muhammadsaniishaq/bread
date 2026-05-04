@@ -66,9 +66,9 @@ export default function StoreAccounting() {
            return sum + (t.type === 'Return' ? -qty : qty);
         }, 0);
 
-        const paid = debtPayments
-          .filter(p => p.customerId === custRecord?.id)
-          .reduce((sum, p) => sum + p.amount, 0);
+        const paid = transactions
+          .filter(t => t.customerId === custRecord?.id && t.type === 'Payment' && t.status === 'COMPLETED')
+          .reduce((sum, t) => sum + t.totalPrice, 0);
 
         return {
           ...s,

@@ -83,7 +83,7 @@ export const Inventory: React.FC = () => {
     products, processInventoryBatch, 
     recordBakeryPayment, 
     transactions, customers, recordSale, 
-    loading, getPersonalStock, refreshData
+    loading, getPersonalStock, refreshData, getSupplierDebt
   } = useAppContext();
   const {  } = useTranslation();
   const navigate = useNavigate();
@@ -301,7 +301,7 @@ export const Inventory: React.FC = () => {
      }
   };
 
-  const personalDebt = myAccount?.debtBalance || 0;
+  const personalDebt = isSupplier ? getSupplierDebt(user?.id || '') : (myAccount?.debtBalance || 0);
   const totalStockCount = enrichedProducts.reduce((s,p) => s + p.myStock, 0);
   const fmt = (v: number) => "₦" + (v || 0).toLocaleString();
 
