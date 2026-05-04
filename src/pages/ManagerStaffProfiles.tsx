@@ -58,7 +58,10 @@ const ManagerStaffProfiles: React.FC = () => {
   const [editOpen, setEditOpen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [dTab, setDTab] = useState<'overview'|'activity'|'security'>('overview');
+  const [dTab, setDTab] = useState<'overview'|'activity'|'security'|'inventory'>('overview');
+  const [settleOpen, setSettleOpen] = useState(false);
+  const [settleAmt, setSettleAmt] = useState('');
+  const [settling, setSettling] = useState(false);
   
   const [eForm, setEForm] = useState({full_name:'',phone:'',email:'',username:'',role:'',notes:'', avatar_url:''});
   const [aForm, setAForm] = useState({full_name:'',phone:'',email:'',username:'',role:'SUPPLIER', avatar_url:''});
@@ -80,6 +83,44 @@ const ManagerStaffProfiles: React.FC = () => {
     setLoading(false);
   };
   useEffect(()=>{fetch();},[]);
+
+  const handleSettleDebt = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selected) return;
+    const amt = parseFloat(settleAmt);
+    if (!amt || amt <= 0) return;
+    
+    const sRecord = customers.find(c => c.profile_id === selected.id) ||
+      customers.find(c => c.name.toLowerCase() === (selected.full_name||'').toLowerCase()) ||
+      customers.find(c => c.phone && c.phone === selected.phone);
+
+    if (!sRecord) return alert("Could not find matching customer record for this supplier.");
+
+    setSettling(true);
+    try {
+      const newDebt = Math.max(0, (sRecord.debtBalance || 0) - amt);
+      await supabase.from('customers').update({ debt_balance: newDebt }).eq('id', sRecord.id);
+      
+      const tx = {
+        id: crypto.randomUUID(),
+        date: new Date().toISOString(),
+        customer_id: sRecord.id,
+        seller_id: selected.id,
+        total_price: amt,
+        type: 'Payment',
+        status: 'COMPLETED',
+        origin: 'ADMIN_SETTLEMENT'
+      };
+      await supabase.from('transactions').insert([tx]);
+      alert(`Successfully recorded payment of ₦${amt.toLocaleString()}`);
+      setSettleOpen(false);
+      setSettleAmt('');
+      window.location.reload();
+    } catch(err: any) {
+      alert("Error: " + err.message);
+    }
+    setSettling(false);
+  };
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -179,7 +220,11 @@ const ManagerStaffProfiles: React.FC = () => {
         <AnimatePresence>
           {selected && (() => {
             const isSupplier = selected.role === 'SUPPLIER';
-            const supplierRecord = isSupplier ? customers.find(c => c.profile_id === selected.id) : null;
+            const supplierRecord = isSupplier ? (
+              customers.find(c => c.profile_id === selected.id) ||
+              customers.find(c => c.name.toLowerCase() === (selected.full_name||'').toLowerCase()) ||
+              customers.find(c => c.phone && c.phone === selected.phone)
+            ) : null;
             const supplierDebt = supplierRecord?.debtBalance || 0;
             const assignedCustomers = isSupplier ? customers.filter(c => c.assignedSupplierId === selected.id || (supplierRecord && c.assignedSupplierId === supplierRecord.id)) : [];
             const supplierStock = isSupplier ? products.reduce((acc, p) => acc + getPersonalStock(p.id, 'SUPPLIER', selected.id), 0) : 0;
@@ -243,9 +288,9 @@ const ManagerStaffProfiles: React.FC = () => {
                       </div>
 
                       {/* TABS */}
-                      <div style={{display:'flex', gap:'16px', borderBottom:`1px solid ${T.borderL}`, marginTop:'24px'}}>
-                        {['overview', 'activity', 'security'].map(tab => (
-                          <button key={tab} onClick={()=>setDTab(tab as any)} style={{background:'none', border:'none', borderBottom:dTab===tab?`2px solid ${T.primary}`:'2px solid transparent', padding:'10px 0', fontSize:'12px', fontWeight:dTab===tab?700:500, color:dTab===tab?T.primary:T.txt2, cursor:'pointer', textTransform:'capitalize'}}>
+                      <div style={{display:'flex', gap:'16px', borderBottom:`1px solid ${T.borderL}`, marginTop:'24px', overflowX:'auto'}} className="hide-scrollbar">
+                        {['overview', 'activity', 'security', ...(isSupplier ? ['inventory'] : [])].map(tab => (
+                          <button key={tab} onClick={()=>setDTab(tab as any)} style={{background:'none', border:'none', borderBottom:dTab===tab?`2px solid ${T.primary}`:'2px solid transparent', padding:'10px 0', fontSize:'12px', fontWeight:dTab===tab?700:500, color:dTab===tab?T.primary:T.txt2, cursor:'pointer', textTransform:'capitalize', whiteSpace:'nowrap'}}>
                             {tab}
                           </button>
                         ))}
@@ -305,13 +350,16 @@ const ManagerStaffProfiles: React.FC = () => {
                             {isSupplier && (
                               <div style={{marginTop: 20}}>
                                 <div style={{display:'flex', gap:8, marginBottom:16}}>
-                                  <div style={{background:T.dangerLt, borderRadius:'12px', padding:'14px', flex:1, border:`1px solid ${T.danger}20`}}>
-                                     <span style={{fontSize:'10px', fontWeight:800, color:T.textDanger, textTransform:'uppercase'}}>Supplier Debt</span>
-                                     <div style={{fontSize:'20px', fontWeight:900, color:T.danger}}>₦{supplierDebt.toLocaleString()}</div>
+                                  <div style={{background:T.dangerLt, borderRadius:'12px', padding:'14px', flex:1, border:`1px solid ${T.danger}20`, display:'flex', flexDirection:'column'}}>
+                                     <div style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
+                                       <span style={{fontSize:'10px', fontWeight:800, color:T.textDanger, textTransform:'uppercase'}}>Supplier Debt</span>
+                                       <button onClick={()=>setSettleOpen(true)} style={{background:T.danger, color:'#fff', border:'none', padding:'4px 8px', borderRadius:'6px', fontSize:'9px', fontWeight:800, cursor:'pointer'}}>Settle Debt</button>
+                                     </div>
+                                     <div style={{fontSize:'20px', fontWeight:900, color:T.danger, marginTop:8}}>₦{supplierDebt.toLocaleString()}</div>
                                   </div>
                                   <div style={{background:T.warnLt, borderRadius:'12px', padding:'14px', flex:1, border:`1px solid ${T.warn}20`}}>
                                      <span style={{fontSize:'10px', fontWeight:800, color:T.textWarn, textTransform:'uppercase'}}>Available Stock</span>
-                                     <div style={{fontSize:'20px', fontWeight:900, color:T.warn}}>{supplierStock} units</div>
+                                     <div style={{fontSize:'20px', fontWeight:900, color:T.warn, marginTop:8}}>{supplierStock} units</div>
                                   </div>
                                 </div>
                                 
@@ -402,6 +450,40 @@ const ManagerStaffProfiles: React.FC = () => {
                           </motion.div>
                         )}
 
+                        {dTab === 'inventory' && isSupplier && (
+                          <motion.div initial={{opacity:0}} animate={{opacity:1}}>
+                            <h3 style={{fontSize:'12px', fontWeight:800, color:T.ink, margin:'0 0 10px'}}>Current Stock Breakdown</h3>
+                            <div style={{display:'flex', flexDirection:'column', gap:8}}>
+                               {products.reduce((acc, p) => acc + getPersonalStock(p.id, 'SUPPLIER', selected.id), 0) === 0 ? (
+                                 <div style={{padding:'30px', textAlign:'center', color:T.txt3}}>
+                                    <Package size={32} style={{opacity:0.2, marginBottom:10}}/>
+                                    <div style={{fontSize:'13px', fontWeight:600}}>Supplier has no stock.</div>
+                                 </div>
+                               ) : products.map(p => {
+                                 const stock = getPersonalStock(p.id, 'SUPPLIER', selected.id);
+                                 if (stock <= 0) return null;
+                                 return (
+                                   <div key={p.id} style={{display:'flex', justifyContent:'space-between', alignItems:'center', background:T.surface2, padding:'12px', borderRadius:'10px', border:`1px solid ${T.borderL}`}}>
+                                      <div style={{display:'flex', alignItems:'center', gap:10}}>
+                                        <div style={{width:32, height:32, borderRadius:'8px', background:T.surface, display:'flex', alignItems:'center', justifyContent:'center', boxShadow:T.shadow}}>
+                                          <Package size={14} color={T.primary}/>
+                                        </div>
+                                        <div>
+                                           <div style={{fontSize:'13px', fontWeight:700, color:T.ink}}>{p.name}</div>
+                                           <div style={{fontSize:'10px', color:T.txt3}}>₦{p.price.toLocaleString()} per unit</div>
+                                        </div>
+                                      </div>
+                                      <div style={{textAlign:'right'}}>
+                                         <div style={{fontSize:'16px', fontWeight:800, color:stock < 5 ? T.danger : T.success}}>{stock}</div>
+                                         <div style={{fontSize:'9px', color:T.txt3, fontWeight:600}}>UNITS</div>
+                                      </div>
+                                   </div>
+                                 );
+                               })}
+                            </div>
+                          </motion.div>
+                        )}
+
                       </div>
                     </div>
                   </div>
@@ -454,6 +536,36 @@ const ManagerStaffProfiles: React.FC = () => {
                       {editOpen && <div><label style={labelStyle}>Administrative Notes</label><textarea style={{...inpStyle, resize:'none', height:100}} value={eForm.notes} onChange={e=>setEForm({...eForm,notes:e.target.value})}/></div>}
                       <button type="submit" disabled={saving} style={{background:T.ink, color:'#fff', border:'none', borderRadius:'10px', padding:'12px', fontWeight:700, fontSize:'12px', cursor:'pointer', marginTop:4}}>
                         {saving ? 'Saving...' : addOpen ? 'Create Account' : 'Save Changes'}
+                      </button>
+                   </form>
+                </div>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
+
+        {/* MODAL: SETTLE DEBT */}
+        <AnimatePresence>
+          {settleOpen && selected && (
+            <div style={{position:'fixed', inset:0, zIndex:1050, display:'flex', alignItems:'center', justifyContent:'center', background:'rgba(0,0,0,0.6)', backdropFilter:'blur(5px)', padding:'20px'}}>
+              <motion.div initial={{scale:0.9, opacity:0}} animate={{scale:1, opacity:1}} exit={{scale:0.95, opacity:0}}
+                style={{background:T.surface, width:'100%', maxWidth:'340px', borderRadius:'16px', display:'flex', flexDirection:'column', overflow:'hidden', boxShadow:T.shadowMd}}>
+                <div style={{padding:'14px 18px', borderBottom:`1px solid ${T.borderL}`, display:'flex', justifyContent:'space-between', alignItems:'center'}}>
+                   <h3 style={{margin:0, fontSize:'15px', fontWeight:800, color:T.ink}}>Record Payment</h3>
+                   <button onClick={()=>setSettleOpen(false)} style={{background:T.bg, border:'none', width:'28px', height:'28px', borderRadius:'8px', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', color:T.ink}}><X size={14}/></button>
+                </div>
+                <div style={{padding:'16px'}}>
+                   <div style={{background:T.surface2, padding:'12px', borderRadius:'10px', marginBottom:16, border:`1px solid ${T.borderL}`}}>
+                      <div style={{fontSize:'11px', color:T.txt3, fontWeight:700, marginBottom:4}}>Supplier / Employee</div>
+                      <div style={{fontSize:'14px', color:T.ink, fontWeight:800}}>{selected.full_name}</div>
+                   </div>
+                   <form onSubmit={handleSettleDebt} style={{display:'flex', flexDirection:'column', gap:12}}>
+                      <div>
+                         <label style={labelStyle}>Amount Paid (₦)</label>
+                         <input type="number" style={inpStyle} placeholder="e.g. 50000" value={settleAmt} onChange={e=>setSettleAmt(e.target.value)} required autoFocus/>
+                      </div>
+                      <button type="submit" disabled={settling} style={{background:T.success, color:'#fff', border:'none', borderRadius:'10px', padding:'12px', fontWeight:700, fontSize:'13px', cursor:'pointer', marginTop:8}}>
+                        {settling ? 'Processing...' : 'Settle Debt'}
                       </button>
                    </form>
                 </div>

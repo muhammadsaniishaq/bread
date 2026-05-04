@@ -11,7 +11,7 @@ import {
   ShoppingCart, RefreshCw, Wallet, Users,
   CheckCircle2, Hourglass, XCircle, ChevronRight,
   BarChart3, ArrowUpRight, ArrowDownRight, Bell,
-  Target, Zap, Star, ShoppingBag, Shield, ShieldCheck, ShieldAlert
+  Target, Zap, Star, ShoppingBag, Shield, ShieldCheck, ShieldAlert, X
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -65,8 +65,16 @@ export default function SupplierDashboard() {
   const [customerOrders, setCustomerOrders] = useState<any[]>([]);
   const [verifyingId, setVerifyingId] = useState<string|null>(null);
 
+  const [settleOpen, setSettleOpen] = useState(false);
+  const [settleAmt, setSettleAmt] = useState('');
+  const [settling, setSettling] = useState(false);
+
   const myAccount = useMemo(() =>
-    customers.find(c => c.profile_id === user?.id), [customers, user]);
+    customers.find(c => c.profile_id === user?.id) ||
+    customers.find(c => user?.email && c.email?.toLowerCase() === user.email.toLowerCase()) ||
+    customers.find(c => (user as any)?.user_metadata?.phone && c.phone === (user as any).user_metadata.phone) ||
+    customers.find(c => (user as any)?.user_metadata?.full_name && c.name?.toLowerCase() === (user as any).user_metadata.full_name.toLowerCase()),
+  [customers, user]);
 
   // ── Auto-Link Profile if missing ──────────────────────────────────────────
   useEffect(() => {
@@ -154,6 +162,38 @@ export default function SupplierDashboard() {
     setRefreshing(true); 
     await Promise.all([refreshData(), fetchCustomerOrders()]); 
     setRefreshing(false); 
+  };
+
+  const handleSettleDebt = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!myAccount) return;
+    const amt = parseFloat(settleAmt);
+    if (!amt || amt <= 0) return;
+
+    setSettling(true);
+    try {
+      const newDebt = Math.max(0, (myAccount.debtBalance || 0) - amt);
+      await supabase.from('customers').update({ debt_balance: newDebt }).eq('id', myAccount.id);
+      
+      const tx = {
+        id: crypto.randomUUID(),
+        date: new Date().toISOString(),
+        customer_id: myAccount.id,
+        seller_id: user?.id,
+        total_price: amt,
+        type: 'Payment',
+        status: 'COMPLETED',
+        origin: 'SUPPLIER_SELF_REMIT'
+      };
+      await supabase.from('transactions').insert([tx]);
+      alert(`Successfully remitted ₦${amt.toLocaleString()} to store.`);
+      setSettleOpen(false);
+      setSettleAmt('');
+      handleRefresh();
+    } catch(err: any) {
+      alert("Error: " + err.message);
+    }
+    setSettling(false);
   };
 
   const fetchCustomerOrders = async () => {
@@ -265,7 +305,10 @@ export default function SupplierDashboard() {
             <motion.div initial={{ opacity:0, y:10 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.1 }}
               style={{ background: hasDebt?'rgba(239,68,68,0.18)':'rgba(16,185,129,0.18)', border:`1px solid ${hasDebt?'rgba(239,68,68,0.35)':'rgba(16,185,129,0.35)'}`, borderRadius:'20px', padding:'18px 20px', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
               <div>
-                <div style={{ fontSize:'10px', fontWeight:800, color:'rgba(255,255,255,0.5)', textTransform:'uppercase', letterSpacing:'0.08em' }}>My Debt Balance</div>
+                <div style={{ fontSize:'10px', fontWeight:800, color:'rgba(255,255,255,0.5)', textTransform:'uppercase', letterSpacing:'0.08em', display:'flex', alignItems:'center', gap:8 }}>
+                   My Debt Balance
+                   {hasDebt && <button onClick={()=>setSettleOpen(true)} style={{background:'#ef4444', color:'#fff', border:'none', padding:'2px 8px', borderRadius:'6px', fontSize:'9px', fontWeight:800, cursor:'pointer', letterSpacing:0}}>Pay Now</button>}
+                </div>
                 <div style={{ fontSize:'30px', fontWeight:900, color: hasDebt?'#fca5a5':'#6ee7b7', letterSpacing:'-0.02em', lineHeight:1.1 }}>
                   {fmt(myAccount?.debtBalance||0)}
                 </div>
@@ -747,6 +790,37 @@ export default function SupplierDashboard() {
           )}
         </div>
       </div>
+
+      {/* MODAL: SETTLE DEBT */}
+      <AnimatePresence>
+        {settleOpen && myAccount && (
+          <div style={{position:'fixed', inset:0, zIndex:1050, display:'flex', alignItems:'center', justifyContent:'center', background:'rgba(0,0,0,0.6)', backdropFilter:'blur(5px)', padding:'20px'}}>
+            <motion.div initial={{scale:0.9, opacity:0}} animate={{scale:1, opacity:1}} exit={{scale:0.95, opacity:0}}
+              style={{background:'#fff', width:'100%', maxWidth:'340px', borderRadius:'16px', display:'flex', flexDirection:'column', overflow:'hidden', boxShadow:'0 10px 40px rgba(0,0,0,0.2)'}}>
+              <div style={{padding:'14px 18px', borderBottom:`1px solid #f1f5f9`, display:'flex', justifyContent:'space-between', alignItems:'center'}}>
+                 <h3 style={{margin:0, fontSize:'15px', fontWeight:800, color:'#0f172a'}}>Remit Payment</h3>
+                 <button onClick={()=>setSettleOpen(false)} style={{background:'#f1f5f9', border:'none', width:'28px', height:'28px', borderRadius:'8px', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', color:'#0f172a'}}><X size={14}/></button>
+              </div>
+              <div style={{padding:'16px'}}>
+                 <div style={{background:'#f8fafc', padding:'12px', borderRadius:'10px', marginBottom:16, border:`1px solid #e2e8f0`}}>
+                    <div style={{fontSize:'11px', color:'#64748b', fontWeight:700, marginBottom:4}}>Current Outstanding Debt</div>
+                    <div style={{fontSize:'16px', color:'#ef4444', fontWeight:800}}>₦{myAccount.debtBalance.toLocaleString()}</div>
+                 </div>
+                 <form onSubmit={handleSettleDebt} style={{display:'flex', flexDirection:'column', gap:12}}>
+                    <div>
+                       <label style={{fontSize: '10px', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', marginBottom: '6px', display: 'block'}}>Amount Paid to Store (₦)</label>
+                       <input type="number" style={{padding: '12px', borderRadius: '10px', border: '1px solid #e2e8f0', background: '#f8fafc', fontSize: '14px', fontWeight: 700, color: '#0f172a', width: '100%', boxSizing: 'border-box'}} placeholder="e.g. 50000" value={settleAmt} onChange={e=>setSettleAmt(e.target.value)} required autoFocus/>
+                    </div>
+                    <button type="submit" disabled={settling} style={{background:'#10b981', color:'#fff', border:'none', borderRadius:'10px', padding:'12px', fontWeight:700, fontSize:'13px', cursor:'pointer', marginTop:8}}>
+                      {settling ? 'Processing...' : 'Confirm Remittance'}
+                    </button>
+                 </form>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
     </AnimatedPage>
   );
 }

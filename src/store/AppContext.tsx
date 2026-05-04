@@ -385,7 +385,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (tx.origin === 'POS_SUPPLIER') {
       // Supplier's Ledger with Bakery (90% wholesale)
       if (tx.sellerId) {
-        const supplier = customers.find(c => c.id === tx.sellerId);
+        const supplier = customers.find(c => c.profile_id === tx.sellerId || c.id === tx.sellerId);
         if (supplier) {
           const wholesaleValue = tx.totalPrice * 0.9;
           updates.push(
