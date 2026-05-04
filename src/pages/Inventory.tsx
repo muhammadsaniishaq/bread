@@ -83,7 +83,7 @@ export const Inventory: React.FC = () => {
     products, processInventoryBatch, 
     recordBakeryPayment, 
     transactions, customers, recordSale, 
-    loading, getPersonalStock 
+    loading, getPersonalStock, refreshData
   } = useAppContext();
   const {  } = useTranslation();
   const navigate = useNavigate();
@@ -256,19 +256,46 @@ export const Inventory: React.FC = () => {
      if (!selectedSK && isSupplier) return alert('Select the Store Keeper receiving this money.');
      setIsProcessing(true);
      try {
-       await recordBakeryPayment({ 
-         id: crypto.randomUUID(), 
-         date: new Date().toISOString(), 
-         amount: parseInt(paymentAmount), 
-         method: paymentMethod, 
-         receiver: storeKeepers.find(sk => sk.id === selectedSK)?.full_name || paymentReceiver,
-          customerId: myId,
-          profileId: user?.id
-        });
+       const amt = parseInt(paymentAmount);
+       if (!amt || amt <= 0) throw new Error('Invalid amount');
+
+       if (isSupplier) {
+         if (!myAccount) throw new Error('Supplier record not found');
+         // Use the new dynamic true debt engine for Suppliers
+         const newDebt = Math.max(0, (myAccount.debtBalance || 0) - amt);
+         await supabase.from('customers').update({ debt_balance: newDebt }).eq('id', myAccount.id);
+         
+         const tx = {
+           id: crypto.randomUUID(),
+           date: new Date().toISOString(),
+           customer_id: myAccount.id,
+           seller_id: user?.id,
+           store_keeper_id: selectedSK,
+           total_price: amt,
+           type: 'Payment',
+           status: 'COMPLETED',
+           origin: 'SUPPLIER_SELF_REMIT'
+         };
+         await supabase.from('transactions').insert([tx]);
+         await refreshData();
+       } else {
+         // Standard Store Keeper / Bakery payment
+         await recordBakeryPayment({ 
+           id: crypto.randomUUID(), 
+           date: new Date().toISOString(), 
+           amount: amt, 
+           method: paymentMethod, 
+           receiver: storeKeepers.find(sk => sk.id === selectedSK)?.full_name || paymentReceiver,
+           customerId: myId,
+           profileId: user?.id
+         });
+       }
+
        alert('Payment recorded successfully.');
        setActiveTab('view');
-     } catch(e) {
-       alert('Failed to record payment');
+       setPaymentAmount('');
+     } catch(e: any) {
+       alert(e.message || 'Failed to record payment');
      } finally {
        setIsProcessing(false);
      }
