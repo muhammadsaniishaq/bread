@@ -513,6 +513,9 @@ Generated via Admin Console.`;
                           <div style={{display:'flex',flexDirection:'column',gap:'4px',marginTop:'10px'}}>
                              {drawer.email && <span style={{color:T.txt2,fontSize:'12px',fontWeight:500}}>Email: {drawer.email}</span>}
                              {drawer.phone && <span style={{color:T.txt2,fontSize:'12px',fontWeight:500}}>Phone: {drawer.phone}</span>}
+                             <span style={{color:T.txt2,fontSize:'12px',fontWeight:500,display:'flex',alignItems:'center',gap:4}}>
+                               Account Manager: <span style={{color:drawer.assignedSupplierId ? T.primary : T.ink, fontWeight:700}}>{suppliers.find(s => s.id === drawer.assignedSupplierId)?.full_name || 'Direct Bakery'}</span>
+                             </span>
                           </div>
 
                           {/* Quick Actions */}

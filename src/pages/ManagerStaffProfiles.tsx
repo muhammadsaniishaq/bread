@@ -9,7 +9,7 @@ import {
   ArrowLeft, Edit2, Download, ChevronRight,
   MessageCircle, BadgeCheck, Activity,
   Phone, Mail, TrendingUp, Key,
-  Camera
+  Camera, Package
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -48,7 +48,7 @@ interface Profile { id:string; full_name:string; phone?:string; email?:string; r
 
 const ManagerStaffProfiles: React.FC = () => {
   useNavigate();
-  const { customers, products, getPersonalStock } = useAppContext();
+  const { customers, products, getPersonalStock, transactions } = useAppContext();
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [custCounts, setCustCounts] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
@@ -184,6 +184,17 @@ const ManagerStaffProfiles: React.FC = () => {
             const assignedCustomers = isSupplier ? customers.filter(c => c.assignedSupplierId === selected.id || (supplierRecord && c.assignedSupplierId === supplierRecord.id)) : [];
             const supplierStock = isSupplier ? products.reduce((acc, p) => acc + getPersonalStock(p.id, 'SUPPLIER', selected.id), 0) : 0;
             
+            const staffTransactions = transactions.filter(t => t.sellerId === selected.id || t.storeKeeperId === selected.id || t.customerId === selected.id).slice(0, 10);
+
+            const permissionsMap: Record<string, string[]> = {
+              MANAGER: ['Full System Access', 'Financial Overrides', 'Staff Management', 'Inventory Control'],
+              SUPPLIER: ['Mobile POS Access', 'Stock Requests', 'Customer Management', 'Route Tracking'],
+              STORE_KEEPER: ['Inventory Management', 'Supplier Dispatch', 'Production Logging'],
+              ADMIN: ['Superuser Access', 'System Settings', 'Role Configuration'],
+              CUSTOMER: ['Client Portal Access', 'Digital Ledger View']
+            };
+            const permissions = permissionsMap[selected.role] || ['Basic Access'];
+
             return (
             <div style={{position:'fixed', inset:0, background:'rgba(15,23,42,0.4)', backdropFilter:'blur(4px)', zIndex:200, display:'flex', flexDirection:'column', justifyContent:'flex-end'}}>
               <motion.div initial={{y:'100%'}} animate={{y:0}} exit={{y:'100%'}} transition={{type:'spring', damping:26, stiffness:300}} style={{background:T.surface, height:'100vh', display:'flex', flexDirection:'column'}}>
@@ -262,6 +273,17 @@ const ManagerStaffProfiles: React.FC = () => {
                               </div>
                             </div>
 
+                            <div style={{display:'flex', gap:8, marginBottom:'16px'}}>
+                              <div style={{background:T.bg, borderRadius:'12px', padding:'14px', flex:1, border:`1px solid ${T.borderL}`}}>
+                                <span style={{fontSize:'10px', fontWeight:800, color:T.txt2, textTransform:'uppercase'}}>Date Joined</span>
+                                <div style={{fontSize:'14px', fontWeight:800, color:T.ink, marginTop:'4px'}}>{new Date(selected.created_at||Date.now()).toLocaleDateString('en-GB', {day:'numeric', month:'short', year:'numeric'})}</div>
+                              </div>
+                              <div style={{background:T.bg, borderRadius:'12px', padding:'14px', flex:1, border:`1px solid ${T.borderL}`}}>
+                                <span style={{fontSize:'10px', fontWeight:800, color:T.txt2, textTransform:'uppercase'}}>Pay Grade</span>
+                                <div style={{fontSize:'14px', fontWeight:800, color:T.ink, marginTop:'4px'}}>Tier {selected.role === 'MANAGER' ? '1' : selected.role === 'ADMIN' ? 'S' : '3'}</div>
+                              </div>
+                            </div>
+
                             <div style={{display:'flex', gap:8}}>
                               <div style={{background:T.bg, borderRadius:'12px', padding:'14px', flex:1, border:`1px solid ${T.borderL}`}}>
                                 <div style={{width:32, height:32, borderRadius:'10px', background:T.surface, display:'flex', alignItems:'center', justifyContent:'center', marginBottom:8, boxShadow:T.shadow}}><Activity size={16} color={T.primary}/></div>
@@ -316,47 +338,67 @@ const ManagerStaffProfiles: React.FC = () => {
                         {dTab === 'activity' && (
                           <motion.div initial={{opacity:0}} animate={{opacity:1}}>
                             <div style={{display:'flex', flexDirection:'column', gap:'12px'}}>
-                               <div style={{display:'flex', alignItems:'flex-start', gap:'12px', padding:'12px', background:T.surface2, borderRadius:'12px', border:`1px solid ${T.borderL}`}}>
-                                  <div style={{background:T.successLt, padding:'8px', borderRadius:'50%'}}><Key size={14} color={T.success}/></div>
-                                  <div>
-                                     <div style={{fontSize:'13px', fontWeight:700, color:T.ink}}>System Login</div>
-                                     <div style={{fontSize:'11px', color:T.txt3, marginTop:2}}>Today, 08:42 AM</div>
+                               {staffTransactions.length === 0 ? (
+                                  <div style={{padding:'30px', textAlign:'center', color:T.txt3}}>
+                                     <Activity size={32} style={{opacity:0.2, marginBottom:10}}/>
+                                     <div style={{fontSize:'13px', fontWeight:600}}>No recent activity found.</div>
                                   </div>
-                               </div>
-                               <div style={{display:'flex', alignItems:'flex-start', gap:'12px', padding:'12px', background:T.surface2, borderRadius:'12px', border:`1px solid ${T.borderL}`}}>
-                                  <div style={{background:T.primaryLt, padding:'8px', borderRadius:'50%'}}><Activity size={14} color={T.primary}/></div>
-                                  <div>
-                                     <div style={{fontSize:'13px', fontWeight:700, color:T.ink}}>Assigned new customer</div>
-                                     <div style={{fontSize:'11px', color:T.txt3, marginTop:2}}>Yesterday, 14:15 PM</div>
-                                  </div>
-                               </div>
-                               <div style={{display:'flex', alignItems:'flex-start', gap:'12px', padding:'12px', background:T.surface2, borderRadius:'12px', border:`1px solid ${T.borderL}`}}>
-                                  <div style={{background:T.primaryLt, padding:'8px', borderRadius:'50%'}}><Edit2 size={14} color={T.primary}/></div>
-                                  <div>
-                                     <div style={{fontSize:'13px', fontWeight:700, color:T.ink}}>Updated profile details</div>
-                                     <div style={{fontSize:'11px', color:T.txt3, marginTop:2}}>Last Week</div>
-                                  </div>
-                               </div>
+                               ) : staffTransactions.map(tx => {
+                                  const d = new Date(tx.date);
+                                  const isSale = tx.type === 'Cash' || tx.type === 'Debt';
+                                  const isInventory = tx.origin === 'STORE' && !isSale;
+                                  const Icon = isSale ? TrendingUp : isInventory ? Package : Activity;
+                                  const color = isSale ? T.success : isInventory ? T.primary : T.warn;
+                                  return (
+                                    <div key={tx.id} style={{display:'flex', alignItems:'flex-start', gap:'12px', padding:'12px', background:T.surface2, borderRadius:'12px', border:`1px solid ${T.borderL}`}}>
+                                        <div style={{background:`${color}20`, padding:'8px', borderRadius:'50%'}}><Icon size={14} color={color}/></div>
+                                        <div style={{flex:1}}>
+                                           <div style={{fontSize:'13px', fontWeight:700, color:T.ink}}>
+                                              {isSale ? 'Processed Sale' : tx.type === 'Return' ? 'Stock Return' : 'Transaction'}
+                                           </div>
+                                           <div style={{fontSize:'11px', color:T.txt3, marginTop:2}}>{d.toLocaleDateString()} {d.toLocaleTimeString()}</div>
+                                        </div>
+                                        <div style={{textAlign:'right'}}>
+                                           <div style={{fontSize:'13px', fontWeight:800, color:T.ink}}>₦{tx.totalPrice.toLocaleString()}</div>
+                                           <div style={{fontSize:'9px', fontWeight:800, color:color, textTransform:'uppercase'}}>{tx.status}</div>
+                                        </div>
+                                    </div>
+                                  );
+                               })}
                             </div>
                           </motion.div>
                         )}
 
                         {dTab === 'security' && (
                           <motion.div initial={{opacity:0}} animate={{opacity:1}}>
-                             <div style={{background:T.surface2, borderRadius:'12px', padding:'16px', border:`1px solid ${T.borderL}`}}>
+                             <div style={{background:T.surface2, borderRadius:'12px', padding:'16px', border:`1px solid ${T.borderL}`, marginBottom:'16px'}}>
                                 <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:12}}>
                                    <span style={{fontSize:'13px', fontWeight:700, color:T.ink}}>Account Status</span>
                                    <span style={{background:T.successLt, color:T.textSuccess, padding:'4px 8px', borderRadius:'6px', fontSize:'10px', fontWeight:800}}>VERIFIED</span>
                                 </div>
                                 <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:12}}>
-                                   <span style={{fontSize:'13px', fontWeight:700, color:T.ink}}>Two-Factor Auth</span>
-                                   <span style={{background:T.dangerLt, color:T.textDanger, padding:'4px 8px', borderRadius:'6px', fontSize:'10px', fontWeight:800}}>DISABLED</span>
+                                   <span style={{fontSize:'13px', fontWeight:700, color:T.ink}}>System Pin Access</span>
+                                   <span style={{background:T.dangerLt, color:T.textDanger, padding:'4px 8px', borderRadius:'6px', fontSize:'10px', fontWeight:800}}>REQUIRES RESET</span>
                                 </div>
                                 <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', paddingTop:12, borderTop:`1px solid ${T.borderL}`}}>
                                    <span style={{fontSize:'11px', fontWeight:600, color:T.txt3}}>Member Since</span>
                                    <span style={{fontSize:'12px', fontWeight:700, color:T.ink}}>{new Date(selected.created_at||Date.now()).toLocaleDateString()}</span>
                                 </div>
                              </div>
+
+                             <h3 style={{fontSize:'12px', fontWeight:800, color:T.ink, margin:'0 0 10px'}}>System Permissions</h3>
+                             <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:8}}>
+                               {permissions.map((perm, i) => (
+                                 <div key={i} style={{background:T.surface, padding:'10px', borderRadius:'8px', border:`1px solid ${T.borderL}`, display:'flex', alignItems:'center', gap:8}}>
+                                    <BadgeCheck size={14} color={T.primary}/>
+                                    <span style={{fontSize:'11px', fontWeight:600, color:T.ink}}>{perm}</span>
+                                 </div>
+                               ))}
+                             </div>
+
+                             <button style={{width:'100%', marginTop:'16px', padding:'12px', background:T.surface, border:`1px solid ${T.borderL}`, borderRadius:'10px', color:T.ink, fontWeight:700, fontSize:'12px', display:'flex', justifyContent:'center', alignItems:'center', gap:6, cursor:'pointer', boxShadow:T.shadow}}>
+                                <Key size={14}/> Force Password Reset
+                             </button>
                           </motion.div>
                         )}
 
@@ -395,13 +437,16 @@ const ManagerStaffProfiles: React.FC = () => {
                          <span style={{fontSize:'10px', color:T.txt3, marginTop:8, fontWeight:600}}>Tap to upload photo</span>
                       </div>
 
-                      <div><label style={labelStyle}>Full Name</label><input style={inpStyle} value={addOpen?aForm.full_name:eForm.full_name} onChange={e=>addOpen?setAForm({...aForm,full_name:e.target.value}):setEForm({...eForm,full_name:e.target.value})} required/></div>
                       <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:12}}>
-                        <div><label style={labelStyle}>Phone</label><input style={inpStyle} value={addOpen?aForm.phone:eForm.phone} onChange={e=>addOpen?setAForm({...aForm,phone:e.target.value}):setEForm({...eForm,phone:e.target.value})}/></div>
-                        <div><label style={labelStyle}>Username</label><input style={inpStyle} value={addOpen?aForm.username:eForm.username} onChange={e=>addOpen?setAForm({...aForm,username:e.target.value.toLowerCase()}):setEForm({...eForm,username:e.target.value.toLowerCase()})}/></div>
+                        <div><label style={labelStyle}>Full Name</label><input style={inpStyle} value={addOpen?aForm.full_name:eForm.full_name} onChange={e=>addOpen?setAForm({...aForm,full_name:e.target.value}):setEForm({...eForm,full_name:e.target.value})} required/></div>
+                        <div><label style={labelStyle}>Email Address</label><input type="email" style={inpStyle} value={addOpen?aForm.email:eForm.email} onChange={e=>addOpen?setAForm({...aForm,email:e.target.value}):setEForm({...eForm,email:e.target.value})}/></div>
+                      </div>
+                      <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:12}}>
+                        <div><label style={labelStyle}>Phone Number</label><input style={inpStyle} value={addOpen?aForm.phone:eForm.phone} onChange={e=>addOpen?setAForm({...aForm,phone:e.target.value}):setEForm({...eForm,phone:e.target.value})}/></div>
+                        <div><label style={labelStyle}>System Username</label><input style={inpStyle} value={addOpen?aForm.username:eForm.username} onChange={e=>addOpen?setAForm({...aForm,username:e.target.value.toLowerCase()}):setEForm({...eForm,username:e.target.value.toLowerCase()})}/></div>
                       </div>
                       <div>
-                        <label style={labelStyle}>Staff Role</label>
+                        <label style={labelStyle}>Administrative Role</label>
                         <select style={inpStyle} value={addOpen?aForm.role:eForm.role} onChange={e=>addOpen?setAForm({...aForm,role:e.target.value}):setEForm({...eForm,role:e.target.value})}>
                           {Object.entries(ROLES).map(([k,v])=><option key={k} value={k}>{v.label}</option>)}
                         </select>
