@@ -15,6 +15,32 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
+/* ─── Premium Design Tokens ─── */
+const T = {
+  bg: '#f8fafc',
+  surface: '#ffffff',
+  surface2: '#f1f5f9',
+  border: '#e2e8f0',
+  accent: '#4f46e5',
+  accentLt: '#eef2ff',
+  success: '#10b981',
+  successLt: '#dcfce7',
+  danger: '#ef4444',
+  dangerLt: '#fee2e2',
+  warn: '#f59e0b',
+  warnLt: '#fef3c7',
+  textSuccess: '#166534',
+  textWarn: '#92400e',
+  ink: '#0f172a',
+  txt2: '#475569',
+  txt3: '#94a3b8',
+  shadow: '0 1px 3px rgba(0,0,0,0.05), 0 10px 15px -3px rgba(0,0,0,0.02)',
+  shadowMd: '0 10px 25px -5px rgba(0,0,0,0.08)',
+  shadowLg: '0 20px 50px -12px rgba(0,0,0,0.1)',
+  radius: '16px',
+  radiusLg: '24px',
+};
+
 const fmt = (v: number) => '₦' + (v || 0).toLocaleString();
 
 const fadeUp = {
@@ -23,34 +49,17 @@ const fadeUp = {
 };
 
 const STATUS: Record<string, { label: string; color: string; bg: string; Icon: any }> = {
-  COMPLETED:        { label: 'Done',      color: '#10b981', bg: 'rgba(16,185,129,0.12)',  Icon: CheckCircle2 },
-  PENDING_STORE:    { label: 'Pending',   color: '#f59e0b', bg: 'rgba(245,158,11,0.12)', Icon: Hourglass },
-  PENDING_SUPPLIER: { label: 'Pending',   color: '#f59e0b', bg: 'rgba(245,158,11,0.12)', Icon: Hourglass },
-  CANCELLED:        { label: 'Cancelled', color: '#ef4444', bg: 'rgba(239,68,68,0.12)',  Icon: XCircle },
+  COMPLETED:        { label: 'Done',      color: T.success, bg: T.successLt,  Icon: CheckCircle2 },
+  PENDING_STORE:    { label: 'Pending',   color: T.warn,    bg: T.warnLt,     Icon: Hourglass },
+  PENDING_SUPPLIER: { label: 'Pending',   color: T.warn,    bg: T.warnLt,     Icon: Hourglass },
+  CANCELLED:        { label: 'Cancelled', color: T.danger,  bg: T.dangerLt,   Icon: XCircle },
 };
 
 const getVerificationStatus = (c: any) => {
-  if (c.is_verified) return { icon: ShieldCheck, color: '#10b981', label: 'Verified' };
-  if (c.phone && c.pin) return { icon: Shield, color: '#f59e0b', label: 'Tantancewa' };
-  return { icon: ShieldAlert, color: '#ef4444', label: 'Unverified' };
+  if (c.is_verified) return { icon: ShieldCheck, color: T.success, label: 'Verified' };
+  if (c.phone && c.pin) return { icon: Shield, color: T.warn, label: 'Tantancewa' };
+  return { icon: ShieldAlert, color: T.danger, label: 'Unverified' };
 };
-
-const Card: React.FC<{ children: React.ReactNode; style?: React.CSSProperties; onClick?: () => void }> = ({ children, style, onClick }) => (
-  <motion.div 
-    whileTap={onClick ? { scale: 0.98 } : undefined}
-    onClick={onClick}
-    style={{
-      background: '#ffffff',
-      border: '1px solid rgba(0,0,0,0.05)',
-      borderRadius: '24px',
-      padding: '16px',
-      boxShadow: '0 4px 24px rgba(0,0,0,0.06)',
-      ...style
-    }}
-  >
-    {children}
-  </motion.div>
-);
 
 export default function SupplierDashboard() {
   const { 
@@ -154,9 +163,9 @@ export default function SupplierDashboard() {
   /* ── Greeting ───────────────────────────────────────────────────────────── */
   const greeting = useMemo(() => {
     const h = new Date().getHours();
-    if (h < 12) return { text: 'Good Morning',   emoji: '🌅', grad: 'linear-gradient(135deg,#f97316,#fbbf24)' };
-    if (h < 17) return { text: 'Good Afternoon', emoji: '☀️', grad: 'linear-gradient(135deg,#6366f1,#60a5fa)' };
-    return              { text: 'Good Evening',   emoji: '🌙', grad: 'linear-gradient(135deg,#9333ea,#818cf8)' };
+    if (h < 12) return { text: 'Good Morning',   emoji: '🌅' };
+    if (h < 17) return { text: 'Good Afternoon', emoji: '☀️' };
+    return              { text: 'Good Evening',   emoji: '🌙' };
   }, []);
 
   const handleRefresh = async () => { 
@@ -249,6 +258,7 @@ export default function SupplierDashboard() {
       alert("Error: " + e.message);
     }
   };
+  
   const getProductName = (id?: string) => products.find(p=>p.id===id)?.name||'Product';
 
   const firstName = (myAccount?.name || user?.email || 'Supplier').split(' ')[0];
@@ -258,107 +268,101 @@ export default function SupplierDashboard() {
   ───────────────────────────────────────────────────────────────────────── */
   return (
     <AnimatedPage>
-      <div style={{ minHeight:'100vh', background:'#f0f2f8', paddingBottom:'110px', fontFamily:"'Inter',system-ui,sans-serif" }}>
+      <div style={{ minHeight:'100vh', background: T.bg, paddingBottom:'110px', fontFamily:"'Inter',system-ui,sans-serif" }}>
 
-        {/* ══ HERO ══ */}
-        <div style={{ background:'linear-gradient(158deg,#1a0533 0%,#3b0764 35%,#4f46e5 75%,#6366f1 100%)', padding:'48px 20px 90px', position:'relative', overflow:'hidden' }}>
-          {/* BG orbs */}
-          <div style={{ position:'absolute', top:'-80px', right:'-60px', width:'280px', height:'280px', borderRadius:'50%', background:'radial-gradient(circle,rgba(139,92,246,0.4) 0%,transparent 70%)', pointerEvents:'none' }}/>
-          <div style={{ position:'absolute', bottom:'-100px', left:'-80px', width:'320px', height:'320px', borderRadius:'50%', background:'radial-gradient(circle,rgba(79,70,229,0.3) 0%,transparent 70%)', pointerEvents:'none' }}/>
-          <div style={{ position:'absolute', top:'40px', left:'40%', width:'150px', height:'150px', borderRadius:'50%', background:'radial-gradient(circle,rgba(99,102,241,0.2) 0%,transparent 70%)', pointerEvents:'none' }}/>
+        {/* ══ PREMIUM HERO ══ */}
+        <div style={{ background: T.ink, padding: '48px 20px 48px', position: 'relative', overflow: 'hidden' }}>
+          {/* Subtle Glows */}
+          <div style={{ position: 'absolute', top: '-100px', right: '-100px', width: '300px', height: '300px', borderRadius: '50%', background: 'radial-gradient(circle, rgba(79,70,229,0.3) 0%, transparent 70%)', pointerEvents: 'none' }} />
+          <div style={{ position: 'absolute', bottom: '-50px', left: '-50px', width: '200px', height: '200px', borderRadius: '50%', background: 'radial-gradient(circle, rgba(16,185,129,0.15) 0%, transparent 70%)', pointerEvents: 'none' }} />
 
-          <div style={{ position:'relative', zIndex:10 }}>
-            {/* Top row */}
-            <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:'24px' }}>
+          <div style={{ position: 'relative', zIndex: 10 }}>
+            {/* Top Row */}
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '24px' }}>
               <div>
-                <div style={{ fontSize:'11px', fontWeight:700, color:'rgba(255,255,255,0.4)', textTransform:'uppercase', letterSpacing:'0.1em', marginBottom:'5px' }}>
-                  {new Date().toLocaleDateString('en-NG',{weekday:'long',day:'numeric',month:'long'})}
+                <div style={{ fontSize: '11px', fontWeight: 800, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '6px' }}>
+                  {new Date().toLocaleDateString('en-NG', { weekday: 'long', day: 'numeric', month: 'long' })}
                 </div>
-                <h1 style={{ fontSize:'22px', fontWeight:900, color:'#fff', margin:0, letterSpacing:'-0.02em', lineHeight:1.2 }}>
-                  <span style={{ background:greeting.grad, WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent' }}>
-                    {greeting.text}
-                  </span>{' '}{greeting.emoji}
+                <h1 style={{ fontSize: '24px', fontWeight: 900, color: '#fff', margin: 0, letterSpacing: '-0.02em' }}>
+                  {greeting.text} {greeting.emoji}
                 </h1>
-                <div style={{ fontSize: '13px', fontWeight: 700, color: 'rgba(255,255,255,0.55)', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <div style={{ fontSize: '13px', fontWeight: 600, color: 'rgba(255,255,255,0.6)', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                   {firstName}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '3px', background: 'rgba(16,185,129,0.2)', padding: '2px 6px', borderRadius: '6px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'rgba(16,185,129,0.15)', padding: '2px 8px', borderRadius: '8px', border: '1px solid rgba(16,185,129,0.3)' }}>
                     <ShieldCheck size={10} color="#10b981" />
-                    <span style={{ fontSize: '9px', fontWeight: 800, color: '#10b981', textTransform: 'uppercase' }}>Fully Verified</span>
+                    <span style={{ fontSize: '9px', fontWeight: 800, color: '#10b981', textTransform: 'uppercase' }}>Verified</span>
                   </div>
                 </div>
               </div>
-              <div style={{ display:'flex', gap:'10px', alignItems:'center' }}>
+              
+              <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
                 {pendingTxns.length > 0 && (
-                  <motion.div animate={{ scale:[1,1.15,1] }} transition={{ repeat:Infinity, duration:2 }}
-                    style={{ width:'10px', height:'10px', borderRadius:'50%', background:'#fbbf24', boxShadow:'0 0 12px rgba(251,191,36,0.7)' }}
+                  <motion.div animate={{ scale: [1, 1.2, 1] }} transition={{ repeat: Infinity, duration: 2 }}
+                    style={{ width: '8px', height: '8px', borderRadius: '50%', background: T.warn, boxShadow: `0 0 12px ${T.warn}` }}
                   />
                 )}
-                <motion.button whileTap={{ scale:0.88 }} onClick={handleRefresh}
-                  style={{ width:'42px', height:'42px', borderRadius:'14px', background:'rgba(255,255,255,0.12)', border:'1px solid rgba(255,255,255,0.18)', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer' }}>
-                  <motion.div animate={{ rotate: refreshing ? 360 : 0 }} transition={{ duration:1, repeat:refreshing?Infinity:0, ease:'linear' }}>
-                    <RefreshCw size={17} color="#fff" />
+                <motion.button whileTap={{ scale: 0.9 }} onClick={handleRefresh}
+                  style={{ width: '40px', height: '40px', borderRadius: '12px', background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                  <motion.div animate={{ rotate: refreshing ? 360 : 0 }} transition={{ duration: 1, repeat: refreshing ? Infinity : 0, ease: 'linear' }}>
+                    <RefreshCw size={18} color="#fff" />
                   </motion.div>
                 </motion.button>
               </div>
             </div>
 
-            {/* Debt / Balance Pill */}
-            <motion.div initial={{ opacity:0, y:10 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.1 }}
-              style={{ background: hasDebt?'rgba(239,68,68,0.18)':'rgba(16,185,129,0.18)', border:`1px solid ${hasDebt?'rgba(239,68,68,0.35)':'rgba(16,185,129,0.35)'}`, borderRadius:'20px', padding:'18px 20px', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+            {/* Premium Debt Card inside Hero */}
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
+              style={{ background: hasDebt ? 'rgba(239,68,68,0.15)' : 'rgba(16,185,129,0.15)', border: `1px solid ${hasDebt ? 'rgba(239,68,68,0.3)' : 'rgba(16,185,129,0.3)'}`, borderRadius: '24px', padding: '20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', backdropFilter: 'blur(10px)' }}>
               <div>
-                <div style={{ fontSize:'10px', fontWeight:800, color:'rgba(255,255,255,0.5)', textTransform:'uppercase', letterSpacing:'0.08em', display:'flex', alignItems:'center', gap:8 }}>
+                <div style={{ fontSize: '10px', fontWeight: 800, color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: '0.1em', display: 'flex', alignItems: 'center', gap: '8px' }}>
                    My Debt Balance
-                   {hasDebt && <button onClick={()=>setSettleOpen(true)} style={{background:'#ef4444', color:'#fff', border:'none', padding:'2px 8px', borderRadius:'6px', fontSize:'9px', fontWeight:800, cursor:'pointer', letterSpacing:0}}>Pay Now</button>}
+                   {hasDebt && <button onClick={() => setSettleOpen(true)} style={{ background: T.danger, color: '#fff', border: 'none', padding: '4px 10px', borderRadius: '8px', fontSize: '9px', fontWeight: 800, cursor: 'pointer', letterSpacing: '0.05em' }}>PAY NOW</button>}
                 </div>
-                <div style={{ fontSize:'30px', fontWeight:900, color: hasDebt?'#fca5a5':'#6ee7b7', letterSpacing:'-0.02em', lineHeight:1.1 }}>
+                <div style={{ fontSize: '32px', fontWeight: 900, color: hasDebt ? '#fca5a5' : '#6ee7b7', letterSpacing: '-0.02em', marginTop: '4px' }}>
                   {fmt(myDebt)}
                 </div>
-                <div style={{ fontSize:'11px', color:'rgba(255,255,255,0.4)', fontWeight:600, marginTop:'3px' }}>
-                  {hasDebt ? 'Settle with store to reduce balance' : 'No outstanding debt — great! 🎉'}
-                </div>
               </div>
-              <div style={{ width:'52px', height:'52px', borderRadius:'18px', background: hasDebt?'rgba(239,68,68,0.2)':'rgba(16,185,129,0.2)', display:'flex', alignItems:'center', justifyContent:'center' }}>
-                <AlertTriangle size={24} color={hasDebt?'#fca5a5':'#6ee7b7'} />
+              <div style={{ width: '48px', height: '48px', borderRadius: '14px', background: hasDebt ? 'rgba(239,68,68,0.2)' : 'rgba(16,185,129,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <AlertTriangle size={24} color={hasDebt ? '#fca5a5' : '#6ee7b7'} />
               </div>
             </motion.div>
           </div>
         </div>
 
-        <div style={{ padding:'0 16px', marginTop:'-48px', position:'relative', zIndex:20 }}>
+        <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '20px', marginTop: '-20px', position: 'relative', zIndex: 20 }}>
 
           {/* ══ 4 STAT BENTO ══ */}
-          <motion.div variants={fadeUp} initial="hidden" animate="show" style={{ display:'grid', gridTemplateColumns:'repeat(2,1fr)', gap:'10px', marginBottom:'12px' }}>
+          <motion.div variants={fadeUp} initial="hidden" animate="show" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
             {[
-              { label:'Today Sales',   val:fmt(todaySales),          icon:Wallet,     color:'#10b981', bg:'rgba(16,185,129,0.1)',   trend: salesChange },
-              { label:'My Stock',      val:`${totalStock} units`,    icon:Package,    color:'#4f46e5', bg:'rgba(79,70,229,0.1)',    trend: null },
-              { label:'Dispatched',    val:fmt(totalDispatched),     icon:TrendingUp, color:'#8b5cf6', bg:'rgba(139,92,246,0.1)',   trend: null },
-              { label:'Pending',       val:String(pendingTxns.length), icon:Hourglass, color:'#f59e0b', bg:'rgba(245,158,11,0.1)', trend: null },
-            ].map((s,i) => (
-              <motion.div key={i} whileTap={{ scale:0.97 }}
-                style={{ background:'#fff', borderRadius:'22px', padding:'16px', boxShadow:'0 4px 24px rgba(0,0,0,0.07)', border:'1px solid rgba(0,0,0,0.05)' }}>
-                <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'10px' }}>
-                  <div style={{ width:'38px', height:'38px', borderRadius:'12px', background:s.bg, display:'flex', alignItems:'center', justifyContent:'center', color:s.color }}>
-                    <s.icon size={18} strokeWidth={2.2} />
+              { label: 'Today Sales',   val: fmt(todaySales),          icon: Wallet,     color: T.success, bg: T.successLt,   trend: salesChange },
+              { label: 'My Stock',      val: `${totalStock} units`,    icon: Package,    color: T.accent,  bg: T.accentLt,    trend: null },
+              { label: 'Dispatched',    val: fmt(totalDispatched),     icon: TrendingUp, color: '#8b5cf6', bg: 'rgba(139,92,246,0.1)', trend: null },
+              { label: 'Pending',       val: String(pendingTxns.length), icon: Hourglass, color: T.warn,   bg: T.warnLt,      trend: null },
+            ].map((s, i) => (
+              <motion.div key={i} whileTap={{ scale: 0.97 }} style={{ background: T.surface, borderRadius: '24px', padding: '16px', boxShadow: T.shadow, border: `1px solid ${T.border}` }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+                  <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: s.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', color: s.color }}>
+                    <s.icon size={18} strokeWidth={2.5} />
                   </div>
                   {s.trend !== null && (
-                    <div style={{ display:'flex', alignItems:'center', gap:'3px', padding:'3px 7px', borderRadius:'8px', background: s.trend>=0?'rgba(16,185,129,0.1)':'rgba(239,68,68,0.1)', color: s.trend>=0?'#10b981':'#ef4444', fontSize:'10px', fontWeight:800 }}>
-                      {s.trend >= 0 ? <ArrowUpRight size={11}/> : <ArrowDownRight size={11}/>}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '2px', padding: '4px 8px', borderRadius: '8px', background: s.trend >= 0 ? T.successLt : T.dangerLt, color: s.trend >= 0 ? T.success : T.danger, fontSize: '10px', fontWeight: 800 }}>
+                      {s.trend >= 0 ? <ArrowUpRight size={12}/> : <ArrowDownRight size={12}/>}
                       {Math.abs(s.trend).toFixed(0)}%
                     </div>
                   )}
                 </div>
-                <div style={{ fontSize:'18px', fontWeight:900, color:'#0f172a', letterSpacing:'-0.02em', lineHeight:1 }}>{s.val}</div>
-                <div style={{ fontSize:'10px', fontWeight:700, color:'#94a3b8', textTransform:'uppercase', letterSpacing:'0.05em', marginTop:'4px' }}>{s.label}</div>
+                <div style={{ fontSize: '18px', fontWeight: 900, color: T.ink, letterSpacing: '-0.02em', lineHeight: 1 }}>{s.val}</div>
+                <div style={{ fontSize: '10px', fontWeight: 800, color: T.txt3, textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: '6px' }}>{s.label}</div>
               </motion.div>
             ))}
           </motion.div>
 
           {/* ══ SECTION TABS ══ */}
-          <div style={{ background:'rgba(255,255,255,0.9)', backdropFilter:'blur(12px)', borderRadius:'16px', padding:'4px', display:'flex', gap:'4px', marginBottom:'12px', boxShadow:'0 2px 12px rgba(0,0,0,0.05)' }}>
-            {(['overview','stock','orders','activity'] as const).map(s => (
+          <div style={{ background: T.surface2, borderRadius: '16px', padding: '6px', display: 'flex', gap: '6px', overflowX: 'auto', WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+            {(['overview', 'stock', 'orders', 'activity'] as const).map(s => (
               <button key={s} onClick={() => setSection(s)}
-                style={{ flex:1, padding:'9px 4px', borderRadius:'12px', border:'none', cursor:'pointer', fontSize:'10px', fontWeight:800, textTransform:'uppercase', letterSpacing:'0.04em', transition:'all 0.2s', background: activeSection===s?'#4f46e5':'transparent', color: activeSection===s?'#fff':'#94a3b8' }}>
-                {s === 'overview' ? 'Overview' : s === 'stock' ? 'Stock' : s === 'orders' ? 'Orders' : 'Activity'}
+                style={{ flex: 1, minWidth: '80px', padding: '10px 12px', borderRadius: '12px', border: 'none', cursor: 'pointer', fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', transition: 'all 0.2s', background: activeSection === s ? T.ink : 'transparent', color: activeSection === s ? '#fff' : T.txt3 }}>
+                {s}
               </button>
             ))}
           </div>
@@ -367,175 +371,144 @@ export default function SupplierDashboard() {
 
             {/* ══════════ OVERVIEW ══════════ */}
             {activeSection === 'overview' && (
-              <motion.div key="overview" initial={{ opacity:0 }} animate={{ opacity:1 }} exit={{ opacity:0 }}>
+              <motion.div key="overview" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+
+                {/* Quick Actions Bento */}
+                <motion.div variants={fadeUp} initial="hidden" animate="show" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <motion.button whileTap={{ scale: 0.95 }} onClick={() => navigate('/sales')}
+                    style={{ background: T.accent, border: 'none', borderRadius: '24px', padding: '20px', cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: '16px', boxShadow: `0 8px 24px ${T.accentLt}`, alignItems: 'flex-start' }}>
+                    <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <ShoppingCart size={20} color="#fff" />
+                    </div>
+                    <div style={{ textAlign: 'left' }}>
+                      <div style={{ fontSize: '14px', fontWeight: 900, color: '#fff' }}>New Sale</div>
+                      <div style={{ fontSize: '11px', fontWeight: 600, color: 'rgba(255,255,255,0.7)' }}>Record transaction</div>
+                    </div>
+                  </motion.button>
+
+                  <motion.button whileTap={{ scale: 0.95 }} onClick={() => navigate('/inventory')}
+                    style={{ background: T.ink, border: 'none', borderRadius: '24px', padding: '20px', cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: '16px', boxShadow: T.shadowMd, alignItems: 'flex-start' }}>
+                    <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: 'rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <Package size={20} color="#fff" />
+                    </div>
+                    <div style={{ textAlign: 'left' }}>
+                      <div style={{ fontSize: '14px', fontWeight: 900, color: '#fff' }}>Stock Request</div>
+                      <div style={{ fontSize: '11px', fontWeight: 600, color: 'rgba(255,255,255,0.6)' }}>Get bread from store</div>
+                    </div>
+                  </motion.button>
+
+                  <motion.button whileTap={{ scale: 0.95 }} onClick={() => navigate('/customers')}
+                    style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: '24px', padding: '20px', cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: '16px', boxShadow: T.shadow, alignItems: 'flex-start' }}>
+                    <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: T.successLt, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <Users size={20} color={T.success} />
+                    </div>
+                    <div style={{ textAlign: 'left' }}>
+                      <div style={{ fontSize: '14px', fontWeight: 900, color: T.ink }}>My Clients</div>
+                      <div style={{ fontSize: '11px', fontWeight: 700, color: T.txt3 }}>{myCustomers.length} assigned</div>
+                    </div>
+                  </motion.button>
+
+                  <motion.button whileTap={{ scale: 0.95 }} onClick={() => navigate('/expenses')}
+                    style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: '24px', padding: '20px', cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: '16px', boxShadow: T.shadow, alignItems: 'flex-start' }}>
+                    <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: T.warnLt, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <Target size={20} color={T.warn} />
+                    </div>
+                    <div style={{ textAlign: 'left' }}>
+                      <div style={{ fontSize: '14px', fontWeight: 900, color: T.ink }}>Spend Tracker</div>
+                      <div style={{ fontSize: '11px', fontWeight: 700, color: T.txt3 }}>View expenses</div>
+                    </div>
+                  </motion.button>
+                </motion.div>
 
                 {/* Weekly Sales Chart */}
                 <motion.div variants={fadeUp} initial="hidden" animate="show"
-                  style={{ background:'#fff', borderRadius:'24px', padding:'20px', boxShadow:'0 4px 24px rgba(0,0,0,0.06)', border:'1px solid rgba(0,0,0,0.04)', marginBottom:'12px' }}>
-                  <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'16px' }}>
-                    <div style={{ display:'flex', alignItems:'center', gap:'10px' }}>
-                      <div style={{ width:'32px', height:'32px', borderRadius:'10px', background:'rgba(79,70,229,0.08)', display:'flex', alignItems:'center', justifyContent:'center', color:'#4f46e5' }}>
-                        <BarChart3 size={16} />
+                  style={{ background: T.surface, borderRadius: '28px', padding: '24px', boxShadow: T.shadow, border: `1px solid ${T.border}` }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: T.accentLt, display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.accent }}>
+                        <BarChart3 size={18} />
                       </div>
                       <div>
-                        <div style={{ fontSize:'13px', fontWeight:900, color:'#0f172a' }}>Weekly Sales</div>
-                        <div style={{ fontSize:'10px', fontWeight:600, color:'#94a3b8' }}>Last 7 days performance</div>
+                        <div style={{ fontSize: '14px', fontWeight: 900, color: T.ink }}>Weekly Sales</div>
+                        <div style={{ fontSize: '11px', fontWeight: 600, color: T.txt3 }}>Last 7 days performance</div>
                       </div>
                     </div>
-                    <div style={{ textAlign:'right' }}>
-                      <div style={{ fontSize:'16px', fontWeight:900, color:'#4f46e5' }}>{fmt(weekSales.reduce((s,d)=>s+d.val,0))}</div>
-                      <div style={{ fontSize:'9px', fontWeight:700, color:'#94a3b8', textTransform:'uppercase' }}>7-day total</div>
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ fontSize: '18px', fontWeight: 900, color: T.accent }}>{fmt(weekSales.reduce((s,d)=>s+d.val,0))}</div>
+                      <div style={{ fontSize: '9px', fontWeight: 800, color: T.txt3, textTransform: 'uppercase' }}>7-day total</div>
                     </div>
                   </div>
                   {/* Bar chart */}
-                  <div style={{ display:'flex', alignItems:'flex-end', gap:'6px', height:'80px' }}>
+                  <div style={{ display: 'flex', alignItems: 'flex-end', gap: '8px', height: '100px' }}>
                     {weekSales.map((d, i) => {
                       const pct = weekMax > 0 ? (d.val / weekMax) * 100 : 0;
                       const isToday = i === 6;
                       return (
-                        <div key={i} style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', gap:'4px', height:'100%' }}>
-                          <div style={{ flex:1, width:'100%', display:'flex', alignItems:'flex-end' }}>
+                        <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', height: '100%' }}>
+                          <div style={{ flex: 1, width: '100%', display: 'flex', alignItems: 'flex-end', background: T.surface2, borderRadius: '6px', overflow: 'hidden' }}>
                             <motion.div
-                              initial={{ height:0 }} animate={{ height:`${Math.max(pct,4)}%` }}
-                              transition={{ delay: i*0.06, type:'spring', stiffness:200, damping:20 }}
-                              style={{ width:'100%', borderRadius:'6px 6px 4px 4px', background: isToday ? 'linear-gradient(180deg,#4f46e5,#6366f1)' : 'rgba(79,70,229,0.15)', boxShadow: isToday?'0 4px 12px rgba(79,70,229,0.3)':'none' }}
+                              initial={{ height: 0 }} animate={{ height: `${Math.max(pct, 5)}%` }}
+                              transition={{ delay: i * 0.06, type: 'spring', stiffness: 200, damping: 20 }}
+                              style={{ width: '100%', borderRadius: '6px', background: isToday ? T.accent : T.txt3 }}
                             />
                           </div>
-                          <div style={{ fontSize:'8px', fontWeight: isToday?900:600, color: isToday?'#4f46e5':'#94a3b8', textAlign:'center' }}>{d.label}</div>
+                          <div style={{ fontSize: '9px', fontWeight: isToday ? 900 : 700, color: isToday ? T.accent : T.txt3, textAlign: 'center' }}>{d.label}</div>
                         </div>
                       );
                     })}
                   </div>
                 </motion.div>
 
-                {/* Quick Actions */}
-                <motion.div variants={fadeUp} initial="hidden" animate="show"
-                  style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'10px', marginBottom:'12px' }}>
-                  <motion.button whileTap={{ scale:0.95 }} onClick={() => navigate('/sales')}
-                    style={{ background:'linear-gradient(135deg,#4f46e5,#6366f1)', border:'none', borderRadius:'22px', padding:'18px', cursor:'pointer', display:'flex', flexDirection:'column', gap:'12px', boxShadow:'0 8px 28px rgba(79,70,229,0.35)', alignItems:'flex-start' }}>
-                    <div style={{ width:'38px', height:'38px', borderRadius:'12px', background:'rgba(255,255,255,0.2)', display:'flex', alignItems:'center', justifyContent:'center' }}>
-                      <ShoppingCart size={18} color="#fff" />
-                    </div>
-                    <div style={{ textAlign:'left' }}>
-                      <div style={{ fontSize:'13px', fontWeight:900, color:'#fff' }}>New Sale</div>
-                      <div style={{ fontSize:'10px', fontWeight:600, color:'rgba(255,255,255,0.6)' }}>Record a transaction</div>
-                    </div>
-                  </motion.button>
-
-                  <motion.button whileTap={{ scale:0.95 }} onClick={() => navigate('/inventory')}
-                    style={{ background:'linear-gradient(135deg,#8b5cf6,#a78bfa)', border:'none', borderRadius:'22px', padding:'18px', cursor:'pointer', display:'flex', flexDirection:'column', gap:'12px', boxShadow:'0 8px 28px rgba(139,92,246,0.35)', alignItems:'flex-start' }}>
-                    <div style={{ width:'38px', height:'38px', borderRadius:'12px', background:'rgba(255,255,255,0.2)', display:'flex', alignItems:'center', justifyContent:'center' }}>
-                      <Package size={18} color="#fff" />
-                    </div>
-                    <div style={{ textAlign:'left' }}>
-                      <div style={{ fontSize:'13px', fontWeight:900, color:'#fff' }}>Request Stock</div>
-                      <div style={{ fontSize:'10px', fontWeight:600, color:'rgba(255,255,255,0.6)' }}>Get bread from store</div>
-                    </div>
-                  </motion.button>
-
-                  <motion.button whileTap={{ scale:0.95 }} onClick={() => navigate('/customers')}
-                    style={{ background:'#fff', border:'1px solid rgba(0,0,0,0.06)', borderRadius:'22px', padding:'18px', cursor:'pointer', display:'flex', flexDirection:'column', gap:'12px', boxShadow:'0 4px 16px rgba(0,0,0,0.06)', alignItems:'flex-start' }}>
-                    <div style={{ width:'38px', height:'38px', borderRadius:'12px', background:'rgba(16,185,129,0.1)', display:'flex', alignItems:'center', justifyContent:'center' }}>
-                      <Users size={18} color="#10b981" />
-                    </div>
-                    <div style={{ textAlign:'left' }}>
-                      <div style={{ fontSize:'13px', fontWeight:900, color:'#0f172a' }}>My Clients</div>
-                      <div style={{ fontSize:'10px', fontWeight:600, color:'#94a3b8' }}>{myCustomers.length} assigned</div>
-                    </div>
-                  </motion.button>
-
-                  <motion.button whileTap={{ scale:0.95 }} onClick={() => navigate('/expenses')}
-                    style={{ background:'#fff', border:'1px solid rgba(0,0,0,0.06)', borderRadius:'22px', padding:'18px', cursor:'pointer', display:'flex', flexDirection:'column', gap:'12px', boxShadow:'0 4px 16px rgba(0,0,0,0.06)', alignItems:'flex-start' }}>
-                    <div style={{ width:'38px', height:'38px', borderRadius:'12px', background:'rgba(245,158,11,0.1)', display:'flex', alignItems:'center', justifyContent:'center' }}>
-                      <Target size={18} color="#f59e0b" />
-                    </div>
-                    <div style={{ textAlign:'left' }}>
-                      <div style={{ fontSize:'13px', fontWeight:900, color:'#0f172a' }}>Spend Tracker</div>
-                      <div style={{ fontSize:'10px', fontWeight:600, color:'#94a3b8' }}>View expenses</div>
-                    </div>
-                  </motion.button>
-                </motion.div>
-
                 {/* My Customers Debt Summary */}
                 {myCustomers.length > 0 && (
                   <motion.div variants={fadeUp} initial="hidden" animate="show"
-                    style={{ background:'#fff', borderRadius:'24px', overflow:'hidden', boxShadow:'0 4px 24px rgba(0,0,0,0.06)', border:'1px solid rgba(0,0,0,0.04)', marginBottom:'12px' }}>
-                    <div style={{ padding:'16px 20px', borderBottom:'1px solid rgba(0,0,0,0.04)', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
-                      <div style={{ display:'flex', alignItems:'center', gap:'10px' }}>
-                        <div style={{ width:'32px', height:'32px', borderRadius:'10px', background:'rgba(239,68,68,0.08)', display:'flex', alignItems:'center', justifyContent:'center', color:'#ef4444' }}>
-                          <Users size={15} />
+                    style={{ background: T.surface, borderRadius: '28px', overflow: 'hidden', boxShadow: T.shadow, border: `1px solid ${T.border}` }}>
+                    <div style={{ padding: '20px 24px', borderBottom: `1px solid ${T.surface2}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: T.dangerLt, display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.danger }}>
+                          <Users size={18} />
                         </div>
                         <div>
-                          <div style={{ fontSize:'13px', fontWeight:900, color:'#0f172a' }}>Client Debt Status</div>
-                          <div style={{ fontSize:'10px', fontWeight:600, color:'#94a3b8' }}>{debtors.length} of {myCustomers.length} clients have debt</div>
+                          <div style={{ fontSize: '14px', fontWeight: 900, color: T.ink }}>Client Debt Status</div>
+                          <div style={{ fontSize: '11px', fontWeight: 600, color: T.txt3 }}>{debtors.length} of {myCustomers.length} clients have debt</div>
                         </div>
                       </div>
                       {totalCustomerDebt > 0 && (
-                        <div style={{ textAlign:'right' }}>
-                          <div style={{ fontSize:'15px', fontWeight:900, color:'#ef4444' }}>{fmt(totalCustomerDebt)}</div>
-                          <div style={{ fontSize:'9px', fontWeight:700, color:'#94a3b8' }}>total owed</div>
+                        <div style={{ textAlign: 'right' }}>
+                          <div style={{ fontSize: '16px', fontWeight: 900, color: T.danger }}>{fmt(totalCustomerDebt)}</div>
+                          <div style={{ fontSize: '9px', fontWeight: 800, color: T.txt3, textTransform: 'uppercase' }}>Total Owed</div>
                         </div>
                       )}
                     </div>
                     {myCustomers.slice(0,4).map((c, i) => (
                       <div key={c.id} onClick={() => navigate(`/customers/${c.id}`)}
-                        style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'12px 20px', borderBottom: i < Math.min(myCustomers.length,4)-1 ? '1px solid rgba(0,0,0,0.04)' : 'none', cursor:'pointer' }}>
-                        <div style={{ display:'flex', alignItems:'center', gap:'10px' }}>
-                          <div style={{ width:'36px', height:'36px', borderRadius:'12px', background: (c.debtBalance||0)>0?'rgba(239,68,68,0.1)':'rgba(16,185,129,0.1)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'14px', fontWeight:900, color: (c.debtBalance||0)>0?'#ef4444':'#10b981' }}>
+                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 24px', borderBottom: i < Math.min(myCustomers.length,4)-1 ? `1px solid ${T.surface2}` : 'none', cursor: 'pointer' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                          <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: (c.debtBalance||0)>0 ? T.dangerLt : T.successLt, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', fontWeight: 900, color: (c.debtBalance||0)>0 ? T.danger : T.success }}>
                             {c.name.charAt(0).toUpperCase()}
                           </div>
                           <div>
-                            <div style={{ display:'flex', alignItems:'center', gap:'6px' }}>
-                               <div style={{ fontSize:'13px', fontWeight:800, color:'#0f172a' }}>{c.name}</div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                               <div style={{ fontSize: '14px', fontWeight: 800, color: T.ink }}>{c.name}</div>
                                {(() => {
                                   const v = getVerificationStatus(c);
-                                  return <v.icon size={12} color={v.color} />;
+                                  return <v.icon size={14} color={v.color} />;
                                })()}
                             </div>
-                            <div style={{ fontSize:'10px', fontWeight:600, color:'#94a3b8' }}>{c.phone || 'No phone'}</div>
+                            <div style={{ fontSize: '11px', fontWeight: 600, color: T.txt3, marginTop: '2px' }}>{c.phone || 'No phone'}</div>
                           </div>
                         </div>
-                        <div style={{ display:'flex', alignItems:'center', gap:'12px', background: 'rgba(0,0,0,0.02)', padding: '6px 10px', borderRadius: '14px', border: '1px solid rgba(0,0,0,0.04)' }} className="no-nav" onClick={e=>e.stopPropagation()}>
-                          <div 
-                            style={{ 
-                              width: '34px', height: '18px', borderRadius: '10px', 
-                              background: c.is_verified ? '#10b981' : '#94a3b840', 
-                              position: 'relative', cursor: verifyingId === c.id ? 'wait' : 'pointer', 
-                              transition: 'all 0.3s', border: `1px solid ${c.is_verified ? '#10b981' : 'rgba(0,0,0,0.06)'}`
-                            }}
-                            onClick={async () => {
-                              if (verifyingId === c.id) return;
-                              setVerifyingId(c.id);
-                              try {
-                                const newVal = !c.is_verified;
-                                await verifyCustomer(c.id, newVal);
-                              } catch (err: any) {
-                                console.error('Verification failed:', err);
-                                alert(`Verification Failed: ${err.message || 'Check database permissions'}`);
-                              } finally {
-                                setVerifyingId(null);
-                              }
-                            }}
-                          >
-                            {verifyingId === c.id ? (
-                               <div style={{ position:'absolute', top:2, left: c.is_verified ? 2 : 18, width:12, height:12, border:'2px solid #fff', borderTopColor:'transparent', borderRadius:'50%', animation:'spin 0.8s linear infinite' }} />
-                            ) : (
-                               <motion.div 
-                                 animate={{ x: c.is_verified ? 16 : 2 }} 
-                                 style={{ width: '14px', height: '14px', borderRadius: '50%', background: '#fff', marginTop: 2, boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }} 
-                               />
-                            )}
-                          </div>
-                          <span style={{ fontSize:'11px', fontWeight:900, color: c.is_verified ? '#10b981' : '#94a3b8', minWidth: '60px' }}>
-                            {c.is_verified ? 'Verified' : 'Verify'}
-                          </span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }} className="no-nav" onClick={e=>e.stopPropagation()}>
+                          {c.debtBalance > 0 && (
+                            <span style={{ fontSize: '14px', fontWeight: 900, color: T.danger }}>{fmt(c.debtBalance)}</span>
+                          )}
+                          <ChevronRight size={16} color={T.txt3} />
                         </div>
-                        <ChevronRight size={14} color="#94a3b8" />
                       </div>
                     ))}
                     {myCustomers.length > 4 && (
                       <div onClick={() => navigate('/customers')}
-                        style={{ padding:'12px 20px', textAlign:'center', fontSize:'12px', fontWeight:800, color:'#4f46e5', cursor:'pointer', borderTop:'1px solid rgba(0,0,0,0.04)' }}>
+                        style={{ padding: '16px 24px', textAlign: 'center', fontSize: '13px', fontWeight: 800, color: T.accent, cursor: 'pointer', background: T.surface2 }}>
                         View all {myCustomers.length} clients →
                       </div>
                     )}
@@ -545,72 +518,34 @@ export default function SupplierDashboard() {
                 {/* Pending Alert */}
                 <AnimatePresence>
                   {pendingTxns.length > 0 && (
-                    <motion.div key="pa" initial={{ opacity:0, height:0 }} animate={{ opacity:1, height:'auto' }} exit={{ opacity:0, height:0 }}
-                      style={{ background:'linear-gradient(135deg,#fffbeb,#fef3c7)', border:'1px solid rgba(245,158,11,0.25)', borderRadius:'20px', padding:'16px 20px', display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'12px', cursor:'pointer' }}
+                    <motion.div key="pa" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
+                      style={{ background: T.warnLt, border: `1px solid ${T.warn}`, borderRadius: '24px', padding: '20px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}
                       onClick={() => navigate('/inventory')}>
-                      <div style={{ display:'flex', alignItems:'center', gap:'14px' }}>
-                        <motion.div animate={{ rotate:[0,-5,5,-5,0] }} transition={{ repeat:Infinity, duration:2.5 }}
-                          style={{ width:'44px', height:'44px', borderRadius:'14px', background:'rgba(245,158,11,0.15)', display:'flex', alignItems:'center', justifyContent:'center', color:'#d97706' }}>
-                          <Bell size={21} />
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                        <motion.div animate={{ rotate: [0, -5, 5, -5, 0] }} transition={{ repeat: Infinity, duration: 2.5 }}
+                          style={{ width: '48px', height: '48px', borderRadius: '14px', background: 'rgba(245,158,11,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.warn }}>
+                          <Bell size={24} />
                         </motion.div>
                         <div>
-                          <div style={{ fontSize:'13px', fontWeight:900, color:'#78350f' }}>{pendingTxns.length} Pending Request{pendingTxns.length>1?'s':''}</div>
-                          <div style={{ fontSize:'11px', fontWeight:600, color:'#92400e' }}>Awaiting store keeper approval</div>
+                          <div style={{ fontSize: '14px', fontWeight: 900, color: T.textWarn }}>{pendingTxns.length} Pending Request{pendingTxns.length>1?'s':''}</div>
+                          <div style={{ fontSize: '11px', fontWeight: 600, color: T.textWarn, opacity: 0.8 }}>Awaiting store keeper approval</div>
                         </div>
                       </div>
-                      <ChevronRight size={16} color="#d97706" />
+                      <ChevronRight size={18} color={T.warn} />
                     </motion.div>
                   )}
                 </AnimatePresence>
 
-                {/* ══ THE RECORDS VAULT ══ */}
-                <motion.div variants={fadeUp} initial="hidden" animate="show" style={{ marginTop: '24px' }}>
-                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
-                     <div style={{ padding: '8px', borderRadius: '10px', background: 'rgba(15,23,42,0.05)', color: '#0f172a' }}>
-                       <Shield size={16} />
-                     </div>
-                     <h3 style={{ fontSize: '16px', fontWeight: 900, color: '#0f172a', margin: 0 }}>The Records Vault</h3>
-                   </div>
-                   
-                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                     <Card onClick={() => navigate('/supplier/docs')} 
-                       style={{ background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)', display: 'flex', flexDirection: 'column', gap: '12px', cursor: 'pointer', border: '1px solid #e2e8f0' }}>
-                       <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)', color: '#6366f1' }}>
-                         <ShieldCheck size={20} />
-                       </div>
-                       <div>
-                         <div style={{ fontSize: '14px', fontWeight: 800, color: '#0f172a' }}>Digital Identity</div>
-                         <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>ID Card & Certs</div>
-                       </div>
-                     </Card>
-
-                     <Card onClick={() => navigate('/inventory')} 
-                       style={{ background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)', display: 'flex', flexDirection: 'column', gap: '12px', cursor: 'pointer', border: '1px solid #e2e8f0' }}>
-                       <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)', color: '#10b981' }}>
-                         <Package size={20} />
-                       </div>
-                       <div>
-                         <div style={{ fontSize: '14px', fontWeight: 800, color: '#0f172a' }}>Stock Ledger</div>
-                         <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>Dispatch Archive</div>
-                       </div>
-                     </Card>
-                   </div>
-
-                   <p style={{ fontSize: '11px', color: '#94a3b8', textAlign: 'center', marginTop: '20px', fontWeight: 500 }}>
-                     Your digital records are encrypted and secured by Bread Cloud™
-                   </p>
-                </motion.div>
-
                 {/* Performance Badge */}
                 {completedTxns.length >= 10 && (
                   <motion.div variants={fadeUp} initial="hidden" animate="show"
-                    style={{ background:'linear-gradient(135deg,#fefce8,#fef9c3)', border:'1px solid rgba(234,179,8,0.2)', borderRadius:'20px', padding:'16px 20px', display:'flex', alignItems:'center', gap:'14px', marginBottom:'12px' }}>
-                    <div style={{ width:'44px', height:'44px', borderRadius:'14px', background:'rgba(234,179,8,0.15)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
-                      <Star size={21} color="#ca8a04" />
+                    style={{ background: 'linear-gradient(135deg, #fefce8, #fef9c3)', border: '1px solid rgba(234,179,8,0.2)', borderRadius: '24px', padding: '20px 24px', display: 'flex', alignItems: 'center', gap: '16px' }}>
+                    <div style={{ width: '48px', height: '48px', borderRadius: '14px', background: 'rgba(234,179,8,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <Star size={24} color="#ca8a04" />
                     </div>
                     <div>
-                      <div style={{ fontSize:'13px', fontWeight:900, color:'#78350f' }}>Active Performer 🏆</div>
-                      <div style={{ fontSize:'11px', fontWeight:600, color:'#92400e' }}>{completedTxns.length} completed transactions — keep it up!</div>
+                      <div style={{ fontSize: '14px', fontWeight: 900, color: '#78350f' }}>Active Performer 🏆</div>
+                      <div style={{ fontSize: '11px', fontWeight: 600, color: '#92400e', marginTop: '2px' }}>{completedTxns.length} completed transactions — excellent work!</div>
                     </div>
                   </motion.div>
                 )}
@@ -619,111 +554,115 @@ export default function SupplierDashboard() {
 
             {/* ══════════ STOCK ══════════ */}
             {activeSection === 'stock' && (
-              <motion.div key="stock" initial={{ opacity:0 }} animate={{ opacity:1 }} exit={{ opacity:0 }}>
+              <motion.div key="stock" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                 <motion.div variants={fadeUp} initial="hidden" animate="show"
-                  style={{ background:'#fff', borderRadius:'24px', overflow:'hidden', boxShadow:'0 4px 24px rgba(0,0,0,0.06)', border:'1px solid rgba(0,0,0,0.04)', marginBottom:'12px' }}>
-                  <div style={{ padding:'16px 20px 14px', borderBottom:'1px solid rgba(0,0,0,0.04)', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
-                    <div style={{ display:'flex', alignItems:'center', gap:'10px' }}>
-                      <div style={{ width:'32px', height:'32px', borderRadius:'10px', background:'rgba(79,70,229,0.08)', display:'flex', alignItems:'center', justifyContent:'center', color:'#4f46e5' }}><Package size={15}/></div>
-                      <div style={{ fontSize:'13px', fontWeight:900, color:'#0f172a' }}>My Stock Levels</div>
+                  style={{ background: T.surface, borderRadius: '28px', overflow: 'hidden', boxShadow: T.shadow, border: `1px solid ${T.border}` }}>
+                  <div style={{ padding: '20px 24px', borderBottom: `1px solid ${T.surface2}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: T.accentLt, display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.accent }}><Package size={18}/></div>
+                      <div style={{ fontSize: '14px', fontWeight: 900, color: T.ink }}>My Stock Levels</div>
                     </div>
-                    <div style={{ background:'rgba(79,70,229,0.08)', color:'#4f46e5', padding:'4px 10px', borderRadius:'8px', fontSize:'11px', fontWeight:800 }}>
+                    <div style={{ background: T.accentLt, color: T.accent, padding: '6px 12px', borderRadius: '8px', fontSize: '11px', fontWeight: 800 }}>
                       {totalStock} units total
                     </div>
                   </div>
                   {myStock.length === 0 ? (
-                    <div style={{ padding:'40px', textAlign:'center', color:'#94a3b8' }}>
-                      <Package size={32} style={{ margin:'0 auto 8px', opacity:0.2 }} />
-                      <div style={{ fontSize:'13px', fontWeight:600 }}>No stock data yet</div>
+                    <div style={{ padding: '48px 20px', textAlign: 'center', color: T.txt3 }}>
+                      <Package size={48} style={{ margin: '0 auto 12px', opacity: 0.2 }} />
+                      <div style={{ fontSize: '14px', fontWeight: 700 }}>No stock data yet</div>
+                      <div style={{ fontSize: '11px', fontWeight: 500, marginTop: '4px' }}>Request stock from the store to begin.</div>
                     </div>
                   ) : myStock.map((p, i) => {
                     const maxStock = 100;
                     const pct = Math.min((p.myStock / maxStock) * 100, 100);
                     return (
-                      <div key={p.id} style={{ padding:'16px 20px', borderBottom: i < myStock.length-1 ? '1px solid rgba(0,0,0,0.04)' : 'none' }}>
-                        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'10px' }}>
-                          <div style={{ display:'flex', alignItems:'center', gap:'10px' }}>
-                            <div style={{ width:'40px', height:'40px', borderRadius:'12px', background: p.warning?'rgba(239,68,68,0.08)':'rgba(79,70,229,0.06)', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                      <div key={p.id} style={{ padding: '20px 24px', borderBottom: i < myStock.length-1 ? `1px solid ${T.surface2}` : 'none' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                            <div style={{ width: '44px', height: '44px', borderRadius: '12px', background: p.warning ? T.dangerLt : T.surface2, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                               {p.warning
-                                ? <AlertTriangle size={17} color="#ef4444" />
-                                : <Zap size={17} color="#4f46e5" />
+                                ? <AlertTriangle size={20} color={T.danger} />
+                                : <Zap size={20} color={T.accent} />
                               }
                             </div>
                             <div>
-                              <div style={{ fontSize:'13px', fontWeight:800, color:'#0f172a' }}>{p.name}</div>
-                              <div style={{ fontSize:'10px', fontWeight:700, color:'#94a3b8' }}>₦{p.price} per unit</div>
+                              <div style={{ fontSize: '15px', fontWeight: 900, color: T.ink }}>{p.name}</div>
+                              <div style={{ fontSize: '11px', fontWeight: 700, color: T.txt3, marginTop: '2px' }}>₦{p.price} per unit</div>
                             </div>
                           </div>
-                          <div style={{ textAlign:'right' }}>
-                            <div style={{ fontSize:'22px', fontWeight:900, color: p.warning?'#ef4444':'#0f172a' }}>{p.myStock}</div>
-                            <div style={{ fontSize:'9px', fontWeight:700, color:'#94a3b8', textTransform:'uppercase' }}>units</div>
+                          <div style={{ textAlign: 'right' }}>
+                            <div style={{ fontSize: '24px', fontWeight: 900, color: p.warning ? T.danger : T.ink }}>{p.myStock}</div>
+                            <div style={{ fontSize: '10px', fontWeight: 800, color: T.txt3, textTransform: 'uppercase' }}>units</div>
                           </div>
                         </div>
                         {/* Stock bar */}
-                        <div style={{ background:'rgba(0,0,0,0.05)', borderRadius:'6px', height:'6px', overflow:'hidden' }}>
+                        <div style={{ background: T.surface2, borderRadius: '8px', height: '8px', overflow: 'hidden' }}>
                           <motion.div
-                            initial={{ width:0 }} animate={{ width:`${pct}%` }}
-                            transition={{ delay: i*0.1, type:'spring', stiffness:200, damping:25 }}
-                            style={{ height:'100%', borderRadius:'6px', background: p.warning ? 'linear-gradient(90deg,#ef4444,#f87171)' : 'linear-gradient(90deg,#4f46e5,#6366f1)' }}
+                            initial={{ width: 0 }} animate={{ width: `${pct}%` }}
+                            transition={{ delay: i * 0.1, type: 'spring', stiffness: 200, damping: 25 }}
+                            style={{ height: '100%', borderRadius: '8px', background: p.warning ? T.danger : T.accent }}
                           />
                         </div>
                         {p.warning && (
-                          <div style={{ marginTop:'6px', fontSize:'10px', fontWeight:800, color:'#ef4444' }}>⚠️ Low stock — request more from store</div>
+                          <div style={{ marginTop: '8px', fontSize: '11px', fontWeight: 800, color: T.danger, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <AlertTriangle size={12} /> Low stock — request more from store
+                          </div>
                         )}
                       </div>
                     );
                   })}
                 </motion.div>
-                <motion.button whileTap={{ scale:0.97 }} onClick={() => navigate('/inventory')}
-                  style={{ width:'100%', background:'linear-gradient(135deg,#4f46e5,#6366f1)', border:'none', borderRadius:'18px', padding:'16px', color:'#fff', fontSize:'13px', fontWeight:900, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:'8px', boxShadow:'0 8px 24px rgba(79,70,229,0.35)', marginBottom:'12px' }}>
-                  <Package size={16} /> Request Stock from Store
+                <motion.button whileTap={{ scale: 0.97 }} onClick={() => navigate('/inventory')}
+                  style={{ width: '100%', background: T.ink, border: 'none', borderRadius: '24px', padding: '20px', color: '#fff', fontSize: '15px', fontWeight: 900, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', boxShadow: T.shadowMd }}>
+                  <Package size={20} /> Request Stock from Store
                 </motion.button>
               </motion.div>
             )}
+
             {/* ══════════ ORDERS ══════════ */}
             {activeSection === 'orders' && (
-              <motion.div key="orders" initial={{ opacity:0 }} animate={{ opacity:1 }} exit={{ opacity:0 }}>
+              <motion.div key="orders" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                 <motion.div variants={fadeUp} initial="hidden" animate="show"
-                  style={{ background:'#fff', borderRadius:'24px', overflow:'hidden', boxShadow:'0 4px 24px rgba(0,0,0,0.06)', border:'1px solid rgba(0,0,0,0.04)', marginBottom:'12px' }}>
-                  <div style={{ padding:'16px 20px 14px', borderBottom:'1px solid rgba(0,0,0,0.04)', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
-                    <div style={{ display:'flex', alignItems:'center', gap:'10px' }}>
-                      <div style={{ width:'32px', height:'32px', borderRadius:'10px', background:'rgba(79,70,229,0.08)', display:'flex', alignItems:'center', justifyContent:'center', color:'#4f46e5' }}><ShoppingBag size={15}/></div>
-                      <div style={{ fontSize:'13px', fontWeight:900, color:'#0f172a' }}>Assigned Orders</div>
+                  style={{ background: T.surface, borderRadius: '28px', overflow: 'hidden', boxShadow: T.shadow, border: `1px solid ${T.border}` }}>
+                  <div style={{ padding: '20px 24px', borderBottom: `1px solid ${T.surface2}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: T.accentLt, display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.accent }}><ShoppingBag size={18}/></div>
+                      <div style={{ fontSize: '14px', fontWeight: 900, color: T.ink }}>Assigned Orders</div>
                     </div>
-                    <div style={{ background:'rgba(79,70,229,0.08)', color:'#4f46e5', padding:'4px 10px', borderRadius:'8px', fontSize:'11px', fontWeight:800 }}>
+                    <div style={{ background: T.accentLt, color: T.accent, padding: '6px 12px', borderRadius: '8px', fontSize: '11px', fontWeight: 800 }}>
                       {customerOrders.filter(o => o.status === 'PENDING').length} new
                     </div>
                   </div>
 
                   {customerOrders.length === 0 ? (
-                    <div style={{ padding:'40px', textAlign:'center', color:'#94a3b8' }}>
-                      <ShoppingBag size={32} style={{ margin:'0 auto 8px', opacity:0.2 }} />
-                      <div style={{ fontSize:'13px', fontWeight:600 }}>No orders assigned to you</div>
+                    <div style={{ padding: '48px 20px', textAlign: 'center', color: T.txt3 }}>
+                      <ShoppingBag size={48} style={{ margin: '0 auto 12px', opacity: 0.2 }} />
+                      <div style={{ fontSize: '14px', fontWeight: 700 }}>No orders assigned to you</div>
                     </div>
                   ) : customerOrders.map((o, i) => (
-                    <div key={o.id} style={{ padding:'16px 20px', borderBottom: i < customerOrders.length-1 ? '1px solid rgba(0,0,0,0.04)' : 'none' }}>
-                       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:'12px' }}>
+                    <div key={o.id} style={{ padding: '20px 24px', borderBottom: i < customerOrders.length-1 ? `1px solid ${T.surface2}` : 'none' }}>
+                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
                           <div>
-                             <div style={{ fontSize:'14px', fontWeight:900, color:'#0f172a' }}>{o.customers?.name || 'Customer'}</div>
-                             <div style={{ fontSize:'11px', color:'#94a3b8', fontWeight:700 }}>Loc: {o.customers?.location || 'Unknown'}</div>
+                             <div style={{ fontSize: '15px', fontWeight: 900, color: T.ink }}>{o.customers?.name || 'Customer'}</div>
+                             <div style={{ fontSize: '12px', color: T.txt3, fontWeight: 700, marginTop: '2px' }}>Loc: {o.customers?.location || 'Unknown'}</div>
                           </div>
-                          <div style={{ textAlign:'right' }}>
-                             <div style={{ fontSize:'16px', fontWeight:900, color:'#4f46e5' }}>{fmt(o.total_price)}</div>
-                             <div style={{ fontSize:'9px', fontWeight:800, color: o.status==='PENDING'?'#f59e0b':'#10b981', textTransform:'uppercase' }}>{o.status === 'PENDING' ? 'New Order' : 'Delivered'}</div>
+                          <div style={{ textAlign: 'right' }}>
+                             <div style={{ fontSize: '18px', fontWeight: 900, color: T.accent }}>{fmt(o.total_price)}</div>
+                             <div style={{ fontSize: '10px', fontWeight: 800, color: o.status==='PENDING' ? T.warn : T.success, textTransform: 'uppercase', marginTop: '4px' }}>{o.status === 'PENDING' ? 'New Order' : 'Delivered'}</div>
                           </div>
                        </div>
                        
-                       <div style={{ background:'#f8fafc', padding:'10px', borderRadius:'12px', marginBottom:'12px' }}>
-                          <div style={{ fontSize:'10px', fontWeight:800, color:'#94a3b8', textTransform:'uppercase', marginBottom:'4px' }}>Items Order</div>
-                          <div style={{ fontSize:'12px', fontWeight:700, color:'#1e293b' }}>
+                       <div style={{ background: T.surface2, padding: '12px 16px', borderRadius: '16px', marginBottom: '16px' }}>
+                          <div style={{ fontSize: '10px', fontWeight: 800, color: T.txt3, textTransform: 'uppercase', marginBottom: '6px' }}>Items Ordered</div>
+                          <div style={{ fontSize: '13px', fontWeight: 700, color: T.ink }}>
                              {o.details?.map((it: any) => `${it.quantity}x ${products.find(px=>px.id===it.productId)?.name}`).join(', ') || 'N/A'}
                           </div>
                        </div>
 
                        {o.status === 'PENDING' && (
-                         <motion.button whileTap={{ scale:0.95 }} onClick={() => processOrder(o.id)}
-                           style={{ width:'100%', padding:'12px', borderRadius:'14px', border:'none', background:'linear-gradient(135deg,#10b981,#059669)', color:'#fff', fontSize:'12px', fontWeight:900, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:'8px', boxShadow:'0 4px 12px rgba(16,185,129,0.2)' }}>
-                            <CheckCircle2 size={16} /> Approve & Deliver
+                         <motion.button whileTap={{ scale: 0.97 }} onClick={() => processOrder(o.id)}
+                           style={{ width: '100%', padding: '16px', borderRadius: '16px', border: 'none', background: T.success, color: '#fff', fontSize: '14px', fontWeight: 900, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', boxShadow: `0 4px 12px ${T.successLt}` }}>
+                            <CheckCircle2 size={18} /> Approve & Deliver
                          </motion.button>
                        )}
                     </div>
@@ -731,25 +670,26 @@ export default function SupplierDashboard() {
                 </motion.div>
               </motion.div>
             )}
+
             {/* ══════════ ACTIVITY ══════════ */}
             {activeSection === 'activity' && (
-              <motion.div key="activity" initial={{ opacity:0 }} animate={{ opacity:1 }} exit={{ opacity:0 }}>
+              <motion.div key="activity" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                 <motion.div variants={fadeUp} initial="hidden" animate="show"
-                  style={{ background:'#fff', borderRadius:'24px', overflow:'hidden', boxShadow:'0 4px 24px rgba(0,0,0,0.06)', border:'1px solid rgba(0,0,0,0.04)', marginBottom:'12px' }}>
-                  <div style={{ padding:'16px 20px 14px', borderBottom:'1px solid rgba(0,0,0,0.04)', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
-                    <div style={{ display:'flex', alignItems:'center', gap:'10px' }}>
-                      <div style={{ width:'32px', height:'32px', borderRadius:'10px', background:'rgba(16,185,129,0.08)', display:'flex', alignItems:'center', justifyContent:'center', color:'#10b981' }}>
-                        <TrendingUp size={15}/>
+                  style={{ background: T.surface, borderRadius: '28px', overflow: 'hidden', boxShadow: T.shadow, border: `1px solid ${T.border}` }}>
+                  <div style={{ padding: '20px 24px', borderBottom: `1px solid ${T.surface2}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: T.successLt, display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.success }}>
+                        <TrendingUp size={18}/>
                       </div>
-                      <div style={{ fontSize:'13px', fontWeight:900, color:'#0f172a' }}>Transaction History</div>
+                      <div style={{ fontSize: '14px', fontWeight: 900, color: T.ink }}>Transaction History</div>
                     </div>
-                    <span style={{ fontSize:'11px', fontWeight:700, color:'#94a3b8' }}>{myTxns.length} total</span>
+                    <span style={{ fontSize: '11px', fontWeight: 800, color: T.txt3 }}>{myTxns.length} total</span>
                   </div>
 
                   {myTxns.length === 0 ? (
-                    <div style={{ padding:'40px', textAlign:'center', color:'#94a3b8' }}>
-                      <TrendingDown size={32} style={{ margin:'0 auto 8px', opacity:0.2 }} />
-                      <div style={{ fontSize:'13px', fontWeight:600 }}>No transactions yet</div>
+                    <div style={{ padding: '48px 20px', textAlign: 'center', color: T.txt3 }}>
+                      <TrendingDown size={48} style={{ margin: '0 auto 12px', opacity: 0.2 }} />
+                      <div style={{ fontSize: '14px', fontWeight: 700 }}>No transactions yet</div>
                     </div>
                   ) : myTxns.slice(0, 15).map((tx, i, arr) => {
                     const s = STATUS[tx.status||'COMPLETED'] || STATUS['COMPLETED'];
@@ -760,21 +700,21 @@ export default function SupplierDashboard() {
                     const d = new Date(tx.date);
                     const isToday2 = tx.date.startsWith(today);
                     return (
-                      <div key={tx.id} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'13px 20px', borderBottom: i < arr.length-1?'1px solid rgba(0,0,0,0.04)':'none' }}>
-                        <div style={{ display:'flex', alignItems:'center', gap:'12px' }}>
-                          <div style={{ width:'42px', height:'42px', borderRadius:'14px', background:s.bg, display:'flex', alignItems:'center', justifyContent:'center', color:s.color, flexShrink:0 }}>
-                            <s.Icon size={19} />
+                      <div key={tx.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 24px', borderBottom: i < arr.length-1 ? `1px solid ${T.surface2}` : 'none' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                          <div style={{ width: '44px', height: '44px', borderRadius: '14px', background: s.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', color: s.color, flexShrink: 0 }}>
+                            <s.Icon size={20} />
                           </div>
                           <div>
-                            <div style={{ fontSize:'13px', fontWeight:800, color:'#0f172a' }}>{label}</div>
-                            <div style={{ fontSize:'10px', fontWeight:700, color:'#94a3b8', marginTop:'2px' }}>
+                            <div style={{ fontSize: '14px', fontWeight: 900, color: T.ink }}>{label}</div>
+                            <div style={{ fontSize: '11px', fontWeight: 700, color: T.txt3, marginTop: '4px' }}>
                               {isToday2 ? `Today ${d.toLocaleTimeString('en',{hour:'2-digit',minute:'2-digit'})}` : d.toLocaleDateString('en-NG',{day:'numeric',month:'short'})}
                             </div>
                           </div>
                         </div>
-                        <div style={{ textAlign:'right' }}>
-                          <div style={{ fontSize:'14px', fontWeight:900, color:'#0f172a' }}>{fmt(tx.totalPrice)}</div>
-                          <div style={{ fontSize:'9px', fontWeight:800, color:s.color, background:s.bg, padding:'2px 6px', borderRadius:'5px', marginTop:'3px', display:'inline-block', textTransform:'uppercase' }}>
+                        <div style={{ textAlign: 'right' }}>
+                          <div style={{ fontSize: '16px', fontWeight: 900, color: T.ink }}>{fmt(tx.totalPrice)}</div>
+                          <div style={{ fontSize: '10px', fontWeight: 800, color: s.color, background: s.bg, padding: '4px 8px', borderRadius: '6px', marginTop: '4px', display: 'inline-block', textTransform: 'uppercase' }}>
                             {s.label}
                           </div>
                         </div>
@@ -787,7 +727,7 @@ export default function SupplierDashboard() {
           </AnimatePresence>
 
           {loading && (
-            <div style={{ textAlign:'center', padding:'16px', fontSize:'12px', color:'#94a3b8', fontWeight:600 }}>Syncing data...</div>
+            <div style={{ textAlign: 'center', padding: '20px', fontSize: '13px', color: T.txt3, fontWeight: 700 }}>Syncing data...</div>
           )}
         </div>
       </div>
@@ -795,24 +735,24 @@ export default function SupplierDashboard() {
       {/* MODAL: SETTLE DEBT */}
       <AnimatePresence>
         {settleOpen && myAccount && (
-          <div style={{position:'fixed', inset:0, zIndex:1050, display:'flex', alignItems:'center', justifyContent:'center', background:'rgba(0,0,0,0.6)', backdropFilter:'blur(5px)', padding:'20px'}}>
-            <motion.div initial={{scale:0.9, opacity:0}} animate={{scale:1, opacity:1}} exit={{scale:0.95, opacity:0}}
-              style={{background:'#fff', width:'100%', maxWidth:'340px', borderRadius:'16px', display:'flex', flexDirection:'column', overflow:'hidden', boxShadow:'0 10px 40px rgba(0,0,0,0.2)'}}>
-              <div style={{padding:'14px 18px', borderBottom:`1px solid #f1f5f9`, display:'flex', justifyContent:'space-between', alignItems:'center'}}>
-                 <h3 style={{margin:0, fontSize:'15px', fontWeight:800, color:'#0f172a'}}>Remit Payment</h3>
-                 <button onClick={()=>setSettleOpen(false)} style={{background:'#f1f5f9', border:'none', width:'28px', height:'28px', borderRadius:'8px', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', color:'#0f172a'}}><X size={14}/></button>
+          <div style={{position: 'fixed', inset: 0, zIndex: 1050, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(15,23,42,0.6)', backdropFilter: 'blur(8px)', padding: '20px'}}>
+            <motion.div initial={{scale: 0.95, opacity: 0}} animate={{scale: 1, opacity: 1}} exit={{scale: 0.95, opacity: 0}}
+              style={{background: T.surface, width: '100%', maxWidth: '380px', borderRadius: '28px', display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: T.shadowLg}}>
+              <div style={{padding: '20px 24px', borderBottom: `1px solid ${T.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+                 <h3 style={{margin: 0, fontSize: '18px', fontWeight: 900, color: T.ink}}>Remit Payment</h3>
+                 <button onClick={()=>setSettleOpen(false)} style={{background: T.surface2, border: 'none', width: '32px', height: '32px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: T.txt2}}><X size={16}/></button>
               </div>
-              <div style={{padding:'16px'}}>
-                 <div style={{background:'#f8fafc', padding:'12px', borderRadius:'10px', marginBottom:16, border:`1px solid #e2e8f0`}}>
-                    <div style={{fontSize:'11px', color:'#64748b', fontWeight:700, marginBottom:4}}>Current Outstanding Debt</div>
-                    <div style={{fontSize:'16px', color:'#ef4444', fontWeight:800}}>₦{myDebt.toLocaleString()}</div>
+              <div style={{padding: '24px'}}>
+                 <div style={{background: T.dangerLt, padding: '16px', borderRadius: '16px', marginBottom: 20, border: `1px solid ${T.danger}30`}}>
+                    <div style={{fontSize: '11px', color: T.danger, fontWeight: 800, textTransform: 'uppercase', marginBottom: 6}}>Current Outstanding Debt</div>
+                    <div style={{fontSize: '24px', color: T.danger, fontWeight: 900}}>{fmt(myDebt)}</div>
                  </div>
-                 <form onSubmit={handleSettleDebt} style={{display:'flex', flexDirection:'column', gap:12}}>
+                 <form onSubmit={handleSettleDebt} style={{display: 'flex', flexDirection: 'column', gap: 16}}>
                     <div>
-                       <label style={{fontSize: '10px', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', marginBottom: '6px', display: 'block'}}>Amount Paid to Store (₦)</label>
-                       <input type="number" style={{padding: '12px', borderRadius: '10px', border: '1px solid #e2e8f0', background: '#f8fafc', fontSize: '14px', fontWeight: 700, color: '#0f172a', width: '100%', boxSizing: 'border-box'}} placeholder="e.g. 50000" value={settleAmt} onChange={e=>setSettleAmt(e.target.value)} required autoFocus/>
+                       <label style={{fontSize: '11px', fontWeight: 800, color: T.txt3, textTransform: 'uppercase', marginBottom: '8px', display: 'block'}}>Amount Paid to Store (₦)</label>
+                       <input type="number" style={{padding: '16px', borderRadius: '14px', border: `1px solid ${T.border}`, background: T.surface, fontSize: '16px', fontWeight: 800, color: T.ink, width: '100%', boxSizing: 'border-box'}} placeholder="e.g. 50000" value={settleAmt} onChange={e=>setSettleAmt(e.target.value)} required autoFocus/>
                     </div>
-                    <button type="submit" disabled={settling} style={{background:'#10b981', color:'#fff', border:'none', borderRadius:'10px', padding:'12px', fontWeight:700, fontSize:'13px', cursor:'pointer', marginTop:8}}>
+                    <button type="submit" disabled={settling} style={{background: T.ink, color: '#fff', border: 'none', borderRadius: '14px', padding: '16px', fontWeight: 900, fontSize: '15px', cursor: 'pointer', marginTop: 8}}>
                       {settling ? 'Processing...' : 'Confirm Remittance'}
                     </button>
                  </form>
