@@ -270,11 +270,16 @@ export default function SupplierDashboard() {
     <AnimatedPage>
       <div style={{ minHeight:'100vh', background: T.bg, paddingBottom:'110px', fontFamily:"'Inter',system-ui,sans-serif" }}>
 
-        {/* ══ PREMIUM HERO ══ */}
-        <div style={{ background: T.ink, padding: '48px 20px 48px', position: 'relative', overflow: 'hidden' }}>
-          {/* Subtle Glows */}
-          <div style={{ position: 'absolute', top: '-100px', right: '-100px', width: '300px', height: '300px', borderRadius: '50%', background: 'radial-gradient(circle, rgba(79,70,229,0.3) 0%, transparent 70%)', pointerEvents: 'none' }} />
-          <div style={{ position: 'absolute', bottom: '-50px', left: '-50px', width: '200px', height: '200px', borderRadius: '50%', background: 'radial-gradient(circle, rgba(16,185,129,0.15) 0%, transparent 70%)', pointerEvents: 'none' }} />
+        {/* ══ PREMIUM HERO WITH ANIMATED GLASSMORPHISM ══ */}
+        <div style={{ background: T.ink, padding: '48px 20px 64px', position: 'relative', overflow: 'hidden' }}>
+          {/* Animated Background Glows */}
+          <motion.div animate={{ rotate: 360, scale: [1, 1.1, 1] }} transition={{ duration: 20, repeat: Infinity, ease: 'linear' }}
+            style={{ position: 'absolute', top: '-150px', right: '-100px', width: '400px', height: '400px', borderRadius: '50%', background: 'radial-gradient(circle, rgba(79,70,229,0.25) 0%, transparent 70%)', pointerEvents: 'none' }} />
+          <motion.div animate={{ rotate: -360, scale: [1, 1.2, 1] }} transition={{ duration: 25, repeat: Infinity, ease: 'linear' }}
+            style={{ position: 'absolute', bottom: '-100px', left: '-50px', width: '300px', height: '300px', borderRadius: '50%', background: 'radial-gradient(circle, rgba(16,185,129,0.15) 0%, transparent 70%)', pointerEvents: 'none' }} />
+          
+          {/* Subtle grid overlay for texture */}
+          <div style={{ position: 'absolute', inset: 0, backgroundImage: 'linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px)', backgroundSize: '30px 30px', pointerEvents: 'none', opacity: 0.5 }} />
 
           <div style={{ position: 'relative', zIndex: 10 }}>
             {/* Top Row */}
@@ -312,11 +317,11 @@ export default function SupplierDashboard() {
 
             {/* Premium Debt Card inside Hero */}
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
-              style={{ background: hasDebt ? 'rgba(239,68,68,0.15)' : 'rgba(16,185,129,0.15)', border: `1px solid ${hasDebt ? 'rgba(239,68,68,0.3)' : 'rgba(16,185,129,0.3)'}`, borderRadius: '24px', padding: '20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', backdropFilter: 'blur(10px)' }}>
+              style={{ background: hasDebt ? 'rgba(239,68,68,0.15)' : 'rgba(16,185,129,0.15)', border: `1px solid ${hasDebt ? 'rgba(239,68,68,0.3)' : 'rgba(16,185,129,0.3)'}`, borderRadius: '24px', padding: '20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', backdropFilter: 'blur(10px)', marginBottom: '16px' }}>
               <div>
                 <div style={{ fontSize: '10px', fontWeight: 800, color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: '0.1em', display: 'flex', alignItems: 'center', gap: '8px' }}>
                    My Debt Balance
-                   {hasDebt && <button onClick={() => setSettleOpen(true)} style={{ background: T.danger, color: '#fff', border: 'none', padding: '4px 10px', borderRadius: '8px', fontSize: '9px', fontWeight: 800, cursor: 'pointer', letterSpacing: '0.05em' }}>PAY NOW</button>}
+                   {hasDebt && <button onClick={() => setSettleOpen(true)} style={{ background: T.danger, color: '#fff', border: 'none', padding: '4px 10px', borderRadius: '8px', fontSize: '9px', fontWeight: 800, cursor: 'pointer', letterSpacing: '0.05em', boxShadow: `0 4px 12px ${T.danger}60` }}>PAY NOW</button>}
                 </div>
                 <div style={{ fontSize: '32px', fontWeight: 900, color: hasDebt ? '#fca5a5' : '#6ee7b7', letterSpacing: '-0.02em', marginTop: '4px' }}>
                   {fmt(myDebt)}
@@ -324,6 +329,29 @@ export default function SupplierDashboard() {
               </div>
               <div style={{ width: '48px', height: '48px', borderRadius: '14px', background: hasDebt ? 'rgba(239,68,68,0.2)' : 'rgba(16,185,129,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <AlertTriangle size={24} color={hasDebt ? '#fca5a5' : '#6ee7b7'} />
+              </div>
+            </motion.div>
+
+            {/* NEW FEATURE: Daily Target Progress Widget (Glassmorphism) */}
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
+              style={{ background: 'rgba(255,255,255,0.08)', backdropFilter: 'blur(12px)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '20px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                 <div style={{ fontSize: '11px', fontWeight: 800, color: 'rgba(255,255,255,0.8)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <Target size={12} color={T.success} /> Daily Sales Target
+                 </div>
+                 <div style={{ fontSize: '11px', fontWeight: 900, color: '#fff' }}>
+                    {Math.min(100, Math.round((todaySales / 100000) * 100))}%
+                 </div>
+              </div>
+              <div style={{ background: 'rgba(0,0,0,0.2)', height: '6px', borderRadius: '4px', overflow: 'hidden' }}>
+                 <motion.div 
+                    initial={{ width: 0 }} animate={{ width: `${Math.min(100, (todaySales / 100000) * 100)}%` }}
+                    transition={{ duration: 1.5, type: 'spring' }}
+                    style={{ height: '100%', background: 'linear-gradient(90deg, #10b981, #34d399)', borderRadius: '4px' }}
+                 />
+              </div>
+              <div style={{ fontSize: '9px', fontWeight: 600, color: 'rgba(255,255,255,0.5)', textAlign: 'right' }}>
+                 Goal: ₦100,000
               </div>
             </motion.div>
           </div>
@@ -334,12 +362,14 @@ export default function SupplierDashboard() {
           {/* ══ 4 STAT BENTO ══ */}
           <motion.div variants={fadeUp} initial="hidden" animate="show" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
             {[
-              { label: 'Today Sales',   val: fmt(todaySales),          icon: Wallet,     color: T.success, bg: T.successLt,   trend: salesChange },
-              { label: 'My Stock',      val: `${totalStock} units`,    icon: Package,    color: T.accent,  bg: T.accentLt,    trend: null },
-              { label: 'Dispatched',    val: fmt(totalDispatched),     icon: TrendingUp, color: '#8b5cf6', bg: 'rgba(139,92,246,0.1)', trend: null },
-              { label: 'Pending',       val: String(pendingTxns.length), icon: Hourglass, color: T.warn,   bg: T.warnLt,      trend: null },
+              { label: 'Today Sales',   val: fmt(todaySales),          icon: Wallet,     color: T.success, bg: T.successLt,   trend: salesChange, grad: 'linear-gradient(135deg, #10b981 0%, #059669 100%)' },
+              { label: 'My Stock',      val: `${totalStock} units`,    icon: Package,    color: T.accent,  bg: T.accentLt,    trend: null, grad: 'linear-gradient(135deg, #4f46e5 0%, #4338ca 100%)' },
+              { label: 'Dispatched',    val: fmt(totalDispatched),     icon: TrendingUp, color: '#8b5cf6', bg: 'rgba(139,92,246,0.1)', trend: null, grad: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)' },
+              { label: 'Pending',       val: String(pendingTxns.length), icon: Hourglass, color: T.warn,   bg: T.warnLt,      trend: null, grad: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)' },
             ].map((s, i) => (
-              <motion.div key={i} whileTap={{ scale: 0.97 }} style={{ background: T.surface, borderRadius: '24px', padding: '16px', boxShadow: T.shadow, border: `1px solid ${T.border}` }}>
+              <motion.div key={i} whileTap={{ scale: 0.95 }} style={{ background: T.surface, borderRadius: '24px', padding: '16px', boxShadow: T.shadow, border: `1px solid ${T.border}`, position: 'relative', overflow: 'hidden' }}>
+                {/* Subtle gradient strip at the bottom of each card for decoration */}
+                <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '4px', background: s.grad, opacity: 0.7 }} />
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
                   <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: s.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', color: s.color }}>
                     <s.icon size={18} strokeWidth={2.5} />
@@ -502,6 +532,35 @@ export default function SupplierDashboard() {
                           {c.debtBalance > 0 && (
                             <span style={{ fontSize: '14px', fontWeight: 900, color: T.danger }}>{fmt(c.debtBalance)}</span>
                           )}
+                          <div 
+                            style={{ 
+                              width: '34px', height: '18px', borderRadius: '10px', 
+                              background: c.is_verified ? T.success : T.border, 
+                              position: 'relative', cursor: verifyingId === c.id ? 'wait' : 'pointer', 
+                              transition: 'all 0.3s'
+                            }}
+                            onClick={async () => {
+                              if (verifyingId === c.id) return;
+                              setVerifyingId(c.id);
+                              try {
+                                await verifyCustomer(c.id, !c.is_verified);
+                              } catch (err: any) {
+                                console.error('Verification failed:', err);
+                                alert(`Verification Failed: ${err.message}`);
+                              } finally {
+                                setVerifyingId(null);
+                              }
+                            }}
+                          >
+                            {verifyingId === c.id ? (
+                               <div style={{ position:'absolute', top:2, left: c.is_verified ? 2 : 18, width:12, height:12, border:'2px solid #fff', borderTopColor:'transparent', borderRadius:'50%', animation:'spin 0.8s linear infinite' }} />
+                            ) : (
+                               <motion.div 
+                                 animate={{ x: c.is_verified ? 16 : 2 }} 
+                                 style={{ width: '14px', height: '14px', borderRadius: '50%', background: '#fff', marginTop: 2, boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }} 
+                               />
+                            )}
+                          </div>
                           <ChevronRight size={16} color={T.txt3} />
                         </div>
                       </div>
