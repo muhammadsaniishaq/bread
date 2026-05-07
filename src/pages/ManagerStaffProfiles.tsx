@@ -4,24 +4,26 @@ import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../store/AppContext';
 import { supabase } from '../lib/supabase';
 import { 
-  Search, UserPlus, X, 
-  Trash2,
+  Search, UserPlus, X, Trash2,
   ArrowLeft, Edit2, Download, ChevronRight,
   MessageCircle, BadgeCheck, Activity,
   Phone, Mail, TrendingUp, Key,
-  Camera, Package
+  Camera, Package,
+  PhoneCall, MessageSquare, Shield
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const T = {
-  primary: '#4f46e5', primaryLt: 'rgba(79,70,229,0.05)',
-  success: '#10b981', successLt: 'rgba(16,185,129,0.1)', textSuccess: '#166534',
+  primary: '#4f46e5', primaryLt: 'rgba(79,70,229,0.08)', primaryMid: 'rgba(79,70,229,0.15)',
+  success: '#10b981', successLt: 'rgba(16,185,129,0.1)', textSuccess: '#065f46',
   danger: '#ef4444', dangerLt: 'rgba(239,68,68,0.1)', textDanger: '#991b1b',
-  warn: '#f59e0b', warnLt: 'rgba(245,158,11,0.1)', textWarn: '#92400e',
+  warn: '#f59e0b', warnLt: 'rgba(245,158,11,0.1)', textWarn: '#78350f',
   ink: '#0f172a', txt2: '#475569', txt3: '#94a3b8',
   bg: '#f1f5f9', surface: '#ffffff', surface2: '#f8fafc',
   border: 'rgba(0,0,0,0.06)', borderL: 'rgba(0,0,0,0.04)',
-  shadow: '0 4px 12px rgba(0,0,0,0.05)', shadowMd: '0 10px 25px -5px rgba(0,0,0,0.08)'
+  shadow: '0 2px 8px rgba(0,0,0,0.06)', shadowMd: '0 8px 24px rgba(0,0,0,0.10)',
+  shadowLg: '0 20px 40px rgba(0,0,0,0.15)',
+  heroGrad: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #4f46e5 100%)',
 };
 
 const ROLES: Record<string,{color:string;bg:string;label:string;icon:string;banner:string}> = {
@@ -53,7 +55,7 @@ const ManagerStaffProfiles: React.FC = () => {
   const [custCounts, setCustCounts] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [filterRole] = useState('ALL');
+  const [activeRoleFilter, setActiveRoleFilter] = useState('ALL');
   const [selected, setSelected] = useState<Profile|null>(null);
   const [editOpen, setEditOpen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
@@ -89,18 +91,23 @@ const ManagerStaffProfiles: React.FC = () => {
     if (!selected) return;
     const amt = parseFloat(settleAmt);
     if (!amt || amt <= 0) return;
-    
+
     const sRecord = customers.find(c => c.profile_id === selected.id) ||
       customers.find(c => c.name.toLowerCase() === (selected.full_name||'').toLowerCase()) ||
       customers.find(c => c.phone && c.phone === selected.phone);
 
-    if (!sRecord) return alert("Could not find matching customer record for this supplier.");
+    if (!sRecord) return alert('Could not find matching customer record for this supplier.');
+
+    // Use dynamic 90% debt calculation
+    const currentDebt = getSupplierDebt(selected.id);
+    if (amt > currentDebt) {
+      alert(`Cannot remit more than the outstanding balance of ₦${currentDebt.toLocaleString()} (90% of sales).`);
+      return;
+    }
 
     setSettling(true);
     try {
-      const newDebt = Math.max(0, (sRecord.debtBalance || 0) - amt);
-      await supabase.from('customers').update({ debt_balance: newDebt }).eq('id', sRecord.id);
-      
+      // Only insert payment transaction — debt is calculated dynamically from transactions
       const tx = {
         id: crypto.randomUUID(),
         date: new Date().toISOString(),
@@ -112,12 +119,12 @@ const ManagerStaffProfiles: React.FC = () => {
         origin: 'ADMIN_SETTLEMENT'
       };
       await supabase.from('transactions').insert([tx]);
-      alert(`Successfully recorded payment of ₦${amt.toLocaleString()}`);
+      alert(`₦${amt.toLocaleString()} recorded. Remaining: ₦${Math.max(0, currentDebt - amt).toLocaleString()}`);
       setSettleOpen(false);
       setSettleAmt('');
       window.location.reload();
     } catch(err: any) {
-      alert("Error: " + err.message);
+      alert('Error: ' + err.message);
     }
     setSettling(false);
   };
@@ -159,57 +166,130 @@ const ManagerStaffProfiles: React.FC = () => {
     }
   };
 
-  const filtered = profiles.filter(p=>{
-    const s=search.toLowerCase();
-    return (filterRole==='ALL'||p.role===filterRole)&&(p.full_name?.toLowerCase().includes(s)||p.phone?.includes(s)||p.username?.toLowerCase().includes(s));
+  const getTxCount = (profileId: string) =>
+    transactions.filter(t => t.sellerId === profileId || t.storeKeeperId === profileId).length;
+
+  const getTier = (count: number) => {
+    if (count >= 100) return { label: 'Platinum', emoji: '💎', color: '#818cf8' };
+    if (count >= 50)  return { label: 'Gold',     emoji: '🥇', color: '#ca8a04' };
+    if (count >= 20)  return { label: 'Silver',   emoji: '🥈', color: '#64748b' };
+    return               { label: 'Bronze',   emoji: '🥉', color: '#b45309' };
+  };
+
+  const totalSupplierDebt = profiles
+    .filter(p => p.role === 'SUPPLIER')
+    .reduce((s, p) => s + getSupplierDebt(p.id), 0);
+
+  const filtered = profiles.filter(p => {
+    const s = search.toLowerCase();
+    return (activeRoleFilter === 'ALL' || p.role === activeRoleFilter)
+      && (p.full_name?.toLowerCase().includes(s) || p.phone?.includes(s) || p.username?.toLowerCase().includes(s));
   });
 
   return (
     <AnimatedPage>
       <div style={{background:T.bg, minHeight:'100vh', fontFamily:"'Inter',system-ui,sans-serif", paddingBottom:'110px', paddingTop:'env(safe-area-inset-top)'}}>
         
-        {/* HEADER */}
-        <div style={{padding:'16px'}}>
-          <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'16px'}}>
-            <div>
-              <h1 style={{fontSize:'18px', fontWeight:800, color:T.ink, margin:0, letterSpacing:'-0.02em'}}>Staff Profiles</h1>
-              <p style={{color:T.txt2, fontSize:'12px', margin:'2px 0 0'}}>Manage your team directory</p>
+        {/* PREMIUM HERO HEADER */}
+        <div style={{background: T.heroGrad, padding:'32px 20px 24px', position:'relative', overflow:'hidden'}}>
+          {/* Background glows */}
+          <div style={{position:'absolute', top:'-60px', right:'-60px', width:'200px', height:'200px', borderRadius:'50%', background:'rgba(165,180,252,0.15)', pointerEvents:'none'}}/>
+          <div style={{position:'absolute', bottom:'-40px', left:'-40px', width:'150px', height:'150px', borderRadius:'50%', background:'rgba(99,102,241,0.2)', pointerEvents:'none'}}/>
+          <div style={{position:'relative'}}>
+            <div style={{display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:'20px'}}>
+              <div>
+                <p style={{color:'rgba(165,180,252,0.8)', fontSize:'11px', fontWeight:800, margin:'0 0 4px', textTransform:'uppercase', letterSpacing:'0.08em'}}>Management Console</p>
+                <h1 style={{fontSize:'22px', fontWeight:900, color:'#fff', margin:0, letterSpacing:'-0.02em'}}>Staff Profiles</h1>
+                <p style={{color:'rgba(255,255,255,0.55)', fontSize:'12px', margin:'4px 0 0', fontWeight:500}}>{profiles.length} team members
+              </p></div>
+              <button onClick={()=>setAddOpen(true)} style={{display:'flex', alignItems:'center', gap:'6px', background:'rgba(255,255,255,0.15)', backdropFilter:'blur(10px)', color:'#fff', padding:'10px 14px', borderRadius:'12px', fontWeight:800, fontSize:'12px', border:'1px solid rgba(255,255,255,0.2)', cursor:'pointer'}}>
+                <UserPlus size={14}/> Add Staff
+              </button>
             </div>
-            <button onClick={()=>setAddOpen(true)} style={{display:'flex', alignItems:'center', gap:'6px', background:T.ink, color:'#fff', padding:'8px 12px', borderRadius:'10px', fontWeight:700, fontSize:'12px', border:'none', cursor:'pointer', boxShadow:T.shadow}}>
-               <UserPlus size={14}/> Add Staff
-            </button>
+            {/* Stats strip */}
+            <div style={{display:'flex', gap:'8px'}}>
+              {[
+                {label:'Suppliers', val: profiles.filter(p=>p.role==='SUPPLIER').length, color:'#fbbf24'},
+                {label:'Store Keepers', val: profiles.filter(p=>p.role==='STORE_KEEPER').length, color:'#60a5fa'},
+                {label:'Total Debt', val: `₦${(totalSupplierDebt/1000).toFixed(0)}k`, color:'#f87171'},
+              ].map(s => (
+                <div key={s.label} style={{flex:1, background:'rgba(255,255,255,0.08)', backdropFilter:'blur(8px)', padding:'10px', borderRadius:'12px', border:'1px solid rgba(255,255,255,0.1)'}}>
+                  <div style={{fontSize:'16px', fontWeight:900, color:s.color}}>{s.val}</div>
+                  <div style={{fontSize:'9px', fontWeight:700, color:'rgba(255,255,255,0.55)', textTransform:'uppercase'}}>{s.label}</div>
+                </div>
+              ))}
+            </div>
           </div>
+        </div>
 
-          <div style={{display:'flex', gap:'8px', marginBottom:'16px'}}>
+        {/* SEARCH + FILTER */}
+        <div style={{padding:'16px'}}>
+          <div style={{display:'flex', gap:'8px', marginBottom:'12px'}}>
             <div style={{position:'relative', flex:1}}>
               <Search size={16} color={T.txt3} style={{position:'absolute', left:'12px', top:'50%', transform:'translateY(-50%)', pointerEvents:'none'}}/>
-              <input style={{...inpStyle, paddingLeft:'36px', height:'40px'}} placeholder="Search name, phone..." value={search} onChange={e=>setSearch(e.target.value)}/>
+              <input style={{...inpStyle, paddingLeft:'36px', height:'42px', borderRadius:'12px', boxShadow:T.shadow}} placeholder="Search name, phone, username..." value={search} onChange={e=>setSearch(e.target.value)}/>
             </div>
-            <button onClick={()=>fetch()} style={{background:T.surface, border:`1px solid ${T.borderL}`, borderRadius:'10px', width:'40px', display:'flex', alignItems:'center', justifyContent:'center', color:T.ink}}><Download size={16}/></button>
+            <button onClick={()=>fetch()} style={{background:T.surface, border:`1px solid ${T.borderL}`, borderRadius:'12px', width:'42px', display:'flex', alignItems:'center', justifyContent:'center', color:T.ink, boxShadow:T.shadow}}><Download size={16}/></button>
+          </div>
+
+          {/* Role Filter Chips */}
+          <div style={{display:'flex', gap:'6px', overflowX:'auto', paddingBottom:'4px', marginBottom:'12px'}}>
+            {[{id:'ALL',label:'All Staff',icon:'👥'}, {id:'SUPPLIER',label:'Suppliers',icon:'📦'}, {id:'STORE_KEEPER',label:'Store Keepers',icon:'🏪'}, {id:'MANAGER',label:'Managers',icon:'🛡️'}, {id:'ADMIN',label:'Admins',icon:'⚡'}].map(r => (
+              <button key={r.id} onClick={()=>setActiveRoleFilter(r.id)}
+                style={{display:'flex', alignItems:'center', gap:'5px', padding:'7px 12px', borderRadius:'20px', border:'none', cursor:'pointer', fontWeight:700, fontSize:'11px', flexShrink:0, transition:'all 0.2s',
+                  background: activeRoleFilter===r.id ? T.ink : T.surface,
+                  color: activeRoleFilter===r.id ? '#fff' : T.txt2,
+                  boxShadow: activeRoleFilter===r.id ? T.shadowMd : T.shadow}}>
+                <span>{r.icon}</span> {r.label}
+                {r.id !== 'ALL' && <span style={{background: activeRoleFilter===r.id ? 'rgba(255,255,255,0.2)' : T.bg, borderRadius:'10px', padding:'1px 5px', fontSize:'9px', fontWeight:900}}>{profiles.filter(p=>p.role===r.id).length}</span>}
+              </button>
+            ))}
           </div>
 
           {/* LIST VIEW */}
-          <div style={{display:'flex', flexDirection:'column', gap:'8px'}}>
-            {loading ? <div style={{textAlign:'center', padding:'40px', color:T.txt3, fontSize:'13px'}}>Syncing profiles...</div> : filtered.map(p => {
+          <div style={{display:'flex', flexDirection:'column', gap:'10px'}}>
+            {loading ? (
+              <div style={{textAlign:'center', padding:'40px', color:T.txt3}}>
+                <motion.div animate={{rotate:360}} transition={{repeat:Infinity, duration:1, ease:'linear'}} style={{width:'32px', height:'32px', border:`3px solid ${T.borderL}`, borderTop:`3px solid ${T.primary}`, borderRadius:'50%', margin:'0 auto 12px'}}/>
+                Syncing profiles...
+              </div>
+            ) : filtered.map(p => {
               const [ac, lc] = getAvatar(p.full_name);
+              const role = ROLES[p.role] || ROLES.CUSTOMER;
+              const debt = p.role === 'SUPPLIER' ? getSupplierDebt(p.id) : 0;
               return (
                 <motion.div key={p.id} whileTap={{scale:0.98}} onClick={()=>{setSelected(p); setDTab('overview');}}
-                  style={{background:T.surface, border:`1px solid ${T.borderL}`, borderRadius:'14px', padding:'12px 14px', boxShadow:T.shadow, cursor:'pointer', display:'flex', alignItems:'center', gap:'12px'}}>
-                  <div style={{width:'40px', height:'40px', borderRadius:'50%', background:lc, display:'flex', alignItems:'center', justifyContent:'center', fontSize:'14px', fontWeight:700, color:ac, flexShrink:0, overflow:'hidden', border:`2px solid ${T.surface}`, boxShadow:T.shadow}}>
-                    {p.avatar_url ? <img src={p.avatar_url} alt={p.full_name} style={{width:'100%', height:'100%', objectFit:'cover'}}/> : p.full_name.charAt(0)}
-                  </div>
-                  <div style={{flex:1, minWidth:0}}>
-                    <div style={{display:'flex', alignItems:'center', gap:'6px', marginBottom:'2px'}}>
-                      <span style={{color:T.ink, fontWeight:700, fontSize:'14px', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis'}}>{p.full_name}</span>
-                      <span style={{fontSize:'9px', fontWeight:800, padding:'2px 6px', borderRadius:'6px', background:ROLES[p.role]?.bg, color:ROLES[p.role]?.color}}>{ROLES[p.role]?.label}</span>
+                  style={{background:T.surface, border:`1px solid ${T.borderL}`, borderRadius:'16px', padding:'14px', boxShadow:T.shadow, cursor:'pointer'}}>
+                  <div style={{display:'flex', alignItems:'center', gap:'12px'}}>
+                    <div style={{width:'44px', height:'44px', borderRadius:'50%', background:lc, display:'flex', alignItems:'center', justifyContent:'center', fontSize:'16px', fontWeight:800, color:ac, flexShrink:0, overflow:'hidden', border:`2px solid ${T.surface}`, boxShadow:T.shadow}}>
+                      {p.avatar_url ? <img src={p.avatar_url} alt={p.full_name} style={{width:'100%', height:'100%', objectFit:'cover'}}/> : p.full_name.charAt(0)}
                     </div>
-                    <div style={{display:'flex', gap:'8px', alignItems:'center'}}>
-                      <span style={{color:T.txt2, fontSize:'11px'}}>{p.phone || 'No phone'}</span>
-                      <span style={{width:3, height:3, borderRadius:'50%', background:T.borderL}}/>
-                      <span style={{color:T.txt3, fontSize:'10px', fontWeight:700}}>@{p.username || 'user'}</span>
+                    <div style={{flex:1, minWidth:0}}>
+                      <div style={{display:'flex', alignItems:'center', gap:'6px', marginBottom:'3px'}}>
+                        <span style={{color:T.ink, fontWeight:800, fontSize:'14px', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis'}}>{p.full_name}</span>
+                        <span style={{fontSize:'9px', fontWeight:800, padding:'2px 7px', borderRadius:'6px', background:role.bg, color:role.color, flexShrink:0}}>{role.label}</span>
+                      </div>
+                      <div style={{display:'flex', gap:'8px', alignItems:'center'}}>
+                        <span style={{color:T.txt2, fontSize:'11px', fontWeight:500}}>{p.phone || 'No phone'}</span>
+                        {debt > 0 && <span style={{fontSize:'10px', fontWeight:800, color:T.danger, background:T.dangerLt, padding:'1px 6px', borderRadius:'5px'}}>₦{debt.toLocaleString()} owed</span>}
+                      </div>
                     </div>
+                    <ChevronRight size={16} color={T.txt3}/>
                   </div>
-                  <ChevronRight size={16} color={T.txt3}/>
+                  {/* Quick action row */}
+                  {p.phone && (
+                    <div style={{display:'flex', gap:'6px', marginTop:'10px', paddingTop:'10px', borderTop:`1px solid ${T.borderL}`}} onClick={e=>e.stopPropagation()}>
+                      <a href={`tel:${p.phone}`} style={{flex:1, display:'flex', alignItems:'center', justifyContent:'center', gap:'5px', padding:'7px', borderRadius:'10px', background:T.successLt, color:T.textSuccess, fontWeight:700, fontSize:'11px', textDecoration:'none'}}>
+                        <PhoneCall size={13}/> Call
+                      </a>
+                      <a href={`https://wa.me/${p.phone?.replace(/\D/g,'')}`} target="_blank" rel="noreferrer" style={{flex:1, display:'flex', alignItems:'center', justifyContent:'center', gap:'5px', padding:'7px', borderRadius:'10px', background:'rgba(37,211,102,0.1)', color:'#128c7e', fontWeight:700, fontSize:'11px', textDecoration:'none'}}>
+                        <MessageSquare size={13}/> WhatsApp
+                      </a>
+                      <button onClick={()=>{setSelected(p); setDTab('overview');}} style={{flex:1, display:'flex', alignItems:'center', justifyContent:'center', gap:'5px', padding:'7px', borderRadius:'10px', background:T.primaryLt, color:T.primary, fontWeight:700, fontSize:'11px', border:'none', cursor:'pointer'}}>
+                        <Shield size={13}/> Profile
+                      </button>
+                    </div>
+                  )}
                 </motion.div>
               )
             })}
@@ -323,10 +403,17 @@ const ManagerStaffProfiles: React.FC = () => {
                                 <span style={{fontSize:'10px', fontWeight:800, color:T.txt2, textTransform:'uppercase'}}>Date Joined</span>
                                 <div style={{fontSize:'14px', fontWeight:800, color:T.ink, marginTop:'4px'}}>{new Date(selected.created_at||Date.now()).toLocaleDateString('en-GB', {day:'numeric', month:'short', year:'numeric'})}</div>
                               </div>
-                              <div style={{background:T.bg, borderRadius:'12px', padding:'14px', flex:1, border:`1px solid ${T.borderL}`}}>
-                                <span style={{fontSize:'10px', fontWeight:800, color:T.txt2, textTransform:'uppercase'}}>Pay Grade</span>
-                                <div style={{fontSize:'14px', fontWeight:800, color:T.ink, marginTop:'4px'}}>Tier {selected.role === 'MANAGER' ? '1' : selected.role === 'ADMIN' ? 'S' : '3'}</div>
-                              </div>
+                              {(() => {
+                                const txCount = getTxCount(selected.id);
+                                const tier = getTier(txCount);
+                                return (
+                                <div style={{background:`${tier.color}15`, borderRadius:'12px', padding:'14px', flex:1, border:`1px solid ${tier.color}30`}}>
+                                  <span style={{fontSize:'10px', fontWeight:800, color:tier.color, textTransform:'uppercase'}}>Performance Tier</span>
+                                  <div style={{fontSize:'20px', marginTop:'4px'}}>{tier.emoji}</div>
+                                  <div style={{fontSize:'13px', fontWeight:900, color:tier.color}}>{tier.label}</div>
+                                </div>
+                                );
+                              })()}
                             </div>
 
                             <div style={{display:'flex', gap:8}}>
@@ -337,8 +424,8 @@ const ManagerStaffProfiles: React.FC = () => {
                               </div>
                               <div style={{background:T.bg, borderRadius:'12px', padding:'14px', flex:1, border:`1px solid ${T.borderL}`}}>
                                 <div style={{width:32, height:32, borderRadius:'10px', background:T.surface, display:'flex', alignItems:'center', justifyContent:'center', marginBottom:8, boxShadow:T.shadow}}><TrendingUp size={16} color={T.success}/></div>
-                                <span style={{fontSize:'10px', fontWeight:800, color:T.txt2, textTransform:'uppercase'}}>Performance</span>
-                                <div style={{fontSize:'20px', fontWeight:900, color:T.ink}}>98%</div>
+                                <span style={{fontSize:'10px', fontWeight:800, color:T.txt2, textTransform:'uppercase'}}>Transactions</span>
+                                <div style={{fontSize:'20px', fontWeight:900, color:T.ink}}>{getTxCount(selected.id)}</div>
                               </div>
                             </div>
 
@@ -347,22 +434,40 @@ const ManagerStaffProfiles: React.FC = () => {
                               <p style={{color:T.txt2, fontSize:'12px', lineHeight:1.6, margin:0}}>{selected.notes || 'No internal notes captured for this personnel member.'}</p>
                             </div>
 
-                            {isSupplier && (
+                            {isSupplier && (() => {
+                              const totalSales = transactions
+                                .filter(t => t.status === 'COMPLETED' && t.origin === 'POS_SUPPLIER' && t.sellerId === selected.id)
+                                .reduce((s, t) => s + t.totalPrice, 0);
+                              const supplierEarnings = totalSales * 0.1;
+                              return (
                               <div style={{marginTop: 20}}>
-                                <div style={{display:'flex', gap:8, marginBottom:16}}>
-                                  <div style={{background:T.dangerLt, borderRadius:'12px', padding:'14px', flex:1, border:`1px solid ${T.danger}20`, display:'flex', flexDirection:'column'}}>
-                                     <div style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
-                                       <span style={{fontSize:'10px', fontWeight:800, color:T.textDanger, textTransform:'uppercase'}}>Supplier Debt</span>
-                                       <button onClick={()=>setSettleOpen(true)} style={{background:T.danger, color:'#fff', border:'none', padding:'4px 8px', borderRadius:'6px', fontSize:'9px', fontWeight:800, cursor:'pointer'}}>Settle Debt</button>
-                                     </div>
-                                     <div style={{fontSize:'20px', fontWeight:900, color:T.danger, marginTop:8}}>₦{supplierDebt.toLocaleString()}</div>
+                                {/* Debt + Stock cards */}
+                                <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginBottom:16}}>
+                                  <div style={{background:`linear-gradient(135deg, ${T.danger}15, ${T.danger}05)`, borderRadius:'14px', padding:'14px', border:`1px solid ${T.danger}20`}}>
+                                    <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:8}}>
+                                      <span style={{fontSize:'10px', fontWeight:800, color:T.textDanger, textTransform:'uppercase'}}>Debt Owed</span>
+                                      <button onClick={()=>setSettleOpen(true)} style={{background:T.danger, color:'#fff', border:'none', padding:'3px 7px', borderRadius:'6px', fontSize:'9px', fontWeight:800, cursor:'pointer'}}>Settle</button>
+                                    </div>
+                                    <div style={{fontSize:'20px', fontWeight:900, color:T.danger}}>₦{supplierDebt.toLocaleString()}</div>
+                                    <div style={{fontSize:'9px', color:T.textDanger, marginTop:4, opacity:0.7}}>90% of sales</div>
                                   </div>
-                                  <div style={{background:T.warnLt, borderRadius:'12px', padding:'14px', flex:1, border:`1px solid ${T.warn}20`}}>
-                                     <span style={{fontSize:'10px', fontWeight:800, color:T.textWarn, textTransform:'uppercase'}}>Available Stock</span>
-                                     <div style={{fontSize:'20px', fontWeight:900, color:T.warn, marginTop:8}}>{supplierStock} units</div>
+                                  <div style={{background:`linear-gradient(135deg, ${T.warn}15, ${T.warn}05)`, borderRadius:'14px', padding:'14px', border:`1px solid ${T.warn}20`}}>
+                                    <span style={{fontSize:'10px', fontWeight:800, color:T.textWarn, textTransform:'uppercase'}}>Available Stock</span>
+                                    <div style={{fontSize:'20px', fontWeight:900, color:T.warn, marginTop:8}}>{supplierStock}</div>
+                                    <div style={{fontSize:'9px', color:T.textWarn, marginTop:4, opacity:0.7}}>units held</div>
                                   </div>
                                 </div>
-                                
+                                {/* Mini earnings row */}
+                                <div style={{background:T.successLt, borderRadius:'12px', padding:'12px', border:`1px solid ${T.success}20`, marginBottom:16, display:'flex', justifyContent:'space-between', alignItems:'center'}}>
+                                  <div>
+                                    <div style={{fontSize:'10px', fontWeight:800, color:T.textSuccess, textTransform:'uppercase'}}>Their 10% Commission</div>
+                                    <div style={{fontSize:'16px', fontWeight:900, color:T.success}}>₦{supplierEarnings.toLocaleString()}</div>
+                                  </div>
+                                  <div style={{textAlign:'right'}}>
+                                    <div style={{fontSize:'10px', fontWeight:800, color:T.txt3, textTransform:'uppercase'}}>Total Sales</div>
+                                    <div style={{fontSize:'16px', fontWeight:900, color:T.ink}}>₦{totalSales.toLocaleString()}</div>
+                                  </div>
+                                </div>
                                 <h3 style={{fontSize:'12px', fontWeight:800, color:T.ink, margin:'0 0 8px'}}>Assigned Customers ({assignedCustomers.length})</h3>
                                 <div style={{display:'flex', flexDirection:'column', gap:8}}>
                                    {assignedCustomers.length === 0 ? <p style={{fontSize:11, color:T.txt3}}>No assigned customers.</p> : assignedCustomers.map(c => (
@@ -379,7 +484,8 @@ const ManagerStaffProfiles: React.FC = () => {
                                    ))}
                                 </div>
                               </div>
-                            )}
+                              );
+                            })()}
                           </motion.div>
                         )}
 
@@ -546,32 +652,53 @@ const ManagerStaffProfiles: React.FC = () => {
 
         {/* MODAL: SETTLE DEBT */}
         <AnimatePresence>
-          {settleOpen && selected && (
-            <div style={{position:'fixed', inset:0, zIndex:1050, display:'flex', alignItems:'center', justifyContent:'center', background:'rgba(0,0,0,0.6)', backdropFilter:'blur(5px)', padding:'20px'}}>
+          {settleOpen && selected && (() => {
+            const currentDebt = getSupplierDebt(selected.id);
+            const totalSales = transactions
+              .filter(t => t.status === 'COMPLETED' && t.origin === 'POS_SUPPLIER' && (t.sellerId === selected.id))
+              .reduce((s, t) => s + t.totalPrice, 0);
+            const myEarnings = totalSales * 0.1;
+            return (
+            <div style={{position:'fixed', inset:0, zIndex:1050, display:'flex', alignItems:'center', justifyContent:'center', background:'rgba(15,23,42,0.7)', backdropFilter:'blur(8px)', padding:'20px'}}>
               <motion.div initial={{scale:0.9, opacity:0}} animate={{scale:1, opacity:1}} exit={{scale:0.95, opacity:0}}
-                style={{background:T.surface, width:'100%', maxWidth:'340px', borderRadius:'16px', display:'flex', flexDirection:'column', overflow:'hidden', boxShadow:T.shadowMd}}>
-                <div style={{padding:'14px 18px', borderBottom:`1px solid ${T.borderL}`, display:'flex', justifyContent:'space-between', alignItems:'center'}}>
-                   <h3 style={{margin:0, fontSize:'15px', fontWeight:800, color:T.ink}}>Record Payment</h3>
-                   <button onClick={()=>setSettleOpen(false)} style={{background:T.bg, border:'none', width:'28px', height:'28px', borderRadius:'8px', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', color:T.ink}}><X size={14}/></button>
-                </div>
-                <div style={{padding:'16px'}}>
-                   <div style={{background:T.surface2, padding:'12px', borderRadius:'10px', marginBottom:16, border:`1px solid ${T.borderL}`}}>
-                      <div style={{fontSize:'11px', color:T.txt3, fontWeight:700, marginBottom:4}}>Supplier / Employee</div>
-                      <div style={{fontSize:'14px', color:T.ink, fontWeight:800}}>{selected.full_name}</div>
+                style={{background:T.surface, width:'100%', maxWidth:'380px', borderRadius:'24px', display:'flex', flexDirection:'column', overflow:'hidden', boxShadow:'0 25px 50px rgba(0,0,0,0.3)'}}>
+                <div style={{padding:'16px 20px', borderBottom:`1px solid ${T.borderL}`, display:'flex', justifyContent:'space-between', alignItems:'center'}}>
+                   <div>
+                     <h3 style={{margin:0, fontSize:'16px', fontWeight:900, color:T.ink}}>Settle Supplier Debt</h3>
+                     <p style={{margin:'2px 0 0', fontSize:'11px', color:T.txt3, fontWeight:600}}>{selected.full_name}</p>
                    </div>
-                   <form onSubmit={handleSettleDebt} style={{display:'flex', flexDirection:'column', gap:12}}>
-                      <div>
-                         <label style={labelStyle}>Amount Paid (₦)</label>
-                         <input type="number" style={inpStyle} placeholder="e.g. 50000" value={settleAmt} onChange={e=>setSettleAmt(e.target.value)} required autoFocus/>
+                   <button onClick={()=>setSettleOpen(false)} style={{background:T.bg, border:'none', width:'32px', height:'32px', borderRadius:'10px', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', color:T.ink}}><X size={14}/></button>
+                </div>
+                <div style={{padding:'20px'}}>
+                  {/* Debt Breakdown */}
+                  <div style={{background:T.dangerLt, padding:'16px', borderRadius:'16px', marginBottom:'16px', border:`1px solid ${T.danger}30`}}>
+                    <div style={{fontSize:'11px', color:T.textDanger, fontWeight:800, textTransform:'uppercase', marginBottom:'8px'}}>Outstanding Debt (90% of Sales)</div>
+                    <div style={{fontSize:'28px', fontWeight:900, color:T.danger, marginBottom:'12px'}}>₦{currentDebt.toLocaleString()}</div>
+                    <div style={{display:'flex', gap:'8px'}}>
+                      <div style={{flex:1, background:'rgba(239,68,68,0.08)', padding:'8px 10px', borderRadius:'10px'}}>
+                        <div style={{fontSize:'9px', fontWeight:800, color:T.textDanger, textTransform:'uppercase'}}>Total Sales</div>
+                        <div style={{fontSize:'13px', fontWeight:900, color:T.ink}}>₦{totalSales.toLocaleString()}</div>
                       </div>
-                      <button type="submit" disabled={settling} style={{background:T.success, color:'#fff', border:'none', borderRadius:'10px', padding:'12px', fontWeight:700, fontSize:'13px', cursor:'pointer', marginTop:8}}>
-                        {settling ? 'Processing...' : 'Settle Debt'}
-                      </button>
-                   </form>
+                      <div style={{flex:1, background:'rgba(16,185,129,0.08)', padding:'8px 10px', borderRadius:'10px'}}>
+                        <div style={{fontSize:'9px', fontWeight:800, color:T.textSuccess, textTransform:'uppercase'}}>Their 10% Cut</div>
+                        <div style={{fontSize:'13px', fontWeight:900, color:T.success}}>₦{myEarnings.toLocaleString()}</div>
+                      </div>
+                    </div>
+                  </div>
+                  <form onSubmit={handleSettleDebt} style={{display:'flex', flexDirection:'column', gap:12}}>
+                    <div>
+                      <label style={labelStyle}>Amount Remitting to Store (₦)</label>
+                      <input type="number" max={currentDebt} style={{...inpStyle, fontSize:'18px', fontWeight:900, padding:'14px'}} placeholder={`Max: ₦${currentDebt.toLocaleString()}`} value={settleAmt} onChange={e=>setSettleAmt(e.target.value)} required autoFocus/>
+                    </div>
+                    <button type="submit" disabled={settling} style={{background:T.ink, color:'#fff', border:'none', borderRadius:'12px', padding:'14px', fontWeight:800, fontSize:'14px', cursor:'pointer', marginTop:4}}>
+                      {settling ? 'Processing...' : 'Confirm Settlement'}
+                    </button>
+                  </form>
                 </div>
               </motion.div>
             </div>
-          )}
+            );
+          })()}
         </AnimatePresence>
 
       </div>

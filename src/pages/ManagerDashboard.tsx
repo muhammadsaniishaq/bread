@@ -57,7 +57,7 @@ const cardAnim = (i: number) => ({
 });
 
 export const ManagerDashboard: React.FC = () => {
-  const { transactions, products, logout, expenses, customers, updateTransactionStatus } = useAppContext();
+  const { transactions, products, logout, expenses, customers, updateTransactionStatus, getSupplierDebt } = useAppContext();
   const { signOut, user } = useAuth();
   const navigate = useNavigate();
   const [chartType, setChartType] = useState<'area' | 'bar'>('area');
@@ -150,11 +150,12 @@ export const ManagerDashboard: React.FC = () => {
     // Net Profit is that Revenue minus Management Expenses
     const netProfit = totalSales - totalExpenses;
     
-    // Filter strictly for Wholesale Supplier Debt
+    // Filter strictly for Wholesale Supplier Debt (using 90% dynamic engine)
     const supplierProfileIds = new Set(suppliers.map(s => s.id));
     const wholesaleCustomers = customers.filter(c => supplierProfileIds.has(c.profile_id || ''));
-    
-    const outstandingDebt = wholesaleCustomers.reduce((s, c) => s + (c.debtBalance || 0), 0);
+
+    // Use getSupplierDebt for each supplier (returns 90% of sales minus payments already made)
+    const outstandingDebt = wholesaleCustomers.reduce((s, c) => s + getSupplierDebt(c.profile_id || ''), 0);
     const stockRemaining = products.reduce((s, p) => s + p.stock, 0);
 
     let topProductId = '', highestQty = 0;
@@ -173,9 +174,11 @@ export const ManagerDashboard: React.FC = () => {
       { day: 'Today', sales: totalSales, expenses: totalExpenses },
     ];
 
+    // Top debtors using 90% dynamic debt per supplier
     const topDebtors = [...wholesaleCustomers]
-      .filter(c => (c.debtBalance || 0) > 0)
-      .sort((a, b) => (b.debtBalance || 0) - (a.debtBalance || 0))
+      .map(c => ({ ...c, dynamicDebt: getSupplierDebt(c.profile_id || '') }))
+      .filter(c => c.dynamicDebt > 0)
+      .sort((a, b) => b.dynamicDebt - a.dynamicDebt)
       .slice(0, 5);
 
     const expenseEfficiency = totalSales > 0 ? Math.round((1 - totalExpenses / totalSales) * 100) : 100;
@@ -670,8 +673,8 @@ export const ManagerDashboard: React.FC = () => {
                   ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                       {metrics.topDebtors.map((c, i) => {
-                        const maxDebt = metrics.topDebtors[0].debtBalance || 1;
-                        const pct = Math.round(((c.debtBalance || 0) / maxDebt) * 100);
+                        const maxDebt = metrics.topDebtors[0].dynamicDebt || 1;
+                        const pct = Math.round((c.dynamicDebt / maxDebt) * 100);
                         const medals = ['🥇','🥈','🥉','4️⃣','5️⃣'];
                         return (
                           <div key={c.id} style={{ padding: '12px', borderRadius: '14px', background: i === 0 ? T.roseL : T.bg, border: `1px solid ${i === 0 ? T.rose + '20' : T.borderL}` }}>
@@ -680,7 +683,7 @@ export const ManagerDashboard: React.FC = () => {
                                 <span style={{ fontSize: '16px' }}>{medals[i]}</span>
                                 <span style={{ fontSize: '13px', fontWeight: 700, color: T.ink }}>{c.name}</span>
                               </div>
-                              <span style={{ fontSize: '13px', fontWeight: 900, color: i === 0 ? T.rose : T.amber }}>{fmt(c.debtBalance || 0)}</span>
+                              <span style={{ fontSize: '13px', fontWeight: 900, color: i === 0 ? T.rose : T.amber }}>{fmt(c.dynamicDebt)}</span>
                             </div>
                             <div style={{ height: '5px', background: 'rgba(0,0,0,0.05)', borderRadius: '3px', overflow: 'hidden' }}>
                               <motion.div initial={{ width: 0 }} animate={{ width: `${pct}%` }} transition={{ duration: 0.9, delay: i * 0.1 }}

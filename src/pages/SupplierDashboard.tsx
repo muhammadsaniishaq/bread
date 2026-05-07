@@ -241,11 +241,15 @@ export default function SupplierDashboard() {
     const amt = parseFloat(settleAmt);
     if (!amt || amt <= 0) return;
 
+    // Guard: don't allow paying more than what is owed (dynamically calculated at 90%)
+    if (amt > myDebt) {
+      alert(`You can only remit up to ${fmt(myDebt)} (your outstanding 90% balance).`);
+      return;
+    }
+
     setSettling(true);
     try {
-      const newDebt = Math.max(0, (myAccount.debtBalance || 0) - amt);
-      await supabase.from('customers').update({ debt_balance: newDebt }).eq('id', myAccount.id);
-      
+      // Insert the payment transaction — getSupplierDebt reads this dynamically, no column update needed
       const tx = {
         id: crypto.randomUUID(),
         date: new Date().toISOString(),
@@ -257,12 +261,12 @@ export default function SupplierDashboard() {
         origin: 'SUPPLIER_SELF_REMIT'
       };
       await supabase.from('transactions').insert([tx]);
-      alert(`Successfully remitted ₦${amt.toLocaleString()} to store.`);
+      alert(`Successfully remitted ${fmt(amt)} to store. Remaining balance: ${fmt(Math.max(0, myDebt - amt))}`);
       setSettleOpen(false);
       setSettleAmt('');
       handleRefresh();
     } catch(err: any) {
-      alert("Error: " + err.message);
+      alert('Error: ' + err.message);
     }
     setSettling(false);
   };
@@ -1058,14 +1062,25 @@ export default function SupplierDashboard() {
                  <button onClick={()=>setSettleOpen(false)} style={{background: T.surface2, border: 'none', width: '32px', height: '32px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: T.txt2}}><X size={16}/></button>
               </div>
               <div style={{padding: '24px'}}>
-                 <div style={{background: T.dangerLt, padding: '16px', borderRadius: '16px', marginBottom: 20, border: `1px solid ${T.danger}30`}}>
-                    <div style={{fontSize: '11px', color: T.danger, fontWeight: 800, textTransform: 'uppercase', marginBottom: 6}}>Current Outstanding Debt</div>
-                    <div style={{fontSize: '24px', color: T.danger, fontWeight: 900}}>{fmt(myDebt)}</div>
+                 {/* Debt breakdown */}
+                 <div style={{background: T.dangerLt, padding: '16px', borderRadius: '16px', marginBottom: 16, border: `1px solid ${T.danger}30`}}>
+                    <div style={{fontSize: '11px', color: T.danger, fontWeight: 800, textTransform: 'uppercase', marginBottom: 8}}>Outstanding Debt (90% of Your Sales)</div>
+                    <div style={{fontSize: '28px', color: T.danger, fontWeight: 900, marginBottom: 12}}>{fmt(myDebt)}</div>
+                    <div style={{display: 'flex', gap: '8px'}}>
+                      <div style={{flex: 1, background: 'rgba(239,68,68,0.1)', padding: '8px 10px', borderRadius: '10px'}}>
+                        <div style={{fontSize: '9px', fontWeight: 800, color: T.danger, textTransform: 'uppercase'}}>Total Sales</div>
+                        <div style={{fontSize: '13px', fontWeight: 900, color: T.ink}}>{fmt(totalDispatched)}</div>
+                      </div>
+                      <div style={{flex: 1, background: 'rgba(16,185,129,0.1)', padding: '8px 10px', borderRadius: '10px'}}>
+                        <div style={{fontSize: '9px', fontWeight: 800, color: T.success, textTransform: 'uppercase'}}>Your 10% Cut</div>
+                        <div style={{fontSize: '13px', fontWeight: 900, color: T.success}}>{fmt(myEarnings)}</div>
+                      </div>
+                    </div>
                  </div>
                  <form onSubmit={handleSettleDebt} style={{display: 'flex', flexDirection: 'column', gap: 16}}>
                     <div>
-                       <label style={{fontSize: '11px', fontWeight: 800, color: T.txt3, textTransform: 'uppercase', marginBottom: '8px', display: 'block'}}>Amount Paid to Store (₦)</label>
-                       <input type="number" style={{padding: '16px', borderRadius: '14px', border: `1px solid ${T.border}`, background: T.surface, fontSize: '16px', fontWeight: 800, color: T.ink, width: '100%', boxSizing: 'border-box'}} placeholder="e.g. 50000" value={settleAmt} onChange={e=>setSettleAmt(e.target.value)} required autoFocus/>
+                       <label style={{fontSize: '11px', fontWeight: 800, color: T.txt3, textTransform: 'uppercase', marginBottom: '8px', display: 'block'}}>Amount to Remit to Store (₦)</label>
+                       <input type="number" max={myDebt} style={{padding: '16px', borderRadius: '14px', border: `1px solid ${T.border}`, background: T.surface, fontSize: '16px', fontWeight: 800, color: T.ink, width: '100%', boxSizing: 'border-box'}} placeholder={`Max: ${fmt(myDebt)}`} value={settleAmt} onChange={e=>setSettleAmt(e.target.value)} required autoFocus/>
                     </div>
                     <button type="submit" disabled={settling} style={{background: T.ink, color: '#fff', border: 'none', borderRadius: '14px', padding: '16px', fontWeight: 900, fontSize: '15px', cursor: 'pointer', marginTop: 8}}>
                       {settling ? 'Processing...' : 'Confirm Remittance'}

@@ -261,10 +261,15 @@ export const Inventory: React.FC = () => {
 
        if (isSupplier) {
          if (!myAccount) throw new Error('Supplier record not found');
-         // Use the new dynamic true debt engine for Suppliers
-         const newDebt = Math.max(0, (myAccount.debtBalance || 0) - amt);
-         await supabase.from('customers').update({ debt_balance: newDebt }).eq('id', myAccount.id);
-         
+
+         // Guard: don't allow paying more than the actual 90% dynamic debt
+         if (amt > personalDebt) {
+           alert(`You can only remit up to ${fmt(personalDebt)} (your outstanding 90% balance).`);
+           setIsProcessing(false);
+           return;
+         }
+
+         // Only insert the payment transaction — getSupplierDebt reads dynamically, no column update needed
          const tx = {
            id: crypto.randomUUID(),
            date: new Date().toISOString(),
@@ -291,7 +296,7 @@ export const Inventory: React.FC = () => {
          });
        }
 
-       alert('Payment recorded successfully.');
+       alert(`Payment of ${fmt(amt)} recorded. Remaining: ${fmt(Math.max(0, personalDebt - amt))}`);
        setActiveTab('view');
        setPaymentAmount('');
      } catch(e: any) {
@@ -455,13 +460,16 @@ export const Inventory: React.FC = () => {
                     {/* Explicit Debt Display for Payment Tab */}
                     {isSupplier && (
                       <div style={{ background: personalDebt > 0 ? T.dangerLt : T.successLt, padding: '14px', borderRadius: '12px', border: `1px solid ${personalDebt > 0 ? '#fecaca' : '#bbf7d0'}`, marginBottom: '4px' }}>
-                        <div style={{ fontSize: '11px', color: personalDebt > 0 ? T.textDanger : T.textSuccess, fontWeight: 800, textTransform: 'uppercase', marginBottom: '2px' }}>Current Outstanding Debt</div>
+                        <div style={{ fontSize: '11px', color: personalDebt > 0 ? T.textDanger : T.textSuccess, fontWeight: 800, textTransform: 'uppercase', marginBottom: '2px' }}>Outstanding Debt (90% of Sales)</div>
                         <div style={{ fontSize: '20px', fontWeight: 900, color: personalDebt > 0 ? T.danger : T.textSuccess }}>{fmt(personalDebt)}</div>
+                        <div style={{ fontSize: '10px', color: personalDebt > 0 ? T.textDanger : T.textSuccess, marginTop: '4px', opacity: 0.8 }}>
+                          Your 10% commission is already deducted
+                        </div>
                       </div>
                     )}
                     <div>
                       <InpLabel>Amount Conveyed (₦)</InpLabel>
-                      <input type="number" required value={paymentAmount} onChange={e => setPaymentAmount(e.target.value)} style={{ ...InpStyle, fontSize: '18px', fontWeight: 900 }} placeholder="0" />
+                      <input type="number" required max={personalDebt} value={paymentAmount} onChange={e => setPaymentAmount(e.target.value)} style={{ ...InpStyle, fontSize: '18px', fontWeight: 900 }} placeholder={`Max: ${fmt(personalDebt)}`} />
                     </div>
                     <div>
                       <InpLabel>Payment Form</InpLabel>
