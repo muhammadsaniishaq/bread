@@ -169,6 +169,9 @@ export default function SupplierDashboard() {
   const debtors          = myCustomers.filter(c=>c.debtBalance>0);
   const totalCustomerDebt= myCustomers.reduce((s,c)=>s+(c.debtBalance||0),0);
 
+  /* ── Helper (must be before topProducts) ───────────────────────────────── */
+  const getProductName = (id?: string) => products.find(p => p.id === id)?.name || 'Product';
+
   /* ── Top products by quantity sold ──────────────────────────────────────── */
   const topProducts = useMemo(() => {
     const map: Record<string, { name: string; qty: number; rev: number }> = {};
@@ -176,11 +179,11 @@ export default function SupplierDashboard() {
       getTransactionItems(t).forEach(item => {
         if (!map[item.productId]) map[item.productId] = { name: getProductName(item.productId), qty: 0, rev: 0 };
         map[item.productId].qty += item.quantity;
-        map[item.productId].rev += item.quantity * item.unitPrice;
+        map[item.productId].rev += item.quantity * (item.unitPrice || 0);
       });
     });
     return Object.entries(map).sort((a,b) => b[1].qty - a[1].qty).slice(0,4).map(([id, v]) => ({ id, ...v }));
-  }, [completedTxns]);
+  }, [completedTxns, products]);
 
   /* ── Performance tier ───────────────────────────────────────────────────── */
   const tier = useMemo(() => {
@@ -204,13 +207,13 @@ export default function SupplierDashboard() {
   const myEarnings   = totalDispatched * 0.1;   // supplier keeps 10%
   const bakeryShare  = totalDispatched * 0.9;   // bakery keeps 90%
 
-  /* ── Sales streak (consecutive days with at least 1 sale) ───────────────── */
+  /* ── Sales streak with safety guard ──────────────────────────────────── */
   const salesStreak = useMemo(() => {
     let streak = 0;
     const check = new Date();
-    while (true) {
+    for (let i = 0; i < 365; i++) {  // max 365 days safety guard
       const ds = check.toISOString().split('T')[0];
-      const hasSale = myTxns.some(t => t.status==='COMPLETED' && t.origin==='POS_SUPPLIER' && t.date.startsWith(ds));
+      const hasSale = myTxns.some(t => t.status === 'COMPLETED' && t.origin === 'POS_SUPPLIER' && t.date.startsWith(ds));
       if (!hasSale) break;
       streak++;
       check.setDate(check.getDate() - 1);
@@ -316,10 +319,19 @@ export default function SupplierDashboard() {
       alert("Error: " + e.message);
     }
   };
-  
-  const getProductName = (id?: string) => products.find(p=>p.id===id)?.name||'Product';
 
   const firstName = (myAccount?.name || user?.email || 'Supplier').split(' ')[0];
+
+  // Pre-compute filtered transactions (avoids IIFE in JSX)
+  const filteredTxns = useMemo(() => {
+    return myTxns
+      .filter(tx => {
+        if (actFilter === 'sales')    return tx.type !== 'Payment';
+        if (actFilter === 'payments') return tx.type === 'Payment';
+        return true;
+      })
+      .slice(0, 20);
+  }, [myTxns, actFilter]);
 
   /* ─────────────────────────────────────────────────────────────────────────
      RENDER
@@ -962,13 +974,7 @@ export default function SupplierDashboard() {
                       <TrendingDown size={48} style={{ margin: '0 auto 12px', opacity: 0.2 }} />
                       <div style={{ fontSize: '14px', fontWeight: 700 }}>No transactions yet</div>
                     </div>
-                  ) : (() => {
-                     const filtered = myTxns.filter(tx => {
-                       if (actFilter === 'sales')    return tx.type !== 'Payment';
-                       if (actFilter === 'payments') return tx.type === 'Payment';
-                       return true;
-                     });
-                     return filtered.slice(0, 20).map((tx, i, arr) => {
+                  ) : filteredTxns.map((tx, i, arr) => {
                     const s = STATUS[tx.status||'COMPLETED'] || STATUS['COMPLETED'];
                     const items = getTransactionItems(tx);
                     const label = items.length > 0
@@ -997,7 +1003,7 @@ export default function SupplierDashboard() {
                         </div>
                       </div>
                     );
-                  })})()}
+                  })}
                 </motion.div>
 
                 {/* Revenue Split Card in Activity */}
