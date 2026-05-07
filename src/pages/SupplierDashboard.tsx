@@ -11,7 +11,8 @@ import {
   ShoppingCart, RefreshCw, Wallet, Users,
   CheckCircle2, Hourglass, XCircle, ChevronRight,
   BarChart3, ArrowUpRight, ArrowDownRight, Bell,
-  Target, Zap, Star, ShoppingBag, Shield, ShieldCheck, ShieldAlert, X
+  Target, Zap, Star, ShoppingBag, Shield, ShieldCheck, ShieldAlert, X,
+  Flame, Layers
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -73,6 +74,14 @@ export default function SupplierDashboard() {
   const [activeSection, setSection]   = useState<'overview'|'stock'|'activity'|'orders'>('overview');
   const [customerOrders, setCustomerOrders] = useState<any[]>([]);
   const [verifyingId, setVerifyingId] = useState<string|null>(null);
+  const [actFilter, setActFilter]     = useState<'all'|'sales'|'payments'>('all');
+  const [clock, setClock]             = useState(() => new Date());
+
+  // Live clock ticker
+  useEffect(() => {
+    const t = setInterval(() => setClock(new Date()), 1000);
+    return () => clearInterval(t);
+  }, []);
 
   const [settleOpen, setSettleOpen] = useState(false);
   const [settleAmt, setSettleAmt] = useState('');
@@ -159,6 +168,55 @@ export default function SupplierDashboard() {
   const hasDebt          = myDebt > 0;
   const debtors          = myCustomers.filter(c=>c.debtBalance>0);
   const totalCustomerDebt= myCustomers.reduce((s,c)=>s+(c.debtBalance||0),0);
+
+  /* ── Top products by quantity sold ──────────────────────────────────────── */
+  const topProducts = useMemo(() => {
+    const map: Record<string, { name: string; qty: number; rev: number }> = {};
+    completedTxns.forEach(t => {
+      getTransactionItems(t).forEach(item => {
+        if (!map[item.productId]) map[item.productId] = { name: getProductName(item.productId), qty: 0, rev: 0 };
+        map[item.productId].qty += item.quantity;
+        map[item.productId].rev += item.quantity * item.unitPrice;
+      });
+    });
+    return Object.entries(map).sort((a,b) => b[1].qty - a[1].qty).slice(0,4).map(([id, v]) => ({ id, ...v }));
+  }, [completedTxns]);
+
+  /* ── Performance tier ───────────────────────────────────────────────────── */
+  const tier = useMemo(() => {
+    const n = completedTxns.length;
+    if (n >= 100) return { label: 'Platinum', emoji: '💎', color: '#818cf8', bg: 'rgba(129,140,248,0.12)', min: 100 };
+    if (n >= 50)  return { label: 'Gold',     emoji: '🥇', color: '#ca8a04', bg: 'rgba(202,138,4,0.12)',   min: 50 };
+    if (n >= 20)  return { label: 'Silver',   emoji: '🥈', color: '#64748b', bg: 'rgba(100,116,139,0.12)', min: 20 };
+    return               { label: 'Bronze',   emoji: '🥉', color: '#b45309', bg: 'rgba(180,83,9,0.12)',    min: 0 };
+  }, [completedTxns.length]);
+
+  const nextTierThreshold = tier.label === 'Bronze' ? 20 : tier.label === 'Silver' ? 50 : tier.label === 'Gold' ? 100 : 100;
+  const tierProgress = Math.min(100, (completedTxns.length / nextTierThreshold) * 100);
+
+  /* ── Monthly total + Revenue split ─────────────────────────────────────── */
+  const monthStart = new Date(); monthStart.setDate(1);
+  const monthSales = useMemo(() =>
+    myTxns.filter(t => t.status==='COMPLETED' && t.origin==='POS_SUPPLIER' && new Date(t.date) >= monthStart)
+      .reduce((s,t) => s+t.totalPrice, 0)
+  , [myTxns]);
+
+  const myEarnings   = totalDispatched * 0.1;   // supplier keeps 10%
+  const bakeryShare  = totalDispatched * 0.9;   // bakery keeps 90%
+
+  /* ── Sales streak (consecutive days with at least 1 sale) ───────────────── */
+  const salesStreak = useMemo(() => {
+    let streak = 0;
+    const check = new Date();
+    while (true) {
+      const ds = check.toISOString().split('T')[0];
+      const hasSale = myTxns.some(t => t.status==='COMPLETED' && t.origin==='POS_SUPPLIER' && t.date.startsWith(ds));
+      if (!hasSale) break;
+      streak++;
+      check.setDate(check.getDate() - 1);
+    }
+    return streak;
+  }, [myTxns]);
 
   /* ── Greeting ───────────────────────────────────────────────────────────── */
   const greeting = useMemo(() => {
@@ -300,18 +358,24 @@ export default function SupplierDashboard() {
                 </div>
               </div>
               
-              <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                {pendingTxns.length > 0 && (
-                  <motion.div animate={{ scale: [1, 1.2, 1] }} transition={{ repeat: Infinity, duration: 2 }}
-                    style={{ width: '8px', height: '8px', borderRadius: '50%', background: T.warn, boxShadow: `0 0 12px ${T.warn}` }}
-                  />
-                )}
-                <motion.button whileTap={{ scale: 0.9 }} onClick={handleRefresh}
-                  style={{ width: '40px', height: '40px', borderRadius: '12px', background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-                  <motion.div animate={{ rotate: refreshing ? 360 : 0 }} transition={{ duration: 1, repeat: refreshing ? Infinity : 0, ease: 'linear' }}>
-                    <RefreshCw size={18} color="#fff" />
-                  </motion.div>
-                </motion.button>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '8px' }}>
+                {/* Live Clock */}
+                <div style={{ fontVariantNumeric: 'tabular-nums', fontSize: '20px', fontWeight: 900, color: '#fff', letterSpacing: '-0.02em', fontFamily: 'monospace' }}>
+                  {clock.toLocaleTimeString('en-NG', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                </div>
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                  {pendingTxns.length > 0 && (
+                    <motion.div animate={{ scale: [1, 1.2, 1] }} transition={{ repeat: Infinity, duration: 2 }}
+                      style={{ width: '8px', height: '8px', borderRadius: '50%', background: T.warn, boxShadow: `0 0 12px ${T.warn}` }}
+                    />
+                  )}
+                  <motion.button whileTap={{ scale: 0.9 }} onClick={handleRefresh}
+                    style={{ width: '40px', height: '40px', borderRadius: '12px', background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                    <motion.div animate={{ rotate: refreshing ? 360 : 0 }} transition={{ duration: 1, repeat: refreshing ? Infinity : 0, ease: 'linear' }}>
+                      <RefreshCw size={18} color="#fff" />
+                    </motion.div>
+                  </motion.button>
+                </div>
               </div>
             </div>
 
@@ -387,12 +451,58 @@ export default function SupplierDashboard() {
             ))}
           </motion.div>
 
-          {/* ══ SECTION TABS ══ */}
-          <div style={{ background: T.surface2, borderRadius: '16px', padding: '6px', display: 'flex', gap: '6px', overflowX: 'auto', WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-            {(['overview', 'stock', 'orders', 'activity'] as const).map(s => (
-              <button key={s} onClick={() => setSection(s)}
-                style={{ flex: 1, minWidth: '80px', padding: '10px 12px', borderRadius: '12px', border: 'none', cursor: 'pointer', fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', transition: 'all 0.2s', background: activeSection === s ? T.ink : 'transparent', color: activeSection === s ? '#fff' : T.txt3 }}>
-                {s}
+          {/* ══ LOW-STOCK ALERT STRIP ══ */}
+          {myStock.some(p => p.warning) && (
+            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}
+              style={{ background: T.dangerLt, border: `1px solid ${T.danger}40`, borderRadius: '16px', padding: '14px 20px', display: 'flex', alignItems: 'center', gap: '12px', overflowX: 'auto' }}>
+              <motion.div animate={{ rotate: [-5, 5, -5] }} transition={{ repeat: Infinity, duration: 1.5 }}>
+                <AlertTriangle size={20} color={T.danger} />
+              </motion.div>
+              <span style={{ fontSize: '12px', fontWeight: 800, color: T.danger, whiteSpace: 'nowrap' }}>Low Stock:</span>
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'nowrap' }}>
+                {myStock.filter(p => p.warning).map(p => (
+                  <span key={p.id} style={{ background: T.danger, color: '#fff', padding: '4px 10px', borderRadius: '8px', fontSize: '11px', fontWeight: 800, whiteSpace: 'nowrap' }}>
+                    {p.name} ({p.myStock})
+                  </span>
+                ))}
+              </div>
+            </motion.div>
+          )}
+
+          {/* ══ STREAK BANNER ══ */}
+          {salesStreak > 0 && (
+            <motion.div variants={fadeUp} initial="hidden" animate="show"
+              style={{ background: 'linear-gradient(135deg,#4f46e5,#7c3aed)', borderRadius: '20px', padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{ fontSize: '28px' }}>🔥</div>
+                <div>
+                  <div style={{ fontSize: '14px', fontWeight: 900, color: '#fff' }}>{salesStreak}-Day Sales Streak!</div>
+                  <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.7)', fontWeight: 600 }}>Keep it up — you're on fire!</div>
+                </div>
+              </div>
+              <div style={{ background: 'rgba(255,255,255,0.15)', borderRadius: '12px', padding: '8px 14px', textAlign: 'center' }}>
+                <div style={{ fontSize: '22px', fontWeight: 900, color: '#fff' }}>{salesStreak}</div>
+                <div style={{ fontSize: '9px', fontWeight: 800, color: 'rgba(255,255,255,0.7)', textTransform: 'uppercase' }}>Days</div>
+              </div>
+            </motion.div>
+          )}
+
+          {/* ══ SECTION TABS WITH ICONS ══ */}
+          <div style={{ background: T.surface2, borderRadius: '16px', padding: '6px', display: 'flex', gap: '4px' }}>
+            {([
+              { id: 'overview', label: 'Overview', icon: '🏠' },
+              { id: 'stock',    label: 'Stock',    icon: '📦' },
+              { id: 'orders',   label: 'Orders',   icon: '🛒' },
+              { id: 'activity', label: 'History',  icon: '📋' },
+            ] as const).map(s => (
+              <button key={s.id} onClick={() => setSection(s.id as any)}
+                style={{ flex: 1, padding: '10px 4px', borderRadius: '12px', border: 'none', cursor: 'pointer',
+                  fontSize: '10px', fontWeight: 800, transition: 'all 0.2s',
+                  background: activeSection === s.id ? T.ink : 'transparent',
+                  color: activeSection === s.id ? '#fff' : T.txt3,
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
+                <span style={{ fontSize: '14px', lineHeight: 1 }}>{s.icon}</span>
+                <span>{s.label}</span>
               </button>
             ))}
           </div>
@@ -611,6 +721,68 @@ export default function SupplierDashboard() {
               </motion.div>
             )}
 
+            {/* ══════════ EARNINGS BREAKDOWN ══════════ */}
+            {activeSection === 'overview' && (
+              <motion.div key="earnings" variants={fadeUp} initial="hidden" animate="show"
+                style={{ background: T.surface, borderRadius: '28px', padding: '24px', boxShadow: T.shadow, border: `1px solid ${T.border}` }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
+                  <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'rgba(139,92,246,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Layers size={18} color="#8b5cf6" />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '14px', fontWeight: 900, color: T.ink }}>Earnings Breakdown</div>
+                    <div style={{ fontSize: '11px', color: T.txt3, fontWeight: 600 }}>Sales performance overview</div>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  {[
+                    { label: 'Today',      val: todaySales,      color: T.success,  bg: T.successLt },
+                    { label: 'Yesterday',  val: yesterdaySales,  color: T.accent,   bg: T.accentLt },
+                    { label: 'This Month', val: monthSales,      color: '#8b5cf6',  bg: 'rgba(139,92,246,0.1)' },
+                    { label: 'All Time',   val: totalDispatched, color: T.ink,      bg: T.surface2 },
+                  ].map((row, i) => (
+                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', background: row.bg, borderRadius: '14px' }}>
+                      <span style={{ fontSize: '13px', fontWeight: 700, color: T.txt2 }}>{row.label}</span>
+                      <span style={{ fontSize: '15px', fontWeight: 900, color: row.color }}>{fmt(row.val)}</span>
+                    </div>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+
+            {/* ══════════ PERFORMANCE TIER ══════════ */}
+            {activeSection === 'overview' && (
+              <motion.div key="tier" variants={fadeUp} initial="hidden" animate="show"
+                style={{ background: tier.bg, border: `1px solid ${tier.color}40`, borderRadius: '28px', padding: '24px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div style={{ fontSize: '36px', lineHeight: 1 }}>{tier.emoji}</div>
+                    <div>
+                      <div style={{ fontSize: '11px', fontWeight: 800, color: tier.color, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Performance Tier</div>
+                      <div style={{ fontSize: '22px', fontWeight: 900, color: T.ink }}>{tier.label}</div>
+                    </div>
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontSize: '28px', fontWeight: 900, color: tier.color }}>{completedTxns.length}</div>
+                    <div style={{ fontSize: '10px', fontWeight: 700, color: T.txt3, textTransform: 'uppercase' }}>Transactions</div>
+                  </div>
+                </div>
+                {tier.label !== 'Platinum' && (
+                  <>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                      <span style={{ fontSize: '11px', fontWeight: 700, color: T.txt3 }}>Progress to next tier</span>
+                      <span style={{ fontSize: '11px', fontWeight: 900, color: tier.color }}>{nextTierThreshold - completedTxns.length} more needed</span>
+                    </div>
+                    <div style={{ background: 'rgba(0,0,0,0.08)', borderRadius: '8px', height: '8px', overflow: 'hidden' }}>
+                      <motion.div initial={{ width: 0 }} animate={{ width: `${tierProgress}%` }}
+                        transition={{ duration: 1.2, type: 'spring' }}
+                        style={{ height: '100%', background: tier.color, borderRadius: '8px' }} />
+                    </div>
+                  </>
+                )}
+              </motion.div>
+            )}
+
             {/* ══════════ STOCK ══════════ */}
             {activeSection === 'stock' && (
               <motion.div key="stock" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
@@ -671,6 +843,37 @@ export default function SupplierDashboard() {
                     );
                   })}
                 </motion.div>
+                {/* Top Products in Stock Tab */}
+                {topProducts.length > 0 && (
+                  <motion.div variants={fadeUp} initial="hidden" animate="show"
+                    style={{ background: T.surface, borderRadius: '28px', overflow: 'hidden', boxShadow: T.shadow, border: `1px solid ${T.border}` }}>
+                    <div style={{ padding: '20px 24px', borderBottom: `1px solid ${T.surface2}`, display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: T.warnLt, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <Flame size={18} color={T.warn} />
+                      </div>
+                      <div>
+                        <div style={{ fontSize: '14px', fontWeight: 900, color: T.ink }}>Top Selling Products</div>
+                        <div style={{ fontSize: '11px', color: T.txt3, fontWeight: 600 }}>Based on all your sales</div>
+                      </div>
+                    </div>
+                    {topProducts.map((p, i) => (
+                      <div key={p.id} style={{ display: 'flex', alignItems: 'center', padding: '14px 24px', borderBottom: i < topProducts.length-1 ? `1px solid ${T.surface2}` : 'none', gap: '12px' }}>
+                        <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: i===0?'#fef9c3':i===1?T.surface2:T.surface2, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: 900, color: i===0?'#ca8a04':T.txt3, flexShrink: 0 }}>
+                          {i+1}
+                        </div>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: '13px', fontWeight: 800, color: T.ink }}>{p.name}</div>
+                          <div style={{ fontSize: '11px', color: T.txt3, marginTop: '2px' }}>{fmt(p.rev)} revenue</div>
+                        </div>
+                        <div style={{ textAlign: 'right' }}>
+                          <div style={{ fontSize: '16px', fontWeight: 900, color: T.accent }}>{p.qty}</div>
+                          <div style={{ fontSize: '9px', fontWeight: 700, color: T.txt3, textTransform: 'uppercase' }}>units</div>
+                        </div>
+                      </div>
+                    ))}
+                  </motion.div>
+                )}
+
                 <motion.button whileTap={{ scale: 0.97 }} onClick={() => navigate('/inventory')}
                   style={{ width: '100%', background: T.ink, border: 'none', borderRadius: '24px', padding: '20px', color: '#fff', fontSize: '15px', fontWeight: 900, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', boxShadow: T.shadowMd }}>
                   <Package size={20} /> Request Stock from Store
@@ -744,13 +947,28 @@ export default function SupplierDashboard() {
                     </div>
                     <span style={{ fontSize: '11px', fontWeight: 800, color: T.txt3 }}>{myTxns.length} total</span>
                   </div>
+                  {/* Filter Pills */}
+                  <div style={{ display: 'flex', gap: '8px', padding: '12px 20px', borderBottom: `1px solid ${T.surface2}`, overflowX: 'auto' }}>
+                    {(['all','sales','payments'] as const).map(f => (
+                      <button key={f} onClick={() => setActFilter(f)}
+                        style={{ padding: '6px 16px', borderRadius: '20px', border: 'none', cursor: 'pointer', fontSize: '11px', fontWeight: 800, textTransform: 'capitalize', whiteSpace: 'nowrap', background: actFilter === f ? T.ink : T.surface2, color: actFilter === f ? '#fff' : T.txt3 }}>
+                        {f === 'all' ? 'All' : f === 'sales' ? '🛒 Sales' : '💳 Payments'}
+                      </button>
+                    ))}
+                  </div>
 
                   {myTxns.length === 0 ? (
                     <div style={{ padding: '48px 20px', textAlign: 'center', color: T.txt3 }}>
                       <TrendingDown size={48} style={{ margin: '0 auto 12px', opacity: 0.2 }} />
                       <div style={{ fontSize: '14px', fontWeight: 700 }}>No transactions yet</div>
                     </div>
-                  ) : myTxns.slice(0, 15).map((tx, i, arr) => {
+                  ) : (() => {
+                     const filtered = myTxns.filter(tx => {
+                       if (actFilter === 'sales')    return tx.type !== 'Payment';
+                       if (actFilter === 'payments') return tx.type === 'Payment';
+                       return true;
+                     });
+                     return filtered.slice(0, 20).map((tx, i, arr) => {
                     const s = STATUS[tx.status||'COMPLETED'] || STATUS['COMPLETED'];
                     const items = getTransactionItems(tx);
                     const label = items.length > 0
@@ -779,7 +997,39 @@ export default function SupplierDashboard() {
                         </div>
                       </div>
                     );
-                  })}
+                  })})()}
+                </motion.div>
+
+                {/* Revenue Split Card in Activity */}
+                <motion.div variants={fadeUp} initial="hidden" animate="show"
+                  style={{ background: T.surface, borderRadius: '28px', padding: '24px', boxShadow: T.shadow, border: `1px solid ${T.border}` }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
+                    <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: T.accentLt, display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.accent }}>
+                      <Wallet size={18} />
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '14px', fontWeight: 900, color: T.ink }}>Revenue Split</div>
+                      <div style={{ fontSize: '11px', color: T.txt3, fontWeight: 600 }}>Your share of all dispatched goods</div>
+                    </div>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
+                    <div style={{ background: T.successLt, borderRadius: '16px', padding: '16px', textAlign: 'center' }}>
+                      <div style={{ fontSize: '11px', fontWeight: 800, color: T.success, textTransform: 'uppercase', marginBottom: '4px' }}>My Cut (10%)</div>
+                      <div style={{ fontSize: '20px', fontWeight: 900, color: T.success }}>{fmt(myEarnings)}</div>
+                    </div>
+                    <div style={{ background: T.accentLt, borderRadius: '16px', padding: '16px', textAlign: 'center' }}>
+                      <div style={{ fontSize: '11px', fontWeight: 800, color: T.accent, textTransform: 'uppercase', marginBottom: '4px' }}>Bakery (90%)</div>
+                      <div style={{ fontSize: '20px', fontWeight: 900, color: T.accent }}>{fmt(bakeryShare)}</div>
+                    </div>
+                  </div>
+                  <div style={{ height: '10px', borderRadius: '8px', overflow: 'hidden', display: 'flex' }}>
+                    <div style={{ width: '10%', background: T.success }} />
+                    <div style={{ width: '90%', background: T.accent }} />
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '6px' }}>
+                    <span style={{ fontSize: '10px', fontWeight: 700, color: T.success }}>10% You</span>
+                    <span style={{ fontSize: '10px', fontWeight: 700, color: T.accent }}>90% Bakery</span>
+                  </div>
                 </motion.div>
               </motion.div>
             )}
