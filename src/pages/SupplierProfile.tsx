@@ -15,16 +15,55 @@ import { AnimatedPage } from '../components/AnimatedPage';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const fmt = (v: number) => '₦' + (v || 0).toLocaleString();
+
+/* ── BRAND DESIGN TOKENS ───────────────────────── */
+const C = {
+  brand:    '#4f46e5',
+  brandDk:  '#3730a3',
+  brandLt:  'rgba(79,70,229,0.08)',
+  ok:       '#10b981',
+  okLt:     'rgba(16,185,129,0.08)',
+  warn:     '#f59e0b',
+  warnLt:   'rgba(245,158,11,0.08)',
+  danger:   '#ef4444',
+  dangerLt: 'rgba(239,68,68,0.08)',
+  ink:      '#0f172a',
+  sub:      '#64748b',
+  muted:    '#94a3b8',
+  surface:  '#ffffff',
+  bg:       '#f1f5f9',
+  border:   'rgba(15,23,42,0.06)',
+  card:     '0 1px 3px rgba(15,23,42,0.04), 0 8px 24px rgba(15,23,42,0.06)',
+  hero:     'linear-gradient(160deg, #0f0c29 0%, #1e1b4b 45%, #312e81 100%)',
+};
+
+const card: React.CSSProperties = {
+  background: C.surface,
+  borderRadius: '20px',
+  padding: '20px',
+  marginBottom: '12px',
+  border: `1px solid ${C.border}`,
+  boxShadow: C.card,
+};
+
+const sectionHead = (label: string, icon?: React.ReactNode): React.ReactNode => (
+  <div style={{ display:'flex', alignItems:'center', gap:'8px', marginBottom:'16px' }}>
+    {icon && <span style={{ color: C.brand }}>{icon}</span>}
+    <span style={{ fontSize:'13px', fontWeight:800, color: C.ink, letterSpacing:'-0.01em' }}>{label}</span>
+  </div>
+);
+
 const inp: React.CSSProperties = {
-  width:'100%', boxSizing:'border-box', padding:'14px 16px',
-  borderRadius:'14px', border:'1px solid rgba(0,0,0,0.08)',
-  background:'#f8fafc', fontWeight:700, fontSize:'14px',
-  outline:'none', fontFamily:'inherit'
+  width:'100%', boxSizing:'border-box', padding:'13px 16px',
+  borderRadius:'12px', border:`1px solid ${C.border}`,
+  background: C.bg, fontWeight:600, fontSize:'14px',
+  outline:'none', fontFamily:'inherit', color: C.ink,
+  transition: 'border-color 0.2s',
 };
 const lbl: React.CSSProperties = {
-  fontSize:'10px', fontWeight:800, color:'#64748b',
-  textTransform:'uppercase', letterSpacing:'0.05em',
-  marginBottom:'6px', display:'block'
+  fontSize:'10px', fontWeight:800, color: C.sub,
+  textTransform:'uppercase', letterSpacing:'0.06em',
+  marginBottom:'6px', display:'block',
 };
 
 export default function SupplierProfile() {
@@ -121,44 +160,45 @@ export default function SupplierProfile() {
 
   return (
     <AnimatedPage>
-      <div style={{ minHeight:'100vh', background:'#f1f5f9', paddingBottom:'120px', fontFamily:"'Inter',system-ui,sans-serif" }}>
+      <div style={{ minHeight:'100vh', background:C.bg, paddingBottom:'120px', fontFamily:"'Inter',system-ui,sans-serif" }}>
 
         {/* ── HERO ── */}
-        <div style={{ background:'linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%)', padding:'56px 24px 100px', position:'relative', overflow:'hidden', textAlign:'center' }}>
-          {/* Glow orbs */}
-          {[['10%','5%','200px','rgba(129,140,248,0.18)'],['70%','60%','160px','rgba(99,102,241,0.14)']].map(([t,l,s,c],i) => (
-            <div key={i} style={{ position:'absolute', top:t, left:l, width:s, height:s, borderRadius:'50%', background:`radial-gradient(circle, ${c} 0%, transparent 70%)`, pointerEvents:'none' }}/>
-          ))}
+        <div style={{ background: C.hero, padding:'52px 24px 96px', position:'relative', overflow:'hidden', textAlign:'center' }}>
+          <div style={{ position:'absolute', top:'-20px', left:'-20px', width:'220px', height:'220px', borderRadius:'50%', background:'radial-gradient(circle, rgba(129,140,248,0.15) 0%, transparent 70%)', pointerEvents:'none' }}/>
+          <div style={{ position:'absolute', bottom:'-40px', right:'-20px', width:'180px', height:'180px', borderRadius:'50%', background:'radial-gradient(circle, rgba(99,102,241,0.12) 0%, transparent 70%)', pointerEvents:'none' }}/>
           <div style={{ position:'relative', zIndex:10 }}>
-            {/* Avatar ring */}
-            <div style={{ width:'96px', height:'96px', margin:'0 auto 16px', position:'relative' }}>
-              <div style={{ position:'absolute', inset:'-4px', borderRadius:'50%', background:'linear-gradient(135deg,#818cf8,#6366f1,#4f46e5)', padding:'3px' }}>
-                <div style={{ width:'100%', height:'100%', borderRadius:'50%', background:'#1e1b4b', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'28px', fontWeight:900, color:'#fff', overflow:'hidden' }}>
-                  {profile?.avatar_url ? <img src={profile.avatar_url} style={{ width:'100%', height:'100%', objectFit:'cover' }} alt="" /> : initials}
+            {/* Avatar */}
+            <div style={{ width:'92px', height:'92px', margin:'0 auto 14px', position:'relative' }}>
+              <div style={{ position:'absolute', inset:'-3px', borderRadius:'50%', background:`linear-gradient(135deg, #a5b4fc, ${C.brand}, ${C.brandDk})` }}>
+                <div style={{ margin:'3px', borderRadius:'50%', background:'#1e1b4b', height:'calc(100% - 6px)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'26px', fontWeight:900, color:'#fff', overflow:'hidden' }}>
+                  {profile?.avatar_url ? <img src={profile.avatar_url} style={{ width:'100%', height:'100%', objectFit:'cover' }} alt=""/> : initials}
                 </div>
               </div>
             </div>
-
-            <h1 style={{ fontSize:'22px', fontWeight:900, color:'#fff', margin:'0 0 6px', letterSpacing:'-0.02em' }}>{profile?.full_name || 'Supplier'}</h1>
-            <p style={{ color:'rgba(165,180,252,0.7)', fontSize:'13px', margin:'0 0 12px' }}>@{profile?.username || 'supplier'}</p>
-
-            <div style={{ display:'inline-flex', alignItems:'center', gap:'8px' }}>
-              <span style={{ display:'inline-flex', alignItems:'center', gap:'5px', padding:'5px 12px', borderRadius:'20px', background:'rgba(16,185,129,0.2)', border:'1px solid rgba(16,185,129,0.3)', color:'#34d399', fontSize:'10px', fontWeight:800, textTransform:'uppercase' }}>
-                <ShieldCheck size={12}/> Verified Supplier
+            <h1 style={{ fontSize:'22px', fontWeight:900, color:'#fff', margin:'0 0 4px', letterSpacing:'-0.03em' }}>{profile?.full_name || 'Supplier'}</h1>
+            <p style={{ color:'rgba(165,180,252,0.65)', fontSize:'13px', margin:'0 0 14px', fontWeight:500 }}>@{profile?.username || 'supplier'}</p>
+            <div style={{ display:'inline-flex', alignItems:'center', gap:'6px', flexWrap:'wrap', justifyContent:'center' }}>
+              <span style={{ display:'inline-flex', alignItems:'center', gap:'5px', padding:'5px 12px', borderRadius:'20px', background:`${C.ok}25`, border:`1px solid ${C.ok}40`, color:'#6ee7b7', fontSize:'10px', fontWeight:800, textTransform:'uppercase', letterSpacing:'0.04em' }}>
+                <ShieldCheck size={11}/> Verified Supplier
               </span>
-              <span style={{ display:'inline-flex', alignItems:'center', gap:'5px', padding:'5px 12px', borderRadius:'20px', background:stats.tier.bg, border:`1px solid ${stats.tier.color}30`, color:stats.tier.color, fontSize:'10px', fontWeight:800 }}>
+              <span style={{ display:'inline-flex', alignItems:'center', gap:'5px', padding:'5px 12px', borderRadius:'20px', background:stats.tier.bg, border:`1px solid ${stats.tier.color}35`, color:stats.tier.color, fontSize:'10px', fontWeight:800 }}>
                 {stats.tier.emoji} {stats.tier.label}
               </span>
+            </div>
+            {/* Member ID */}
+            <div style={{ marginTop:'14px', display:'inline-flex', alignItems:'center', gap:'6px', background:'rgba(255,255,255,0.06)', border:'1px solid rgba(255,255,255,0.1)', padding:'5px 12px', borderRadius:'10px' }}>
+              <span style={{ fontSize:'9px', color:'rgba(165,180,252,0.5)', fontWeight:700, textTransform:'uppercase' }}>Member ID</span>
+              <span style={{ fontSize:'11px', color:'rgba(255,255,255,0.7)', fontWeight:800, fontFamily:'monospace' }}>{(user?.id || '').slice(0,8).toUpperCase()}</span>
             </div>
           </div>
         </div>
 
-        <div style={{ padding:'0 16px', marginTop:'-72px', position:'relative', zIndex:20 }}>
+        <div style={{ padding:'0 16px', marginTop:'-68px', position:'relative', zIndex:20 }}>
 
           {/* ── PENDING ALERT ── */}
           {stats.pendingCount > 0 && (
-            <motion.div initial={{ opacity:0, scale:0.95 }} animate={{ opacity:1, scale:1 }}
-              style={{ background:'linear-gradient(135deg,#92400e,#b45309)', borderRadius:'16px', padding:'14px 16px', marginBottom:'12px', display:'flex', alignItems:'center', gap:'12px', boxShadow:'0 8px 24px rgba(180,83,9,0.3)' }}>
+            <motion.div initial={{ opacity:0, y:-8 }} animate={{ opacity:1, y:0 }}
+              style={{ background:`linear-gradient(135deg,#92400e,${C.warn})`, borderRadius:'16px', padding:'14px 16px', marginBottom:'12px', display:'flex', alignItems:'center', gap:'12px', boxShadow:`0 8px 24px ${C.warn}40` }}>
               <AlertTriangle size={20} color="#fbbf24"/>
               <div style={{ flex:1 }}>
                 <div style={{ fontSize:'13px', fontWeight:900, color:'#fef3c7' }}>{stats.pendingCount} Pending Order{stats.pendingCount > 1 ? 's' : ''}</div>
@@ -171,129 +211,122 @@ export default function SupplierProfile() {
           {/* ── QUICK CONTACT ── */}
           {profile?.phone && (
             <motion.div initial={{ opacity:0, y:12 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.05 }}
-              style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'10px', marginBottom:'14px' }}>
-              <a href={`tel:${profile.phone}`} style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:'8px', background:'#fff', borderRadius:'16px', padding:'14px', textDecoration:'none', color:'#10b981', fontWeight:800, fontSize:'13px', boxShadow:'0 4px 16px rgba(0,0,0,0.06)', border:'1px solid rgba(16,185,129,0.15)' }}>
-                <PhoneCall size={18}/> Call Me
+              style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'10px', marginBottom:'12px' }}>
+              <a href={`tel:${profile.phone}`} style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:'8px', background:C.surface, borderRadius:'16px', padding:'13px', textDecoration:'none', color:C.ok, fontWeight:800, fontSize:'13px', boxShadow:C.card, border:`1px solid ${C.ok}20` }}>
+                <PhoneCall size={17}/> Call
               </a>
-              <a href={`https://wa.me/${profile.phone.replace(/\D/g,'')}`} target="_blank" rel="noreferrer" style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:'8px', background:'#fff', borderRadius:'16px', padding:'14px', textDecoration:'none', color:'#25d366', fontWeight:800, fontSize:'13px', boxShadow:'0 4px 16px rgba(0,0,0,0.06)', border:'1px solid rgba(37,211,102,0.15)' }}>
-                <MessageSquare size={18}/> WhatsApp
+              <a href={`https://wa.me/${profile.phone.replace(/\D/g,'')}`} target="_blank" rel="noreferrer" style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:'8px', background:C.surface, borderRadius:'16px', padding:'13px', textDecoration:'none', color:'#25d366', fontWeight:800, fontSize:'13px', boxShadow:C.card, border:'1px solid rgba(37,211,102,0.2)' }}>
+                <MessageSquare size={17}/> WhatsApp
               </a>
             </motion.div>
           )}
 
-          {/* ── KPI BENTO GRID ── */}
-          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'10px', marginBottom:'14px' }}>
+          {/* ── KPI GRID ── */}
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'10px', marginBottom:'12px' }}>
             {[
-              { icon:<TrendingUp size={18}/>, iconBg:'rgba(99,102,241,0.12)', iconColor:'#6366f1', label:'Total Sales', val:fmt(stats.totalSales), sub:'All time' },
-              { icon:<Star size={18}/>,      iconBg:'rgba(202,138,4,0.12)',   iconColor:'#ca8a04', label:'My 10% Cut',  val:fmt(stats.myEarnings), sub:'Commission earned' },
-              { icon:<Zap size={18}/>,       iconBg:'rgba(239,68,68,0.10)',   iconColor:'#ef4444', label:'Debt Owed',   val:fmt(stats.debt90),     sub:'90% of sales' },
-              { icon:<Users size={18}/>,     iconBg:'rgba(16,185,129,0.10)', iconColor:'#10b981', label:'Customers',   val:String(stats.custCount), sub:`${stats.txCount} transactions` },
+              { icon:<TrendingUp size={17}/>, bg:C.brandLt,  c:C.brand,  label:'Total Sales', val:fmt(stats.totalSales),     sub:'All time' },
+              { icon:<Star size={17}/>,       bg:C.warnLt,   c:C.warn,   label:'My 10% Cut',  val:fmt(stats.myEarnings),     sub:'Commission' },
+              { icon:<Zap size={17}/>,        bg:C.dangerLt, c:C.danger, label:'Debt Owed',   val:fmt(stats.debt90),         sub:'90% of sales' },
+              { icon:<Users size={17}/>,      bg:C.okLt,     c:C.ok,     label:'Customers',   val:String(stats.custCount),   sub:`${stats.txCount} tx` },
             ].map((k, i) => (
-              <motion.div key={i} initial={{ opacity:0, y:20 }} animate={{ opacity:1, y:0 }} transition={{ delay:i*0.08 }}
-                style={{ background:'#fff', borderRadius:'20px', padding:'16px', border:'1px solid rgba(0,0,0,0.05)', boxShadow:'0 4px 16px rgba(0,0,0,0.06)' }}>
-                <div style={{ width:'36px', height:'36px', borderRadius:'12px', background:k.iconBg, display:'flex', alignItems:'center', justifyContent:'center', color:k.iconColor, marginBottom:'10px' }}>{k.icon}</div>
-                <div style={{ fontSize:'10px', fontWeight:800, color:'#94a3b8', textTransform:'uppercase', marginBottom:'4px' }}>{k.label}</div>
-                <div style={{ fontSize:'18px', fontWeight:900, color:'#0f172a', lineHeight:1 }}>{k.val}</div>
-                <div style={{ fontSize:'9px', color:'#cbd5e1', fontWeight:600, marginTop:'3px' }}>{k.sub}</div>
+              <motion.div key={i} initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ delay:i*0.07 }}
+                style={{ ...card, padding:'16px', marginBottom:0 }}>
+                <div style={{ width:'34px', height:'34px', borderRadius:'10px', background:k.bg, display:'flex', alignItems:'center', justifyContent:'center', color:k.c, marginBottom:'10px' }}>{k.icon}</div>
+                <div style={{ fontSize:'10px', fontWeight:800, color:C.muted, textTransform:'uppercase', letterSpacing:'0.04em', marginBottom:'4px' }}>{k.label}</div>
+                <div style={{ fontSize:'18px', fontWeight:900, color:C.ink, lineHeight:1, letterSpacing:'-0.02em' }}>{k.val}</div>
+                <div style={{ fontSize:'9px', color:C.muted, fontWeight:600, marginTop:'4px' }}>{k.sub}</div>
               </motion.div>
             ))}
           </div>
 
           {/* ── REVENUE SPLIT BAR ── */}
-          <motion.div initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.3 }}
-            style={{ background:'#fff', borderRadius:'20px', padding:'18px', marginBottom:'14px', border:'1px solid rgba(0,0,0,0.05)', boxShadow:'0 4px 16px rgba(0,0,0,0.06)' }}>
+          <motion.div initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.28 }} style={{ ...card }}>
             <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'12px' }}>
-              <div style={{ fontSize:'12px', fontWeight:800, color:'#0f172a' }}>Revenue Split</div>
-              <div style={{ fontSize:'10px', fontWeight:700, color:'#94a3b8' }}>10% You · 90% Bakery</div>
+              <span style={{ fontSize:'13px', fontWeight:800, color:C.ink }}>Revenue Split</span>
+              <span style={{ fontSize:'10px', fontWeight:700, color:C.muted }}>10% You · 90% Bakery</span>
             </div>
-            <div style={{ height:'10px', borderRadius:'10px', background:'#f1f5f9', overflow:'hidden', display:'flex' }}>
+            <div style={{ height:'10px', borderRadius:'10px', background:C.bg, overflow:'hidden', display:'flex', marginBottom:'12px' }}>
               <motion.div initial={{ width:0 }} animate={{ width:'10%' }} transition={{ duration:1, delay:0.5 }}
-                style={{ height:'100%', background:'linear-gradient(90deg,#10b981,#34d399)', borderRadius:'10px 0 0 10px' }}/>
+                style={{ height:'100%', background:`linear-gradient(90deg,${C.ok},#34d399)`, borderRadius:'10px 0 0 10px' }}/>
               <motion.div initial={{ width:0 }} animate={{ width:'90%' }} transition={{ duration:1, delay:0.5 }}
-                style={{ height:'100%', background:'linear-gradient(90deg,#6366f1,#818cf8)', borderRadius:'0 10px 10px 0' }}/>
+                style={{ height:'100%', background:`linear-gradient(90deg,${C.brand},#818cf8)`, borderRadius:'0 10px 10px 0' }}/>
             </div>
-            <div style={{ display:'flex', justifyContent:'space-between', marginTop:'10px' }}>
+            <div style={{ display:'flex', justifyContent:'space-between' }}>
               <div style={{ display:'flex', alignItems:'center', gap:'6px' }}>
-                <div style={{ width:'8px', height:'8px', borderRadius:'50%', background:'#10b981' }}/>
-                <span style={{ fontSize:'11px', fontWeight:700, color:'#475569' }}>Your Share</span>
-                <span style={{ fontSize:'12px', fontWeight:900, color:'#10b981' }}>{fmt(stats.myEarnings)}</span>
+                <div style={{ width:'8px', height:'8px', borderRadius:'50%', background:C.ok }}/>
+                <span style={{ fontSize:'11px', fontWeight:600, color:C.sub }}>Your Share</span>
+                <span style={{ fontSize:'12px', fontWeight:900, color:C.ok }}>{fmt(stats.myEarnings)}</span>
               </div>
               <div style={{ display:'flex', alignItems:'center', gap:'6px' }}>
-                <div style={{ width:'8px', height:'8px', borderRadius:'50%', background:'#6366f1' }}/>
-                <span style={{ fontSize:'11px', fontWeight:700, color:'#475569' }}>Bakery 90%</span>
-                <span style={{ fontSize:'12px', fontWeight:900, color:'#6366f1' }}>{fmt(stats.debt90)}</span>
+                <div style={{ width:'8px', height:'8px', borderRadius:'50%', background:C.brand }}/>
+                <span style={{ fontSize:'11px', fontWeight:600, color:C.sub }}>Bakery</span>
+                <span style={{ fontSize:'12px', fontWeight:900, color:C.brand }}>{fmt(stats.debt90)}</span>
               </div>
             </div>
           </motion.div>
 
           {/* ── ACCOUNT HEALTH METER ── */}
-          <motion.div initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.32 }}
-            style={{ background:'#fff', borderRadius:'20px', padding:'18px', marginBottom:'14px', border:'1px solid rgba(0,0,0,0.05)', boxShadow:'0 4px 16px rgba(0,0,0,0.06)' }}>
+          <motion.div initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.32 }} style={{ ...card }}>
             <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'12px' }}>
-              <div style={{ fontSize:'13px', fontWeight:800, color:'#0f172a' }}>Account Health</div>
-              <span style={{ fontSize:'11px', fontWeight:900, color:stats.healthLabel.color, background:`${stats.healthLabel.color}15`, padding:'3px 10px', borderRadius:'20px' }}>{stats.healthLabel.label}</span>
+              {sectionHead('Account Health')}
+              <span style={{ fontSize:'11px', fontWeight:800, color:stats.healthLabel.color, background:`${stats.healthLabel.color}12`, padding:'3px 10px', borderRadius:'20px', border:`1px solid ${stats.healthLabel.color}25` }}>{stats.healthLabel.label}</span>
             </div>
-            <div style={{ position:'relative', height:'12px', background:'#f1f5f9', borderRadius:'12px', overflow:'hidden', marginBottom:'10px' }}>
+            <div style={{ position:'relative', height:'10px', background:C.bg, borderRadius:'10px', overflow:'hidden', marginBottom:'10px' }}>
               <motion.div initial={{ width:0 }} animate={{ width:`${stats.healthScore}%` }} transition={{ duration:1.2, ease:'easeOut', delay:0.6 }}
-                style={{ position:'absolute', inset:0, background:`linear-gradient(90deg,${stats.healthLabel.color},${stats.healthLabel.color}99)`, borderRadius:'12px' }}/>
+                style={{ position:'absolute', inset:0, background:`linear-gradient(90deg,${stats.healthLabel.color},${stats.healthLabel.color}bb)`, borderRadius:'10px' }}/>
             </div>
-            <div style={{ display:'flex', justifyContent:'space-between', fontSize:'10px', fontWeight:700, color:'#94a3b8' }}>
+            <div style={{ display:'flex', justifyContent:'space-between', fontSize:'11px', fontWeight:600, color:C.muted }}>
               <span>Score: <strong style={{ color:stats.healthLabel.color }}>{stats.healthScore}%</strong></span>
-              <span>Debt ratio: <strong style={{ color:stats.debtRatio > 50 ? '#ef4444' : '#94a3b8' }}>{stats.debtRatio}% of sales</strong></span>
+              <span>Debt: <strong style={{ color:stats.debtRatio > 50 ? C.danger : C.muted }}>{stats.debtRatio}% of sales</strong></span>
             </div>
           </motion.div>
 
-          {/* ── ACHIEVEMENTS ── */}
-          <motion.div initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.34 }}
-            style={{ background:'#fff', borderRadius:'20px', padding:'18px', marginBottom:'14px', border:'1px solid rgba(0,0,0,0.05)', boxShadow:'0 4px 16px rgba(0,0,0,0.06)' }}>
-            <div style={{ fontSize:'13px', fontWeight:800, color:'#0f172a', marginBottom:'14px', display:'flex', alignItems:'center', gap:'8px' }}>
-              <Award size={15} color="#ca8a04"/> Achievements
-            </div>
+          <motion.div initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.34 }} style={{ ...card }}>
+            {sectionHead('Achievements', <Award size={15}/>)}
             <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:'8px' }}>
               {[
-                { emoji:'✅', label:'Verified',      earned:true,                       color:'#10b981' },
+                { emoji:'✅', label:'Verified',      earned:true,                       color:C.ok },
                 { emoji:'🔥', label:'Active Seller', earned:stats.txCount >= 5,         color:'#f97316' },
-                { emoji:'👑', label:'Top Performer', earned:stats.txCount >= 50,        color:'#ca8a04' },
-                { emoji:'💰', label:'Revenue King',  earned:stats.totalSales >= 100000, color:'#6366f1' },
+                { emoji:'👑', label:'Top Performer', earned:stats.txCount >= 50,        color:C.warn },
+                { emoji:'💰', label:'Revenue King',  earned:stats.totalSales >= 100000, color:C.brand },
                 { emoji:'🤝', label:'Client Magnet', earned:stats.custCount >= 5,       color:'#0891b2' },
                 { emoji:'💎', label:'Platinum',      earned:stats.txCount >= 100,       color:'#818cf8' },
               ].map((b, i) => (
-                <div key={i} style={{ textAlign:'center', padding:'12px 6px', borderRadius:'14px', background:b.earned ? `${b.color}10` : '#f8fafc', border:`1px solid ${b.earned ? b.color + '25' : 'rgba(0,0,0,0.04)'}`, opacity:b.earned ? 1 : 0.4 }}>
+                <div key={i} style={{ textAlign:'center', padding:'12px 6px', borderRadius:'14px', background:b.earned ? `${b.color}0d` : C.bg, border:`1px solid ${b.earned ? b.color + '20' : C.border}`, opacity:b.earned ? 1 : 0.35, transition:'all 0.2s' }}>
                   <div style={{ fontSize:'22px', marginBottom:'4px' }}>{b.emoji}</div>
-                  <div style={{ fontSize:'9px', fontWeight:800, color:b.earned ? b.color : '#94a3b8', textTransform:'uppercase', lineHeight:1.2 }}>{b.label}</div>
+                  <div style={{ fontSize:'9px', fontWeight:800, color:b.earned ? b.color : C.muted, textTransform:'uppercase', lineHeight:1.3 }}>{b.label}</div>
                 </div>
               ))}
             </div>
           </motion.div>
 
           {/* ── RECENT TRANSACTIONS ── */}
-          <motion.div initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.36 }}
-            style={{ background:'#fff', borderRadius:'20px', padding:'18px', marginBottom:'14px', border:'1px solid rgba(0,0,0,0.05)', boxShadow:'0 4px 16px rgba(0,0,0,0.06)' }}>
+          <motion.div initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.36 }} style={{ ...card }}>
             <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'14px' }}>
-              <div style={{ fontSize:'13px', fontWeight:800, color:'#0f172a', display:'flex', alignItems:'center', gap:'8px' }}><Clock size={14} color="#6366f1"/> Recent Activity</div>
-              <button onClick={() => navigate('/supplier/dashboard')} style={{ display:'flex', alignItems:'center', gap:'4px', background:'none', border:'none', color:'#6366f1', fontSize:'11px', fontWeight:800, cursor:'pointer', fontFamily:'inherit' }}>All <ArrowUpRight size={12}/></button>
+              {sectionHead('Recent Activity', <Clock size={14}/>)}
+              <button onClick={() => navigate('/supplier/dashboard')} style={{ display:'flex', alignItems:'center', gap:'4px', background:'none', border:'none', color:C.brand, fontSize:'11px', fontWeight:800, cursor:'pointer', fontFamily:'inherit' }}>All <ArrowUpRight size={12}/></button>
             </div>
             {stats.recentTxns.length === 0 ? (
-              <div style={{ textAlign:'center', padding:'20px', color:'#94a3b8' }}>
-                <Activity size={26} style={{ display:'block', margin:'0 auto 8px', opacity:0.3 }}/>
+              <div style={{ textAlign:'center', padding:'20px', color:C.muted }}>
+                <Activity size={26} style={{ display:'block', margin:'0 auto 8px', opacity:0.25 }}/>
                 <div style={{ fontSize:'12px', fontWeight:600 }}>No transactions yet</div>
               </div>
             ) : stats.recentTxns.map((tx, i) => {
               const isPayment = tx.type === 'Payment';
-              const chip = isPayment ? { label:'Payment', color:'#10b981', bg:'rgba(16,185,129,0.1)' }
-                         : tx.type === 'Cash' ? { label:'Cash Sale', color:'#6366f1', bg:'rgba(99,102,241,0.1)' }
-                         : { label:tx.type, color:'#f59e0b', bg:'rgba(245,158,11,0.1)' };
+              const chip = isPayment ? { label:'Payment',   color:C.ok,     bg:C.okLt }
+                         : tx.type === 'Cash' ? { label:'Cash Sale', color:C.brand,  bg:C.brandLt }
+                         : { label:tx.type,    color:C.warn,    bg:C.warnLt };
               return (
-                <div key={tx.id} style={{ display:'flex', alignItems:'center', gap:'12px', padding:'10px 0', borderBottom: i < stats.recentTxns.length - 1 ? '1px solid rgba(0,0,0,0.04)' : 'none' }}>
-                  <div style={{ width:'38px', height:'38px', borderRadius:'12px', background:chip.bg, display:'flex', alignItems:'center', justifyContent:'center', color:chip.color, flexShrink:0 }}>
-                    {isPayment ? <Wallet size={15}/> : <TrendingUp size={15}/>}
+                <div key={tx.id} style={{ display:'flex', alignItems:'center', gap:'12px', padding:'10px 0', borderBottom: i < stats.recentTxns.length - 1 ? `1px solid ${C.border}` : 'none' }}>
+                  <div style={{ width:'36px', height:'36px', borderRadius:'10px', background:chip.bg, display:'flex', alignItems:'center', justifyContent:'center', color:chip.color, flexShrink:0 }}>
+                    {isPayment ? <Wallet size={14}/> : <TrendingUp size={14}/>}
                   </div>
                   <div style={{ flex:1 }}>
-                    <div style={{ fontSize:'13px', fontWeight:700, color:'#0f172a' }}>{isPayment ? 'Remittance' : 'Sale Transaction'}</div>
-                    <div style={{ fontSize:'10px', color:'#94a3b8', fontWeight:600 }}>{new Date(tx.date).toLocaleDateString('en-GB',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</div>
+                    <div style={{ fontSize:'13px', fontWeight:700, color:C.ink }}>{isPayment ? 'Remittance' : 'Sale'}</div>
+                    <div style={{ fontSize:'10px', color:C.muted, fontWeight:500 }}>{new Date(tx.date).toLocaleDateString('en-GB',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</div>
                   </div>
                   <div style={{ textAlign:'right' }}>
-                    <div style={{ fontSize:'14px', fontWeight:900, color:'#0f172a' }}>₦{tx.totalPrice.toLocaleString()}</div>
+                    <div style={{ fontSize:'14px', fontWeight:900, color:C.ink, letterSpacing:'-0.02em' }}>₦{tx.totalPrice.toLocaleString()}</div>
                     <span style={{ fontSize:'9px', fontWeight:800, color:chip.color, background:chip.bg, padding:'2px 6px', borderRadius:'6px' }}>{chip.label}</span>
                   </div>
                 </div>
@@ -302,24 +335,23 @@ export default function SupplierProfile() {
           </motion.div>
 
           {/* ── PROFILE CARD ── */}
-          <motion.div initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.35 }}
-            style={{ background:'#fff', borderRadius:'20px', padding:'20px', marginBottom:'14px', border:'1px solid rgba(0,0,0,0.05)', boxShadow:'0 4px 16px rgba(0,0,0,0.06)' }}>
+          <motion.div initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.38 }} style={{ ...card }}>
             <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'16px' }}>
-              <span style={{ fontSize:'12px', fontWeight:800, color:'#0f172a' }}>Supplier Details</span>
-              <button onClick={() => setIsEditing(true)} style={{ display:'flex', alignItems:'center', gap:'5px', background:'rgba(99,102,241,0.08)', color:'#6366f1', border:'none', padding:'6px 12px', borderRadius:'10px', fontSize:'11px', fontWeight:800, cursor:'pointer' }}>
+              {sectionHead('Supplier Details', <User size={14}/>)}
+              <button onClick={() => setIsEditing(true)} style={{ display:'flex', alignItems:'center', gap:'5px', background:C.brandLt, color:C.brand, border:'none', padding:'6px 12px', borderRadius:'10px', fontSize:'11px', fontWeight:800, cursor:'pointer', fontFamily:'inherit' }}>
                 <Edit2 size={12}/> Edit
               </button>
             </div>
             {[
-              { icon:<User size={16}/>, bg:'rgba(99,102,241,0.1)', c:'#6366f1', label:'Username', val:`@${profile?.username || 'supplier'}` },
-              { icon:<Phone size={16}/>, bg:'rgba(16,185,129,0.1)', c:'#10b981', label:'Phone', val:profile?.phone || 'N/A' },
-              ...(profile?.whatsapp_number ? [{ icon:<Phone size={16}/>, bg:'rgba(37,211,102,0.1)', c:'#25d366', label:'WhatsApp', val:profile.whatsapp_number }] : []),
-            ].map((row, i) => (
-              <div key={i} style={{ display:'flex', alignItems:'center', gap:'12px', marginBottom: i < 2 ? '14px' : 0 }}>
-                <div style={{ width:'40px', height:'40px', borderRadius:'12px', background:row.bg, display:'flex', alignItems:'center', justifyContent:'center', color:row.c, flexShrink:0 }}>{row.icon}</div>
+              { icon:<User size={15}/>,  bg:C.brandLt,              c:C.brand,   label:'Username', val:`@${profile?.username || 'supplier'}` },
+              { icon:<Phone size={15}/>, bg:C.okLt,                 c:C.ok,      label:'Phone',    val:profile?.phone || 'N/A' },
+              ...(profile?.whatsapp_number ? [{ icon:<Phone size={15}/>, bg:'rgba(37,211,102,0.08)', c:'#25d366', label:'WhatsApp', val:profile.whatsapp_number }] : []),
+            ].map((row, i, arr) => (
+              <div key={i} style={{ display:'flex', alignItems:'center', gap:'12px', paddingBottom: i < arr.length-1 ? '14px' : 0, borderBottom: i < arr.length-1 ? `1px solid ${C.border}` : 'none', marginBottom: i < arr.length-1 ? '14px' : 0 }}>
+                <div style={{ width:'38px', height:'38px', borderRadius:'10px', background:row.bg, display:'flex', alignItems:'center', justifyContent:'center', color:row.c, flexShrink:0 }}>{row.icon}</div>
                 <div>
-                  <div style={{ fontSize:'10px', color:'#94a3b8', fontWeight:700 }}>{row.label}</div>
-                  <div style={{ fontSize:'14px', fontWeight:800, color:'#0f172a' }}>{row.val}</div>
+                  <div style={{ fontSize:'10px', color:C.muted, fontWeight:700, textTransform:'uppercase', letterSpacing:'0.04em' }}>{row.label}</div>
+                  <div style={{ fontSize:'14px', fontWeight:700, color:C.ink }}>{row.val}</div>
                 </div>
               </div>
             ))}
@@ -361,24 +393,24 @@ export default function SupplierProfile() {
 
           {/* ── QUICK LINKS ── */}
           <motion.div initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.45 }}
-            style={{ background:'#fff', borderRadius:'20px', padding:'8px', marginBottom:'14px', border:'1px solid rgba(0,0,0,0.05)', boxShadow:'0 4px 16px rgba(0,0,0,0.06)' }}>
+            style={{ background:C.surface, borderRadius:'20px', padding:'8px', marginBottom:'14px', border:`1px solid ${C.border}`, boxShadow:C.card }}>
             {[
-              { label:'Daily Reports',  sub:'Sales & summaries',  icon:<FileText size={18}/>,  color:'#6366f1', bg:'rgba(99,102,241,0.1)',  path:'/reports' },
-              { label:'Stock Ledger',   sub:'Inventory & stock',  icon:<Package size={18}/>,   color:'#db2777', bg:'rgba(219,39,119,0.1)',  path:'/supplier/inventory' },
-              { label:'Analytics',      sub:'Performance trends', icon:<BarChart3 size={18}/>, color:'#0891b2', bg:'rgba(8,145,178,0.1)',   path:'/supplier/dashboard' },
+              { label:'Daily Reports',  sub:'Sales & summaries',  icon:<FileText size={17}/>,  color:C.brand,   bg:C.brandLt,  path:'/reports' },
+              { label:'Stock Ledger',   sub:'Inventory & stock',  icon:<Package size={17}/>,   color:'#db2777', bg:'rgba(219,39,119,0.08)', path:'/supplier/inventory' },
+              { label:'Analytics',      sub:'Performance trends', icon:<BarChart3 size={17}/>, color:'#0891b2', bg:'rgba(8,145,178,0.08)', path:'/supplier/dashboard' },
             ].map((link, i) => (
               <div key={i}>
-                {i > 0 && <div style={{ height:'1px', background:'rgba(0,0,0,0.04)', margin:'0 12px' }}/>}
+                {i > 0 && <div style={{ height:'1px', background:C.border, margin:'0 12px' }}/>}
                 <button onClick={() => navigate(link.path)}
                   style={{ width:'100%', padding:'12px', borderRadius:'14px', border:'none', background:'transparent', display:'flex', alignItems:'center', justifyContent:'space-between', cursor:'pointer', fontFamily:'inherit' }}>
                   <div style={{ display:'flex', alignItems:'center', gap:'12px' }}>
-                    <div style={{ width:'42px', height:'42px', borderRadius:'14px', background:link.bg, display:'flex', alignItems:'center', justifyContent:'center', color:link.color }}>{link.icon}</div>
+                    <div style={{ width:'40px', height:'40px', borderRadius:'12px', background:link.bg, display:'flex', alignItems:'center', justifyContent:'center', color:link.color }}>{link.icon}</div>
                     <div style={{ textAlign:'left' }}>
-                      <div style={{ fontSize:'14px', fontWeight:800, color:'#0f172a' }}>{link.label}</div>
-                      <div style={{ fontSize:'11px', color:'#94a3b8', fontWeight:600 }}>{link.sub}</div>
+                      <div style={{ fontSize:'14px', fontWeight:700, color:C.ink }}>{link.label}</div>
+                      <div style={{ fontSize:'11px', color:C.muted, fontWeight:500 }}>{link.sub}</div>
                     </div>
                   </div>
-                  <ChevronRight size={16} color="#cbd5e1"/>
+                  <ChevronRight size={16} color={C.muted}/>
                 </button>
               </div>
             ))}
@@ -387,23 +419,25 @@ export default function SupplierProfile() {
           {/* ── SIGN OUT ── */}
           <motion.button initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:0.5 }}
             onClick={() => signOut()}
-            style={{ width:'100%', padding:'16px', borderRadius:'20px', border:'1.5px solid rgba(239,68,68,0.2)', background:'rgba(239,68,68,0.05)', color:'#ef4444', fontSize:'14px', fontWeight:900, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:'8px', fontFamily:'inherit' }}>
-            <LogOut size={18}/> Sign Out
+            style={{ width:'100%', padding:'15px', borderRadius:'18px', border:`1px solid ${C.danger}20`, background:C.dangerLt, color:C.danger, fontSize:'14px', fontWeight:800, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:'8px', fontFamily:'inherit', letterSpacing:'-0.01em' }}>
+            <LogOut size={17}/> Sign Out
           </motion.button>
         </div>
 
         {/* ── EDIT MODAL ── */}
         <AnimatePresence>
           {isEditing && (
-            <div style={{ position:'fixed', inset:0, zIndex:1000, display:'flex', alignItems:'flex-end', background:'rgba(15,23,42,0.6)', backdropFilter:'blur(6px)' }}>
-              <motion.div initial={{ y:'100%' }} animate={{ y:0 }} exit={{ y:'100%' }} transition={{ type:'spring', damping:28, stiffness:280 }}
-                style={{ background:'#fff', width:'100%', maxHeight:'92vh', overflowY:'auto', borderRadius:'28px 28px 0 0', padding:'28px 20px', boxShadow:'0 -20px 60px rgba(0,0,0,0.2)' }}>
+            <div style={{ position:'fixed', inset:0, zIndex:1000, display:'flex', alignItems:'flex-end', background:'rgba(15,23,42,0.65)', backdropFilter:'blur(8px)' }}>
+              <motion.div initial={{ y:'100%' }} animate={{ y:0 }} exit={{ y:'100%' }} transition={{ type:'spring', damping:30, stiffness:300 }}
+                style={{ background:C.surface, width:'100%', maxHeight:'92vh', overflowY:'auto', borderRadius:'28px 28px 0 0', padding:'28px 20px 40px', boxShadow:'0 -24px 60px rgba(15,23,42,0.25)' }}>
+                {/* Drag pill */}
+                <div style={{ width:'40px', height:'4px', borderRadius:'4px', background:C.border, margin:'-12px auto 20px' }}/>
                 <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'24px' }}>
                   <div>
-                    <h2 style={{ margin:0, fontSize:'20px', fontWeight:900, color:'#0f172a' }}>Edit Profile</h2>
-                    <p style={{ margin:'2px 0 0', fontSize:'12px', color:'#94a3b8' }}>Update your supplier information</p>
+                    <h2 style={{ margin:0, fontSize:'20px', fontWeight:900, color:C.ink, letterSpacing:'-0.03em' }}>Edit Profile</h2>
+                    <p style={{ margin:'2px 0 0', fontSize:'12px', color:C.muted, fontWeight:500 }}>Update your supplier information</p>
                   </div>
-                  <button onClick={() => setIsEditing(false)} style={{ background:'#f1f5f9', border:'none', width:'36px', height:'36px', borderRadius:'12px', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer' }}><X size={16}/></button>
+                  <button onClick={() => setIsEditing(false)} style={{ background:C.bg, border:`1px solid ${C.border}`, width:'36px', height:'36px', borderRadius:'12px', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', color:C.ink }}><X size={16}/></button>
                 </div>
 
                 <div style={{ display:'flex', flexDirection:'column', gap:'14px' }}>
@@ -415,7 +449,7 @@ export default function SupplierProfile() {
                     <div><label style={lbl}>WhatsApp</label><input style={inp} value={fWhatsapp} onChange={e=>setFWhatsapp(e.target.value)}/></div>
                   </div>
 
-                  <div style={{ height:'1px', background:'rgba(0,0,0,0.06)' }}/>
+                  <div style={{ height:'1px', background:C.border }}/>
 
                   <div><label style={lbl}>Bank Name</label><input style={inp} value={fBankName} onChange={e=>setFBankName(e.target.value)} placeholder="e.g. OPay, Zenith"/></div>
                   <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'12px' }}>
@@ -426,14 +460,14 @@ export default function SupplierProfile() {
                   <div>
                     <label style={lbl}>Security PIN</label>
                     <div style={{ position:'relative' }}>
-                      <Lock size={15} color="#94a3b8" style={{ position:'absolute', left:'14px', top:'50%', transform:'translateY(-50%)' }}/>
+                      <Lock size={15} color={C.muted} style={{ position:'absolute', left:'14px', top:'50%', transform:'translateY(-50%)' }}/>
                       <input type="password" maxLength={4} value={fPin} onChange={e=>setFPin(e.target.value.replace(/\D/g,''))}
                         style={{ ...inp, paddingLeft:'42px', letterSpacing:'6px', fontWeight:900, fontSize:'18px' }}/>
                     </div>
                   </div>
 
                   <motion.button whileTap={{ scale:0.98 }} onClick={handleSave} disabled={loading}
-                    style={{ padding:'18px', borderRadius:'18px', background:'linear-gradient(135deg,#4f46e5,#6366f1)', color:'#fff', border:'none', fontWeight:900, fontSize:'15px', cursor:'pointer', fontFamily:'inherit', boxShadow:'0 8px 24px rgba(99,102,241,0.35)', marginTop:'4px' }}>
+                    style={{ padding:'17px', borderRadius:'16px', background:`linear-gradient(135deg,${C.brandDk},${C.brand})`, color:'#fff', border:'none', fontWeight:800, fontSize:'15px', cursor:'pointer', fontFamily:'inherit', boxShadow:`0 8px 24px ${C.brand}40`, marginTop:'4px', letterSpacing:'-0.01em' }}>
                     {loading ? 'Saving...' : 'Save Changes'}
                   </motion.button>
                 </div>
