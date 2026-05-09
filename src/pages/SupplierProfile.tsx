@@ -16,55 +16,48 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 const fmt = (v: number) => '₦' + (v || 0).toLocaleString();
 
-/* ── BRAND DESIGN TOKENS ───────────────────────── */
-const C = {
-  brand:    '#4f46e5',
-  brandDk:  '#3730a3',
-  brandLt:  'rgba(79,70,229,0.08)',
-  ok:       '#10b981',
-  okLt:     'rgba(16,185,129,0.08)',
-  warn:     '#f59e0b',
-  warnLt:   'rgba(245,158,11,0.08)',
-  danger:   '#ef4444',
-  dangerLt: 'rgba(239,68,68,0.08)',
-  ink:      '#0f172a',
-  sub:      '#64748b',
-  muted:    '#94a3b8',
-  surface:  '#ffffff',
-  bg:       '#f1f5f9',
-  border:   'rgba(15,23,42,0.06)',
-  card:     '0 1px 3px rgba(15,23,42,0.04), 0 8px 24px rgba(15,23,42,0.06)',
-  hero:     'linear-gradient(160deg, #0f0c29 0%, #1e1b4b 45%, #312e81 100%)',
+/* ── DESIGN TOKENS (matches ManagerStaffProfiles) ───────── */
+const T = {
+  primary: '#4f46e5', primaryLt: 'rgba(79,70,229,0.08)', primaryMid: 'rgba(79,70,229,0.15)',
+  success: '#10b981', successLt: 'rgba(16,185,129,0.1)', textSuccess: '#065f46',
+  danger:  '#ef4444', dangerLt:  'rgba(239,68,68,0.1)',  textDanger:  '#991b1b',
+  warn:    '#f59e0b', warnLt:    'rgba(245,158,11,0.1)', textWarn:    '#78350f',
+  ink: '#0f172a', txt2: '#475569', txt3: '#94a3b8',
+  bg: '#f1f5f9', surface: '#ffffff', surface2: '#f8fafc',
+  border: 'rgba(0,0,0,0.06)', borderL: 'rgba(0,0,0,0.04)',
+  shadow:   '0 2px 8px rgba(0,0,0,0.06)',
+  shadowMd: '0 8px 24px rgba(0,0,0,0.10)',
+  shadowLg: '0 20px 40px rgba(0,0,0,0.15)',
+  heroGrad: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #4f46e5 100%)',
 };
 
 const card: React.CSSProperties = {
-  background: C.surface,
+  background: T.surface,
   borderRadius: '20px',
   padding: '20px',
   marginBottom: '12px',
-  border: `1px solid ${C.border}`,
-  boxShadow: C.card,
+  border: `1px solid ${T.border}`,
+  boxShadow: T.shadowMd,
 };
 
 const sectionHead = (label: string, icon?: React.ReactNode): React.ReactNode => (
-  <div style={{ display:'flex', alignItems:'center', gap:'8px', marginBottom:'16px' }}>
-    {icon && <span style={{ color: C.brand }}>{icon}</span>}
-    <span style={{ fontSize:'13px', fontWeight:800, color: C.ink, letterSpacing:'-0.01em' }}>{label}</span>
+  <div style={{ display:'flex', alignItems:'center', gap:'8px', marginBottom:'14px' }}>
+    {icon && <span style={{ color: T.primary }}>{icon}</span>}
+    <span style={{ fontSize:'12px', fontWeight:800, color:T.txt2, textTransform:'uppercase', letterSpacing:'0.04em' }}>{label}</span>
   </div>
 );
 
 const inp: React.CSSProperties = {
-  width:'100%', boxSizing:'border-box', padding:'13px 16px',
-  borderRadius:'12px', border:`1px solid ${C.border}`,
-  background: C.bg, fontWeight:600, fontSize:'14px',
-  outline:'none', fontFamily:'inherit', color: C.ink,
-  transition: 'border-color 0.2s',
+  background: T.surface, border: `1px solid ${T.borderL}`, borderRadius: '10px',
+  padding: '10px 12px', fontSize: '13px', fontWeight: 500, color: T.ink,
+  outline: 'none', width: '100%', boxSizing: 'border-box', transition: 'all 0.2s', fontFamily: 'inherit',
 };
 const lbl: React.CSSProperties = {
-  fontSize:'10px', fontWeight:800, color: C.sub,
-  textTransform:'uppercase', letterSpacing:'0.06em',
-  marginBottom:'6px', display:'block',
+  fontSize: '10px', fontWeight: 800, color: T.txt2,
+  textTransform: 'uppercase', letterSpacing: '0.04em',
+  marginBottom: '6px', display: 'block',
 };
+
 
 export default function SupplierProfile() {
   const navigate = useNavigate();
@@ -160,16 +153,16 @@ export default function SupplierProfile() {
 
   return (
     <AnimatedPage>
-      <div style={{ minHeight:'100vh', background:C.bg, paddingBottom:'120px', fontFamily:"'Inter',system-ui,sans-serif" }}>
+      <div style={{ minHeight:'100vh', background:T.bg, paddingBottom:'120px', fontFamily:"'Inter',system-ui,sans-serif" }}>
 
         {/* ── HERO ── */}
-        <div style={{ background: C.hero, padding:'52px 24px 96px', position:'relative', overflow:'hidden', textAlign:'center' }}>
+        <div style={{ background: T.heroGrad, padding:'52px 24px 96px', position:'relative', overflow:'hidden', textAlign:'center' }}>
           <div style={{ position:'absolute', top:'-20px', left:'-20px', width:'220px', height:'220px', borderRadius:'50%', background:'radial-gradient(circle, rgba(129,140,248,0.15) 0%, transparent 70%)', pointerEvents:'none' }}/>
           <div style={{ position:'absolute', bottom:'-40px', right:'-20px', width:'180px', height:'180px', borderRadius:'50%', background:'radial-gradient(circle, rgba(99,102,241,0.12) 0%, transparent 70%)', pointerEvents:'none' }}/>
           <div style={{ position:'relative', zIndex:10 }}>
             {/* Avatar */}
             <div style={{ width:'92px', height:'92px', margin:'0 auto 14px', position:'relative' }}>
-              <div style={{ position:'absolute', inset:'-3px', borderRadius:'50%', background:`linear-gradient(135deg, #a5b4fc, ${C.brand}, ${C.brandDk})` }}>
+              <div style={{ position:'absolute', inset:'-3px', borderRadius:'50%', background:`linear-gradient(135deg, #a5b4fc, ${T.primary}, #3730a3)` }}>
                 <div style={{ margin:'3px', borderRadius:'50%', background:'#1e1b4b', height:'calc(100% - 6px)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'26px', fontWeight:900, color:'#fff', overflow:'hidden' }}>
                   {profile?.avatar_url ? <img src={profile.avatar_url} style={{ width:'100%', height:'100%', objectFit:'cover' }} alt=""/> : initials}
                 </div>
@@ -178,7 +171,7 @@ export default function SupplierProfile() {
             <h1 style={{ fontSize:'22px', fontWeight:900, color:'#fff', margin:'0 0 4px', letterSpacing:'-0.03em' }}>{profile?.full_name || 'Supplier'}</h1>
             <p style={{ color:'rgba(165,180,252,0.65)', fontSize:'13px', margin:'0 0 14px', fontWeight:500 }}>@{profile?.username || 'supplier'}</p>
             <div style={{ display:'inline-flex', alignItems:'center', gap:'6px', flexWrap:'wrap', justifyContent:'center' }}>
-              <span style={{ display:'inline-flex', alignItems:'center', gap:'5px', padding:'5px 12px', borderRadius:'20px', background:`${C.ok}25`, border:`1px solid ${C.ok}40`, color:'#6ee7b7', fontSize:'10px', fontWeight:800, textTransform:'uppercase', letterSpacing:'0.04em' }}>
+              <span style={{ display:'inline-flex', alignItems:'center', gap:'5px', padding:'5px 12px', borderRadius:'20px', background:`${T.success}25`, border:`1px solid ${T.success}40`, color:'#6ee7b7', fontSize:'10px', fontWeight:800, textTransform:'uppercase', letterSpacing:'0.04em' }}>
                 <ShieldCheck size={11}/> Verified Supplier
               </span>
               <span style={{ display:'inline-flex', alignItems:'center', gap:'5px', padding:'5px 12px', borderRadius:'20px', background:stats.tier.bg, border:`1px solid ${stats.tier.color}35`, color:stats.tier.color, fontSize:'10px', fontWeight:800 }}>
@@ -198,7 +191,7 @@ export default function SupplierProfile() {
           {/* ── PENDING ALERT ── */}
           {stats.pendingCount > 0 && (
             <motion.div initial={{ opacity:0, y:-8 }} animate={{ opacity:1, y:0 }}
-              style={{ background:`linear-gradient(135deg,#92400e,${C.warn})`, borderRadius:'16px', padding:'14px 16px', marginBottom:'12px', display:'flex', alignItems:'center', gap:'12px', boxShadow:`0 8px 24px ${C.warn}40` }}>
+              style={{ background:`linear-gradient(135deg,#92400e,${T.warn})`, borderRadius:'16px', padding:'14px 16px', marginBottom:'12px', display:'flex', alignItems:'center', gap:'12px', boxShadow:`0 8px 24px ${T.warn}40` }}>
               <AlertTriangle size={20} color="#fbbf24"/>
               <div style={{ flex:1 }}>
                 <div style={{ fontSize:'13px', fontWeight:900, color:'#fef3c7' }}>{stats.pendingCount} Pending Order{stats.pendingCount > 1 ? 's' : ''}</div>
@@ -212,10 +205,10 @@ export default function SupplierProfile() {
           {profile?.phone && (
             <motion.div initial={{ opacity:0, y:12 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.05 }}
               style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'10px', marginBottom:'12px' }}>
-              <a href={`tel:${profile.phone}`} style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:'8px', background:C.surface, borderRadius:'16px', padding:'13px', textDecoration:'none', color:C.ok, fontWeight:800, fontSize:'13px', boxShadow:C.card, border:`1px solid ${C.ok}20` }}>
+              <a href={`tel:${profile.phone}`} style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:'8px', background:T.surface, borderRadius:'16px', padding:'13px', textDecoration:'none', color:T.success, fontWeight:800, fontSize:'13px', boxShadow:T.shadowMd, border:`1px solid ${T.success}20` }}>
                 <PhoneCall size={17}/> Call
               </a>
-              <a href={`https://wa.me/${profile.phone.replace(/\D/g,'')}`} target="_blank" rel="noreferrer" style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:'8px', background:C.surface, borderRadius:'16px', padding:'13px', textDecoration:'none', color:'#25d366', fontWeight:800, fontSize:'13px', boxShadow:C.card, border:'1px solid rgba(37,211,102,0.2)' }}>
+              <a href={`https://wa.me/${profile.phone.replace(/\D/g,'')}`} target="_blank" rel="noreferrer" style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:'8px', background:T.surface, borderRadius:'16px', padding:'13px', textDecoration:'none', color:'#25d366', fontWeight:800, fontSize:'13px', boxShadow:T.shadowMd, border:'1px solid rgba(37,211,102,0.2)' }}>
                 <MessageSquare size={17}/> WhatsApp
               </a>
             </motion.div>
@@ -224,17 +217,17 @@ export default function SupplierProfile() {
           {/* ── KPI GRID ── */}
           <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'10px', marginBottom:'12px' }}>
             {[
-              { icon:<TrendingUp size={17}/>, bg:C.brandLt,  c:C.brand,  label:'Total Sales', val:fmt(stats.totalSales),     sub:'All time' },
-              { icon:<Star size={17}/>,       bg:C.warnLt,   c:C.warn,   label:'My 10% Cut',  val:fmt(stats.myEarnings),     sub:'Commission' },
-              { icon:<Zap size={17}/>,        bg:C.dangerLt, c:C.danger, label:'Debt Owed',   val:fmt(stats.debt90),         sub:'90% of sales' },
-              { icon:<Users size={17}/>,      bg:C.okLt,     c:C.ok,     label:'Customers',   val:String(stats.custCount),   sub:`${stats.txCount} tx` },
+              { icon:<TrendingUp size={17}/>, bg:T.primaryLt,  c:T.primary,  label:'Total Sales', val:fmt(stats.totalSales),   sub:'All time' },
+              { icon:<Star size={17}/>,       bg:T.warnLt,     c:T.warn,     label:'My 10% Cut',  val:fmt(stats.myEarnings),   sub:'Commission' },
+              { icon:<Zap size={17}/>,        bg:T.dangerLt,   c:T.danger,   label:'Debt Owed',   val:fmt(stats.debt90),       sub:'90% of sales' },
+              { icon:<Users size={17}/>,      bg:T.successLt,  c:T.success,  label:'Customers',   val:String(stats.custCount), sub:`${stats.txCount} tx` },
             ].map((k, i) => (
               <motion.div key={i} initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ delay:i*0.07 }}
                 style={{ ...card, padding:'16px', marginBottom:0 }}>
                 <div style={{ width:'34px', height:'34px', borderRadius:'10px', background:k.bg, display:'flex', alignItems:'center', justifyContent:'center', color:k.c, marginBottom:'10px' }}>{k.icon}</div>
-                <div style={{ fontSize:'10px', fontWeight:800, color:C.muted, textTransform:'uppercase', letterSpacing:'0.04em', marginBottom:'4px' }}>{k.label}</div>
-                <div style={{ fontSize:'18px', fontWeight:900, color:C.ink, lineHeight:1, letterSpacing:'-0.02em' }}>{k.val}</div>
-                <div style={{ fontSize:'9px', color:C.muted, fontWeight:600, marginTop:'4px' }}>{k.sub}</div>
+                <div style={{ fontSize:'10px', fontWeight:800, color:T.txt3, textTransform:'uppercase', letterSpacing:'0.04em', marginBottom:'4px' }}>{k.label}</div>
+                <div style={{ fontSize:'18px', fontWeight:900, color:T.ink, lineHeight:1, letterSpacing:'-0.02em' }}>{k.val}</div>
+                <div style={{ fontSize:'9px', color:T.txt3, fontWeight:600, marginTop:'4px' }}>{k.sub}</div>
               </motion.div>
             ))}
           </div>
@@ -242,25 +235,25 @@ export default function SupplierProfile() {
           {/* ── REVENUE SPLIT BAR ── */}
           <motion.div initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.28 }} style={{ ...card }}>
             <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'12px' }}>
-              <span style={{ fontSize:'13px', fontWeight:800, color:C.ink }}>Revenue Split</span>
-              <span style={{ fontSize:'10px', fontWeight:700, color:C.muted }}>10% You · 90% Bakery</span>
+              <span style={{ fontSize:'13px', fontWeight:800, color:T.ink }}>Revenue Split</span>
+              <span style={{ fontSize:'10px', fontWeight:700, color:T.txt3 }}>10% You · 90% Bakery</span>
             </div>
-            <div style={{ height:'10px', borderRadius:'10px', background:C.bg, overflow:'hidden', display:'flex', marginBottom:'12px' }}>
+            <div style={{ height:'10px', borderRadius:'10px', background:T.bg, overflow:'hidden', display:'flex', marginBottom:'12px' }}>
               <motion.div initial={{ width:0 }} animate={{ width:'10%' }} transition={{ duration:1, delay:0.5 }}
-                style={{ height:'100%', background:`linear-gradient(90deg,${C.ok},#34d399)`, borderRadius:'10px 0 0 10px' }}/>
+                style={{ height:'100%', background:`linear-gradient(90deg,${T.success},#34d399)`, borderRadius:'10px 0 0 10px' }}/>
               <motion.div initial={{ width:0 }} animate={{ width:'90%' }} transition={{ duration:1, delay:0.5 }}
-                style={{ height:'100%', background:`linear-gradient(90deg,${C.brand},#818cf8)`, borderRadius:'0 10px 10px 0' }}/>
+                style={{ height:'100%', background:`linear-gradient(90deg,${T.primary},#818cf8)`, borderRadius:'0 10px 10px 0' }}/>
             </div>
             <div style={{ display:'flex', justifyContent:'space-between' }}>
               <div style={{ display:'flex', alignItems:'center', gap:'6px' }}>
-                <div style={{ width:'8px', height:'8px', borderRadius:'50%', background:C.ok }}/>
-                <span style={{ fontSize:'11px', fontWeight:600, color:C.sub }}>Your Share</span>
-                <span style={{ fontSize:'12px', fontWeight:900, color:C.ok }}>{fmt(stats.myEarnings)}</span>
+                <div style={{ width:'8px', height:'8px', borderRadius:'50%', background:T.success }}/>
+                <span style={{ fontSize:'11px', fontWeight:600, color:T.txt2 }}>Your Share</span>
+                <span style={{ fontSize:'12px', fontWeight:900, color:T.success }}>{fmt(stats.myEarnings)}</span>
               </div>
               <div style={{ display:'flex', alignItems:'center', gap:'6px' }}>
-                <div style={{ width:'8px', height:'8px', borderRadius:'50%', background:C.brand }}/>
-                <span style={{ fontSize:'11px', fontWeight:600, color:C.sub }}>Bakery</span>
-                <span style={{ fontSize:'12px', fontWeight:900, color:C.brand }}>{fmt(stats.debt90)}</span>
+                <div style={{ width:'8px', height:'8px', borderRadius:'50%', background:T.primary }}/>
+                <span style={{ fontSize:'11px', fontWeight:600, color:T.txt2 }}>Bakery</span>
+                <span style={{ fontSize:'12px', fontWeight:900, color:T.primary }}>{fmt(stats.debt90)}</span>
               </div>
             </div>
           </motion.div>
@@ -271,13 +264,13 @@ export default function SupplierProfile() {
               {sectionHead('Account Health')}
               <span style={{ fontSize:'11px', fontWeight:800, color:stats.healthLabel.color, background:`${stats.healthLabel.color}12`, padding:'3px 10px', borderRadius:'20px', border:`1px solid ${stats.healthLabel.color}25` }}>{stats.healthLabel.label}</span>
             </div>
-            <div style={{ position:'relative', height:'10px', background:C.bg, borderRadius:'10px', overflow:'hidden', marginBottom:'10px' }}>
+            <div style={{ position:'relative', height:'10px', background:T.bg, borderRadius:'10px', overflow:'hidden', marginBottom:'10px' }}>
               <motion.div initial={{ width:0 }} animate={{ width:`${stats.healthScore}%` }} transition={{ duration:1.2, ease:'easeOut', delay:0.6 }}
                 style={{ position:'absolute', inset:0, background:`linear-gradient(90deg,${stats.healthLabel.color},${stats.healthLabel.color}bb)`, borderRadius:'10px' }}/>
             </div>
-            <div style={{ display:'flex', justifyContent:'space-between', fontSize:'11px', fontWeight:600, color:C.muted }}>
+            <div style={{ display:'flex', justifyContent:'space-between', fontSize:'11px', fontWeight:600, color:T.txt3 }}>
               <span>Score: <strong style={{ color:stats.healthLabel.color }}>{stats.healthScore}%</strong></span>
-              <span>Debt: <strong style={{ color:stats.debtRatio > 50 ? C.danger : C.muted }}>{stats.debtRatio}% of sales</strong></span>
+              <span>Debt: <strong style={{ color:stats.debtRatio > 50 ? T.danger : T.txt3 }}>{stats.debtRatio}% of sales</strong></span>
             </div>
           </motion.div>
 
@@ -285,16 +278,16 @@ export default function SupplierProfile() {
             {sectionHead('Achievements', <Award size={15}/>)}
             <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:'8px' }}>
               {[
-                { emoji:'✅', label:'Verified',      earned:true,                       color:C.ok },
+                { emoji:'✅', label:'Verified',      earned:true,                       color:T.success },
                 { emoji:'🔥', label:'Active Seller', earned:stats.txCount >= 5,         color:'#f97316' },
-                { emoji:'👑', label:'Top Performer', earned:stats.txCount >= 50,        color:C.warn },
-                { emoji:'💰', label:'Revenue King',  earned:stats.totalSales >= 100000, color:C.brand },
+                { emoji:'👑', label:'Top Performer', earned:stats.txCount >= 50,        color:T.warn },
+                { emoji:'💰', label:'Revenue King',  earned:stats.totalSales >= 100000, color:T.primary },
                 { emoji:'🤝', label:'Client Magnet', earned:stats.custCount >= 5,       color:'#0891b2' },
                 { emoji:'💎', label:'Platinum',      earned:stats.txCount >= 100,       color:'#818cf8' },
               ].map((b, i) => (
-                <div key={i} style={{ textAlign:'center', padding:'12px 6px', borderRadius:'14px', background:b.earned ? `${b.color}0d` : C.bg, border:`1px solid ${b.earned ? b.color + '20' : C.border}`, opacity:b.earned ? 1 : 0.35, transition:'all 0.2s' }}>
+                <div key={i} style={{ textAlign:'center', padding:'12px 6px', borderRadius:'14px', background:b.earned ? `${b.color}0d` : T.bg, border:`1px solid ${b.earned ? b.color + '20' : T.border}`, opacity:b.earned ? 1 : 0.35, transition:'all 0.2s' }}>
                   <div style={{ fontSize:'22px', marginBottom:'4px' }}>{b.emoji}</div>
-                  <div style={{ fontSize:'9px', fontWeight:800, color:b.earned ? b.color : C.muted, textTransform:'uppercase', lineHeight:1.3 }}>{b.label}</div>
+                  <div style={{ fontSize:'9px', fontWeight:800, color:b.earned ? b.color : T.txt3, textTransform:'uppercase', lineHeight:1.3 }}>{b.label}</div>
                 </div>
               ))}
             </div>
@@ -304,29 +297,29 @@ export default function SupplierProfile() {
           <motion.div initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.36 }} style={{ ...card }}>
             <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'14px' }}>
               {sectionHead('Recent Activity', <Clock size={14}/>)}
-              <button onClick={() => navigate('/supplier/dashboard')} style={{ display:'flex', alignItems:'center', gap:'4px', background:'none', border:'none', color:C.brand, fontSize:'11px', fontWeight:800, cursor:'pointer', fontFamily:'inherit' }}>All <ArrowUpRight size={12}/></button>
+              <button onClick={() => navigate('/supplier/dashboard')} style={{ display:'flex', alignItems:'center', gap:'4px', background:'none', border:'none', color:T.primary, fontSize:'11px', fontWeight:800, cursor:'pointer', fontFamily:'inherit' }}>All <ArrowUpRight size={12}/></button>
             </div>
             {stats.recentTxns.length === 0 ? (
-              <div style={{ textAlign:'center', padding:'20px', color:C.muted }}>
+              <div style={{ textAlign:'center', padding:'20px', color:T.txt3 }}>
                 <Activity size={26} style={{ display:'block', margin:'0 auto 8px', opacity:0.25 }}/>
                 <div style={{ fontSize:'12px', fontWeight:600 }}>No transactions yet</div>
               </div>
             ) : stats.recentTxns.map((tx, i) => {
               const isPayment = tx.type === 'Payment';
-              const chip = isPayment ? { label:'Payment',   color:C.ok,     bg:C.okLt }
-                         : tx.type === 'Cash' ? { label:'Cash Sale', color:C.brand,  bg:C.brandLt }
-                         : { label:tx.type,    color:C.warn,    bg:C.warnLt };
+              const chip = isPayment ? { label:'Payment',   color:T.success, bg:T.successLt }
+                         : tx.type === 'Cash' ? { label:'Cash Sale', color:T.primary, bg:T.primaryLt }
+                         : { label:tx.type,    color:T.warn,    bg:T.warnLt };
               return (
-                <div key={tx.id} style={{ display:'flex', alignItems:'center', gap:'12px', padding:'10px 0', borderBottom: i < stats.recentTxns.length - 1 ? `1px solid ${C.border}` : 'none' }}>
+                <div key={tx.id} style={{ display:'flex', alignItems:'center', gap:'12px', padding:'10px 0', borderBottom: i < stats.recentTxns.length - 1 ? `1px solid ${T.border}` : 'none' }}>
                   <div style={{ width:'36px', height:'36px', borderRadius:'10px', background:chip.bg, display:'flex', alignItems:'center', justifyContent:'center', color:chip.color, flexShrink:0 }}>
                     {isPayment ? <Wallet size={14}/> : <TrendingUp size={14}/>}
                   </div>
                   <div style={{ flex:1 }}>
-                    <div style={{ fontSize:'13px', fontWeight:700, color:C.ink }}>{isPayment ? 'Remittance' : 'Sale'}</div>
-                    <div style={{ fontSize:'10px', color:C.muted, fontWeight:500 }}>{new Date(tx.date).toLocaleDateString('en-GB',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</div>
+                    <div style={{ fontSize:'13px', fontWeight:700, color:T.ink }}>{isPayment ? 'Remittance' : 'Sale'}</div>
+                    <div style={{ fontSize:'10px', color:T.txt3, fontWeight:500 }}>{new Date(tx.date).toLocaleDateString('en-GB',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</div>
                   </div>
                   <div style={{ textAlign:'right' }}>
-                    <div style={{ fontSize:'14px', fontWeight:900, color:C.ink, letterSpacing:'-0.02em' }}>₦{tx.totalPrice.toLocaleString()}</div>
+                    <div style={{ fontSize:'14px', fontWeight:900, color:T.ink, letterSpacing:'-0.02em' }}>₦{tx.totalPrice.toLocaleString()}</div>
                     <span style={{ fontSize:'9px', fontWeight:800, color:chip.color, background:chip.bg, padding:'2px 6px', borderRadius:'6px' }}>{chip.label}</span>
                   </div>
                 </div>
@@ -338,20 +331,20 @@ export default function SupplierProfile() {
           <motion.div initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.38 }} style={{ ...card }}>
             <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'16px' }}>
               {sectionHead('Supplier Details', <User size={14}/>)}
-              <button onClick={() => setIsEditing(true)} style={{ display:'flex', alignItems:'center', gap:'5px', background:C.brandLt, color:C.brand, border:'none', padding:'6px 12px', borderRadius:'10px', fontSize:'11px', fontWeight:800, cursor:'pointer', fontFamily:'inherit' }}>
+              <button onClick={() => setIsEditing(true)} style={{ display:'flex', alignItems:'center', gap:'5px', background:T.primaryLt, color:T.primary, border:'none', padding:'6px 12px', borderRadius:'10px', fontSize:'11px', fontWeight:800, cursor:'pointer', fontFamily:'inherit' }}>
                 <Edit2 size={12}/> Edit
               </button>
             </div>
             {[
-              { icon:<User size={15}/>,  bg:C.brandLt,              c:C.brand,   label:'Username', val:`@${profile?.username || 'supplier'}` },
-              { icon:<Phone size={15}/>, bg:C.okLt,                 c:C.ok,      label:'Phone',    val:profile?.phone || 'N/A' },
+              { icon:<User size={15}/>,  bg:T.primaryLt,  c:T.primary,  label:'Username', val:`@${profile?.username || 'supplier'}` },
+              { icon:<Phone size={15}/>, bg:T.successLt,  c:T.success,  label:'Phone',    val:profile?.phone || 'N/A' },
               ...(profile?.whatsapp_number ? [{ icon:<Phone size={15}/>, bg:'rgba(37,211,102,0.08)', c:'#25d366', label:'WhatsApp', val:profile.whatsapp_number }] : []),
             ].map((row, i, arr) => (
-              <div key={i} style={{ display:'flex', alignItems:'center', gap:'12px', paddingBottom: i < arr.length-1 ? '14px' : 0, borderBottom: i < arr.length-1 ? `1px solid ${C.border}` : 'none', marginBottom: i < arr.length-1 ? '14px' : 0 }}>
+              <div key={i} style={{ display:'flex', alignItems:'center', gap:'12px', paddingBottom: i < arr.length-1 ? '14px' : 0, borderBottom: i < arr.length-1 ? `1px solid ${T.border}` : 'none', marginBottom: i < arr.length-1 ? '14px' : 0 }}>
                 <div style={{ width:'38px', height:'38px', borderRadius:'10px', background:row.bg, display:'flex', alignItems:'center', justifyContent:'center', color:row.c, flexShrink:0 }}>{row.icon}</div>
                 <div>
-                  <div style={{ fontSize:'10px', color:C.muted, fontWeight:700, textTransform:'uppercase', letterSpacing:'0.04em' }}>{row.label}</div>
-                  <div style={{ fontSize:'14px', fontWeight:700, color:C.ink }}>{row.val}</div>
+                  <div style={{ fontSize:'10px', color:T.txt3, fontWeight:700, textTransform:'uppercase', letterSpacing:'0.04em' }}>{row.label}</div>
+                  <div style={{ fontSize:'14px', fontWeight:700, color:T.ink }}>{row.val}</div>
                 </div>
               </div>
             ))}
@@ -393,24 +386,24 @@ export default function SupplierProfile() {
 
           {/* ── QUICK LINKS ── */}
           <motion.div initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.45 }}
-            style={{ background:C.surface, borderRadius:'20px', padding:'8px', marginBottom:'14px', border:`1px solid ${C.border}`, boxShadow:C.card }}>
+            style={{ background:T.surface, borderRadius:'20px', padding:'8px', marginBottom:'14px', border:`1px solid ${T.border}`, boxShadow:T.shadowMd }}>
             {[
-              { label:'Daily Reports',  sub:'Sales & summaries',  icon:<FileText size={17}/>,  color:C.brand,   bg:C.brandLt,  path:'/reports' },
+              { label:'Daily Reports',  sub:'Sales & summaries',  icon:<FileText size={17}/>,  color:T.primary, bg:T.primaryLt, path:'/reports' },
               { label:'Stock Ledger',   sub:'Inventory & stock',  icon:<Package size={17}/>,   color:'#db2777', bg:'rgba(219,39,119,0.08)', path:'/supplier/inventory' },
               { label:'Analytics',      sub:'Performance trends', icon:<BarChart3 size={17}/>, color:'#0891b2', bg:'rgba(8,145,178,0.08)', path:'/supplier/dashboard' },
             ].map((link, i) => (
               <div key={i}>
-                {i > 0 && <div style={{ height:'1px', background:C.border, margin:'0 12px' }}/>}
+                {i > 0 && <div style={{ height:'1px', background:T.border, margin:'0 12px' }}/>}
                 <button onClick={() => navigate(link.path)}
                   style={{ width:'100%', padding:'12px', borderRadius:'14px', border:'none', background:'transparent', display:'flex', alignItems:'center', justifyContent:'space-between', cursor:'pointer', fontFamily:'inherit' }}>
                   <div style={{ display:'flex', alignItems:'center', gap:'12px' }}>
                     <div style={{ width:'40px', height:'40px', borderRadius:'12px', background:link.bg, display:'flex', alignItems:'center', justifyContent:'center', color:link.color }}>{link.icon}</div>
                     <div style={{ textAlign:'left' }}>
-                      <div style={{ fontSize:'14px', fontWeight:700, color:C.ink }}>{link.label}</div>
-                      <div style={{ fontSize:'11px', color:C.muted, fontWeight:500 }}>{link.sub}</div>
+                      <div style={{ fontSize:'14px', fontWeight:700, color:T.ink }}>{link.label}</div>
+                      <div style={{ fontSize:'11px', color:T.txt3, fontWeight:500 }}>{link.sub}</div>
                     </div>
                   </div>
-                  <ChevronRight size={16} color={C.muted}/>
+                  <ChevronRight size={16} color={T.txt3}/>
                 </button>
               </div>
             ))}
@@ -419,7 +412,7 @@ export default function SupplierProfile() {
           {/* ── SIGN OUT ── */}
           <motion.button initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:0.5 }}
             onClick={() => signOut()}
-            style={{ width:'100%', padding:'15px', borderRadius:'18px', border:`1px solid ${C.danger}20`, background:C.dangerLt, color:C.danger, fontSize:'14px', fontWeight:800, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:'8px', fontFamily:'inherit', letterSpacing:'-0.01em' }}>
+            style={{ width:'100%', padding:'15px', borderRadius:'18px', border:`1px solid ${T.danger}20`, background:T.dangerLt, color:T.danger, fontSize:'14px', fontWeight:800, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:'8px', fontFamily:'inherit', letterSpacing:'-0.01em' }}>
             <LogOut size={17}/> Sign Out
           </motion.button>
         </div>
@@ -429,15 +422,15 @@ export default function SupplierProfile() {
           {isEditing && (
             <div style={{ position:'fixed', inset:0, zIndex:1000, display:'flex', alignItems:'flex-end', background:'rgba(15,23,42,0.65)', backdropFilter:'blur(8px)' }}>
               <motion.div initial={{ y:'100%' }} animate={{ y:0 }} exit={{ y:'100%' }} transition={{ type:'spring', damping:30, stiffness:300 }}
-                style={{ background:C.surface, width:'100%', maxHeight:'92vh', overflowY:'auto', borderRadius:'28px 28px 0 0', padding:'28px 20px 40px', boxShadow:'0 -24px 60px rgba(15,23,42,0.25)' }}>
+                style={{ background:T.surface, width:'100%', maxHeight:'92vh', overflowY:'auto', borderRadius:'28px 28px 0 0', padding:'28px 20px 40px', boxShadow:T.shadowLg }}>
                 {/* Drag pill */}
-                <div style={{ width:'40px', height:'4px', borderRadius:'4px', background:C.border, margin:'-12px auto 20px' }}/>
+                <div style={{ width:'40px', height:'4px', borderRadius:'4px', background:T.border, margin:'-12px auto 20px' }}/>
                 <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'24px' }}>
                   <div>
-                    <h2 style={{ margin:0, fontSize:'20px', fontWeight:900, color:C.ink, letterSpacing:'-0.03em' }}>Edit Profile</h2>
-                    <p style={{ margin:'2px 0 0', fontSize:'12px', color:C.muted, fontWeight:500 }}>Update your supplier information</p>
+                    <h2 style={{ margin:0, fontSize:'20px', fontWeight:900, color:T.ink }}>Edit Profile</h2>
+                    <p style={{ margin:'2px 0 0', fontSize:'12px', color:T.txt3, fontWeight:500 }}>Update your supplier information</p>
                   </div>
-                  <button onClick={() => setIsEditing(false)} style={{ background:C.bg, border:`1px solid ${C.border}`, width:'36px', height:'36px', borderRadius:'12px', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', color:C.ink }}><X size={16}/></button>
+                  <button onClick={() => setIsEditing(false)} style={{ background:T.bg, border:`1px solid ${T.border}`, width:'36px', height:'36px', borderRadius:'12px', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', color:T.ink }}><X size={16}/></button>
                 </div>
 
                 <div style={{ display:'flex', flexDirection:'column', gap:'14px' }}>
@@ -449,7 +442,7 @@ export default function SupplierProfile() {
                     <div><label style={lbl}>WhatsApp</label><input style={inp} value={fWhatsapp} onChange={e=>setFWhatsapp(e.target.value)}/></div>
                   </div>
 
-                  <div style={{ height:'1px', background:C.border }}/>
+                  <div style={{ height:'1px', background:T.border }}/>
 
                   <div><label style={lbl}>Bank Name</label><input style={inp} value={fBankName} onChange={e=>setFBankName(e.target.value)} placeholder="e.g. OPay, Zenith"/></div>
                   <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'12px' }}>
@@ -460,14 +453,14 @@ export default function SupplierProfile() {
                   <div>
                     <label style={lbl}>Security PIN</label>
                     <div style={{ position:'relative' }}>
-                      <Lock size={15} color={C.muted} style={{ position:'absolute', left:'14px', top:'50%', transform:'translateY(-50%)' }}/>
+                      <Lock size={15} color={T.txt3} style={{ position:'absolute', left:'14px', top:'50%', transform:'translateY(-50%)' }}/>
                       <input type="password" maxLength={4} value={fPin} onChange={e=>setFPin(e.target.value.replace(/\D/g,''))}
                         style={{ ...inp, paddingLeft:'42px', letterSpacing:'6px', fontWeight:900, fontSize:'18px' }}/>
                     </div>
                   </div>
 
                   <motion.button whileTap={{ scale:0.98 }} onClick={handleSave} disabled={loading}
-                    style={{ padding:'17px', borderRadius:'16px', background:`linear-gradient(135deg,${C.brandDk},${C.brand})`, color:'#fff', border:'none', fontWeight:800, fontSize:'15px', cursor:'pointer', fontFamily:'inherit', boxShadow:`0 8px 24px ${C.brand}40`, marginTop:'4px', letterSpacing:'-0.01em' }}>
+                    style={{ padding:'17px', borderRadius:'16px', background:T.heroGrad, color:'#fff', border:'none', fontWeight:800, fontSize:'15px', cursor:'pointer', fontFamily:'inherit', boxShadow:`0 8px 24px ${T.primary}40`, marginTop:'4px' }}>
                     {loading ? 'Saving...' : 'Save Changes'}
                   </motion.button>
                 </div>
